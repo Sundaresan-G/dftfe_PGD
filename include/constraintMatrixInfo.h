@@ -108,6 +108,15 @@ namespace dftfe
       distribute_slave_to_master(distributedCPUMultiVec<T> &fieldVector,
                                  const unsigned int         blockSize) const;
 
+      /**
+       * @brief Scales the constraints with the inverse diagonal mass matrix so that the scaling of the vector can be done at the cell level
+       *
+       * @param invSqrtMassVec the inverse diagonal mass matrix
+       */
+      void
+      initializeScaledConstraints(
+        const distributedCPUVec<double> &invSqrtMassVec);
+
 
       /**
        * @brief sets field values at constrained nodes to be zero

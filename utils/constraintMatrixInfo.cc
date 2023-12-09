@@ -171,6 +171,23 @@ namespace dftfe
         }
     }
 
+
+    void
+    constraintMatrixInfo::initializeScaledConstraints(
+      const distributedCPUVec<double> &invSqrtMassVec)
+    {
+      unsigned int count = 0;
+      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+        {
+          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+            {
+              d_columnValues[count] *=
+                invSqrtMassVec.local_element(d_columnIdsLocal[count]);
+              count++;
+            }
+        }
+    }
+
     //
     // set the constrained degrees of freedom to values so that constraints
     // are satisfied

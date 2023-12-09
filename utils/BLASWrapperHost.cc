@@ -95,6 +95,12 @@ namespace dftfe
 
     template void
     BLASWrapper<dftfe::utils::MemorySpace::HOST>::xscal(
+      std::complex<double> * x,
+      const double           a,
+      const dftfe::size_type n) const;
+
+    template void
+    BLASWrapper<dftfe::utils::MemorySpace::HOST>::xscal(
       std::complex<float> *     x,
       const std::complex<float> a,
       const dftfe::size_type    n) const;
