@@ -281,8 +281,7 @@ namespace dftfe
                                       numberWaveFunctions,
                                     0.0);
 
-    d_cellHamMatrixTimesWaveMatrix.resize(totalLocallyOwnedCells *
-                                            d_numberNodesPerElement *
+    d_cellHamMatrixTimesWaveMatrix.resize(d_numberNodesPerElement *
                                             numberWaveFunctions,
                                           0.0);
 
