@@ -217,9 +217,6 @@ namespace dftfe
     constraintMatrixInfo::distribute(distributedCPUVec<T> &fieldVector,
                                      const unsigned int    blockSize) const
     {
-      fieldVector.update_ghost_values();
-
-
       unsigned int       count = 0;
       const unsigned int inc   = 1;
       std::vector<T>     newValuesBlock(blockSize, 0.0);
@@ -263,16 +260,12 @@ namespace dftfe
 
     template <typename T>
     void
-    constraintMatrixInfo::distribute(distributedCPUMultiVec<T> &fieldVector,
-                                     const unsigned int         blockSize,
-                                     bool                       updGhosts) const
+    constraintMatrixInfo::distribute(
+      distributedCPUMultiVec<T> &fieldVector) const
     {
-      if (updGhosts)
-        fieldVector.updateGhostValues();
-
-
-      unsigned int       count = 0;
-      const unsigned int inc   = 1;
+      const unsigned int blockSize = fieldVector.numVectors();
+      unsigned int       count     = 0;
+      const unsigned int inc       = 1;
       std::vector<T>     newValuesBlock(blockSize, 0.0);
       for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
         {
@@ -359,11 +352,11 @@ namespace dftfe
     template <typename T>
     void
     constraintMatrixInfo::distribute_slave_to_master(
-      distributedCPUMultiVec<T> &fieldVector,
-      const unsigned int         blockSize) const
+      distributedCPUMultiVec<T> &fieldVector) const
     {
-      unsigned int       count = 0;
-      const unsigned int inc   = 1;
+      const unsigned int blockSize = fieldVector.numVectors();
+      unsigned int       count     = 0;
+      const unsigned int inc       = 1;
       for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
@@ -414,9 +407,9 @@ namespace dftfe
 
     template <typename T>
     void
-    constraintMatrixInfo::set_zero(distributedCPUMultiVec<T> &fieldVector,
-                                   const unsigned int         blockSize) const
+    constraintMatrixInfo::set_zero(distributedCPUMultiVec<T> &fieldVector) const
     {
+      const unsigned int blockSize = fieldVector.numVectors();
       for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
@@ -463,25 +456,19 @@ namespace dftfe
 
     template void
     constraintMatrixInfo::distribute(
-      distributedCPUMultiVec<double> &fieldVector,
-      const unsigned int              blockSize,
-      bool                            updGhosts) const;
+      distributedCPUMultiVec<double> &fieldVector) const;
 
     template void
     constraintMatrixInfo::distribute(
-      distributedCPUMultiVec<std::complex<double>> &fieldVector,
-      const unsigned int                            blockSize,
-      bool                                          updGhosts) const;
+      distributedCPUMultiVec<std::complex<double>> &fieldVector) const;
 
     template void
     constraintMatrixInfo::distribute_slave_to_master(
-      distributedCPUMultiVec<dataTypes::number> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedCPUMultiVec<dataTypes::number> &fieldVector) const;
 
     template void
     constraintMatrixInfo::set_zero(
-      distributedCPUMultiVec<dataTypes::number> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedCPUMultiVec<dataTypes::number> &fieldVector) const;
 
   } // namespace dftUtils
 

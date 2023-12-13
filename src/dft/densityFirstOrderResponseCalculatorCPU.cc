@@ -188,7 +188,7 @@ namespace dftfe
                           XCurrentKPoint[iNode * totalNumWaveFunctions + jvec +
                                          iWave];
 
-
+                    flattenedArrayBlock1.update_ghost_values();
                     (operatorMatrix.getOverloadedConstraintMatrix())
                       ->distribute(flattenedArrayBlock1, currentBlockSize);
 
@@ -201,7 +201,7 @@ namespace dftfe
                           XPrimeCurrentKPoint[iNode * totalNumWaveFunctions +
                                               jvec + iWave];
 
-
+                    flattenedArrayBlock2.update_ghost_values();
                     (operatorMatrix.getOverloadedConstraintMatrix())
                       ->distribute(flattenedArrayBlock2, currentBlockSize);
 
@@ -585,6 +585,7 @@ namespace dftfe
                                          iWave];
 
 
+                    flattenedArrayBlock1.update_ghost_values();
                     (operatorMatrix.getOverloadedConstraintMatrix())
                       ->distribute(flattenedArrayBlock1, currentBlockSize);
 
@@ -598,6 +599,7 @@ namespace dftfe
                                               jvec + iWave];
 
 
+                    flattenedArrayBlock2.update_ghost_values();
                     (operatorMatrix.getOverloadedConstraintMatrix())
                       ->distribute(flattenedArrayBlock2, currentBlockSize);
 

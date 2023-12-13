@@ -471,8 +471,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
                     &d_cellWaveFunctionMatrix[0],
                     numberWaveFunctions,
                     &dftPtr->d_nonLocalProjectorElementMatricesConjugate
-                       [atomId][nonZeroElementMatrixId][d_kPointIndex * d_numberNodesPerElement *
-                         numberPseudoWaveFunctions],
+                       [atomId][nonZeroElementMatrixId]
+                       [d_kPointIndex * d_numberNodesPerElement *
+                        numberPseudoWaveFunctions],
                     d_numberNodesPerElement,
                     &one,
                     &projectorKetTimesVector[atomId][0],
@@ -571,7 +572,8 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
         }
       d_BLASWrapperPtrHost->xgemm(
         'N',
-        std::is_same<dataTypes::number, std::complex<double>>::value ? 'T':'N',
+        std::is_same<dataTypes::number, std::complex<double>>::value ? 'T' :
+                                                                       'N',
         numberWaveFunctions,
         d_numberNodesPerElement,
         d_numberNodesPerElement,
@@ -607,8 +609,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
                 &projectorKetTimesVector[atomId][0],
                 numberWaveFunctions,
                 &dftPtr->d_nonLocalProjectorElementMatricesTranspose
-                   [atomId][nonZeroElementMatrixId][d_kPointIndex * d_numberNodesPerElement *
-                                   numberPseudoWaveFunctions],
+                   [atomId][nonZeroElementMatrixId]
+                   [d_kPointIndex * d_numberNodesPerElement *
+                    numberPseudoWaveFunctions],
                 numberPseudoWaveFunctions,
                 &one,
                 &d_cellHamMatrixTimesWaveMatrix[0],

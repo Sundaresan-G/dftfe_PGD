@@ -2914,7 +2914,7 @@ namespace dftfe
       for (unsigned int i = 0; i < local_size; i++)
         vVector.data()[i] = ((double)std::rand()) / ((double)RAND_MAX);
 
-      operatorMatrix.getOverloadedConstraintMatrix()->set_zero(vVector, 1);
+      operatorMatrix.getOverloadedConstraintMatrix()->set_zero(vVector);
 
       //
       // evaluate l2 norm

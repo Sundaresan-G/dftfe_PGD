@@ -544,13 +544,12 @@ namespace dftfe
     template <typename NumberType>
     void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<NumberType> &fieldVector,
-      const unsigned int                blockSize) const
+      distributedDeviceVec<NumberType> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
-        // fieldVector.update_ghost_values();
 
+      const unsigned int blockSize = fieldVector.numVectors();
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
       distributeKernel<<<
         min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
@@ -595,12 +594,12 @@ namespace dftfe
     //
     void
     constraintMatrixInfoDevice::distribute_slave_to_master(
-      distributedDeviceVec<double> &fieldVector,
-      const unsigned int            blockSize) const
+      distributedDeviceVec<double> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
 
+      const unsigned int blockSize = fieldVector.numVectors();
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
       distributeSlaveToMasterKernelAtomicAdd<<<
         min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
@@ -643,12 +642,12 @@ namespace dftfe
     constraintMatrixInfoDevice::distribute_slave_to_master(
       distributedDeviceVec<std::complex<double>> &fieldVector,
       double *                                    tempReal,
-      double *                                    tempImag,
-      const unsigned int                          blockSize) const
+      double *                                    tempImag) const
     {
       if (d_numConstrainedDofs == 0)
         return;
 
+      const unsigned int blockSize = fieldVector.numVectors();
       dftfe::utils::deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
         (fieldVector.localSize() * fieldVector.numVectors()),
         fieldVector.begin(),
@@ -732,12 +731,12 @@ namespace dftfe
     constraintMatrixInfoDevice::distribute_slave_to_master(
       distributedDeviceVec<std::complex<float>> &fieldVector,
       float *                                    tempReal,
-      float *                                    tempImag,
-      const unsigned int                         blockSize) const
+      float *                                    tempImag) const
     {
       if (d_numConstrainedDofs == 0)
         return;
 
+      const unsigned int blockSize = fieldVector.numVectors();
       dftfe::utils::deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
         (fieldVector.localSize() * fieldVector.numVectors()),
         fieldVector.begin(),
@@ -817,12 +816,12 @@ namespace dftfe
     template <typename NumberType>
     void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<NumberType> &fieldVector,
-      const unsigned int                blockSize) const
+      distributedDeviceVec<NumberType> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
 
+      const unsigned int blockSize          = fieldVector.numVectors();
       const unsigned int numConstrainedDofs = d_rowIdsLocal.size();
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
       setzeroKernel<<<min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
@@ -882,43 +881,35 @@ namespace dftfe
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<double> &fieldVector,
-      const unsigned int            blockSize) const;
+      distributedDeviceVec<double> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<std::complex<double>> &fieldVector,
-      const unsigned int                          blockSize) const;
+      distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<float> &fieldVector,
-      const unsigned int           blockSize) const;
+      distributedDeviceVec<float> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<std::complex<float>> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedDeviceVec<std::complex<float>> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<double> &fieldVector,
-      const unsigned int            blockSize) const;
+      distributedDeviceVec<double> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<std::complex<double>> &fieldVector,
-      const unsigned int                          blockSize) const;
+      distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<float> &fieldVector,
-      const unsigned int           blockSize) const;
+      distributedDeviceVec<float> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<std::complex<float>> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedDeviceVec<std::complex<float>> &fieldVector) const;
 
 
   } // namespace dftUtils

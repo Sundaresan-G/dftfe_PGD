@@ -655,9 +655,9 @@ namespace dftfe
           for (unsigned int iWave = 0; iWave < numPsi; ++iWave)
             flattenedArrayBlock.data()[iNode * numPsi + iWave] =
               X[iNode * N + startingVecId + iWave];
-
+        flattenedArrayBlock.updateGhostValues();
         (operatorMatrix.getOverloadedConstraintMatrix())
-          ->distribute(flattenedArrayBlock, numPsi);
+          ->distribute(flattenedArrayBlock);
 
         interpolatePsiComputeELocWfcEshelbyTensor(operatorMatrix,
                                                   flattenedArrayBlock,

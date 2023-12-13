@@ -286,7 +286,7 @@ namespace dftfe
                     deviceFlattenedArrayXBlock.updateGhostValues();
 
                     (operatorMatrix.getOverloadedConstraintMatrix())
-                      ->distribute(deviceFlattenedArrayXBlock, BVec);
+                      ->distribute(deviceFlattenedArrayXBlock);
 
 
                     dftfe::utils::deviceKernelsGeneric::
@@ -303,7 +303,7 @@ namespace dftfe
                     deviceFlattenedArrayXPrimeBlock.updateGhostValues();
 
                     (operatorMatrix.getOverloadedConstraintMatrix())
-                      ->distribute(deviceFlattenedArrayXPrimeBlock, BVec);
+                      ->distribute(deviceFlattenedArrayXPrimeBlock);
 
 
                     for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)

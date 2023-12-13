@@ -950,7 +950,8 @@ namespace dftfe
     //
     // update slave nodes before doing element-level matrix-vec multiplication
     //
-    dftPtr->constraintsNoneDataInfo.distribute(src, numberWaveFunctions);
+    src.updateGhostValues();
+    dftPtr->constraintsNoneDataInfo.distribute(src);
 
 
 
@@ -973,8 +974,7 @@ namespace dftfe
     //
     // update master node contributions from its correponding slave nodes
     //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(
-      dst, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
 
 
 
@@ -1068,7 +1068,8 @@ namespace dftfe
     //
     // update slave nodes before doing element-level matrix-vec multiplication
     //
-    dftPtr->constraintsNoneDataInfo.distribute(src, numberWaveFunctions);
+    src.updateGhostValues();
+    dftPtr->constraintsNoneDataInfo.distribute(src);
 
 
     //
@@ -1091,8 +1092,7 @@ namespace dftfe
     //
     // update master node contributions from its correponding slave nodes
     //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(
-      dst, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
 
     src.zeroOutGhosts();
     dst.accumulateAddLocallyOwned();
@@ -1217,7 +1217,8 @@ namespace dftfe
     //
     // update slave nodes before doing element-level matrix-vec multiplication
     //
-    dftPtr->constraintsNoneDataInfo.distribute(src, numberWaveFunctions);
+    src.updateGhostValues();
+    dftPtr->constraintsNoneDataInfo.distribute(src);
 
 
 
@@ -1235,8 +1236,7 @@ namespace dftfe
     //
     // update master node contributions from its correponding slave nodes
     //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(
-      dst, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
 
 
     src.zeroOutGhosts();
@@ -1310,7 +1310,7 @@ namespace dftfe
           }
       }
 
-    dftPtr->constraintsNoneDataInfo.set_zero(src, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.set_zero(src);
   }
 #endif
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -1323,14 +1323,11 @@ namespace dftfe
     std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst)
   {
     src[0]->updateGhostValues();
-    scaledConstraintsNoneDataInfoPtr->distribute(*(src[0]),
-                                                 src[0]->numVectors(),
-                                                 false);
+    scaledConstraintsNoneDataInfoPtr->distribute(*(src[0]));
     computeHamiltonianTimesXInternal(
       (*src[0]), (*dst[0]), scalarHX, scalarY, scalarX);
 
-    scaledConstraintsNoneDataInfoPtr->distribute_slave_to_master(
-      *(dst[0]), dst[0]->numVectors());
+    scaledConstraintsNoneDataInfoPtr->distribute_slave_to_master(*(dst[0]));
 
     src[0]->zeroOutGhosts();
     dst[0]->accumulateAddLocallyOwned();

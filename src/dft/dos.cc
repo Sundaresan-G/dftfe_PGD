@@ -507,6 +507,7 @@ namespace dftfe
                                               iNode * d_numEigenValues + ivec +
                                               iWave];
 
+            eigenVectorsFlattenedBlock[kPoint].update_ghost_values();
             constraintsNoneDataInfo.distribute(
               eigenVectorsFlattenedBlock[kPoint], currentBlockSize);
             eigenVectorsFlattenedBlock[kPoint].update_ghost_values();
@@ -1053,6 +1054,7 @@ namespace dftfe
                                               iNode * d_numEigenValues + ivec +
                                               iWave];
 
+            eigenVectorsFlattenedBlock[kPoint].update_ghost_values();
             constraintsNoneDataInfo.distribute(
               eigenVectorsFlattenedBlock[kPoint], currentBlockSize);
             eigenVectorsFlattenedBlock[kPoint].update_ghost_values();

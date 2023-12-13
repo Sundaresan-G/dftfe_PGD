@@ -69,8 +69,7 @@ namespace dftfe
        */
       template <typename NumberType>
       void
-      distribute(distributedDeviceVec<NumberType> &fieldVector,
-                 const unsigned int                blockSize) const;
+      distribute(distributedDeviceVec<NumberType> &fieldVector) const;
 
       /**
        * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
@@ -83,13 +82,12 @@ namespace dftfe
        * @param blockSize number of components for a given node
        */
       void
-      distribute_slave_to_master(distributedDeviceVec<double> &fieldVector,
-                                 const unsigned int            blockSize) const;
+      distribute_slave_to_master(
+        distributedDeviceVec<double> &fieldVector) const;
 
       inline void
       distribute_slave_to_master(
-        distributedDeviceVec<std::complex<double>> &fieldVector,
-        const unsigned int                          blockSize) const
+        distributedDeviceVec<std::complex<double>> &fieldVector) const
       {}
 
       /**
@@ -106,14 +104,12 @@ namespace dftfe
       distribute_slave_to_master(
         distributedDeviceVec<std::complex<double>> &fieldVector,
         double *                                    tempReal,
-        double *                                    tempImag,
-        const unsigned int                          blockSize) const;
+        double *                                    tempImag) const;
 
       inline void
       distribute_slave_to_master(distributedDeviceVec<double> &fieldVector,
                                  double *                      tempReal,
-                                 double *                      tempImag,
-                                 const unsigned int            blockSize) const
+                                 double *                      tempImag) const
       {}
 
 
@@ -131,8 +127,7 @@ namespace dftfe
       distribute_slave_to_master(
         distributedDeviceVec<std::complex<float>> &fieldVector,
         float *                                    tempReal,
-        float *                                    tempImag,
-        const unsigned int                         blockSize) const;
+        float *                                    tempImag) const;
 
 
       /**
@@ -143,8 +138,7 @@ namespace dftfe
        */
       template <typename NumberType>
       void
-      set_zero(distributedDeviceVec<NumberType> &fieldVector,
-               const unsigned int                blockSize) const;
+      set_zero(distributedDeviceVec<NumberType> &fieldVector) const;
 
       /**
        * clear data members
