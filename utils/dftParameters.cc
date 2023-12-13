@@ -866,7 +866,7 @@ namespace dftfe
 
           prm.declare_entry(
             "ENABLE HAMILTONIAN TIMES VECTOR OPTIM",
-            "true",
+            "false",
             dealii::Patterns::Bool(),
             "[Advanced] Turns on optimization for hamiltonian times vector multiplication. Operations involving data movement from global vector to finite-element cell level and vice versa are done by employing different data structures for interior nodes and surfaces nodes of a given cell and this allows reduction of memory access costs");
 

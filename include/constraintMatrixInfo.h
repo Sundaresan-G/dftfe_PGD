@@ -86,7 +86,8 @@ namespace dftfe
       template <typename T>
       void
       distribute(distributedCPUMultiVec<T> &fieldVector,
-                 const unsigned int         blockSize) const;
+                 const unsigned int         blockSize,
+                 bool                       updGhosts = true) const;
 
       /**
        * @brief transfers the contributions of slave nodes to master nodes using the constraint equation

@@ -1322,8 +1322,10 @@ namespace dftfe
     const double                                              scalarX,
     std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst)
   {
+    src[0]->updateGhostValues();
     scaledConstraintsNoneDataInfoPtr->distribute(*(src[0]),
-                                                 src[0]->numVectors());
+                                                 src[0]->numVectors(),
+                                                 false);
     computeHamiltonianTimesXInternal(
       (*src[0]), (*dst[0]), scalarHX, scalarY, scalarX);
 

@@ -264,9 +264,11 @@ namespace dftfe
     template <typename T>
     void
     constraintMatrixInfo::distribute(distributedCPUMultiVec<T> &fieldVector,
-                                     const unsigned int         blockSize) const
+                                     const unsigned int         blockSize,
+                                     bool                       updGhosts) const
     {
-      fieldVector.updateGhostValues();
+      if (updGhosts)
+        fieldVector.updateGhostValues();
 
 
       unsigned int       count = 0;
@@ -462,12 +464,14 @@ namespace dftfe
     template void
     constraintMatrixInfo::distribute(
       distributedCPUMultiVec<double> &fieldVector,
-      const unsigned int              blockSize) const;
+      const unsigned int              blockSize,
+      bool                            updGhosts) const;
 
     template void
     constraintMatrixInfo::distribute(
       distributedCPUMultiVec<std::complex<double>> &fieldVector,
-      const unsigned int                            blockSize) const;
+      const unsigned int                            blockSize,
+      bool                                          updGhosts) const;
 
     template void
     constraintMatrixInfo::distribute_slave_to_master(
