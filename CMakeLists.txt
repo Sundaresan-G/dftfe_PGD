@@ -158,7 +158,14 @@ SET(TARGET_SRC
   ./src/force/configurationalStressCompute/computeStressEself.cc
   ./src/force/configurationalStressCompute/stress.cc
   ./src/force/createBinObjectsForce.cc
-  ./src/force/locateAtomCoreNodesForce.cc)
+  ./src/force/locateAtomCoreNodesForce.cc
+  ./src/atom/AtomPseudoWavefunctions.cc
+  ./src/atom/AtomCenteredSphericalFunctionContainer.cc
+  ./src/atom/AtomCenteredSphericalFunctionBase.cc
+  ./src/atom/AtomCenteredSphericalFunctionSinc.cc
+  ./src/atom/AtomCenteredSphericalFunctionBessel.cc
+  ./src/atom/AtomCenteredSphericalFunctionGaussian.cc
+  ./src/atom/AtomCenteredSphericalFunctionSpline.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 
