@@ -1,0 +1,223 @@
+// ---------------------------------------------------------------------
+//
+// Copyright (c) 2017-2022 The Regents of the University of Michigan and DFT-FE
+// authors.
+//
+// This file is part of the DFT-FE code.
+//
+// The DFT-FE code is free software; you can use it, redistribute
+// it, and/or modify it under the terms of the GNU Lesser General
+// Public License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// The full text of the license can be found in the file LICENSE at
+// the top level of the DFT-FE distribution.
+//
+// ---------------------------------------------------------------------
+//
+// @author  Kartick Ramakrishnan, Sambit Das
+//
+
+#ifndef DFTFE_ONCVCLASS_H
+#define DFTFE_ONCVCLASS_H
+
+#include "vector"
+#include "map"
+#include "AtomCenteredSphericalFunctionBase.h"
+#include "AtomCenteredSphericalFunctionBessel.h"
+#include "AtomCenteredSphericalFunctionSinc.h"
+#include "AtomCenteredSphericalFunctionGaussian.h"
+#include "AtomCenteredSphericalFunctionSpline.h"
+#include "AtomCenteredSphericalFunctionContainer.h"
+#include "AtomicCenteredNonLocalOperator.h"
+#include <memory>
+#include <MemorySpaceType.h>
+#include <headers.h>
+#include <TypeConfig.h>
+#include <dftUtils.h>
+#include "FEBasisOperations.h"
+#include <BLASWrapper.h>
+#include <xc.h>
+#include <excManager.h>
+#ifdef _OPENMP
+#  include <omp.h>
+#else
+#  define omp_get_thread_num() 0
+#endif
+namespace dftfe
+{
+
+
+  template <typename ValueType>
+  class oncvClass
+  {
+  public:
+    oncvClass();
+    /**
+     * @brief Initialises all the data members with addresses/values to/of dftClass.
+     * @param[in] densityQuadratureId quadratureId for density.
+     * @param[in] localContributionQuadratureId quadratureId for local/zero
+     * potential
+     * @param[in] nuclearChargeQuadratureIdElectro quadratureId for nuclear
+     * charges
+     * @param[in] densityQuadratureIdElectro quadratureId for density in
+     * Electrostatics mesh
+     * @param[in] bQuadValuesAllAtoms address of nuclear charge field
+     * @param[in] excFunctionalPtr address XC functional pointer
+     * @param[in] numEigenValues number of eigenvalues
+     * @param[in] atomLocations atomic Coordinates
+     * @param[in] imageIds image IDs of periodic cell
+     * @param[in] periodicCoords coordinates of image atoms
+     */
+
+    virtual void
+    initialise(
+      unsigned int densityQuadratureId,
+      unsigned int localContributionQuadratureId,
+      unsigned int sparsityPatternQuadratureId,
+      unsigned int nlpspQuadratureId,
+      unsigned int nuclearChargeQuadratureIdElectro,
+      unsigned int densityQuadratureIdElectro,
+      std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms,
+      excManager *                                   excFunctionalPtr,
+      unsigned int                                   numEigenValues,
+      const std::vector<std::vector<double>> &       atomLocations,
+      const std::vector<int> &                       imageIds,
+      const std::vector<std::vector<double>> &       periodicCoords,
+      const bool                                     reproducibleOutput,
+      const std::map<unsigned int, unsigned int> &   atomAttributes) = 0;
+
+    /**
+     * @brief Initialises all the data members with addresses/values to/of dftClass.
+     * @param[in] densityQuadratureId quadratureId for density.
+     * @param[in] localContributionQuadratureId quadratureId for local/zero
+     * potential
+     * @param[in] nuclearChargeQuadratureIdElectro quadratureId for nuclear
+     * charges
+     * @param[in] densityQuadratureIdElectro quadratureId for density in
+     * Electrostatics mesh
+     * @param[in] bQuadValuesAllAtoms address of nuclear charge field
+     * @param[in] excFunctionalPtr address XC functional pointer
+     * @param[in] numEigenValues number of eigenvalues
+     * @param[in] atomLocations atomic Coordinates
+     * @param[in] imageIds image IDs of periodic cell
+     * @param[in] periodicCoords coordinates of image atoms
+     */
+    virtual void
+    reinit() = 0;
+
+
+    /**
+     * @brief Initialises local potential
+     */
+    void
+    initLocalPotential();
+
+    void
+    getRadialValenceDensity(unsigned int         Zno,
+                            double               rad,
+                            std::vector<double> &Val);
+
+    double
+    getRadialValenceDensity(unsigned int Zno, double rad);
+
+    double
+    getRmaxValenceDensity(unsigned int Zno);
+
+    void
+    getRadialCoreDensity(unsigned int         Zno,
+                         double               rad,
+                         std::vector<double> &Val);
+
+    double
+    getRadialCoreDensity(unsigned int Zno, double rad);
+
+    double
+    getRmaxCoreDensity(unsigned int Zno);
+
+    double
+    getRadialLocalPseudo(unsigned int Zno, double rad);
+
+    double
+    getRmaxLocalPot(unsigned int Zno);
+
+    bool
+    coreNuclearDensityPresent(unsigned int Zno);
+
+    // Creating Object for Atom Centerd Nonlocal Operator
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<dataTypes::number,
+                                     dftfe::utils::MemorySpace::HOST>>
+      d_nonLocalOperator;
+
+  protected:
+    /**
+     * @brief Converts the periodic image data structure to relevant form for the container class
+     * @param[in] atomLocations atomic Coordinates
+     * @param[in] imageIds image IDs of periodic cell
+     * @param[in] periodicCoords coordinates of image atoms
+     * @param[out] imageIdsTemp image IDs of periodic cell
+     * @param[out] imageCoordsTemp coordinates of image atoms
+     */
+    void
+    setImageCoordinates(const std::vector<std::vector<double>> &atomLocations,
+                        const std::vector<int> &                imageIds,
+                        const std::vector<std::vector<double>> &periodicCoords,
+                        std::vector<unsigned int> &             imageIdsTemp,
+                        std::vector<double> &imageCoordsTemp);
+    /**
+     * @brief Creating Density splines for all atomTypes
+     */
+    void
+    createAtomCenteredSphericalFunctionsForDensities();
+
+
+
+    unsigned int              d_densityQuadratureId;
+    unsigned int              d_localContributionQuadratureId;
+    unsigned int              d_nuclearChargeQuadratureIdElectro;
+    unsigned int              d_densityQuadratureIdElectro;
+    unsigned int              d_sparsityPatternQuadratureId;
+    unsigned int              d_nlpspQuadratureId;
+    excManager *              d_excManagerPtr;
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+      d_BasisOperatorHostPtr;
+
+
+
+    std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
+    bool                                              d_floatingNuclearCharges;
+    int                                               d_verbosity;
+    std::vector<std::vector<double>>                  d_atomLocations;
+    std::set<unsigned int>                            d_atomTypes;
+    std::map<unsigned int, std::vector<unsigned int>> d_atomTypesList;
+    std::string                                       d_dftfeScratchFolderName;
+    std::map<dealii::CellId, std::vector<double>> *   d_bQuadValuesAllAtoms;
+    std::vector<int>                                  d_imageIds;
+    std::vector<std::vector<double>>                  d_imagePositions;
+    unsigned int                                      d_numEigenValues;
+    unsigned int                                      d_nOMPThreads;
+
+    std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      d_atomicProjectorFnsVector;
+    std::vector<std::map<unsigned int, AtomCenteredSphericalFunctionBase *>>
+      d_atomicLocalPotVector;
+    std::vector<std::map<unsigned int, AtomCenteredSphericalFunctionBase *>>
+      d_atomicValenceDensityVector;
+    std::map<unsigned int, AtomCenteredSphericalFunctionBase *>
+      d_atomicCoreDensityMap;
+    std::map<unsigned int, AtomCenteredSphericalFunctionBase *>
+         atomicValenceDensityMap;
+    bool d_reproducible_output;
+    /// FIXME: eventually it should be a map of atomic number to struct-
+    /// {valence number, mesh input etc}
+    std::map<unsigned int, unsigned int> d_atomTypeAtributes;
+
+
+
+  }; // end of class
+
+} // end of namespace dftfe
+#include "../src/pseudo/oncvClass.t.cc"
+#endif //  DFTFE_PSEUDOPOTENTIALBASE_H

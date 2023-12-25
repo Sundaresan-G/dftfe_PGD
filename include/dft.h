@@ -67,7 +67,7 @@
 #endif
 
 #include <mixingClass.h>
-
+#include <oncvClass.h>
 
 namespace dftfe
 {
