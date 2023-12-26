@@ -72,7 +72,6 @@ namespace dftfe
      * charges
      * @param[in] densityQuadratureIdElectro quadratureId for density in
      * Electrostatics mesh
-     * @param[in] bQuadValuesAllAtoms address of nuclear charge field
      * @param[in] excFunctionalPtr address XC functional pointer
      * @param[in] numEigenValues number of eigenvalues
      * @param[in] atomLocations atomic Coordinates
@@ -86,9 +85,7 @@ namespace dftfe
       unsigned int localContributionQuadratureId,
       unsigned int sparsityPatternQuadratureId,
       unsigned int nlpspQuadratureId,
-      unsigned int nuclearChargeQuadratureIdElectro,
       unsigned int densityQuadratureIdElectro,
-      std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms,
       excManager *                                   excFunctionalPtr,
       unsigned int                                   numEigenValues,
       const std::vector<std::vector<double>> &       atomLocations,
@@ -230,7 +227,6 @@ namespace dftfe
     std::set<unsigned int>                            d_atomTypes;
     std::map<unsigned int, std::vector<unsigned int>> d_atomTypesList;
     std::string                                       d_dftfeScratchFolderName;
-    std::map<dealii::CellId, std::vector<double>> *   d_bQuadValuesAllAtoms;
     std::vector<int>                                  d_imageIds;
     std::vector<std::vector<double>>                  d_imagePositions;
     unsigned int                                      d_numEigenValues;

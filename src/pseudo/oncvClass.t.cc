@@ -208,9 +208,7 @@ namespace dftfe
     unsigned int localContributionQuadratureId,
     unsigned int sparsityPatternQuadratureId,
     unsigned int nlpspQuadratureId,
-    unsigned int nuclearChargeQuadratureIdElectro,
     unsigned int densityQuadratureIdElectro,
-    std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms,
     excManager *                                   excFunctionalPtr,
     unsigned int                                   numEigenValues,
     const std::vector<std::vector<double>> &       atomLocations,
@@ -226,11 +224,9 @@ namespace dftfe
 
     d_densityQuadratureId              = densityQuadratureId;
     d_localContributionQuadratureId    = localContributionQuadratureId;
-    d_nuclearChargeQuadratureIdElectro = nuclearChargeQuadratureIdElectro;
     d_densityQuadratureIdElectro       = densityQuadratureIdElectro;
     d_sparsityPatternQuadratureId      = sparsityPatternQuadratureId;
     d_nlpspQuadratureId                = nlpspQuadratureId;
-    d_bQuadValuesAllAtoms              = &bQuadValuesAllAtoms;
     d_excManagerPtr                    = excFunctionalPtr;
     d_numEigenValues                   = numEigenValues;
     d_reproducible_output              = reproducibleOutput;
