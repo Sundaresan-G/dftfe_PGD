@@ -69,7 +69,7 @@ namespace dftfe
      * @param[in] periodicCoords coordinates of image atoms
      */
 
-    virtual void
+    void
     initialise(
       unsigned int densityQuadratureId,
       unsigned int localContributionQuadratureId,
@@ -170,7 +170,33 @@ namespace dftfe
     void
     createAtomCenteredSphericalFunctionsForDensities();
 
+    void
+    computeNonlocalPseudoPotentialConstants();
+    void
+    createAtomCenteredSphericalFunctionsForProjectors();
+    void
+    createAtomCenteredSphericalFunctionsForLocalPotential();
 
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+                                     d_BLASWrapperHostPtr;
+    std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
+    std::map<unsigned int, std::vector<double>>
+      d_atomicNonLocalPseudoPotentialConstants;
+    std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      d_atomicWaveFnsVector;
+    std::shared_ptr<AtomCenteredSphericalFunctionContainer>
+      d_atomicProjectorFnsContainer;
+    std::map<std::pair<unsigned int, unsigned int>,
+             std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+      d_atomicProjectorFnsMap;
+
+    // parallel communication objects
+    const MPI_Comm     d_mpiCommParent;
+    const unsigned int d_this_mpi_process;
+
+    // conditional stream object
+    dealii::ConditionalOStream pcout;
 
     unsigned int              d_densityQuadratureId;
     unsigned int              d_localContributionQuadratureId;

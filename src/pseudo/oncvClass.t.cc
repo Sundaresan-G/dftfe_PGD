@@ -21,8 +21,7 @@
 namespace dftfe
 {
   template <typename ValueType>
-  oncvClass<
-    ValueType>::oncvClass()
+  oncvClass<ValueType>::oncvClass()
   {}
 
   template <typename ValueType>
@@ -200,4 +199,306 @@ namespace dftfe
   {
     return (d_atomTypeCoreFlagMap[Zno]);
   }
+  template <typename ValueType>
+  void
+  oncvClass<ValueType>::initialise(
+    unsigned int densityQuadratureId,
+    unsigned int localContributionQuadratureId,
+    unsigned int sparsityPatternQuadratureId,
+    unsigned int nlpspQuadratureId,
+    unsigned int nuclearChargeQuadratureIdElectro,
+    unsigned int densityQuadratureIdElectro,
+    std::map<dealii::CellId, std::vector<double>> &bQuadValuesAllAtoms,
+    excManager *                                   excFunctionalPtr,
+    unsigned int                                   numEigenValues,
+    const std::vector<std::vector<double>> &       atomLocations,
+    const std::vector<int> &                       imageIds,
+    const std::vector<std::vector<double>> &       periodicCoords,
+    const bool                                     reproducibleOutput,
+    const std::map<unsigned int, unsigned int> &   atomAttributes)
+  {
+    MPI_Barrier(d_mpiCommParent);
+    std::cout
+      << "Starting Creation of Nuclear Electrostatics Manager ONCV class: "
+      << std::endl;
+
+    d_densityQuadratureId              = densityQuadratureId;
+    d_localContributionQuadratureId    = localContributionQuadratureId;
+    d_nuclearChargeQuadratureIdElectro = nuclearChargeQuadratureIdElectro;
+    d_densityQuadratureIdElectro       = densityQuadratureIdElectro;
+    d_sparsityPatternQuadratureId      = sparsityPatternQuadratureId;
+    d_nlpspQuadratureId                = nlpspQuadratureId;
+    d_bQuadValuesAllAtoms              = &bQuadValuesAllAtoms;
+    d_excManagerPtr                    = excFunctionalPtr;
+    d_numEigenValues                   = numEigenValues;
+    d_reproducible_output              = reproducibleOutput;
+    d_atomTypeAtributes                = atomAttributes;
+    std::vector<unsigned int> atomicNumbers;
+    std::vector<double>       atomCoords;
+    std::vector<double>       imageCoordsTemp;
+    std::vector<unsigned int> imageIdsTemp;
+    setImageCoordinates(
+      atomLocations, imageIds, periodicCoords, imageIdsTemp, imageCoordsTemp);
+
+    for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
+      {
+        atomicNumbers.push_back(atomLocations[iAtom][0]);
+        for (int dim = 2; dim < 5; dim++)
+          atomCoords.push_back(atomLocations[iAtom][dim]);
+      }
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Starting Splines creation for atomic Densities " << std::endl;
+  createAtomCenteredSphericalFunctionsForDensities();
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Finished Splines creation for atomic Densites " << std::endl;
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Starting Splines creation for atomic Proj " << std::endl;
+    createAtomCenteredSphericalFunctionsForProjectors();
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Finished Splines creation for atomic Projectors " << std::endl;
+    pcout << "Starting Splines creation for Vloc" << std::endl;
+    createAtomCenteredSphericalFunctionsForLocalPotential();
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Finished Splines creation for Vloc" << std::endl;
+    d_atomicProjectorFnsContainer =
+      std::make_shared<AtomCenteredSphericalFunctionContainer>();
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Creating AtomCenteredSphericalFunction Object " << std::endl;
+    d_atomicProjectorFnsContainer->init(atomicNumbers,
+                                        atomCoords,
+                                        imageCoordsTemp,
+                                        imageIdsTemp,
+                                        d_atomicProjectorFnsMap);
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Finished Creation of container object " << std::endl;
+    pcout << "Starting Filling Nonlocal Potential Constants" << std::endl;
+    computeNonlocalPseudoPotentialConstants();
+    MPI_Barrier(d_mpiCommParent);
+    pcout << "Finished Filling Nonlocal Potential Constants" << std::endl;
+    pcout << " Starting Computing Sparsity Pattern for Projectors..."
+          << std::endl;
+    d_atomicProjectorFnsContainer->computeSparseStructure(
+      d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
+    MPI_Barrier(d_mpiCommParent);
+    pcout << " Finished Computing Sparsity Pattern for Projectors..."
+          << std::endl;
+    pcout << "Creating NonLocal Operator..." << std::endl;
+    d_nonLocalOperator = std::make_shared<
+      AtomicCenteredNonLocalOperator<ValueType,
+                                     dftfe::utils::MemorySpace::HOST>>(
+      d_BLASWrapperHostPtr,
+      d_atomicProjectorFnsContainer,
+      d_numEigenValues,
+      d_mpiCommParent);
+    MPI_Barrier(d_mpiCommParent);
+    pcout << " Finished Creating NonLocal Operator..." << std::endl;
+  }
+
+
+  template <typename ValueType>
+  void
+  oncvClass<
+    ValueType>::computeNonlocalPseudoPotentialConstants()
+  {
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        const unsigned int Zno = *it;
+        const std::map<std::pair<unsigned int, unsigned int>,
+                       std::shared_ptr<AtomCenteredSphericalFunctionBase>>
+          sphericalFunction =
+            d_atomicProjectorFnsContainer->getSphericalFunctions();
+        unsigned int numRadProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Zno);
+        unsigned int numTotalProjectors =
+          d_atomicProjectorFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+
+        char denominatorDataFileName[256];
+        strcpy(denominatorDataFileName,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(Zno) + "/" +
+                "denom.dat")
+                 .c_str());
+        pcout << "Debug: Line 152: " << denominatorDataFileName << std::endl;
+        std::vector<std::vector<double>> denominator(0);
+        dftUtils::readFile(numRadProjectors,
+                           denominator,
+                           denominatorDataFileName);
+        std::vector<double> pseudoPotentialConstants(numTotalProjectors, 0.0);
+        unsigned int        ProjId = 0;
+        for (unsigned int iProj = 0; iProj < numRadProjectors; iProj++)
+          {
+            std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
+              sphericalFunction.find(std::make_pair(Zno, iProj))->second;
+            unsigned int lQuantumNumber = sphFn->getQuantumNumberl();
+            for (int l = 0; l < 2 * lQuantumNumber + 1; l++)
+              {
+                pseudoPotentialConstants[ProjId] = denominator[iProj][iProj];
+                ProjId++;
+              }
+          }
+        d_atomicNonLocalPseudoPotentialConstants[Zno] =
+          pseudoPotentialConstants;
+      } //*it
+  }
+
+
+  template <typename ValueType>
+  void
+  oncvClass<ValueType>::reinit()
+  {}
+
+  template <typename ValueType>
+  void
+  oncvClass<
+    ValueType>::createAtomCenteredSphericalFunctionsForProjectors()
+  {
+    d_atomicProjectorFnsVector.clear();
+    std::vector<std::vector<int>> projectorIdDetails;
+    std::vector<std::vector<int>> atomicFunctionIdDetails;
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        pcout << "Filling projectors for atom: " << *it << std::endl;
+        char         pseudoAtomDataFile[256];
+        unsigned int cumulativeSplineId = 0;
+        strcpy(pseudoAtomDataFile,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                "/PseudoAtomDat")
+                 .c_str());
+        pcout << "Reading from: " << pseudoAtomDataFile << std::endl;
+        unsigned int  Zno = *it;
+        std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
+        unsigned int  numberOfProjectors;
+        readPseudoDataFileNames >> numberOfProjectors;
+        readPseudoDataFileNames.ignore();
+        projectorIdDetails.resize(numberOfProjectors);
+        std::string   readLine;
+        std::set<int> radFunctionIds;
+        pcout << "Number of projectors: " << numberOfProjectors << std::endl;
+
+
+
+        atomicFunctionIdDetails.resize(numberOfProjectors);
+        for (unsigned int i = 0; i < numberOfProjectors; ++i)
+          {
+            std::vector<int> &radAndAngularFunctionId =
+              atomicFunctionIdDetails[i];
+            radAndAngularFunctionId.resize(3, 0);
+            std::getline(readPseudoDataFileNames, readLine);
+
+            std::istringstream lineString(readLine);
+            unsigned int       count = 0;
+            int                Id;
+            double             mollifierRadius;
+            std::string        dummyString;
+            while (lineString >> dummyString)
+              {
+                if (count < 3)
+                  {
+                    Id = atoi(dummyString.c_str());
+                    //
+                    // insert the radial(spline) Id to the splineIds set
+                    //
+                    if (count == 1)
+                      radFunctionIds.insert(Id);
+                    radAndAngularFunctionId[count] = Id;
+                  }
+                // if (count==3) {
+                // Id = atoi(dummyString.c_str());
+                // projector[(*it)][i] = Id ;
+                // }
+                if (count > 3)
+                  {
+                    std::cerr << "Invalid argument in the SingleAtomData file"
+                              << std::endl;
+                    exit(-1);
+                  }
+
+                count++;
+              }
+          }
+        std::string  tempProjRadialFunctionFileName;
+        unsigned int numProj;
+        unsigned int alpha = 0;
+        pcout << "Number of L components Projectors: " << radFunctionIds.size()
+              << std::endl;
+        for (std::set<int>::iterator i = radFunctionIds.begin();
+             i != radFunctionIds.end();
+             ++i)
+          {
+            char         projRadialFunctionFileName[512];
+            unsigned int lQuantumNo = *i;
+            readPseudoDataFileNames >> tempProjRadialFunctionFileName;
+            readPseudoDataFileNames >> numProj;
+            strcpy(projRadialFunctionFileName,
+                   (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                    "/" + tempProjRadialFunctionFileName)
+                     .c_str());
+
+            //
+            // 2D vector to store the radial coordinate and its
+            // corresponding function value
+            std::vector<std::vector<double>> radialFunctionData(0);
+
+            //
+            // read the radial function file
+            //
+            dftUtils::readFile(numProj + 1,
+                               radialFunctionData,
+                               projRadialFunctionFileName);
+
+            for (int j = 1; j < numProj + 1; j++)
+              {
+                d_atomicProjectorFnsMap[std::make_pair(Zno, alpha)] =
+                  std::make_shared<AtomCenteredSphericalFunctionSpline>(
+                    projRadialFunctionFileName, lQuantumNo, 0, j, numProj + 1);
+
+                alpha++;
+              }
+          } // i loop
+
+      } // for loop *it
+  }
+
+
+
+  template <typename ValueType>
+  void
+  oncvClass<
+    ValueType>::createAtomCenteredSphericalFunctionsForLocalPotential()
+  {
+    pcout << "Debug Line: 298" << std::endl;
+    d_atomicLocalPotVector.clear();
+    d_atomicLocalPotVector.resize(d_nOMPThreads);
+
+    for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
+         it != d_atomTypes.end();
+         ++it)
+      {
+        unsigned int atomicNumber = *it;
+        char         LocalDataFile[256];
+        strcpy(LocalDataFile,
+               (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                "/locPot.dat")
+                 .c_str());
+        for (unsigned int i = 0; i < d_nOMPThreads; i++)
+          d_atomicLocalPotVector[i][*it] =
+            new AtomCenteredSphericalFunctionSpline(
+              LocalDataFile,
+              0,
+              false,
+              1,
+              false,
+              true,
+              d_reproducible_output ? 8.0001 : 10.0001,
+              d_reproducible_output ? 1.0e-8 : 1.0e-7,
+              d_atomTypeAtributes[*it],
+              -1);
+
+      } //*it loop
+  }  
 } // namespace dftfe

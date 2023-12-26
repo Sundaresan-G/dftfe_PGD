@@ -23,6 +23,7 @@
 #include <headers.h>
 #include <operator.h>
 #include <BLASWrapper.h>
+#include <oncvClass.h>
 
 namespace dftfe
 {
@@ -537,6 +538,8 @@ node is stored
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperPtrHost;
+
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;    
 
     /// data structures to store diagonal of inverse square root mass matrix and
     /// square root of mass matrix
