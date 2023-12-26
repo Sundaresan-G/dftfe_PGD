@@ -51,7 +51,18 @@ namespace dftfe
   class oncvClass
   {
   public:
-    oncvClass();
+    oncvClass(const MPI_Comm &   mpi_comm_parent,
+    const std::string &scratchFolderName,
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+      basisOperationsPtr,
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+                                  BLASWrapperPtrHost,
+    const std::set<unsigned int> &atomTypes,
+    const bool                    floatingNuclearCharges,
+    const unsigned int            nOMPThreads);
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
      * @param[in] densityQuadratureId quadratureId for density.
@@ -84,7 +95,7 @@ namespace dftfe
       const std::vector<int> &                       imageIds,
       const std::vector<std::vector<double>> &       periodicCoords,
       const bool                                     reproducibleOutput,
-      const std::map<unsigned int, unsigned int> &   atomAttributes) = 0;
+      const std::map<unsigned int, unsigned int> &   atomAttributes) ;
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
@@ -102,8 +113,8 @@ namespace dftfe
      * @param[in] imageIds image IDs of periodic cell
      * @param[in] periodicCoords coordinates of image atoms
      */
-    virtual void
-    reinit() = 0;
+    void
+    reinit();
 
 
     /**

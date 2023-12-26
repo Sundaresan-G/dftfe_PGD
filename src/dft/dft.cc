@@ -802,18 +802,42 @@ namespace dftfe
       }
 
     int nlccFlag = 0;
+    int              pawFlag  = 0;
+    std::vector<int> pspFlags(2, 0);
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
         d_dftParamsPtr->isPseudopotential == true)
-      nlccFlag = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
+      pspFlags = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
                                       d_dftfeScratchFolderName,
                                       d_dftParamsPtr->verbosity,
                                       d_dftParamsPtr->natomTypes,
                                       d_dftParamsPtr->pseudoTestsFlag);
 
-    nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
+    nlccFlag = pspFlags[0];
+    pawFlag  = pspFlags[1];
 
+    nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
+    pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
     if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
       d_dftParamsPtr->nonLinearCoreCorrection = true;
+    if (pawFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
+      d_dftParamsPtr->pawPseudoPotential = true;
+    if(d_dftParamsPtr->isPseudopotential == true && d_dftParamsPtr->pawPseudoPotential == false)
+    {
+        d_oncvClassPtr = std::make_shared<dftfe::oncvClass<dataTypes::number>>(
+            d_mpiCommParent,
+            d_dftfeScratchFolderName,
+            basisOperationsPtrHost,
+            d_BLASWrapperPtrHost,
+            atomTypes,
+            d_dftParamsPtr->floatingNuclearCharges,
+            d_nOMPThreads);
+    }
+    else if(d_dftParamsPtr->isPseudopotential == true && d_dftParamsPtr->pawPseudoPotential == true)
+    {
+            AssertThrow(false,
+                        dealii::ExcMessage(std::string(
+                          "DFT-FE Error: PAW is not yet implemented in thie release.")));
+    }
 
     if (d_dftParamsPtr->verbosity >= 1)
       if (d_dftParamsPtr->nonLinearCoreCorrection == true)

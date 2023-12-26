@@ -54,6 +54,7 @@ namespace dftfe
       timeReversal, pseudoTestsFlag, constraintMagnetization, writeDosFile,
       writeLdosFile, writeBandsFile, writeLocalizationLengths, pinnedNodeForPBC,
       writePdosFile;
+    bool pawPseudoPotential;  
 
 
     /** parameters for LRD preconditioner **/

@@ -21,13 +21,34 @@
 namespace dftfe
 {
   template <typename ValueType>
-  oncvClass<ValueType>::oncvClass()
-  {}
+  oncvClass<ValueType>::oncvClass(const MPI_Comm &   mpi_comm_parent,
+    const std::string &scratchFolderName,
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+      basisOperationsPtr,
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+                                  BLASWrapperPtrHost,
+    const std::set<unsigned int> &atomTypes,
+    const bool                    floatingNuclearCharges,
+    const unsigned int            nOMPThreads)
+    : d_mpiCommParent(mpi_comm_parent)
+    ,d_this_mpi_process(dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
+    ,pcout(std::cout, (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
+  {
+    d_BasisOperatorHostPtr   = basisOperationsPtr;
+    d_BLASWrapperHostPtr     = BLASWrapperPtrHost;
+    d_dftfeScratchFolderName = scratchFolderName;
+    d_atomTypes              = atomTypes;
+    d_floatingNuclearCharges = floatingNuclearCharges;
+    d_nOMPThreads            = nOMPThreads;
+
+  }
 
   template <typename ValueType>
   void
-  oncvClass<
-    ValueType>::createAtomCenteredSphericalFunctionsForDensities()
+  oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForDensities()
   {
     d_atomicCoreDensityMap.clear();
     d_atomicValenceDensityVector.clear();
@@ -67,25 +88,6 @@ namespace dftfe
           d_atomTypeCoreFlagMap[atomicNumber] = false;
       } //*it loop
 
-
-
-    // for (unsigned int i = 0; i < d_nOMPThreads; i++)
-    //   {
-    //     // d_atomicCoreDensityVector[i] = (atomicCoreDensityMap);
-    //     // d_atomicValenceDensityVector[i] = (atomicValenceDensityMap);
-    //     std::map<unsigned int, AtomCenteredSphericalFunctionBase*>
-    //     atomValenceDensityMap; for (std::set<unsigned int>::iterator it =
-    //     d_atomTypes.begin();
-    //          it != d_atomTypes.end();
-    //          ++it)
-    //       {
-    //         std::cout<<"Debug: Line 80"<<std::endl;
-    //         *(atomValenceDensityMap[*it]) =
-    //         (*(atomicValenceDensityMap[*it]));
-    //       }
-    //       std::cout<<"Debug: Line 83"<<std::endl;
-    //       d_atomicValenceDensityVector[i] = atomValenceDensityMap;
-    //   }
   }
 
   template <typename ValueType>
