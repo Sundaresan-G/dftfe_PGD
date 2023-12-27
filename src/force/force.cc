@@ -592,14 +592,14 @@ namespace dftfe
 
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  std::vector<double>
+  std::vector<double>&
   forceClass<FEOrder, FEOrderElectro>::getAtomsForces()
   {
     return d_globalAtomsForces;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dealii::Tensor<2, 3, double>
+  dealii::Tensor<2, 3, double>&
   forceClass<FEOrder, FEOrderElectro>::getStress()
   {
     return d_stress;

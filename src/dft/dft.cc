@@ -4573,21 +4573,21 @@ namespace dftfe
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  std::vector<std::vector<double>>
+  const std::vector<std::vector<double>>&
   dftClass<FEOrder, FEOrderElectro>::getAtomLocationsCart() const
   {
     return atomLocations;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  std::vector<std::vector<double>>
+  const std::vector<std::vector<double>>&
   dftClass<FEOrder, FEOrderElectro>::getAtomLocationsFrac() const
   {
     return atomLocationsFractional;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  std::vector<std::vector<double>>
+  const std::vector<std::vector<double>>&
   dftClass<FEOrder, FEOrderElectro>::getCell() const
   {
     return d_domainBoundingVectors;
@@ -4602,21 +4602,21 @@ namespace dftfe
 
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  std::set<unsigned int>
+  const std::set<unsigned int>&
   dftClass<FEOrder, FEOrderElectro>::getAtomTypes() const
   {
     return atomTypes;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  std::vector<double>
+  const std::vector<double>&
   dftClass<FEOrder, FEOrderElectro>::getForceonAtoms() const
   {
     return (forcePtr->getAtomsForces());
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dealii::Tensor<2, 3, double>
+  const dealii::Tensor<2, 3, double>&
   dftClass<FEOrder, FEOrderElectro>::getCellStress() const
   {
     return (forcePtr->getStress());
@@ -4651,14 +4651,14 @@ namespace dftfe
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  distributedCPUVec<double>
+  const distributedCPUVec<double>&
   dftClass<FEOrder, FEOrderElectro>::getRhoNodalOut() const
   {
     return d_rhoOutNodalValues;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  distributedCPUVec<double>
+  const distributedCPUVec<double>&
   dftClass<FEOrder, FEOrderElectro>::getRhoNodalSplitOut() const
   {
     return d_rhoOutNodalValuesSplit;
