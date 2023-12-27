@@ -59,6 +59,11 @@ namespace dftfe
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
                                                   BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+                                                  BLASWrapperPtrDevice,  
+#endif                                                                                                  
       const std::set<unsigned int> &              atomTypes,
       const bool                                  floatingNuclearCharges,
       const unsigned int                          nOMPThreads,
@@ -155,8 +160,11 @@ namespace dftfe
     std::shared_ptr<
       AtomicCenteredNonLocalOperator<dataTypes::number,
                                      dftfe::utils::MemorySpace::HOST>>
-      d_nonLocalOperator;
-
+      d_nonLocalOperatorHost;
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<dataTypes::number,
+                                     dftfe::utils::MemorySpace::DEVICE>>
+      d_nonLocalOperatorDevice;
   private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
@@ -188,6 +196,9 @@ namespace dftfe
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
                                      d_BLASWrapperHostPtr;
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+                                     d_BLASWrapperDevicePtr;
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
       d_atomicNonLocalPseudoPotentialConstants;

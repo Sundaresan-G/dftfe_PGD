@@ -17,7 +17,7 @@
 // @author Kartick Ramakrishnan, Sambit Das, Phani Motamarri, Vishal Subramanian
 //
 
-#include <AtomicCenteredNonLocalOperator.h>
+
 namespace dftfe
 {
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>

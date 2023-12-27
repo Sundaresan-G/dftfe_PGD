@@ -829,6 +829,9 @@ namespace dftfe
           d_dftfeScratchFolderName,
           basisOperationsPtrHost,
           d_BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+          d_BLASWrapperPtr,
+#endif          
           atomTypes,
           d_dftParamsPtr->floatingNuclearCharges,
           d_nOMPThreads,

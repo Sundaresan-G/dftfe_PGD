@@ -31,6 +31,11 @@ namespace dftfe
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
                                                 BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+                                                  BLASWrapperPtrDevice,  
+#endif                                                                                                 
     const std::set<unsigned int> &              atomTypes,
     const bool                                  floatingNuclearCharges,
     const unsigned int                          nOMPThreads,
@@ -45,6 +50,9 @@ namespace dftfe
   {
     d_BasisOperatorHostPtr   = basisOperationsPtr;
     d_BLASWrapperHostPtr     = BLASWrapperPtrHost;
+ #if defined(DFTFE_WITH_DEVICE)
+    d_BLASWrapperDevicePtr = BLASWrapperPtrDevice;
+#endif    
     d_dftfeScratchFolderName = scratchFolderName;
     d_atomTypes              = atomTypes;
     d_floatingNuclearCharges = floatingNuclearCharges;
@@ -228,13 +236,25 @@ namespace dftfe
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
 
 
-    d_nonLocalOperator = std::make_shared<
+    d_nonLocalOperatorHost = std::make_shared<
       AtomicCenteredNonLocalOperator<ValueType,
                                      dftfe::utils::MemorySpace::HOST>>(
       d_BLASWrapperHostPtr,
       d_atomicProjectorFnsContainer,
       d_numEigenValues,
       d_mpiCommParent);
+#if defined(DFTFE_WITH_DEVICE)
+    // if(d_useDevice)
+    //   d_nonLocalOperatorDevice = std::make_shared<
+    //     AtomicCenteredNonLocalOperator<ValueType,
+    //                                  dftfe::utils::MemorySpace::DEVICE>>(
+    //   d_BLASWrapperDevicePtr,
+    //   d_atomicProjectorFnsContainer,
+    //   d_numEigenValues,
+    //   d_mpiCommParent);
+#endif      
+
+
   }
 
 
@@ -320,12 +340,13 @@ namespace dftfe
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
       }
-    // d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,
+    // d_nonLocalOperatorHost->computeCMatrixEntries(d_BasisOperatorHostPtr,
     //                                           d_nlpspQuadratureId,
     //                                           d_BLASWrapperHostPtr);
     if (d_useDevice)
       {
         // copy from CPU to GPU objects the CMatrix Entries
+        //d_nonLocalOperatorDevice->copyEnrties();
       }
   }
 

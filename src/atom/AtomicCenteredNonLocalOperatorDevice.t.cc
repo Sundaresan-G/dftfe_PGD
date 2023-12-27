@@ -17,7 +17,7 @@
 // @author Kartick Ramakrishnan
 //
 
-#include <AtomicCenteredNonLocalOperator.h>
+
 namespace dftfe
 {
   template <typename ValueType>
