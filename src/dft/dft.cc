@@ -4581,6 +4581,20 @@ namespace dftfe
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
   const std::vector<std::vector<double>> &
+  dftClass<FEOrder, FEOrderElectro>::getImageAtomLocationsCart() const
+  {
+    return d_imagePositionsTrunc;
+  }
+
+  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  const std::vector<int> &
+  dftClass<FEOrder, FEOrderElectro>::getImageAtomIDs() const
+  {
+    return d_imageIdsTrunc;
+  }
+
+  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  const std::vector<std::vector<double>> &
   dftClass<FEOrder, FEOrderElectro>::getAtomLocationsFrac() const
   {
     return atomLocationsFractional;

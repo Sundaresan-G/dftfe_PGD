@@ -440,6 +440,20 @@ namespace dftfe
     const std::vector<std::vector<double>> &
     getAtomLocationsCart() const;
 
+
+    /**
+     * @brief Gets the current image atom Locations in cartesian form
+     * (origin at center of domain) from dftClass
+     */
+    const std::vector<std::vector<double>> &
+    getImageAtomLocationsCart() const;
+
+    /**
+     * @brief Gets the current image atom ids from dftClass
+     */
+    const std::vector<int> &
+    getImageAtomIDs() const;
+
     /**
      * @brief Gets the current atom Locations in fractional form
      * from dftClass (only applicable for periodic and semi-periodic BCs)
