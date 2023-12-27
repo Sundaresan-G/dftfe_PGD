@@ -21,7 +21,8 @@
 namespace dftfe
 {
   template <typename ValueType>
-  oncvClass<ValueType>::oncvClass(const MPI_Comm &   mpi_comm_parent,
+  oncvClass<ValueType>::oncvClass(
+    const MPI_Comm &   mpi_comm_parent,
     const std::string &scratchFolderName,
     std::shared_ptr<
       dftfe::basis::
@@ -29,13 +30,18 @@ namespace dftfe
       basisOperationsPtr,
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-                                  BLASWrapperPtrHost,
-    const std::set<unsigned int> &atomTypes,
-    const bool                    floatingNuclearCharges,
-    const unsigned int            nOMPThreads)
+                                                BLASWrapperPtrHost,
+    const std::set<unsigned int> &              atomTypes,
+    const bool                                  floatingNuclearCharges,
+    const unsigned int                          nOMPThreads,
+    const std::map<unsigned int, unsigned int> &atomAttributes,
+    const bool                                  reproducibleOutput,
+    const bool                                  useDevice)
     : d_mpiCommParent(mpi_comm_parent)
-    ,d_this_mpi_process(dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
-    ,pcout(std::cout, (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
+    , d_this_mpi_process(
+        dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
+    , pcout(std::cout,
+            (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
   {
     d_BasisOperatorHostPtr   = basisOperationsPtr;
     d_BLASWrapperHostPtr     = BLASWrapperPtrHost;
@@ -43,7 +49,9 @@ namespace dftfe
     d_atomTypes              = atomTypes;
     d_floatingNuclearCharges = floatingNuclearCharges;
     d_nOMPThreads            = nOMPThreads;
-
+    d_reproducible_output    = reproducibleOutput;
+    d_atomTypeAtributes      = atomAttributes;
+    d_useDevice              = useDevice;
   }
 
   template <typename ValueType>
@@ -87,7 +95,6 @@ namespace dftfe
         else
           d_atomTypeCoreFlagMap[atomicNumber] = false;
       } //*it loop
-
   }
 
   template <typename ValueType>
@@ -119,9 +126,7 @@ namespace dftfe
   }
   template <typename ValueType>
   double
-  oncvClass<ValueType>::getRadialValenceDensity(
-    unsigned int Zno,
-    double       rad)
+  oncvClass<ValueType>::getRadialValenceDensity(unsigned int Zno, double rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double       Value =
@@ -131,10 +136,9 @@ namespace dftfe
   }
   template <typename ValueType>
   void
-  oncvClass<ValueType>::getRadialValenceDensity(
-    unsigned int         Zno,
-    double               rad,
-    std::vector<double> &Val)
+  oncvClass<ValueType>::getRadialValenceDensity(unsigned int         Zno,
+                                                double               rad,
+                                                std::vector<double> &Val)
   {
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
@@ -143,24 +147,20 @@ namespace dftfe
 
   template <typename ValueType>
   double
-  oncvClass<ValueType>::getRmaxValenceDensity(
-    unsigned int Zno)
+  oncvClass<ValueType>::getRmaxValenceDensity(unsigned int Zno)
   {
     return (d_atomicValenceDensityVector[0][Zno]->getRadialCutOff());
   }
   template <typename ValueType>
   double
-  oncvClass<ValueType>::getRmaxCoreDensity(
-    unsigned int Zno)
+  oncvClass<ValueType>::getRmaxCoreDensity(unsigned int Zno)
   {
     return (d_atomicCoreDensityMap[Zno]->getRadialCutOff());
   }
 
   template <typename ValueType>
   double
-  oncvClass<ValueType>::getRadialCoreDensity(
-    unsigned int Zno,
-    double       rad)
+  oncvClass<ValueType>::getRadialCoreDensity(unsigned int Zno, double rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double       Value    = d_atomicCoreDensityMap[Zno]->getRadialValue(rad);
@@ -168,10 +168,9 @@ namespace dftfe
   }
   template <typename ValueType>
   void
-  oncvClass<ValueType>::getRadialCoreDensity(
-    unsigned int         Zno,
-    double               rad,
-    std::vector<double> &Val)
+  oncvClass<ValueType>::getRadialCoreDensity(unsigned int         Zno,
+                                             double               rad,
+                                             std::vector<double> &Val)
   {
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
@@ -180,9 +179,7 @@ namespace dftfe
 
   template <typename ValueType>
   double
-  oncvClass<ValueType>::getRadialLocalPseudo(
-    unsigned int Zno,
-    double       rad)
+  oncvClass<ValueType>::getRadialLocalPseudo(unsigned int Zno, double rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double Value = d_atomicLocalPotVector[threadId][Zno]->getRadialValue(rad);
@@ -196,91 +193,41 @@ namespace dftfe
   }
   template <typename ValueType>
   bool
-  oncvClass<ValueType>::coreNuclearDensityPresent(
-    unsigned int Zno)
+  oncvClass<ValueType>::coreNuclearDensityPresent(unsigned int Zno)
   {
     return (d_atomTypeCoreFlagMap[Zno]);
   }
   template <typename ValueType>
   void
-  oncvClass<ValueType>::initialise(
-    unsigned int densityQuadratureId,
-    unsigned int localContributionQuadratureId,
-    unsigned int sparsityPatternQuadratureId,
-    unsigned int nlpspQuadratureId,
-    unsigned int densityQuadratureIdElectro,
-    excManager *                                   excFunctionalPtr,
-    unsigned int                                   numEigenValues,
-    const std::vector<std::vector<double>> &       atomLocations,
-    const std::vector<int> &                       imageIds,
-    const std::vector<std::vector<double>> &       periodicCoords,
-    const bool                                     reproducibleOutput,
-    const std::map<unsigned int, unsigned int> &   atomAttributes)
+  oncvClass<ValueType>::initialise(unsigned int densityQuadratureId,
+                                   unsigned int localContributionQuadratureId,
+                                   unsigned int sparsityPatternQuadratureId,
+                                   unsigned int nlpspQuadratureId,
+                                   unsigned int densityQuadratureIdElectro,
+                                   excManager * excFunctionalPtr,
+                                   unsigned int numEigenValues)
   {
     MPI_Barrier(d_mpiCommParent);
-    std::cout
-      << "Starting Creation of Nuclear Electrostatics Manager ONCV class: "
-      << std::endl;
+    std::cout << "Initialising  ONCV class: " << std::endl;
 
-    d_densityQuadratureId              = densityQuadratureId;
-    d_localContributionQuadratureId    = localContributionQuadratureId;
-    d_densityQuadratureIdElectro       = densityQuadratureIdElectro;
-    d_sparsityPatternQuadratureId      = sparsityPatternQuadratureId;
-    d_nlpspQuadratureId                = nlpspQuadratureId;
-    d_excManagerPtr                    = excFunctionalPtr;
-    d_numEigenValues                   = numEigenValues;
-    d_reproducible_output              = reproducibleOutput;
-    d_atomTypeAtributes                = atomAttributes;
-    std::vector<unsigned int> atomicNumbers;
-    std::vector<double>       atomCoords;
-    std::vector<double>       imageCoordsTemp;
-    std::vector<unsigned int> imageIdsTemp;
-    setImageCoordinates(
-      atomLocations, imageIds, periodicCoords, imageIdsTemp, imageCoordsTemp);
+    d_densityQuadratureId           = densityQuadratureId;
+    d_localContributionQuadratureId = localContributionQuadratureId;
+    d_densityQuadratureIdElectro    = densityQuadratureIdElectro;
+    d_sparsityPatternQuadratureId   = sparsityPatternQuadratureId;
+    d_nlpspQuadratureId             = nlpspQuadratureId;
+    d_excManagerPtr                 = excFunctionalPtr;
+    d_numEigenValues                = numEigenValues;
 
-    for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
-      {
-        atomicNumbers.push_back(atomLocations[iAtom][0]);
-        for (int dim = 2; dim < 5; dim++)
-          atomCoords.push_back(atomLocations[iAtom][dim]);
-      }
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Starting Splines creation for atomic Densities " << std::endl;
-  createAtomCenteredSphericalFunctionsForDensities();
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Finished Splines creation for atomic Densites " << std::endl;
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Starting Splines creation for atomic Proj " << std::endl;
+    createAtomCenteredSphericalFunctionsForDensities();
     createAtomCenteredSphericalFunctionsForProjectors();
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Finished Splines creation for atomic Projectors " << std::endl;
-    pcout << "Starting Splines creation for Vloc" << std::endl;
     createAtomCenteredSphericalFunctionsForLocalPotential();
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Finished Splines creation for Vloc" << std::endl;
+    computeNonlocalPseudoPotentialConstants();
+
+
     d_atomicProjectorFnsContainer =
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Creating AtomCenteredSphericalFunction Object " << std::endl;
-    d_atomicProjectorFnsContainer->init(atomicNumbers,
-                                        atomCoords,
-                                        imageCoordsTemp,
-                                        imageIdsTemp,
-                                        d_atomicProjectorFnsMap);
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Finished Creation of container object " << std::endl;
-    pcout << "Starting Filling Nonlocal Potential Constants" << std::endl;
-    computeNonlocalPseudoPotentialConstants();
-    MPI_Barrier(d_mpiCommParent);
-    pcout << "Finished Filling Nonlocal Potential Constants" << std::endl;
-    pcout << " Starting Computing Sparsity Pattern for Projectors..."
-          << std::endl;
-    d_atomicProjectorFnsContainer->computeSparseStructure(
-      d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
-    MPI_Barrier(d_mpiCommParent);
-    pcout << " Finished Computing Sparsity Pattern for Projectors..."
-          << std::endl;
-    pcout << "Creating NonLocal Operator..." << std::endl;
+
+
     d_nonLocalOperator = std::make_shared<
       AtomicCenteredNonLocalOperator<ValueType,
                                      dftfe::utils::MemorySpace::HOST>>(
@@ -288,15 +235,12 @@ namespace dftfe
       d_atomicProjectorFnsContainer,
       d_numEigenValues,
       d_mpiCommParent);
-    MPI_Barrier(d_mpiCommParent);
-    pcout << " Finished Creating NonLocal Operator..." << std::endl;
   }
 
 
   template <typename ValueType>
   void
-  oncvClass<
-    ValueType>::computeNonlocalPseudoPotentialConstants()
+  oncvClass<ValueType>::computeNonlocalPseudoPotentialConstants()
   {
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
@@ -345,13 +289,49 @@ namespace dftfe
 
   template <typename ValueType>
   void
-  oncvClass<ValueType>::reinit()
-  {}
+  oncvClass<ValueType>::initialiseNonLocalContribution(
+    const std::vector<std::vector<double>> &atomLocations,
+    const std::vector<int> &                imageIds,
+    const std::vector<std::vector<double>> &periodicCoords,
+    const bool                              updateNonlocalSparsity)
+  {
+    std::vector<unsigned int> atomicNumbers;
+    std::vector<double>       atomCoords;
+    std::vector<double>       imageCoordsTemp;
+    std::vector<unsigned int> imageIdsTemp;
+    setImageCoordinates(
+      atomLocations, imageIds, periodicCoords, imageIdsTemp, imageCoordsTemp);
+
+    for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
+      {
+        atomicNumbers.push_back(atomLocations[iAtom][0]);
+        for (int dim = 2; dim < 5; dim++)
+          atomCoords.push_back(atomLocations[iAtom][dim]);
+      }
+
+
+    d_atomicProjectorFnsContainer->init(atomicNumbers,
+                                        atomCoords,
+                                        imageCoordsTemp,
+                                        imageIdsTemp,
+                                        d_atomicProjectorFnsMap);
+    if (updateNonlocalSparsity)
+      {
+        d_atomicProjectorFnsContainer->computeSparseStructure(
+          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
+      }
+    // d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,
+    //                                           d_nlpspQuadratureId,
+    //                                           d_BLASWrapperHostPtr);
+    if (d_useDevice)
+      {
+        // copy from CPU to GPU objects the CMatrix Entries
+      }
+  }
 
   template <typename ValueType>
   void
-  oncvClass<
-    ValueType>::createAtomCenteredSphericalFunctionsForProjectors()
+  oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForProjectors()
   {
     d_atomicProjectorFnsVector.clear();
     std::vector<std::vector<int>> projectorIdDetails;
@@ -466,8 +446,7 @@ namespace dftfe
 
   template <typename ValueType>
   void
-  oncvClass<
-    ValueType>::createAtomCenteredSphericalFunctionsForLocalPotential()
+  oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForLocalPotential()
   {
     pcout << "Debug Line: 298" << std::endl;
     d_atomicLocalPotVector.clear();
@@ -498,5 +477,5 @@ namespace dftfe
               -1);
 
       } //*it loop
-  }  
+  }
 } // namespace dftfe

@@ -1271,7 +1271,7 @@ namespace dftfe
     unsigned int                  d_binsStartDofHandlerIndexElectro;
     unsigned int                  d_densityQuadratureId;
     unsigned int                  d_densityQuadratureIdElectro;
-    unsigned int                  d_sparsityPatternQuadratureId;    
+    unsigned int                  d_sparsityPatternQuadratureId;
     unsigned int                  d_nOMPThreads;
     dealii::MatrixFree<3, double> matrix_free_data, d_matrixFreeDataPRefined;
     std::shared_ptr<
@@ -1299,7 +1299,7 @@ namespace dftfe
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperPtrHost;
 
-    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;  
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
 
 
     std::shared_ptr<

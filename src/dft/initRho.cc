@@ -74,8 +74,7 @@ namespace dftfe
          it != atomTypes.end();
          it++)
       {
-        outerMostPointDen[*it] =
-          d_oncvClassPtr->getRmaxValenceDensity(*it);
+        outerMostPointDen[*it] = d_oncvClassPtr->getRmaxValenceDensity(*it);
         if (outerMostPointDen[*it] > maxRhoTail)
           maxRhoTail = outerMostPointDen[*it];
       }
@@ -258,9 +257,8 @@ namespace dftfe
                             outerMostPointDen[atomLocations[chargeId][0]])
                           {
                             rhoNodalValue +=
-                              d_oncvClassPtr
-                                ->getRadialValenceDensity(
-                                  atomLocations[chargeId][0], distanceToAtom);
+                              d_oncvClassPtr->getRadialValenceDensity(
+                                atomLocations[chargeId][0], distanceToAtom);
                           }
                       }
 
@@ -399,9 +397,8 @@ namespace dftfe
                         outerMostPointDen[atomLocations[n][0]])
                       {
                         rhoValueAtQuadPt +=
-                          d_oncvClassPtr
-                            ->getRadialValenceDensity(atomLocations[n][0],
-                                                      distanceToAtom);
+                          d_oncvClassPtr->getRadialValenceDensity(
+                            atomLocations[n][0], distanceToAtom);
                       }
                     else
                       {
@@ -427,9 +424,8 @@ namespace dftfe
                            [0]]) // outerMostPointPseudo[atomLocations[masterAtomId][0]])
                       {
                         rhoValueAtQuadPt +=
-                          d_oncvClassPtr
-                            ->getRadialValenceDensity(
-                              atomLocations[masterAtomId][0], distanceToAtom);
+                          d_oncvClassPtr->getRadialValenceDensity(
+                            atomLocations[masterAtomId][0], distanceToAtom);
                       }
                   }
 
@@ -451,7 +447,7 @@ namespace dftfe
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
           {
-#pragma omp parallel for num_threads(d_nOMPThreads) 
+#pragma omp parallel for num_threads(d_nOMPThreads)
             for (unsigned int iCell = 0;
                  iCell < basisOperationsPtrHost->nCells();
                  ++iCell)
@@ -500,10 +496,8 @@ namespace dftfe
                             double value, radialDensityFirstDerivative,
                               radialDensitySecondDerivative;
                             std::vector<double> Vec;
-                            d_oncvClassPtr
-                              ->getRadialValenceDensity(atomLocations[n][0],
-                                                        distanceToAtom,
-                                                        Vec);
+                            d_oncvClassPtr->getRadialValenceDensity(
+                              atomLocations[n][0], distanceToAtom, Vec);
                             value                         = Vec[0];
                             radialDensityFirstDerivative  = Vec[1];
                             radialDensitySecondDerivative = Vec[2];
@@ -548,11 +542,10 @@ namespace dftfe
                             double value, radialDensityFirstDerivative,
                               radialDensitySecondDerivative;
                             std::vector<double> Vec;
-                            d_oncvClassPtr
-                              ->getRadialValenceDensity(
-                                atomLocations[masterAtomId][0],
-                                distanceToAtom,
-                                Vec);
+                            d_oncvClassPtr->getRadialValenceDensity(
+                              atomLocations[masterAtomId][0],
+                              distanceToAtom,
+                              Vec);
                             value                         = Vec[0];
                             radialDensityFirstDerivative  = Vec[1];
                             radialDensitySecondDerivative = Vec[2];

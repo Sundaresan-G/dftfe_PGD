@@ -44,10 +44,10 @@ namespace dftfe
       << std::endl;
     std::map<unsigned int, alglib::spline1dinterpolant> coreDenSpline;
     std::map<unsigned int, std::vector<std::vector<double>>>
-                                         singleAtomCoreElectronDensity;
-    std::map<unsigned int, double>       outerMostPointCoreDen;
-    const double                         truncationTol = 1e-12;
-    unsigned int                         fileReadFlag  = 0;
+                                   singleAtomCoreElectronDensity;
+    std::map<unsigned int, double> outerMostPointCoreDen;
+    const double                   truncationTol = 1e-12;
+    unsigned int                   fileReadFlag  = 0;
 
     double maxCoreRhoTail = 0.0;
     // loop over atom types
@@ -55,8 +55,7 @@ namespace dftfe
          it != atomTypes.end();
          it++)
       {
-        outerMostPointCoreDen[*it] =
-          d_oncvClassPtr->getRmaxCoreDensity(*it);
+        outerMostPointCoreDen[*it] = d_oncvClassPtr->getRmaxCoreDensity(*it);
         if (outerMostPointCoreDen[*it] > maxCoreRhoTail)
           maxCoreRhoTail = outerMostPointCoreDen[*it];
       }
@@ -173,7 +172,7 @@ namespace dftfe
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
                         radialDensitySecondDerivative = Vec[2];
-                        isCoreRhoDataInCell = true;
+                        isCoreRhoDataInCell           = true;
                       }
                     else
                       {
@@ -296,7 +295,7 @@ namespace dftfe
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
                         radialDensitySecondDerivative = Vec[2];
-                        isCoreRhoDataInCell = true;
+                        isCoreRhoDataInCell           = true;
                       }
                     else
                       {

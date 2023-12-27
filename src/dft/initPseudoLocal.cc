@@ -73,10 +73,9 @@ namespace dftfe
              it != atomTypes.end();
              it++)
           {
-        outerMostDataPoint[*it] =
-          d_oncvClassPtr->getRmaxLocalPot(*it);
-        if (maxTail < outerMostDataPoint[*it])
-          maxTail = outerMostDataPoint[*it];
+            outerMostDataPoint[*it] = d_oncvClassPtr->getRmaxLocalPot(*it);
+            if (maxTail < outerMostDataPoint[*it])
+              maxTail = outerMostDataPoint[*it];
           }
       }
     else
@@ -322,7 +321,7 @@ namespace dftfe
       dftUtils::createKpointParallelizationIndices(
         interpoolcomm, numMacroCells, kptGroupLowHighPlusOneIndicesStep2);
     basisOperationsPtrHost->reinit(0, 0, lpspQuadratureId);
-#pragma omp parallel for num_threads(d_nOMPThreads) 
+#pragma omp parallel for num_threads(d_nOMPThreads)
     for (unsigned int macrocell = 0;
          macrocell < _matrix_free_data.n_cell_batches();
          ++macrocell)
@@ -406,9 +405,8 @@ namespace dftfe
                                 if (d_dftParamsPtr->isPseudopotential)
                                   {
                                     value =
-                                      d_oncvClassPtr
-                                        ->getRadialLocalPseudo(atomicNumber,
-                                                               distanceToAtom);
+                                      d_oncvClassPtr->getRadialLocalPseudo(
+                                        atomicNumber, distanceToAtom);
                                   }
                                 else
                                   {
@@ -598,9 +596,8 @@ namespace dftfe
                       {
                         if (d_dftParamsPtr->isPseudopotential)
                           {
-                            value = d_oncvClassPtr
-                                      ->getRadialLocalPseudo(atomicNumber,
-                                                             distanceToAtom);
+                            value = d_oncvClassPtr->getRadialLocalPseudo(
+                              atomicNumber, distanceToAtom);
                           }
                         else
                           {

@@ -45,24 +45,26 @@
 #endif
 namespace dftfe
 {
-
-
   template <typename ValueType>
   class oncvClass
   {
   public:
-    oncvClass(const MPI_Comm &   mpi_comm_parent,
-    const std::string &scratchFolderName,
-    std::shared_ptr<
-      dftfe::basis::
-        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-      basisOperationsPtr,
-    std::shared_ptr<
-      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-                                  BLASWrapperPtrHost,
-    const std::set<unsigned int> &atomTypes,
-    const bool                    floatingNuclearCharges,
-    const unsigned int            nOMPThreads);
+    oncvClass(
+      const MPI_Comm &   mpi_comm_parent,
+      const std::string &scratchFolderName,
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+        basisOperationsPtr,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+                                                  BLASWrapperPtrHost,
+      const std::set<unsigned int> &              atomTypes,
+      const bool                                  floatingNuclearCharges,
+      const unsigned int                          nOMPThreads,
+      const std::map<unsigned int, unsigned int> &atomAttributes,
+      const bool                                  reproducibleOutput,
+      const bool                                  useDevice);
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
      * @param[in] densityQuadratureId quadratureId for density.
@@ -80,19 +82,13 @@ namespace dftfe
      */
 
     void
-    initialise(
-      unsigned int densityQuadratureId,
-      unsigned int localContributionQuadratureId,
-      unsigned int sparsityPatternQuadratureId,
-      unsigned int nlpspQuadratureId,
-      unsigned int densityQuadratureIdElectro,
-      excManager *                                   excFunctionalPtr,
-      unsigned int                                   numEigenValues,
-      const std::vector<std::vector<double>> &       atomLocations,
-      const std::vector<int> &                       imageIds,
-      const std::vector<std::vector<double>> &       periodicCoords,
-      const bool                                     reproducibleOutput,
-      const std::map<unsigned int, unsigned int> &   atomAttributes) ;
+    initialise(unsigned int densityQuadratureId,
+               unsigned int localContributionQuadratureId,
+               unsigned int sparsityPatternQuadratureId,
+               unsigned int nlpspQuadratureId,
+               unsigned int densityQuadratureIdElectro,
+               excManager * excFunctionalPtr,
+               unsigned int numEigenValues);
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
@@ -111,7 +107,11 @@ namespace dftfe
      * @param[in] periodicCoords coordinates of image atoms
      */
     void
-    reinit();
+    initialiseNonLocalContribution(
+      const std::vector<std::vector<double>> &atomLocations,
+      const std::vector<int> &                imageIds,
+      const std::vector<std::vector<double>> &periodicCoords,
+      const bool                              updateNonlocalSparsity);
 
 
     /**
@@ -157,7 +157,7 @@ namespace dftfe
                                      dftfe::utils::MemorySpace::HOST>>
       d_nonLocalOperator;
 
-  protected:
+  private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
      * @param[in] atomLocations atomic Coordinates
@@ -205,14 +205,14 @@ namespace dftfe
 
     // conditional stream object
     dealii::ConditionalOStream pcout;
-
-    unsigned int              d_densityQuadratureId;
-    unsigned int              d_localContributionQuadratureId;
-    unsigned int              d_nuclearChargeQuadratureIdElectro;
-    unsigned int              d_densityQuadratureIdElectro;
-    unsigned int              d_sparsityPatternQuadratureId;
-    unsigned int              d_nlpspQuadratureId;
-    excManager *              d_excManagerPtr;
+    bool                       d_useDevice;
+    unsigned int               d_densityQuadratureId;
+    unsigned int               d_localContributionQuadratureId;
+    unsigned int               d_nuclearChargeQuadratureIdElectro;
+    unsigned int               d_densityQuadratureIdElectro;
+    unsigned int               d_sparsityPatternQuadratureId;
+    unsigned int               d_nlpspQuadratureId;
+    excManager *               d_excManagerPtr;
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>

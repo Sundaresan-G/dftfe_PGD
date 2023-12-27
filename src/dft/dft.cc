@@ -801,7 +801,7 @@ namespace dftfe
           << d_dftParamsPtr->pseudoPotentialFile << std::endl;
       }
 
-    int nlccFlag = 0;
+    int              nlccFlag = 0;
     int              pawFlag  = 0;
     std::vector<int> pspFlags(2, 0);
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
@@ -821,23 +821,29 @@ namespace dftfe
       d_dftParamsPtr->nonLinearCoreCorrection = true;
     if (pawFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
       d_dftParamsPtr->pawPseudoPotential = true;
-    if(d_dftParamsPtr->isPseudopotential == true && d_dftParamsPtr->pawPseudoPotential == false)
-    {
+    if (d_dftParamsPtr->isPseudopotential == true &&
+        d_dftParamsPtr->pawPseudoPotential == false)
+      {
         d_oncvClassPtr = std::make_shared<dftfe::oncvClass<dataTypes::number>>(
-            d_mpiCommParent,
-            d_dftfeScratchFolderName,
-            basisOperationsPtrHost,
-            d_BLASWrapperPtrHost,
-            atomTypes,
-            d_dftParamsPtr->floatingNuclearCharges,
-            d_nOMPThreads);
-    }
-    else if(d_dftParamsPtr->isPseudopotential == true && d_dftParamsPtr->pawPseudoPotential == true)
-    {
-            AssertThrow(false,
-                        dealii::ExcMessage(std::string(
-                          "DFT-FE Error: PAW is not yet implemented in thie release.")));
-    }
+          d_mpiCommParent,
+          d_dftfeScratchFolderName,
+          basisOperationsPtrHost,
+          d_BLASWrapperPtrHost,
+          atomTypes,
+          d_dftParamsPtr->floatingNuclearCharges,
+          d_nOMPThreads,
+          d_atomTypeAtributes,
+          d_dftParamsPtr->reproducible_output,
+          d_dftParamsPtr->useDevice);
+      }
+    else if (d_dftParamsPtr->isPseudopotential == true &&
+             d_dftParamsPtr->pawPseudoPotential == true)
+      {
+        AssertThrow(
+          false,
+          dealii::ExcMessage(std::string(
+            "DFT-FE Error: PAW is not yet implemented in thie release.")));
+      }
 
     if (d_dftParamsPtr->verbosity >= 1)
       if (d_dftParamsPtr->nonLinearCoreCorrection == true)
@@ -909,6 +915,11 @@ namespace dftfe
         if (d_dftParamsPtr->verbosity >= 2)
           pcout << "initPseudoPotentialAll: Time taken for non local psp init: "
                 << init_nonlocal2 << std::endl;
+        // Will replace the above lines,
+        d_oncvClassPtr->initialiseNonLocalContribution(atomLocations,
+                                                       d_imageIdsTrunc,
+                                                       d_imagePositionsTrunc,
+                                                       updateNonlocalSparsity);
       }
   }
 
@@ -1165,6 +1176,14 @@ namespace dftfe
     //
     // initialize pseudopotential data for both local and nonlocal part
     //
+    d_oncvClassPtr->initialise(d_densityQuadratureId,
+                               d_lpspQuadratureId,
+                               d_sparsityPatternQuadratureId,
+                               d_nlpspQuadratureId,
+                               d_densityQuadratureIdElectro,
+                               d_excManagerPtr,
+                               d_numEigenValues);
+
     initPseudoPotentialAll();
 
     if (d_dftParamsPtr->verbosity >= 4)
