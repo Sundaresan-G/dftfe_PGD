@@ -310,10 +310,10 @@ namespace dftfe
     double
     getFreeEnergy() const;
 
-    const distributedCPUVec<double>&
+    const distributedCPUVec<double> &
     getRhoNodalOut() const;
 
-    const distributedCPUVec<double>&
+    const distributedCPUVec<double> &
     getRhoNodalSplitOut() const;
 
     double
@@ -437,14 +437,14 @@ namespace dftfe
      * @brief Gets the current atom Locations in cartesian form
      * (origin at center of domain) from dftClass
      */
-    const std::vector<std::vector<double>>&
+    const std::vector<std::vector<double>> &
     getAtomLocationsCart() const;
 
     /**
      * @brief Gets the current atom Locations in fractional form
      * from dftClass (only applicable for periodic and semi-periodic BCs)
      */
-    const std::vector<std::vector<double>>&
+    const std::vector<std::vector<double>> &
     getAtomLocationsFrac() const;
 
 
@@ -455,7 +455,7 @@ namespace dftfe
      *  @return std::vector<std::vector<double>> 3 \times 3 matrix,lattice[i][j]
      *  corresponds to jth component of ith lattice vector
      */
-    const std::vector<std::vector<double>>&
+    const std::vector<std::vector<double>> &
     getCell() const;
 
     /**
@@ -468,19 +468,19 @@ namespace dftfe
     /**
      * @brief Gets the current atom types from dftClass
      */
-    const std::set<unsigned int>&
+    const std::set<unsigned int> &
     getAtomTypes() const;
 
     /**
      * @brief Gets the current atomic forces from dftClass
      */
-    const std::vector<double>&
+    const std::vector<double> &
     getForceonAtoms() const;
 
     /**
      * @brief Gets the current cell stress from dftClass
      */
-    const dealii::Tensor<2, 3, double>&
+    const dealii::Tensor<2, 3, double> &
     getCellStress() const;
 
     /**
