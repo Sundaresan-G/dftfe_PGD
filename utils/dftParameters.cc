@@ -355,7 +355,7 @@ namespace dftfe
 
           prm.declare_entry(
             "USE PRECONDITIONER",
-            "false",
+            "true",
             dealii::Patterns::Bool(),
             "[Standard] Boolean parameter specifying if the preconditioner described by JCP 144, 164109 (2016) is to be used.");
 
