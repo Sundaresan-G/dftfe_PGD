@@ -66,4 +66,14 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE> &dst,
       const std::pair<unsigned int, unsigned int> &cellRange)
   {}
+
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    transferCMatrixEntriesfromHostObject(
+      std::shared_ptr<
+        AtomicCenteredNonLocalOperator<ValueType,
+                                       dftfe::utils::MemorySpace::HOST>>
+        nonLocalOperatorHost)
+  {}
 } // namespace dftfe

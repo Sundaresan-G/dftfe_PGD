@@ -60,25 +60,9 @@ namespace dftfe
       const MPI_Comm &   mpi_comm_parent);
 
     void
-    init(
-      std::vector<double> &kPointWeights,
-      std::vector<double> &kPointCoordinates,
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-                         basisOperationsPtr,
-      const unsigned int quadratureIndex,
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        BLASWrapperPtrHost);
+    initKpoints(const std::vector<double> &kPointWeights,
+                const std::vector<double> &kPointCoordinates);
 
-    // This function gets the S matrix from the physics class.
-    // The S_{I,p} with p as a composite index
-    // p = {t,m,t',m'} the right most being the fastest index
-    void
-    initCouplingMatrix(
-      const CouplingEntries,
-      const std::map<unsigned int, std::vector<double>> *matrixVec);
 
     void
     InitalisePartitioner(
@@ -89,16 +73,6 @@ namespace dftfe
 
 
   protected:
-    void
-    computeCMatrixEntries(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-                         basisOperationsPtr,
-      const unsigned int quadratureIndex,
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        BLASWrapperPtrHost);
     unsigned int        d_numberOfVectors;
     std::vector<double> d_kPointWeights;
     std::vector<double> d_kPointCoordinates;
@@ -153,15 +127,41 @@ namespace dftfe
                                                 dftfe::utils::MemorySpace::HOST>
   {
   public:
+    void
+    computeCMatrixEntries(
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+                         basisOperationsPtr,
+      const unsigned int quadratureIndex,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+        BLASWrapperPtrHost);
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_kPointWeights;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_kPointCoordinates;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_numberOfVectors;
+
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_CMatrixEntriesConjugate;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_CMatrixEntriesTranspose;
+
+
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::AtomicCenteredNonLocalOperatorBase;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_BLASWrapperPtr;
-    using AtomicCenteredNonLocalOperatorBase<
-      ValueType,
-      dftfe::utils::MemorySpace::HOST>::d_CouplingMatrix;
+
 
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
@@ -234,9 +234,33 @@ namespace dftfe
         dftfe::utils::MemorySpace::DEVICE>
   {
   public:
+
+
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::AtomicCenteredNonLocalOperatorBase;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_kPointWeights;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_kPointCoordinates;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_numberOfVectors;
+
+    void
+    transferCMatrixEntriesfromHostObject(
+      std::shared_ptr<
+        AtomicCenteredNonLocalOperator<ValueType,
+                                       dftfe::utils::MemorySpace::HOST>>
+        nonLocalOperatorHost);
+
+
+
     // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class dst and
-    // src have the same size
+    // update_ghost_Values() on src src is not changed inside this class dst
+    // and src have the same size
     void
     apply_C_V_CCT_onX(
       const dftfe::linearAlgebra::MultiVector<ValueType,

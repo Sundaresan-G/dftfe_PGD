@@ -831,7 +831,7 @@ namespace dftfe
           d_BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
           d_BLASWrapperPtr,
-#endif          
+#endif
           atomTypes,
           d_dftParamsPtr->floatingNuclearCharges,
           d_nOMPThreads,
@@ -922,6 +922,8 @@ namespace dftfe
         d_oncvClassPtr->initialiseNonLocalContribution(atomLocations,
                                                        d_imageIdsTrunc,
                                                        d_imagePositionsTrunc,
+                                                       d_kPointWeights,
+                                                       d_kPointCoordinates,
                                                        updateNonlocalSparsity);
       }
   }
