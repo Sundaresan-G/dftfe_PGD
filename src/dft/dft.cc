@@ -814,7 +814,7 @@ namespace dftfe
 
     nlccFlag = pspFlags[0];
     pawFlag  = pspFlags[1];
-
+    pcout << "Flags: " << pawFlag << " " << nlccFlag << std::endl;
     nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
     pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
     if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
@@ -824,14 +824,11 @@ namespace dftfe
     if (d_dftParamsPtr->isPseudopotential == true &&
         d_dftParamsPtr->pawPseudoPotential == false)
       {
+        // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
+        // "<<basisOperationsPtrHost->nCells()<<std::endl;
         d_oncvClassPtr = std::make_shared<dftfe::oncvClass<dataTypes::number>>(
           d_mpiCommParent,
           d_dftfeScratchFolderName,
-          basisOperationsPtrHost,
-          d_BLASWrapperPtrHost,
-#if defined(DFTFE_WITH_DEVICE)
-          d_BLASWrapperPtr,
-#endif
           atomTypes,
           d_dftParamsPtr->floatingNuclearCharges,
           d_nOMPThreads,
@@ -886,7 +883,7 @@ namespace dftfe
           pcout
             << "initPseudoPotentialAll: Time taken for initializing core density for non-linear core correction: "
             << init_core << std::endl;
-
+        // The Lines from 889 to 921 will be replaced
 
         if (updateNonlocalSparsity)
           {
@@ -919,6 +916,8 @@ namespace dftfe
           pcout << "initPseudoPotentialAll: Time taken for non local psp init: "
                 << init_nonlocal2 << std::endl;
         // Will replace the above lines,
+        pcout << "dft.cc Number of cells DEBUG: "
+              << basisOperationsPtrHost->nCells() << std::endl;
         d_oncvClassPtr->initialiseNonLocalContribution(atomLocations,
                                                        d_imageIdsTrunc,
                                                        d_imagePositionsTrunc,
@@ -1170,6 +1169,28 @@ namespace dftfe
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
                                         "initBoundaryConditions completed");
+
+    //
+    // initialize pseudopotential data for both local and nonlocal part
+    //
+    pcout << "dft.cc Number of cells DEBUG: "
+          << basisOperationsPtrHost->nCells() << std::endl;
+    d_oncvClassPtr->initialise(basisOperationsPtrHost,
+                               d_BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+                               d_BLASWrapperPtr,
+#endif
+                               d_densityQuadratureId,
+                               d_lpspQuadratureId,
+                               d_sparsityPatternQuadratureId,
+                               d_nlpspQuadratureId,
+                               d_densityQuadratureIdElectro,
+                               d_excManagerPtr,
+                               atomLocations,
+                               d_numEigenValues);
+
+
+
     //
     // initialize guesses for electron-density and wavefunctions
     //
@@ -1178,16 +1199,7 @@ namespace dftfe
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
                                         "initElectronicFields completed");
-    //
-    // initialize pseudopotential data for both local and nonlocal part
-    //
-    d_oncvClassPtr->initialise(d_densityQuadratureId,
-                               d_lpspQuadratureId,
-                               d_sparsityPatternQuadratureId,
-                               d_nlpspQuadratureId,
-                               d_densityQuadratureIdElectro,
-                               d_excManagerPtr,
-                               d_numEigenValues);
+
 
     initPseudoPotentialAll();
 

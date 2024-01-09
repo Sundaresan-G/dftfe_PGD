@@ -21,20 +21,8 @@ namespace dftfe
 {
   template <typename ValueType>
   oncvClass<ValueType>::oncvClass(
-    const MPI_Comm &   mpi_comm_parent,
-    const std::string &scratchFolderName,
-    std::shared_ptr<
-      dftfe::basis::
-        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-      basisOperationsPtr,
-    std::shared_ptr<
-      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-      BLASWrapperPtrHost,
-#if defined(DFTFE_WITH_DEVICE)
-    std::shared_ptr<
-      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-      BLASWrapperPtrDevice,
-#endif
+    const MPI_Comm &                            mpi_comm_parent,
+    const std::string &                         scratchFolderName,
     const std::set<unsigned int> &              atomTypes,
     const bool                                  floatingNuclearCharges,
     const unsigned int                          nOMPThreads,
@@ -47,11 +35,6 @@ namespace dftfe
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
   {
-    d_BasisOperatorHostPtr = basisOperationsPtr;
-    d_BLASWrapperHostPtr   = BLASWrapperPtrHost;
-#if defined(DFTFE_WITH_DEVICE)
-    d_BLASWrapperDevicePtr = BLASWrapperPtrDevice;
-#endif
     d_dftfeScratchFolderName = scratchFolderName;
     d_atomTypes              = atomTypes;
     d_floatingNuclearCharges = floatingNuclearCharges;
@@ -108,16 +91,43 @@ namespace dftfe
 
   template <typename ValueType>
   void
-  oncvClass<ValueType>::initialise(unsigned int densityQuadratureId,
-                                   unsigned int localContributionQuadratureId,
-                                   unsigned int sparsityPatternQuadratureId,
-                                   unsigned int nlpspQuadratureId,
-                                   unsigned int densityQuadratureIdElectro,
-                                   excManager * excFunctionalPtr,
-                                   unsigned int numEigenValues)
+  oncvClass<ValueType>::initialise(
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+      basisOperationsPtr,
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+      BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+      BLASWrapperPtrDevice,
+#endif
+    unsigned int                            densityQuadratureId,
+    unsigned int                            localContributionQuadratureId,
+    unsigned int                            sparsityPatternQuadratureId,
+    unsigned int                            nlpspQuadratureId,
+    unsigned int                            densityQuadratureIdElectro,
+    excManager *                            excFunctionalPtr,
+    const std::vector<std::vector<double>> &atomLocations,
+    unsigned int                            numEigenValues)
   {
     MPI_Barrier(d_mpiCommParent);
-    std::cout << "Initialising  ONCV class: " << std::endl;
+    pcout << "Initialising  ONCV class: " << std::endl;
+    d_BasisOperatorHostPtr = basisOperationsPtr;
+    d_BLASWrapperHostPtr   = BLASWrapperPtrHost;
+#if defined(DFTFE_WITH_DEVICE)
+    d_BLASWrapperDevicePtr = BLASWrapperPtrDevice;
+#endif
+
+    pcout << "ONCV Number of cells DEBUG: " << d_BasisOperatorHostPtr->nCells()
+          << std::endl;
+    std::vector<unsigned int> atomicNumbers;
+    for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
+      {
+        atomicNumbers.push_back(atomLocations[iAtom][0]);
+      }
 
     d_densityQuadratureId           = densityQuadratureId;
     d_localContributionQuadratureId = localContributionQuadratureId;
@@ -130,12 +140,11 @@ namespace dftfe
     createAtomCenteredSphericalFunctionsForDensities();
     createAtomCenteredSphericalFunctionsForProjectors();
     createAtomCenteredSphericalFunctionsForLocalPotential();
-    computeNonlocalPseudoPotentialConstants();
-
 
     d_atomicProjectorFnsContainer =
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
 
+    d_atomicProjectorFnsContainer->init(atomicNumbers, d_atomicProjectorFnsMap);
 
     d_nonLocalOperatorHost = std::make_shared<
       AtomicCenteredNonLocalOperator<ValueType,
@@ -154,6 +163,7 @@ namespace dftfe
         d_numEigenValues,
         d_mpiCommParent);
 #endif
+    computeNonlocalPseudoPotentialConstants();
   }
   template <typename ValueType>
   void
@@ -180,55 +190,77 @@ namespace dftfe
       }
 
 
-    d_atomicProjectorFnsContainer->init(atomicNumbers,
-                                        atomCoords,
-                                        imageCoordsTemp,
-                                        imageIdsTemp,
-                                        d_atomicProjectorFnsMap);
+    d_atomicProjectorFnsContainer->initaliseCoordinates(atomCoords,
+                                                        imageCoordsTemp,
+                                                        imageIdsTemp);
+
+    pcout << "ONCV Number of cells DEBUG: " << d_BasisOperatorHostPtr->nCells()
+          << std::endl;
     if (updateNonlocalSparsity)
       {
+        MPI_Barrier(d_mpiCommParent);
+        double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
+        MPI_Barrier(d_mpiCommParent);
+        double TotalTime = MPI_Wtime() - InitTime;
+        if (true)
+          pcout
+            << "ONCVclass: Time taken for computeSparseStructureNonLocalProjectors: "
+            << TotalTime << std::endl;
       }
-
+    MPI_Barrier(d_mpiCommParent);
+    double InitTimeTotal = MPI_Wtime();
     d_nonLocalOperatorHost->initKpoints(kPointWeights, kPointCoordinates);
 
     d_nonLocalOperatorHost->computeCMatrixEntries(d_BasisOperatorHostPtr,
                                                   d_nlpspQuadratureId,
                                                   d_BLASWrapperHostPtr);
+#if defined(DFTFE_WITH_DEVICE)
     if (d_useDevice)
       {
-        // copy from CPU to GPU objects the CMatrix Entries
-        // d_nonLocalOperatorDevice->copyEntries();
+        d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
+        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
+          d_nonLocalOperatorHost);
       }
+#endif
+    MPI_Barrier(d_mpiCommParent);
+    double TotalTime = MPI_Wtime() - InitTimeTotal;
+    if (true)
+      pcout << "ONCVclass: Time taken for non local psp init: " << TotalTime
+            << std::endl;
   }
 
   template <typename ValueType>
   void
   oncvClass<ValueType>::computeNonlocalPseudoPotentialConstants()
   {
+    pcout << "Debug: Line 229" << std::endl;
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
       {
         const unsigned int Zno = *it;
+        pcout << "Debug: Line 242" << std::endl;
         const std::map<std::pair<unsigned int, unsigned int>,
                        std::shared_ptr<AtomCenteredSphericalFunctionBase>>
           sphericalFunction =
             d_atomicProjectorFnsContainer->getSphericalFunctions();
+        pcout << "Debug: Line 246" << std::endl;
         unsigned int numRadProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Zno);
+        pcout << "Num Rad Projectors: " << numRadProjectors << std::endl;
         unsigned int numTotalProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-
+        pcout << "Num Total Projectors: " << numTotalProjectors << std::endl;
         char denominatorDataFileName[256];
         strcpy(denominatorDataFileName,
                (d_dftfeScratchFolderName + "/z" + std::to_string(Zno) + "/" +
                 "denom.dat")
                  .c_str());
-        pcout << "Debug: Line 152: " << denominatorDataFileName << std::endl;
+        pcout << "Debug: Line 251: " << denominatorDataFileName << std::endl;
         std::vector<std::vector<double>> denominator(0);
         dftUtils::readFile(numRadProjectors,
                            denominator,

@@ -36,13 +36,15 @@
 namespace dftfe
 {
   /**
-   * @brief Enum class that stores he list of coupling Matrices that will can be
+   * @brief Enum class that lists
    * used in the non-local Operator
    *
    */
-  enum class CouplingEntries
+  enum class CouplingStructure
   {
-
+    diagonal,
+    dense,
+    blockDiagonal
   };
 
 
@@ -72,13 +74,15 @@ namespace dftfe
         basisOperationsPtr);
 
 
+
   protected:
     unsigned int        d_numberOfVectors;
     std::vector<double> d_kPointWeights;
     std::vector<double> d_kPointCoordinates;
-    std::map<CouplingEntries, std::map<unsigned int, std::vector<double>> *>
-                                                     d_CouplingMatrix;
-    std::map<CouplingEntries, std::vector<double> *> d_CouplingMatrixFlattened;
+    // std::map<CouplingEntries, std::map<unsigned int, std::vector<double>> *>
+    //                                                  d_CouplingMatrix;
+    // std::map<CouplingEntries, std::vector<double> *>
+    // d_CouplingMatrixFlattened;
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
       d_BLASWrapperPtr;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
@@ -163,9 +167,9 @@ namespace dftfe
       dftfe::utils::MemorySpace::HOST>::d_BLASWrapperPtr;
 
 
-    using AtomicCenteredNonLocalOperatorBase<
-      ValueType,
-      dftfe::utils::MemorySpace::HOST>::d_CouplingMatrixFlattened;
+    // using AtomicCenteredNonLocalOperatorBase<
+    //   ValueType,
+    //   dftfe::utils::MemorySpace::HOST>::d_CouplingMatrixFlattened;
     using AtomicCenteredNonLocalOperatorBase<ValueType,
                                              dftfe::utils::MemorySpace::HOST>::
       d_atomCenteredSphericalFunctionContainer;
@@ -174,6 +178,13 @@ namespace dftfe
     dealii::IndexSet d_ghostSphericalFunctionIdsCurrentProcess;
     std::map<std::pair<unsigned int, unsigned int>, unsigned int>
       d_sphericalFunctionIdsNumberingMapCurrentProcess;
+
+    // void
+    // applyV_onCTX(CouplingStructure couplingtype, const std::vector<double> &
+    // couplingMatrix, const std::vector<double> &CT, std::vector<double> &dst
+    // );
+
+
 
     // Assumes that constraints.distribute is called on src and
     // update_ghost_Values() on src src is not changed inside this class dst
@@ -234,8 +245,6 @@ namespace dftfe
         dftfe::utils::MemorySpace::DEVICE>
   {
   public:
-
-
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::AtomicCenteredNonLocalOperatorBase;

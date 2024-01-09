@@ -49,27 +49,14 @@ namespace dftfe
   class oncvClass
   {
   public:
-    oncvClass(
-      const MPI_Comm &   mpi_comm_parent,
-      const std::string &scratchFolderName,
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr,
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        BLASWrapperPtrHost,
-#if defined(DFTFE_WITH_DEVICE)
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        BLASWrapperPtrDevice,
-#endif
-      const std::set<unsigned int> &              atomTypes,
-      const bool                                  floatingNuclearCharges,
-      const unsigned int                          nOMPThreads,
-      const std::map<unsigned int, unsigned int> &atomAttributes,
-      const bool                                  reproducibleOutput,
-      const bool                                  useDevice);
+    oncvClass(const MPI_Comm &              mpi_comm_parent,
+              const std::string &           scratchFolderName,
+              const std::set<unsigned int> &atomTypes,
+              const bool                    floatingNuclearCharges,
+              const unsigned int            nOMPThreads,
+              const std::map<unsigned int, unsigned int> &atomAttributes,
+              const bool                                  reproducibleOutput,
+              const bool                                  useDevice);
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
      * @param[in] densityQuadratureId quadratureId for density.
@@ -87,13 +74,27 @@ namespace dftfe
      */
 
     void
-    initialise(unsigned int densityQuadratureId,
-               unsigned int localContributionQuadratureId,
-               unsigned int sparsityPatternQuadratureId,
-               unsigned int nlpspQuadratureId,
-               unsigned int densityQuadratureIdElectro,
-               excManager * excFunctionalPtr,
-               unsigned int numEigenValues);
+    initialise(
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+        basisOperationsPtr,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+        BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        BLASWrapperPtrDevice,
+#endif
+      unsigned int                            densityQuadratureId,
+      unsigned int                            localContributionQuadratureId,
+      unsigned int                            sparsityPatternQuadratureId,
+      unsigned int                            nlpspQuadratureId,
+      unsigned int                            densityQuadratureIdElectro,
+      excManager *                            excFunctionalPtr,
+      const std::vector<std::vector<double>> &atomLocations,
+      unsigned int                            numEigenValues);
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.

@@ -22,21 +22,13 @@ namespace dftfe
   void
   AtomCenteredSphericalFunctionContainer::init(
     const std::vector<unsigned int> &atomicNumbers,
-    const std::vector<double> &      atomCoords,
-    const std::vector<double> &      periodicCoords,
-    const std::vector<unsigned int> &imageIds,
     const std::map<std::pair<unsigned int, unsigned int>,
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       &listOfSphericalFunctions)
   {
     std::cout << "Initialising Container Class: " << std::endl;
     d_atomicNumbers               = atomicNumbers;
-    d_atomCoords                  = atomCoords;
     d_sphericalFunctionsContainer = listOfSphericalFunctions;
-    std::cout << "Setting Image coordinates " << std::endl;
-    setImageCoordinates(imageIds, periodicCoords);
-    std::cout << "Finished Setting Image coordinates " << std::endl;
-
     for (const auto &[key, value] : listOfSphericalFunctions)
       {
         unsigned int atomicNumber = key.first;
@@ -63,7 +55,17 @@ namespace dftfe
                 d_totalSphericalFunctionIndexStart[atomicNumber].back() + 1);
           }
       }
-
+  }
+  void
+  AtomCenteredSphericalFunctionContainer::initaliseCoordinates(
+    const std::vector<double> &      atomCoords,
+    const std::vector<double> &      periodicCoords,
+    const std::vector<unsigned int> &imageIds)
+  {
+    d_atomCoords = atomCoords;
+    std::cout << "Setting Image coordinates " << std::endl;
+    setImageCoordinates(imageIds, periodicCoords);
+    std::cout << "Finished Setting Image coordinates " << std::endl;
     // AssertChecks
     AssertThrow(
       d_atomicNumbers.size() == d_atomCoords.size() / 3,
@@ -192,7 +194,7 @@ namespace dftfe
     //
     int numberAtomsOfInterest = d_atomicNumbers.size(); //
 
-
+    std::cout << "Debug: Line 201" << std::endl;
 
     //     //
     //     // pre-allocate data structures that stores the sparsity of deltaVl
@@ -212,7 +214,7 @@ namespace dftfe
     unsigned int sparseFlag         = 0;
     int          cumulativeSplineId = 0;
     int          waveFunctionId;
-
+    std::cout << "Debug: Line 221" << std::endl;
     const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberQuadraturePoints =
@@ -225,6 +227,7 @@ namespace dftfe
     unsigned int       numberGlobalCharges = d_atomicNumbers.size();
     const unsigned int numberElements      = totalLocallyOwnedCells;
     std::vector<int>   sparsityPattern(numberElements, -1);
+    std::cout << "Debug: Line 234" << std::endl;
     for (int iAtom = 0; iAtom < numberAtomsOfInterest; ++iAtom)
       {
         //
@@ -242,7 +245,7 @@ namespace dftfe
         //
 
 
-
+        std::cout << "Debug: Line 251" << std::endl;
         unsigned int imageIdsSize = d_periodicImageCoord[iAtom].size() / 3;
 
         //
@@ -365,11 +368,11 @@ namespace dftfe
 
 #ifdef DEBUG
         if (d_dftParamsPtr->verbosity >= 4)
-          pcout << "No.of non zero elements in the compact support of
+          std::cout << "No.of non zero elements in the compact support of
             atom "
-                << iAtom << " is "
-                << d_elementIteratorsInAtomCompactSupport[iAtom].size()
-                << std::endl;
+                    << iAtom << " is "
+                    << d_elementIteratorsInAtomCompactSupport[iAtom].size()
+                    << std::endl;
 #endif
 
         if (isAtomIdInProcessor)

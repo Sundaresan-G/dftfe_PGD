@@ -43,13 +43,14 @@ namespace dftfe
     // orbital.
     void
     init(const std::vector<unsigned int> &atomicNumbers,
-         const std::vector<double> &      atomCoords,
-         const std::vector<double> &      periodicCoords,
-         const std::vector<unsigned int> &imageIds,
          const std::map<std::pair<unsigned int, unsigned int>,
                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>
            &listOfSphericalFunctions);
 
+    void
+    initaliseCoordinates(const std::vector<double> &      atomCoords,
+                         const std::vector<double> &      periodicCoords,
+                         const std::vector<unsigned int> &imageIds);
     unsigned int
     getNumAtomCentersSize();
 

@@ -92,9 +92,11 @@ namespace dftfe
     const unsigned int numberNodesPerElement =
       basisOperationsPtr->nDofsPerCell();
     const unsigned int numCells = totalLocallyOwnedCells;
-    const dftfe::utils::MemoryStorage<double, //ValueType for complex
+    const dftfe::utils::MemoryStorage<double, // ValueType for complex
                                       dftfe::utils::MemorySpace::HOST>
-      &shapeValQuads = basisOperationsPtr->shapeFunctionBasisData(); //shapeFunctionData() for complex
+      &shapeValQuads =
+        basisOperationsPtr
+          ->shapeFunctionBasisData(); // shapeFunctionData() for complex
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       quadraturePointsVector = basisOperationsPtr->quadPoints();
     const dftfe::utils::MemoryStorage<ValueType,
