@@ -121,8 +121,7 @@ namespace dftfe
     d_BLASWrapperDevicePtr = BLASWrapperPtrDevice;
 #endif
 
-    pcout << "ONCV Number of cells DEBUG: " << d_BasisOperatorHostPtr->nCells()
-          << std::endl;
+
     std::vector<unsigned int> atomicNumbers;
     for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
       {
@@ -194,8 +193,7 @@ namespace dftfe
                                                         imageCoordsTemp,
                                                         imageIdsTemp);
 
-    pcout << "ONCV Number of cells DEBUG: " << d_BasisOperatorHostPtr->nCells()
-          << std::endl;
+
     if (updateNonlocalSparsity)
       {
         MPI_Barrier(d_mpiCommParent);
@@ -235,18 +233,15 @@ namespace dftfe
   void
   oncvClass<ValueType>::computeNonlocalPseudoPotentialConstants()
   {
-    pcout << "Debug: Line 229" << std::endl;
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
       {
         const unsigned int Zno = *it;
-        pcout << "Debug: Line 242" << std::endl;
         const std::map<std::pair<unsigned int, unsigned int>,
                        std::shared_ptr<AtomCenteredSphericalFunctionBase>>
           sphericalFunction =
             d_atomicProjectorFnsContainer->getSphericalFunctions();
-        pcout << "Debug: Line 246" << std::endl;
         unsigned int numRadProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Zno);
@@ -260,7 +255,6 @@ namespace dftfe
                (d_dftfeScratchFolderName + "/z" + std::to_string(Zno) + "/" +
                 "denom.dat")
                  .c_str());
-        pcout << "Debug: Line 251: " << denominatorDataFileName << std::endl;
         std::vector<std::vector<double>> denominator(0);
         dftUtils::readFile(numRadProjectors,
                            denominator,
@@ -519,7 +513,8 @@ namespace dftfe
     imageIdsTemp.clear();
     imageCoordsTemp.clear();
     imageCoordsTemp.resize(imageIds.size() * 3, 0.0);
-    std::vector<unsigned int> imageLoc(int(atomLocations.size() / 3), 0.0);
+    std::vector<unsigned int> imageLoc(int(atomLocations.size()), 0.0);
+    pcout<<"ImageLocation size: "<<imageLoc.size()<<std::endl;
     for (int jImage = 0; jImage < imageIds.size(); jImage++)
       {
         unsigned int atomId = (imageIds[jImage]);

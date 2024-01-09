@@ -26,7 +26,7 @@ namespace dftfe
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       &listOfSphericalFunctions)
   {
-    std::cout << "Initialising Container Class: " << std::endl;
+    //std::cout << "Initialising Container Class: " << std::endl;
     d_atomicNumbers               = atomicNumbers;
     d_sphericalFunctionsContainer = listOfSphericalFunctions;
     for (const auto &[key, value] : listOfSphericalFunctions)
@@ -63,9 +63,9 @@ namespace dftfe
     const std::vector<unsigned int> &imageIds)
   {
     d_atomCoords = atomCoords;
-    std::cout << "Setting Image coordinates " << std::endl;
+    //std::cout << "Setting Image coordinates " << std::endl;
     setImageCoordinates(imageIds, periodicCoords);
-    std::cout << "Finished Setting Image coordinates " << std::endl;
+    //std::cout << "Finished Setting Image coordinates " << std::endl;
     // AssertChecks
     AssertThrow(
       d_atomicNumbers.size() == d_atomCoords.size() / 3,
@@ -194,7 +194,6 @@ namespace dftfe
     //
     int numberAtomsOfInterest = d_atomicNumbers.size(); //
 
-    std::cout << "Debug: Line 201" << std::endl;
 
     //     //
     //     // pre-allocate data structures that stores the sparsity of deltaVl
@@ -245,7 +244,6 @@ namespace dftfe
         //
 
 
-        std::cout << "Debug: Line 251" << std::endl;
         unsigned int imageIdsSize = d_periodicImageCoord[iAtom].size() / 3;
 
         //
