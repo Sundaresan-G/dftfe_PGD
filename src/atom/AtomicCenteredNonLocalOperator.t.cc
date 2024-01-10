@@ -386,17 +386,30 @@ namespace dftfe
                       << it->second << std::endl;
           }
       }
-    d_mpiPatternP2P =
-      std::make_shared<const utils::mpi::MPIPatternP2P<memorySpace>>(
-        d_locallyOwnedSphericalFunctionIdsCurrentProcess,
-        d_ghostSphericalFunctionIdsCurrentProcess,
-        d_mpi_communicator);
-    ValueType zero = 0.0;
-    d_SphericalFunctionKetTimesVectorFlattened =
-      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>(
-        d_mpiPatternP2P, d_numberOfVectors, zero);
-    // d_SphericalFunctionKetTimesVectorPar.resize(1);
-    // d_SphericalFunctionKetTimesVectorPar[0].reinit(vec);
+      // d_mpiPatternP2P =
+      //   std::make_shared<const utils::mpi::MPIPatternP2P<memorySpace>>(
+      //     d_locallyOwnedSphericalFunctionIdsCurrentProcess,
+      //     d_ghostSphericalFunctionIdsCurrentProcess,
+      //     d_mpi_communicator);
+      // ValueType zero = 0.0;
+      // d_SphericalFunctionKetTimesVectorFlattened =
+      //   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>(
+      //     d_mpiPatternP2P, d_numberOfVectors, zero);
+
+#ifdef USE_COMPLEX
+    distributedCPUVec<std::complex<double>> vec(
+      d_locallyOwnedSphericalFunctionIdsCurrentProcess,
+      d_ghostSphericalFunctionIdsCurrentProcess,
+      d_mpi_communicator);
+#else
+    distributedCPUVec<double> vec(
+      d_locallyOwnedSphericalFunctionIdsCurrentProcess,
+      d_ghostSphericalFunctionIdsCurrentProcess,
+      d_mpi_communicator);
+#endif
+    vec.update_ghost_values();
+    d_SphericalFunctionKetTimesVectorPar.resize(1);
+    d_SphericalFunctionKetTimesVectorPar[0].reinit(vec);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>

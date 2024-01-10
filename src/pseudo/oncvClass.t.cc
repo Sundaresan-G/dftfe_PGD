@@ -200,7 +200,7 @@ namespace dftfe
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
-        //d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);  
+        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (true)
@@ -219,7 +219,7 @@ namespace dftfe
       {
         d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
         d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
-          d_nonLocalOperatorHost,d_BasisOperatorHostPtr);
+          d_nonLocalOperatorHost, d_BasisOperatorHostPtr);
       }
 #endif
     MPI_Barrier(d_mpiCommParent);

@@ -90,7 +90,13 @@ namespace dftfe
 
     unsigned int
     getMaxSingleAtomEntries();
-
+#ifdef USE_COMPLEX
+    std::vector<distributedCPUVec<double>> d_SphericalFunctionKetTimesVectorPar;
+#else
+    std::vector<distributedCPUVec<double>> d_SphericalFunctionKetTimesVectorPar;
+#endif
+    std::map<std::pair<unsigned int, unsigned int>, unsigned int>
+      d_sphericalFunctionIdsNumberingMapCurrentProcess;
 
   protected:
     unsigned int        d_numberOfVectors;
@@ -123,8 +129,7 @@ namespace dftfe
     const unsigned int         d_n_mpi_processes;
     dealii::IndexSet           d_locallyOwnedSphericalFunctionIdsCurrentProcess;
     dealii::IndexSet           d_ghostSphericalFunctionIdsCurrentProcess;
-    std::map<std::pair<unsigned int, unsigned int>, unsigned int>
-      d_sphericalFunctionIdsNumberingMapCurrentProcess;
+
     dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
       d_SphericalFunctionKetTimesVectorFlattened;
 
@@ -172,28 +177,29 @@ namespace dftfe
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_numberOfVectors;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_SphericalFunctionKetTimesVectorPar;
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_sphericalFunctionIdsNumberingMapCurrentProcess;
 
-#ifdef USE_COMPLEX
-    std::vector<std::vector<std::vector<std::complex<double>>>>
-      d_CMatrixEntriesConjugate, d_CMatrixEntriesTranspose;
-#else
-    std::vector<std::vector<std::vector<double>>> d_CMatrixEntriesConjugate,
-      d_CMatrixEntriesTranspose;
-#endif
-    using AtomicCenteredNonLocalOperatorBase<
-      ValueType,
-      dftfe::utils::MemorySpace::HOST>::d_totalAtomsInCurrentProc; // number of atoms of interst with
-                                            // compact in current processor
-    using AtomicCenteredNonLocalOperatorBase<
-      ValueType,
-      dftfe::utils::MemorySpace::HOST>::d_totalNonlocalElems; // number of nonlocal FE celss having nonlocal
+
+
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_totalAtomsInCurrentProc; // number of atoms of interst with
+                                 // compact in current processor
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_totalNonlocalElems; // number of nonlocal FE celss having nonlocal
                             // contribution in current processor
-    using AtomicCenteredNonLocalOperatorBase<
-      ValueType,
-      dftfe::utils::MemorySpace::HOST>::d_totalNonLocalEntries; // Total number of nonlocal components
-    using AtomicCenteredNonLocalOperatorBase<
-      ValueType,
-      dftfe::utils::MemorySpace::HOST>::d_maxSingleAtomContribution; // maximum number of nonlocal indexes across
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_totalNonLocalEntries; // Total number of nonlocal components
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_maxSingleAtomContribution; // maximum number of nonlocal indexes across
                                    // all atoms of interset
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
@@ -202,6 +208,7 @@ namespace dftfe
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::AtomicCenteredNonLocalOperatorBase;
+
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_BLASWrapperPtr;
@@ -214,10 +221,11 @@ namespace dftfe
                                              dftfe::utils::MemorySpace::HOST>::
       d_atomCenteredSphericalFunctionContainer;
 
-    dealii::IndexSet d_locallyOwnedSphericalFunctionIdsCurrentProcess;
-    dealii::IndexSet d_ghostSphericalFunctionIdsCurrentProcess;
-    std::map<std::pair<unsigned int, unsigned int>, unsigned int>
-      d_sphericalFunctionIdsNumberingMapCurrentProcess;
+
+
+    std::vector<std::vector<std::vector<dataTypes::number>>>
+      d_CMatrixEntriesConjugate, d_CMatrixEntriesTranspose;
+
 
     // void
     // applyV_onCTX(CouplingStructure couplingtype,
@@ -286,13 +294,17 @@ namespace dftfe
         dftfe::utils::MemorySpace::DEVICE>
   {
   public:
-    using AtomicCenteredNonLocalOperatorBase<ValueType,
-                                             dftfe::utils::MemorySpace::DEVICE>::
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::
       d_atomCenteredSphericalFunctionContainer;
 
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::AtomicCenteredNonLocalOperatorBase;
+
+
+
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_kPointWeights;
@@ -304,32 +316,35 @@ namespace dftfe
       dftfe::utils::MemorySpace::DEVICE>::d_numberOfVectors;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
-      dftfe::utils::MemorySpace::DEVICE>::d_totalAtomsInCurrentProc; // number of atoms of interst with
-                                            // compact in current processor
+      dftfe::utils::MemorySpace::DEVICE>::
+      d_totalAtomsInCurrentProc; // number of atoms of interst with
+                                 // compact in current processor
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
-      dftfe::utils::MemorySpace::DEVICE>::d_totalNonlocalElems; // number of nonlocal FE celss having nonlocal
+      dftfe::utils::MemorySpace::DEVICE>::
+      d_totalNonlocalElems; // number of nonlocal FE celss having nonlocal
                             // contribution in current processor
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
-      dftfe::utils::MemorySpace::DEVICE>::d_totalNonLocalEntries; // Total number of nonlocal components
+      dftfe::utils::MemorySpace::DEVICE>::
+      d_totalNonLocalEntries; // Total number of nonlocal components
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
-      dftfe::utils::MemorySpace::DEVICE>::d_maxSingleAtomContribution; // maximum number of nonlocal indexes across
+      dftfe::utils::MemorySpace::DEVICE>::
+      d_maxSingleAtomContribution; // maximum number of nonlocal indexes across
                                    // all atoms of interset
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_numberCellsAccumNonLocalAtoms;
     void
     transferCMatrixEntriesfromHostObject(
+      std::shared_ptr<AtomicCenteredNonLocalOperator<
+        ValueType,
+        dftfe::utils::MemorySpace::HOST>> nonLocalOperatorHost,
       std::shared_ptr<
-        AtomicCenteredNonLocalOperator<ValueType,
-                                       dftfe::utils::MemorySpace::HOST>>
-        nonLocalOperatorHost,
-              std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-                         basisOperationsPtr  );
+        basisOperationsPtr);
 
 
 
@@ -386,7 +401,7 @@ namespace dftfe
       const std::pair<unsigned int, unsigned int> &cellRange);
 
   private:
-  //Data structures moved from KSOperatorDevice
+    // Data structures moved from KSOperatorDevice
     std::vector<dataTypes::number>
       d_cellHamiltonianMatrixNonLocalFlattenedConjugate;
     dftfe::utils::MemoryStorage<dataTypes::number,
@@ -422,19 +437,17 @@ namespace dftfe
     dftfe::utils::MemoryStorage<dftfe::global_size_type,
                                 dftfe::utils::MemorySpace::DEVICE>
                               d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice;
-    std::vector<unsigned int> d_projectorIdsParallelNumberingMap;
+    std::vector<unsigned int> d_shapeFnIdsParallelNumberingMap;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
-                     d_projectorIdsParallelNumberingMapDevice;
+                     d_shapeFnIdsParallelNumberingMapDevice;
     std::vector<int> d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec;
     dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
                               d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice;
     std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
-                              d_cellNodeIdMapNonLocalToLocalDevice;
+      d_cellNodeIdMapNonLocalToLocalDevice;
 
     std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
-
-
   };
 
 
