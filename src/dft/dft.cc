@@ -924,6 +924,9 @@ namespace dftfe
                                                        d_kPointWeights,
                                                        d_kPointCoordinates,
                                                        updateNonlocalSparsity);
+
+
+        // d_oncvClassPtr->compareSparsityPatternAndCMatrix(d_sparsityPattern);
       }
   }
 

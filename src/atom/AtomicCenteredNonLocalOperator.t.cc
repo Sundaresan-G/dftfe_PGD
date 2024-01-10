@@ -40,7 +40,11 @@ namespace dftfe
     d_BLASWrapperPtr = BLASWrapperPtr;
     d_atomCenteredSphericalFunctionContainer =
       atomCenteredSphericalFunctionContainer;
-    d_numberOfVectors = numVectors;
+    d_numberOfVectors           = numVectors;
+    d_maxSingleAtomContribution = d_atomCenteredSphericalFunctionContainer
+                                    ->getMaximumNumberOfSphericalFunctions();
+    d_totalNonLocalEntries = d_atomCenteredSphericalFunctionContainer
+                               ->getTotalNumberOfSphericalFunctions();
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -50,6 +54,11 @@ namespace dftfe
   {
     d_kPointWeights     = kPointWeights;
     d_kPointCoordinates = kPointCoordinates;
+    d_atomCenteredSphericalFunctionContainer
+      ->getTotalAtomsAndNonLocalElementsInCurrentProcessor(
+        d_totalAtomsInCurrentProc,
+        d_totalNonlocalElems,
+        d_numberCellsAccumNonLocalAtoms);
   }
 
 
@@ -390,6 +399,36 @@ namespace dftfe
     // d_SphericalFunctionKetTimesVectorPar[0].reinit(vec);
   }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  unsigned int
+  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
+    getTotalAtomInCurrentProcessor()
+  {
+    return (d_totalAtomsInCurrentProc);
+  }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  unsigned int
+  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
+    getTotalNonLocalElementsInCurrentProcessor()
+  {
+    return (d_totalNonlocalElems);
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  unsigned int
+  AtomicCenteredNonLocalOperatorBase<ValueType,
+                                     memorySpace>::getTotalNonLocalEntries()
+  {
+    return (d_totalNonLocalEntries);
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  unsigned int
+  AtomicCenteredNonLocalOperatorBase<ValueType,
+                                     memorySpace>::getMaxSingleAtomEntries()
+  {
+    return (d_maxSingleAtomContribution);
+  }
 
 } // namespace dftfe

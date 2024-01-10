@@ -169,6 +169,13 @@ namespace dftfe
                                      dftfe::utils::MemorySpace::DEVICE>>
       d_nonLocalOperatorDevice;
 
+
+    // //TemporaryFunctionsFOrTesting
+    // void
+    // compareSparsityPatternAndCMatrix(const std::map<unsigned int,
+    // std::vector<int>> & sparsityPatternRef);
+
+
   private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class

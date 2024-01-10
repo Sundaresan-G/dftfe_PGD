@@ -76,6 +76,15 @@ namespace dftfe
     getTotalNumberOfSphericalFunctions();
 
     unsigned int
+    getMaximumNumberOfSphericalFunctions();
+
+    void
+    getTotalAtomsAndNonLocalElementsInCurrentProcessor(
+      unsigned int &             totalAtomsInCurrentProcessor,
+      unsigned int &             totalNonLocalElements,
+      std::vector<unsigned int> &numberCellsAccumNonLocalAtoms);
+
+    unsigned int
     getTotalNumberOfRadialSphericalFunctions();
 
     const std::map<std::pair<unsigned int, unsigned int>,
@@ -111,6 +120,10 @@ namespace dftfe
     void
     setImageCoordinates(const std::vector<unsigned int> &imageIds,
                         const std::vector<double> &      periodicCoords);
+
+
+    // const std::map<unsigned int, std::vector<int>> &
+    // getSparsityPattern();
 
   private:
     // A flattened vector that stores the coordinates of the atoms of interest

@@ -200,6 +200,7 @@ namespace dftfe
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
+        //d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);  
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (true)
@@ -210,7 +211,6 @@ namespace dftfe
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
     d_nonLocalOperatorHost->initKpoints(kPointWeights, kPointCoordinates);
-
     d_nonLocalOperatorHost->computeCMatrixEntries(d_BasisOperatorHostPtr,
                                                   d_nlpspQuadratureId,
                                                   d_BLASWrapperHostPtr);
@@ -219,7 +219,7 @@ namespace dftfe
       {
         d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
         d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
-          d_nonLocalOperatorHost);
+          d_nonLocalOperatorHost,d_BasisOperatorHostPtr);
       }
 #endif
     MPI_Barrier(d_mpiCommParent);
@@ -328,17 +328,12 @@ namespace dftfe
                 if (count < 3)
                   {
                     Id = atoi(dummyString.c_str());
-                    //
-                    // insert the radial(spline) Id to the splineIds set
-                    //
+
                     if (count == 1)
                       radFunctionIds.insert(Id);
                     radAndAngularFunctionId[count] = Id;
                   }
-                // if (count==3) {
-                // Id = atoi(dummyString.c_str());
-                // projector[(*it)][i] = Id ;
-                // }
+
                 if (count > 3)
                   {
                     std::cerr << "Invalid argument in the SingleAtomData file"
@@ -514,7 +509,7 @@ namespace dftfe
     imageCoordsTemp.clear();
     imageCoordsTemp.resize(imageIds.size() * 3, 0.0);
     std::vector<unsigned int> imageLoc(int(atomLocations.size()), 0.0);
-    pcout<<"ImageLocation size: "<<imageLoc.size()<<std::endl;
+    pcout << "ImageLocation size: " << imageLoc.size() << std::endl;
     for (int jImage = 0; jImage < imageIds.size(); jImage++)
       {
         unsigned int atomId = (imageIds[jImage]);
@@ -529,4 +524,18 @@ namespace dftfe
         imageLoc[atomId] += 1;
       }
   }
+  // template <typename ValueType>
+  // void
+  // oncvClass<ValueType>::compareSparsityPatternAndCMatrix(const
+  // std::map<unsigned int, std::vector<int>> & sparsityPatternRef)
+  // {
+  //   const std::map<unsigned int, std::vector<int>> sparsityPattern =
+  //   d_atomicProjectorFnsContainer->getSparsityPattern();
+
+  //   pcout<<"Size of sparsity Patterns: "<<sparsityPatternRef.size()<<"
+  //   "<<sparsityPattern.size()<<std::endl;
+
+  // }
+
+
 } // namespace dftfe
