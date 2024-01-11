@@ -1305,7 +1305,7 @@ namespace dftfe
                            std::numeric_limits<unsigned int>::max() ?
                          d_dofHandlerID :
                          constraintIndex]
-        .distribute(multiVector, multiVector.numVectors());
+        .distribute(multiVector);
     }
 
 

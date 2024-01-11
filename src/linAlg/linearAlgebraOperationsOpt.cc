@@ -301,18 +301,14 @@ namespace dftfe
       //
       // call HX
       //
-      bool   scaleFlag = false;
-      double scalar    = 1.0;
-
-      operatorMatrix.HX(XArray, numberWaveFunctions, scaleFlag, scalar, YArray);
 
 
       double alpha1 = sigma1 / e, alpha2 = -c;
-
-      //
-      // YArray = alpha1*(YArray + alpha2*XArray) and YArray = alpha1*YArray
-      //
-      YArray.addAndScale(alpha1, alpha2, XArray);
+      {
+        std::vector<distributedCPUMultiVec<T> *> XArrayPtrs{&XArray};
+        std::vector<distributedCPUMultiVec<T> *> YArrayPtrs{&YArray};
+        operatorMatrix.HX(XArrayPtrs, alpha1, 0.0, alpha1 * alpha2, YArrayPtrs);
+      }
 
       //
       // polynomial loop
@@ -322,10 +318,6 @@ namespace dftfe
           sigma2 = 1.0 / (gamma - sigma);
           alpha1 = 2.0 * sigma2 / e, alpha2 = -(sigma * sigma2);
 
-          //
-          // XArray = alpha2 * XArray - c * alpha1 * YArray
-          //
-          XArray.scaleAndAdd(alpha2, -c * alpha1, YArray);
 
 
           //
@@ -333,8 +325,13 @@ namespace dftfe
           //
           bool scaleFlag = true;
 
-          operatorMatrix.HX(
-            YArray, numberWaveFunctions, scaleFlag, alpha1, XArray);
+          {
+            std::vector<distributedCPUMultiVec<T> *> XArrayPtrs{&XArray};
+            std::vector<distributedCPUMultiVec<T> *> YArrayPtrs{&YArray};
+            operatorMatrix.HX(
+              YArrayPtrs, alpha1, alpha2, -c * alpha1, XArrayPtrs);
+          }
+
 
           //
           // XArray = YArray
@@ -2917,7 +2914,7 @@ namespace dftfe
       for (unsigned int i = 0; i < local_size; i++)
         vVector.data()[i] = ((double)std::rand()) / ((double)RAND_MAX);
 
-      operatorMatrix.getOverloadedConstraintMatrix()->set_zero(vVector, 1);
+      operatorMatrix.getOverloadedConstraintMatrix()->set_zero(vVector);
 
       //
       // evaluate l2 norm

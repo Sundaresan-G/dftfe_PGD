@@ -24,6 +24,7 @@
 #include <operator.h>
 #include <BLASWrapper.h>
 #include <oncvClass.h>
+#include <FEBasisOperations.h>
 
 namespace dftfe
 {
@@ -114,6 +115,13 @@ node is stored
        const double                               scalarB,
        distributedCPUMultiVec<dataTypes::number> &dst,
        std::vector<dataTypes::number> &           cellDstWaveFunctionMatrix);
+
+    void
+    HX(std::vector<distributedCPUMultiVec<dataTypes::number> *> &src,
+       const double                                              scalarHX,
+       const double                                              scalarY,
+       const double                                              scalarX,
+       std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst);
 
 
     /**
@@ -505,6 +513,14 @@ node is stored
       const double                               scalarB   = 1.0,
       bool                                       scaleFlag = false);
 
+    void
+    computeHamiltonianTimesXInternal(
+      const distributedCPUMultiVec<dataTypes::number> &src,
+      distributedCPUMultiVec<dataTypes::number> &      dst,
+      const double                                     scalarHX = 1.0,
+      const double                                     scalarY  = 1.0,
+      const double                                     scalarX  = 1.0);
+
 
 
     /**
@@ -544,6 +560,8 @@ node is stored
     /// data structures to store diagonal of inverse square root mass matrix and
     /// square root of mass matrix
     distributedCPUVec<double> d_invSqrtMassVector, d_sqrtMassVector;
+    std::vector<double>       d_invSqrtElementalMassVector;
+    std::vector<bool>         d_isConstrained;
 
     dealii::Table<2, dealii::VectorizedArray<double>> vEff;
     dealii::Table<2, dealii::VectorizedArray<double>> d_vEffExternalPotCorr;
@@ -611,12 +629,27 @@ node is stored
     std::vector<dealii::types::global_dof_index>
       d_FullflattenedArrayMacroCellLocalProcIndexIdMap;
 
-    std::vector<unsigned int> d_normalCellIdToMacroCellIdMap;
-    std::vector<unsigned int> d_macroCellIdToNormalCellIdMap;
+    std::vector<unsigned int>      d_normalCellIdToMacroCellIdMap;
+    std::vector<unsigned int>      d_macroCellIdToNormalCellIdMap;
+    std::vector<dataTypes::number> d_cellWaveFunctionMatrix,
+      d_cellHamMatrixTimesWaveMatrix;
+    std::map<unsigned int,
+             dftfe::utils::MemoryStorage<dataTypes::number,
+                                         dftfe::utils::MemorySpace::HOST>>
+      projectorKetTimesVector;
+    std::shared_ptr<
+      dftfe::basis::FEBasisOperations<dataTypes::number,
+                                      double,
+                                      dftfe::utils::MemorySpace::HOST>>
+      basisOperationsPtrHost;
 
     /// flag for precomputing stiffness matrix contribution from
     /// sum{Vext}-sum{Vnuc}
     bool d_isStiffnessMatrixExternalPotCorrComputed;
+
+    // Constraints scaled with diagonal Mass Matrix
+    std::shared_ptr<dftUtils::constraintMatrixInfo>
+      scaledConstraintsNoneDataInfoPtr;
 
     /// external potential correction quadrature id
     unsigned int d_externalPotCorrQuadratureId;

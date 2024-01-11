@@ -1025,7 +1025,7 @@ namespace dftfe
         deviceFlattenedArrayBlock.updateGhostValues();
 
         (operatorMatrix.getOverloadedConstraintMatrix())
-          ->distribute(deviceFlattenedArrayBlock, numPsi);
+          ->distribute(deviceFlattenedArrayBlock);
 
 
         // dftfe::utils::deviceSynchronize();

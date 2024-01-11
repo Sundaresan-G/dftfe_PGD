@@ -76,6 +76,7 @@ namespace dftfe
   {
     computing_timer.enter_subsection("kohnShamDFTOperatorClass setup");
 
+    basisOperationsPtrHost = dftPtr->basisOperationsPtrHost;
 
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
@@ -110,6 +111,68 @@ namespace dftfe
       dftPtr->constraintsNone,
       d_nodesPerCellClassificationMap,
       d_globalArrayClassificationMap);
+
+    scaledConstraintsNoneDataInfoPtr =
+      std::make_shared<dftUtils::constraintMatrixInfo>(
+        dftPtr->constraintsNoneDataInfo);
+    d_invSqrtMassVector.update_ghost_values();
+    scaledConstraintsNoneDataInfoPtr->initializeScaledConstraints(
+      d_invSqrtMassVector);
+    const unsigned int numberMacroCells =
+      dftPtr->matrix_free_data.n_macro_cells();
+    const unsigned int numberNodesPerElement =
+      dftPtr->matrix_free_data.get_dofs_per_cell(
+        dftPtr->d_densityDofHandlerIndex);
+    const unsigned int totalLocallyOwnedCells =
+      dftPtr->matrix_free_data.n_physical_cells();
+    const unsigned int nRelaventDofs =
+      dftPtr->matrix_free_data
+        .get_vector_partitioner(dftPtr->d_densityDofHandlerIndex)
+        ->locally_owned_size() +
+      dftPtr->matrix_free_data
+        .get_vector_partitioner(dftPtr->d_densityDofHandlerIndex)
+        ->n_ghost_indices();
+    typename dealii::DoFHandler<3>::active_cell_iterator
+      cell = dftPtr->matrix_free_data
+               .get_dof_handler(dftPtr->d_densityDofHandlerIndex)
+               .begin_active(),
+      endc = dftPtr->matrix_free_data
+               .get_dof_handler(dftPtr->d_densityDofHandlerIndex)
+               .end();
+    std::vector<dealii::types::global_dof_index> cell_dof_indices(
+      numberNodesPerElement);
+    d_invSqrtElementalMassVector.resize(totalLocallyOwnedCells *
+                                        numberNodesPerElement);
+    d_isConstrained.resize(nRelaventDofs, false);
+    unsigned int iElemCount = 0;
+    for (; cell != endc; ++cell)
+      {
+        if (cell->is_locally_owned())
+          {
+            cell->get_dof_indices(cell_dof_indices);
+            for (unsigned int iNode = 0; iNode < numberNodesPerElement; ++iNode)
+              {
+                dealii::types::global_dof_index globalIndex =
+                  cell_dof_indices[iNode];
+                if (dftPtr->constraintsNone.is_constrained(globalIndex))
+                  d_invSqrtElementalMassVector[iElemCount *
+                                                 numberNodesPerElement +
+                                               iNode] = 1.0;
+                else
+                  d_invSqrtElementalMassVector[iElemCount *
+                                                 numberNodesPerElement +
+                                               iNode] =
+                    d_invSqrtMassVector(globalIndex);
+                if (dftPtr->constraintsNone.is_constrained(globalIndex))
+                  d_isConstrained[dftPtr->matrix_free_data
+                                    .get_vector_partitioner(
+                                      dftPtr->d_densityDofHandlerIndex)
+                                    ->global_to_local(globalIndex)] = true;
+              }
+            ++iElemCount;
+          }
+      }
+    d_invSqrtMassVector.zero_out_ghosts();
 
     computing_timer.leave_subsection("kohnShamDFTOperatorClass setup");
   }
@@ -212,6 +275,31 @@ namespace dftfe
       d_normalCellIdToMacroCellIdMap,
       d_macroCellIdToNormalCellIdMap,
       d_FullflattenedArrayCellLocalProcIndexIdMap);
+    const unsigned int totalLocallyOwnedCells =
+      dftPtr->matrix_free_data.n_physical_cells();
+    d_cellWaveFunctionMatrix.resize(d_numberNodesPerElement *
+                                      numberWaveFunctions,
+                                    0.0);
+
+    d_cellHamMatrixTimesWaveMatrix.resize(d_numberNodesPerElement *
+                                            numberWaveFunctions,
+                                          0.0);
+
+    if (dftPtr->d_dftParamsPtr->isPseudopotential &&
+        dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
+      {
+        for (unsigned int iAtom = 0;
+             iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+             ++iAtom)
+          {
+            const unsigned int atomId =
+              dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+            const int numberSingleAtomPseudoWaveFunctions =
+              dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
+            projectorKetTimesVector[atomId].resize(
+              numberWaveFunctions * numberSingleAtomPseudoWaveFunctions, 0.0);
+          }
+      }
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -862,7 +950,8 @@ namespace dftfe
     //
     // update slave nodes before doing element-level matrix-vec multiplication
     //
-    dftPtr->constraintsNoneDataInfo.distribute(src, numberWaveFunctions);
+    src.updateGhostValues();
+    dftPtr->constraintsNoneDataInfo.distribute(src);
 
 
 
@@ -885,8 +974,7 @@ namespace dftfe
     //
     // update master node contributions from its correponding slave nodes
     //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(
-      dst, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
 
 
 
@@ -980,7 +1068,8 @@ namespace dftfe
     //
     // update slave nodes before doing element-level matrix-vec multiplication
     //
-    dftPtr->constraintsNoneDataInfo.distribute(src, numberWaveFunctions);
+    src.updateGhostValues();
+    dftPtr->constraintsNoneDataInfo.distribute(src);
 
 
     //
@@ -1003,8 +1092,7 @@ namespace dftfe
     //
     // update master node contributions from its correponding slave nodes
     //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(
-      dst, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
 
     src.zeroOutGhosts();
     dst.accumulateAddLocallyOwned();
@@ -1129,7 +1217,8 @@ namespace dftfe
     //
     // update slave nodes before doing element-level matrix-vec multiplication
     //
-    dftPtr->constraintsNoneDataInfo.distribute(src, numberWaveFunctions);
+    src.updateGhostValues();
+    dftPtr->constraintsNoneDataInfo.distribute(src);
 
 
 
@@ -1147,8 +1236,7 @@ namespace dftfe
     //
     // update master node contributions from its correponding slave nodes
     //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(
-      dst, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
 
 
     src.zeroOutGhosts();
@@ -1222,9 +1310,29 @@ namespace dftfe
           }
       }
 
-    dftPtr->constraintsNoneDataInfo.set_zero(src, numberWaveFunctions);
+    dftPtr->constraintsNoneDataInfo.set_zero(src);
   }
 #endif
+  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  void
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::HX(
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> &src,
+    const double                                              scalarHX,
+    const double                                              scalarY,
+    const double                                              scalarX,
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst)
+  {
+    src[0]->updateGhostValues();
+    scaledConstraintsNoneDataInfoPtr->distribute(*(src[0]));
+    computeHamiltonianTimesXInternal(
+      (*src[0]), (*dst[0]), scalarHX, scalarY, scalarX);
+
+    scaledConstraintsNoneDataInfoPtr->distribute_slave_to_master(*(dst[0]));
+
+    src[0]->zeroOutGhosts();
+    dst[0]->accumulateAddLocallyOwned();
+    dst[0]->zeroOutGhosts();
+  }
 
 
 

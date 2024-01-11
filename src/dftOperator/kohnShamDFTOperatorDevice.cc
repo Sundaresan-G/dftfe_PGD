@@ -3137,7 +3137,7 @@ namespace dftfe
       {
         src.updateGhostValues();
       }
-    getOverloadedConstraintMatrix()->distribute(src, numberWaveFunctions);
+    getOverloadedConstraintMatrix()->distribute(src);
 
     computeLocalHamiltonianTimesX(
       src.begin(),
@@ -3158,10 +3158,9 @@ namespace dftfe
 
     if (std::is_same<dataTypes::number, std::complex<double>>::value)
       getOverloadedConstraintMatrix()->distribute_slave_to_master(
-        dst, d_tempRealVec.begin(), d_tempImagVec.begin(), numberWaveFunctions);
+        dst, d_tempRealVec.begin(), d_tempImagVec.begin());
     else
-      getOverloadedConstraintMatrix()->distribute_slave_to_master(
-        dst, numberWaveFunctions);
+      getOverloadedConstraintMatrix()->distribute_slave_to_master(dst);
 
 
     src.zeroOutGhosts();
@@ -3276,7 +3275,7 @@ namespace dftfe
 
 
     src.updateGhostValues();
-    getOverloadedConstraintMatrix()->distribute(src, numberWaveFunctions);
+    getOverloadedConstraintMatrix()->distribute(src);
 
     computeLocalHamiltonianTimesX(
       src.begin(),
@@ -3297,10 +3296,9 @@ namespace dftfe
 
     if (std::is_same<dataTypes::number, std::complex<double>>::value)
       getOverloadedConstraintMatrix()->distribute_slave_to_master(
-        dst, d_tempRealVec.begin(), d_tempImagVec.begin(), numberWaveFunctions);
+        dst, d_tempRealVec.begin(), d_tempImagVec.begin());
     else
-      getOverloadedConstraintMatrix()->distribute_slave_to_master(
-        dst, numberWaveFunctions);
+      getOverloadedConstraintMatrix()->distribute_slave_to_master(dst);
 
 
     src.zeroOutGhosts();
@@ -3388,7 +3386,7 @@ namespace dftfe
       }
 
     if (!computePart2)
-      getOverloadedConstraintMatrix()->distribute(src, numberWaveFunctions);
+      getOverloadedConstraintMatrix()->distribute(src);
 
 
     if (!computePart2)
@@ -3415,10 +3413,9 @@ namespace dftfe
 
     if (std::is_same<dataTypes::number, std::complex<double>>::value)
       getOverloadedConstraintMatrix()->distribute_slave_to_master(
-        dst, d_tempRealVec.begin(), d_tempImagVec.begin(), numberWaveFunctions);
+        dst, d_tempRealVec.begin(), d_tempImagVec.begin());
     else
-      getOverloadedConstraintMatrix()->distribute_slave_to_master(
-        dst, numberWaveFunctions);
+      getOverloadedConstraintMatrix()->distribute_slave_to_master(dst);
 
     if (computePart2)
       return;

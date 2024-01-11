@@ -143,6 +143,13 @@ namespace dftfe
        distributedCPUMultiVec<dataTypes::number> &Y,
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
 
+    virtual void
+    HX(std::vector<distributedCPUMultiVec<dataTypes::number> *> &src,
+       const double                                              scalarHX,
+       const double                                              scalarY,
+       const double                                              scalarX,
+       std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst) = 0;
+
 
     virtual void
     HX(distributedCPUMultiVec<dataTypes::number> &src,

@@ -248,7 +248,7 @@ namespace dftfe
               dftPtr->d_eigenVectorsFlattenedHost
                 [kPoint * localVectorSize * dftPtr->d_numEigenValues +
                  iNode * dftPtr->d_numEigenValues + iWave];
-
+        eigenVectorsFlattenedArrayFullBlock.update_ghost_values();
         dftPtr->constraintsNoneDataInfo.distribute(
           eigenVectorsFlattenedArrayFullBlock, dftPtr->d_numEigenValues);
 
