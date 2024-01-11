@@ -92,7 +92,8 @@ namespace dftfe
     unsigned int
     getMaxSingleAtomEntries();
 #ifdef USE_COMPLEX
-    std::vector<distributedCPUVec<std::complex<double>>> d_SphericalFunctionKetTimesVectorPar;
+    std::vector<distributedCPUVec<std::complex<double>>>
+      d_SphericalFunctionKetTimesVectorPar;
 
 #else
     std::vector<distributedCPUVec<double>> d_SphericalFunctionKetTimesVectorPar;
@@ -103,6 +104,7 @@ namespace dftfe
 
   protected:
     unsigned int        d_numberOfVectors;
+    bool                d_AllReduceCompleted;
     std::vector<double> d_kPointWeights;
     std::vector<double> d_kPointCoordinates;
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
@@ -135,11 +137,16 @@ namespace dftfe
 
     unsigned int d_totalAtomsInCurrentProc; // number of atoms of interst with
                                             // compact in current processor
-    unsigned int d_totalNonlocalElems; // number of nonlocal FE celss having nonlocal contribution in current processor
+    unsigned int
+      d_totalNonlocalElems; // number of nonlocal FE celss having nonlocal
+                            // contribution in current processor
     unsigned int d_totalNonLocalEntries; // Total number of nonlocal components
-    unsigned int d_maxSingleAtomContribution; // maximum number of nonlocal indexes across all atoms of interset
+    unsigned int
+      d_maxSingleAtomContribution; // maximum number of nonlocal indexes across
+                                   // all atoms of interset
     std::vector<unsigned int> d_numberCellsAccumNonLocalAtoms;
-    unsigned int d_numberNodesPerElement; //Access from BasisOperator WHile filling CMatrixEntries
+    unsigned int              d_numberNodesPerElement; // Access from BasisOperator WHile
+                                          // filling CMatrixEntries
     unsigned int d_locallyOwnedCells;
     unsigned int d_numberWaveFunctions;
     unsigned int d_kPointIndex;
@@ -157,9 +164,6 @@ namespace dftfe
                                                 dftfe::utils::MemorySpace::HOST>
   {
   public:
-
-
-
     void
     initialiseOperatorActionOnX(unsigned int kPointIndex) override;
 
@@ -182,6 +186,9 @@ namespace dftfe
       dftfe::utils::MemorySpace::HOST>::d_numberNodesPerElement;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_AllReduceCompleted;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
       dftfe::utils::MemorySpace::HOST>::d_numberWaveFunctions;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
@@ -200,14 +207,20 @@ namespace dftfe
                                              dftfe::utils::MemorySpace::HOST>::
       d_sphericalFunctionIdsNumberingMapCurrentProcess;
 
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_SphericalFunctionKetTimesVectorPar;
     using AtomicCenteredNonLocalOperatorBase<ValueType,
-                                             dftfe::utils::MemorySpace::HOST>::d_SphericalFunctionKetTimesVectorPar;
-    using AtomicCenteredNonLocalOperatorBase<ValueType,
-                                             dftfe::utils::MemorySpace::HOST>::d_SphericalFunctionKetTimesVectorParFlattened;
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_SphericalFunctionKetTimesVectorParFlattened;
     using AtomicCenteredNonLocalOperatorBase<ValueType,
                                              dftfe::utils::MemorySpace::HOST>::
       d_totalAtomsInCurrentProc; // number of atoms of interst with
                                  // compact in current processor
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_locallyOwnedCells;
+
     using AtomicCenteredNonLocalOperatorBase<ValueType,
                                              dftfe::utils::MemorySpace::HOST>::
       d_totalNonlocalElems; // number of nonlocal FE celss having nonlocal
@@ -246,23 +259,33 @@ namespace dftfe
 
 
     void
-    applyV_onCTX(CouplingStructure couplingtype,
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> & couplingMatrix);
+    applyV_onCTX(
+      CouplingStructure couplingtype,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &couplingMatrix);
 
     void
-    applyCTonX(const dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST> & X,
-    std::pair<unsigned int, unsigned int> &cellRange );
+    applyCTonX(
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::HOST> &X,
+      std::pair<unsigned int, unsigned int> &cellRange);
 
     void
-    applyCTonX(const dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST> & X);
+    applyCTonX(
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::HOST> &X);
 
 
     void
-    applyConVCTX(dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST> & Xout,
-    std::pair<unsigned int, unsigned int> &cellRange  );
+    applyConVCTX(
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
+        &                                    Xout,
+      std::pair<unsigned int, unsigned int> &cellRange);
 
     void
-    applyConVCTX(dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST> & Xout );
+    applyConVCTX(
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
+        &Xout);
 
 
 
@@ -316,9 +339,8 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::HOST> &dst,
       const std::pair<unsigned int, unsigned int> &cellRange);
 
-    private:
-      std::map<unsigned int, std::vector<double>> d_ShapeFnTimesWavefunction;
-
+  private:
+    std::map<unsigned int, std::vector<double>> d_ShapeFnTimesWavefunction;
   };
 
   template <typename ValueType>
@@ -329,7 +351,6 @@ namespace dftfe
         dftfe::utils::MemorySpace::DEVICE>
   {
   public:
-
     void
     initialiseOperatorActionOnX(unsigned int kPointIndex) override;
 
@@ -345,8 +366,10 @@ namespace dftfe
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::AtomicCenteredNonLocalOperatorBase;
 
-    using AtomicCenteredNonLocalOperatorBase<ValueType,
-                                             dftfe::utils::MemorySpace::DEVICE>::d_SphericalFunctionKetTimesVectorParFlattened;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::
+      d_SphericalFunctionKetTimesVectorParFlattened;
 
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
@@ -357,7 +380,9 @@ namespace dftfe
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_kPointIndex;
-
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_AllReduceCompleted;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_kPointWeights;
@@ -402,8 +427,10 @@ namespace dftfe
 
 
     void
-    applyCTonX(const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> & X,
-    std::pair<unsigned int, unsigned int> &cellRange );
+    applyCTonX(
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE> &X,
+      std::pair<unsigned int, unsigned int> &cellRange);
 
 
     // Assumes that constraints.distribute is called on src and

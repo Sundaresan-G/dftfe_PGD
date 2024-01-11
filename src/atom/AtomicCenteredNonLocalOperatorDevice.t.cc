@@ -70,11 +70,11 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    applyCTonX(const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> & X,
-    std::pair<unsigned int, unsigned int> &cellRange )
-  {}  
-
-
+    applyCTonX(
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE> &X,
+      std::pair<unsigned int, unsigned int> &cellRange)
+  {}
 
 
 
@@ -109,7 +109,8 @@ namespace dftfe
     d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
       d_totalNonlocalElems * d_numberNodesPerElement, 0);
     d_projectorKetTimesVectorAllCellsDevice.resize(
-      d_totalNonlocalElems * d_numberWaveFunctions * d_maxSingleAtomContribution,
+      d_totalNonlocalElems * d_numberWaveFunctions *
+        d_maxSingleAtomContribution,
       dataTypes::number(0.0));
     d_shapeFnIdsParallelNumberingMap.clear();
     d_shapeFnIdsParallelNumberingMap.resize(d_totalNonLocalEntries, 0);
@@ -180,7 +181,8 @@ namespace dftfe
           {
             const unsigned int elementId =
               elementIndexesInAtomCompactSupport[iElemComp];
-            for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
+            for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
+                 ++iNode)
               {
                 dftfe::global_size_type localNodeId =
                   d_numberWaveFunctions *
@@ -211,7 +213,8 @@ namespace dftfe
                     {
                       d_cellHamiltonianMatrixNonLocalFlattenedConjugate
                         [ikpoint * d_totalNonlocalElems *
-                           d_numberNodesPerElement * d_maxSingleAtomContribution +
+                           d_numberNodesPerElement *
+                           d_maxSingleAtomContribution +
                          countElem * d_maxSingleAtomContribution *
                            d_numberNodesPerElement +
                          d_numberNodesPerElement * alpha + iNode] =
@@ -223,7 +226,8 @@ namespace dftfe
 
                       d_cellHamiltonianMatrixNonLocalFlattenedTranspose
                         [ikpoint * d_totalNonlocalElems *
-                           d_numberNodesPerElement * d_maxSingleAtomContribution +
+                           d_numberNodesPerElement *
+                           d_maxSingleAtomContribution +
                          countElem * d_numberNodesPerElement *
                            d_maxSingleAtomContribution +
                          d_maxSingleAtomContribution * iNode + alpha] =
@@ -303,18 +307,20 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-  initialiseOperatorActionOnX(unsigned int kPointIndex)
+    initialiseOperatorActionOnX(unsigned int kPointIndex)
   {
     d_kPointIndex = kPointIndex;
     // d_ShapeFnTimesWavefunction.clear();
-    // const std::vector<unsigned int> atomIdsInProcessor = d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
+    // const std::vector<unsigned int> atomIdsInProcessor =
+    // d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     // const std::vector<unsigned int> &atomicNumber =
     //   d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
     // for(int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
     // {
     //     unsigned int atomId = atomIdsInProcessor[iAtom];
     //     unsigned int Zno = atomicNumber[atomId];
-    //     unsigned int numberSphericalFunctions = d_atomCenteredSphericalFunctionContainer->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+    //     unsigned int numberSphericalFunctions =
+    //     d_atomCenteredSphericalFunctionContainer->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
     //     d_ShapeFnTimesWavefunction[atomId].resize(numberSphericalFunctions*d_numberWaveFunctions);
     // }
   }
@@ -322,13 +328,13 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-  initialiseFlattenedDataStructure(unsigned int numberWaveFunctions)
+    initialiseFlattenedDataStructure(unsigned int numberWaveFunctions)
   {
     d_numberWaveFunctions = numberWaveFunctions;
-        // dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-        //   d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
-        //   numberWaveFunctions,
-        //   d_SphericalFunctionKetTimesVectorParFlattened);    
+    // dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
+    //   d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
+    //   numberWaveFunctions,
+    //   d_SphericalFunctionKetTimesVectorParFlattened);
   }
 
 

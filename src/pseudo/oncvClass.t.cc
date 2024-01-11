@@ -274,6 +274,7 @@ namespace dftfe
           }
         d_atomicNonLocalPseudoPotentialConstants[Zno] =
           pseudoPotentialConstants;
+        d_nonlocalHamiltonianEntriesUpdated = false;
       } //*it
   }
 
@@ -536,6 +537,46 @@ namespace dftfe
   //   "<<sparsityPattern.size()<<std::endl;
 
   // }
+  template <typename ValueType>
+  void
+  oncvClass<ValueType>::applynonLocalHamiltonianMatrix()
+  {
+    if (!d_nonlocalHamiltonianEntriesUpdated)
+      {
+        const std::vector<unsigned int> atomIdsInProcessor =
+          d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+        std::vector<unsigned int> atomicNumber =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        d_nonLocalHamiltonianEntriesHost.clear();
+        std::vector<double> Entries;
+        for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+          {
+            unsigned int atomId = atomIdsInProcessor[iAtom];
+            unsigned int Zno    = atomicNumber[atomId];
+            unsigned int numberSphericalFunctions =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+            for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
+                 alpha++)
+              {
+                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                Entries.push_back(V);
+              }
+          }
+        d_nonLocalHamiltonianEntriesHost.resize(Entries.size());
+        d_nonLocalHamiltonianEntriesHost.copyFrom(Entries);
+      }
 
+
+    if (!d_useDevice)
+      {
+        d_nonLocalOperatorHost->applyV_onCTX(CouplingStructure::diagonal,
+                                             d_nonLocalHamiltonianEntriesHost);
+      }
+    else
+      {
+        // d_nonLocalOperatorDevice->applyV_onCTX(CouplingStructure::diagonal,d_nonLocalHamiltonianEntriesDevice);
+      }
+  }
 
 } // namespace dftfe

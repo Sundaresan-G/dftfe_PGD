@@ -170,10 +170,8 @@ namespace dftfe
       d_nonLocalOperatorDevice;
 
 
-    // //TemporaryFunctionsFOrTesting
-    // void
-    // compareSparsityPatternAndCMatrix(const std::map<unsigned int,
-    // std::vector<int>> & sparsityPatternRef);
+    void
+    applynonLocalHamiltonianMatrix();
 
 
   private:
@@ -213,6 +211,11 @@ namespace dftfe
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
       d_atomicNonLocalPseudoPotentialConstants;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_nonLocalHamiltonianEntriesHost;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+         d_nonLocalHamiltonianEntriesDevice;
+    bool d_nonlocalHamiltonianEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
