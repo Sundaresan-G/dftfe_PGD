@@ -77,6 +77,7 @@ namespace dftfe
     computing_timer.enter_subsection("kohnShamDFTOperatorClass setup");
 
     basisOperationsPtrHost = dftPtr->basisOperationsPtrHost;
+    d_oncvClassPtr = dftPtr->d_oncvClassPtr;
 
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
@@ -210,6 +211,7 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
+          //d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(numberWaveFunctions);
       }
 
 

@@ -23,6 +23,8 @@
 #include <operatorDevice.h>
 #include <FEBasisOperations.h>
 #include <BLASWrapper.h>
+#include <oncvClass.h>
+#include <AtomicCenteredNonLocalOperator.h>
 
 namespace dftfe
 {
@@ -655,6 +657,14 @@ namespace dftfe
                                       double,
                                       dftfe::utils::MemorySpace::HOST>>
       basisOperationsPtrHost;
+
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<dataTypes::number,
+                                     dftfe::utils::MemorySpace::DEVICE>>
+      d_ONCVnonLocalOperator;
+
 
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>

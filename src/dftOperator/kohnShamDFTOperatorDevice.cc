@@ -486,7 +486,7 @@ namespace dftfe
 
     basisOperationsPtrDevice = dftPtr->basisOperationsPtrDevice;
     basisOperationsPtrHost   = dftPtr->basisOperationsPtrHost;
-
+    d_oncvClassPtr = dftPtr->d_oncvClassPtr;
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
     d_sqrtMassVector.reinit(d_invSqrtMassVector);
@@ -652,7 +652,8 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           BVec,
           d_parallelProjectorKetTimesBlockVectorDevice);
-
+        //d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(BVec);
+       
         d_totalPseudoWfcNonLocal = 0;
         d_totalNonlocalElems     = 0;
         d_totalNonlocalAtomsCurrentProc =

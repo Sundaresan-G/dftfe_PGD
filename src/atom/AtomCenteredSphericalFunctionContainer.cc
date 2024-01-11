@@ -19,6 +19,14 @@
 
 namespace dftfe
 {
+
+  const std::vector<int> &
+  AtomCenteredSphericalFunctionContainer::getAtomIdsInElement(unsigned int iElem)
+  {
+
+    return (d_AtomIdsInElement[iElem]);
+  }
+
   void
   AtomCenteredSphericalFunctionContainer::init(
     const std::vector<unsigned int> &atomicNumbers,
@@ -469,12 +477,11 @@ namespace dftfe
     const unsigned int cutOffType);
 
 
-  //  template <typename NumberType>
-  //   const std::map<unsigned int, std::vector<int>> &
-  //   AtomCenteredSphericalFunctionContainer::getSparsityPattern()
-  //   {
-  //     return(d_sparsityPattern);
-  //   }
+    const std::map<unsigned int, std::vector<int>> &
+    AtomCenteredSphericalFunctionContainer::getSparsityPattern()
+    {
+      return(d_sparsityPattern);
+    }
 
 
 

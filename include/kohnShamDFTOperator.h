@@ -25,7 +25,8 @@
 #include <BLASWrapper.h>
 #include <oncvClass.h>
 #include <FEBasisOperations.h>
-
+#include <oncvClass.h>
+#include <AtomicCenteredNonLocalOperator.h>
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -555,7 +556,6 @@ node is stored
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperPtrHost;
 
-    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
 
     /// data structures to store diagonal of inverse square root mass matrix and
     /// square root of mass matrix
@@ -642,6 +642,13 @@ node is stored
                                       double,
                                       dftfe::utils::MemorySpace::HOST>>
       basisOperationsPtrHost;
+
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<dataTypes::number,
+                                     dftfe::utils::MemorySpace::HOST>>
+      d_ONCVnonLocalOperator;
 
     /// flag for precomputing stiffness matrix contribution from
     /// sum{Vext}-sum{Vnuc}

@@ -122,8 +122,11 @@ namespace dftfe
                         const std::vector<double> &      periodicCoords);
 
 
-    // const std::map<unsigned int, std::vector<int>> &
-    // getSparsityPattern();
+    
+    const std::vector<int> & getAtomIdsInElement(unsigned int iElem);
+
+    const std::map<unsigned int, std::vector<int>> &
+    getSparsityPattern();
 
   private:
     // A flattened vector that stores the coordinates of the atoms of interest
