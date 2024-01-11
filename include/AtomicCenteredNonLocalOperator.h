@@ -32,7 +32,7 @@
 #include <pseudoUtils.h>
 #include <vectorUtilities.h>
 #include <MPIPatternP2P.h>
-
+#include <MultiVector.h>
 namespace dftfe
 {
   /**
@@ -91,7 +91,7 @@ namespace dftfe
     unsigned int
     getMaxSingleAtomEntries();
 #ifdef USE_COMPLEX
-    std::vector<distributedCPUVec<double>> d_SphericalFunctionKetTimesVectorPar;
+    std::vector<distributedCPUVec<std::complex<double>>> d_SphericalFunctionKetTimesVectorPar;
 #else
     std::vector<distributedCPUVec<double>> d_SphericalFunctionKetTimesVectorPar;
 #endif
@@ -233,7 +233,9 @@ namespace dftfe
     // std::vector<double> &CT, std::vector<double> &dst
     // );
 
-
+    void
+    applyCTonX(const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> & X,
+    std::pair<unsigned int, unsigned int> &cellRange );
 
     // Assumes that constraints.distribute is called on src and
     // update_ghost_Values() on src src is not changed inside this class dst
@@ -346,6 +348,11 @@ namespace dftfe
           FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
         basisOperationsPtr);
 
+
+
+    void
+    applyCTonX(const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> & X,
+    std::pair<unsigned int, unsigned int> &cellRange );
 
 
     // Assumes that constraints.distribute is called on src and

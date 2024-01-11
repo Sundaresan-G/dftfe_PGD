@@ -590,11 +590,18 @@ namespace dftfe
 
       } // ChargeId loop
 
-    //   //     //
-    //   //     // Add mpi accumulation
-    //   //     //
-    // Copy from Temp to HOST/DEVICE
+
   }
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
+  applyCTonX(const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> & X,
+    std::pair<unsigned int, unsigned int> &cellRange )
+  {
+ 
+    
+
+  }  
 
 
 

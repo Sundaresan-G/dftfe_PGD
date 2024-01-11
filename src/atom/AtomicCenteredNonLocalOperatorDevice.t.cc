@@ -70,6 +70,17 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    applyCTonX(const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> & X,
+    std::pair<unsigned int, unsigned int> &cellRange )
+  {}  
+
+
+
+
+
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
     transferCMatrixEntriesfromHostObject(
       std::shared_ptr<AtomicCenteredNonLocalOperator<
         ValueType,

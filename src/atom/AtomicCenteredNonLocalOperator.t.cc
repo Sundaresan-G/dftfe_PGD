@@ -407,6 +407,8 @@ namespace dftfe
       d_ghostSphericalFunctionIdsCurrentProcess,
       d_mpi_communicator);
 #endif
+
+
     vec.update_ghost_values();
     d_SphericalFunctionKetTimesVectorPar.resize(1);
     d_SphericalFunctionKetTimesVectorPar[0].reinit(vec);
