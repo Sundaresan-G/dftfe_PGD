@@ -558,6 +558,31 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
             }
         }
     }
+  const std::map<unsigned int, std::vector<dataTypes::number>>
+    temp_projectorTimesVector =
+      d_ONCVnonLocalOperator->getScaledShapeFnTimesWaveFunction();
+  for (unsigned int iAtom = 0;
+       iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+       ++iAtom)
+    {
+      const unsigned int atomId =
+        dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+      std::vector<dataTypes::number> tempVector =
+        temp_projectorTimesVector.find(atomId)->second;
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::HOST>
+        tempVectorReference = projectorKetTimesVector.find(atomId)->second;
+      pcout << "DEBUG: Size of the two vectors: " << tempVector.size() << " "
+            << tempVectorReference.size() << std::endl;
+      for (int i = 0; i < tempVector.size(); i++)
+        {
+          pcout << "Debug: " << i << " " << tempVector[i] << " "
+                << tempVectorReference[i] << std::endl;
+        }
+    }
+
+
+
   for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
     {
       for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
@@ -593,9 +618,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
       if (dftPtr->d_dftParamsPtr->isPseudopotential &&
           dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
         {
-          d_ONCVnonLocalOperator->applyConVCTX(
-            d_cellHamMatrixTimesWaveMatrix,
-            std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
+          // d_ONCVnonLocalOperator->applyConVCTX(
+          //   d_cellHamMatrixTimesWaveMatrix,
+          //   std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
 
           for (unsigned int iAtom = 0;
                iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();

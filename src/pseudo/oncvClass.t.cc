@@ -199,7 +199,7 @@ namespace dftfe
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
-          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 0, 1E-8);
+          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
         d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
@@ -380,7 +380,10 @@ namespace dftfe
                 d_atomicProjectorFnsMap[std::make_pair(Zno, alpha)] =
                   std::make_shared<AtomCenteredSphericalFunctionSpline>(
                     projRadialFunctionFileName, lQuantumNo, 0, j, numProj + 1);
-
+                std::cout << "Radial Value for Projector: "
+                          << d_atomicProjectorFnsMap[std::make_pair(Zno, alpha)]
+                               ->getRadialValue(0.0)
+                          << std::endl;
                 alpha++;
               }
           } // i loop

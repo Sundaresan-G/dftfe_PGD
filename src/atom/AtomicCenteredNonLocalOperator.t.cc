@@ -190,7 +190,7 @@ namespace dftfe
         ghostAtomIdsInCurrentProcess.add_index(newAtomId);
       }
 
-    if (d_this_mpi_process == 0 && false)
+    if (d_this_mpi_process == 0 && true)
       {
         for (std::map<int, int>::const_iterator it = oldToNewAtomIds.begin();
              it != oldToNewAtomIds.end();
@@ -205,7 +205,7 @@ namespace dftfe
           std::cout << ownedAtomIdsSizesAllProcess[iProc] << ",";
         std::cout << std::endl;
       }
-    if (false)
+    if (true)
       {
         std::stringstream ss1;
         ownedAtomIdsInCurrentProcess.print(ss1);
@@ -320,7 +320,7 @@ namespace dftfe
                                                               g.end());
         localGhostCount++;
       }
-    if (false)
+    if (true)
       {
         std::stringstream ss1;
         d_locallyOwnedSphericalFunctionIdsCurrentProcess.print(ss1);
@@ -374,7 +374,7 @@ namespace dftfe
           }
       }
 
-    if (false)
+    if (true)
       {
         for (std::map<std::pair<unsigned int, unsigned int>,
                       unsigned int>::const_iterator it =

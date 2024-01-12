@@ -88,8 +88,12 @@ namespace dftfe
     d_periodicImageCoord.clear();
     for (unsigned int iAtom = 0; iAtom < d_atomicNumbers.size(); iAtom++)
       {
-        d_periodicImageCoord[iAtom] = std::vector<double>(0);
+        d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 0]);
+        d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 1]);
+        d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 2]);
       }
+    std::cout << "DEBUG: Size of imageIds: " << imageIds.size() << std::endl;
+
 
     for (unsigned int jImageAtom = 0; jImageAtom < imageIds.size();
          jImageAtom++)
@@ -268,14 +272,16 @@ namespace dftfe
     //
     // loop over nonlocal atoms
     //
-    unsigned int sparseFlag         = 0;
-    int          cumulativeSplineId = 0;
-    int          waveFunctionId;
-    std::cout << "Debug: Line 221" << std::endl;
+    unsigned int       sparseFlag         = 0;
+    int                cumulativeSplineId = 0;
+    int                waveFunctionId;
     const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
+    std::cout << "Quadrature Index: " << quadratureIndex << std::endl;
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberQuadraturePoints =
       basisOperationsPtr->nQuadsPerCell();
+    std::cout << "Number of Quadrature Points: " << numberQuadraturePoints
+              << std::endl;
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       quadraturePointsVector = basisOperationsPtr->quadPoints();
     //
@@ -283,8 +289,11 @@ namespace dftfe
     //
     unsigned int       numberGlobalCharges = d_atomicNumbers.size();
     const unsigned int numberElements      = totalLocallyOwnedCells;
-    std::vector<int>   sparsityPattern(numberElements, -1);
-    std::cout << "Debug: Line 234" << std::endl;
+    std::cout << "DEBUG: Total number of cells" << totalLocallyOwnedCells
+              << std::endl;
+    std::vector<int> sparsityPattern(numberElements, -1);
+    std::cout << "DEBUG: Number of atoms " << numberAtomsOfInterest
+              << std::endl;
     for (int iAtom = 0; iAtom < numberAtomsOfInterest; ++iAtom)
       {
         //
@@ -295,141 +304,130 @@ namespace dftfe
         unsigned int Zno                 = d_atomicNumbers[iAtom];
         //
         //
-        int numberSphericalFunctions = d_numSphericalFunctions[Zno];
-
+        int numberSphericalFunctions = d_numRadialSphericalFunctions[Zno];
+        std::cout << "DEBUG: Number of sphericalFunctions "
+                  << numberSphericalFunctions << std::endl;
         //
         // get the global charge Id of the current nonlocal atom
         //
 
 
         unsigned int imageIdsSize = d_periodicImageCoord[iAtom].size() / 3;
-
+        std::cout << "DEBUG: Size of imageIds" << imageIdsSize << std::endl;
         //
         // resize the data structure corresponding to sparsity pattern
         //
-        // std::vector<int> sparsityPattern;(numberElements,-1);
-        d_sparsityPattern[iAtom].resize(numberElements, -1);
 
-        if (imageIdsSize != 0)
+        std::fill(sparsityPattern.begin(), sparsityPattern.end(), -1);
+        //
+        // parallel loop over all elements
+        //
+
+        for (int iCell = 0; iCell < totalLocallyOwnedCells; iCell++)
           {
-            std::fill(sparsityPattern.begin(), sparsityPattern.end(), -1);
-            //
-            // parallel loop over all elements
-            //
-
-            for (int iCell = 0; iCell < totalLocallyOwnedCells; iCell++)
+            std::vector<double> quadPoints(numberQuadraturePoints * 3, 0.0);
+            for (int iQuad = 0; iQuad < numberQuadraturePoints; iQuad++)
               {
-                std::vector<double> quadPoints(numberQuadraturePoints * 3, 0.0);
-                for (int iQuad = 0; iQuad < numberQuadraturePoints; iQuad++)
+                quadPoints[iQuad * 3 + 0] =
+                  quadraturePointsVector[iCell * (numberQuadraturePoints * 3) +
+                                         iQuad * 3 + 0];
+                quadPoints[iQuad * 3 + 1] =
+                  quadraturePointsVector[iCell * (numberQuadraturePoints * 3) +
+                                         iQuad * 3 + 1];
+                quadPoints[iQuad * 3 + 2] =
+                  quadraturePointsVector[iCell * (numberQuadraturePoints * 3) +
+                                         iQuad * 3 + 2];
+              }
+            sparseFlag = 0;
+            for (int iImageAtomCount = 0; iImageAtomCount < imageIdsSize;
+                 ++iImageAtomCount)
+              {
+                std::vector<double> x(3, 0.0);
+                dealii::Point<3>    chargePoint(0.0, 0.0, 0.0);
+                if (iImageAtomCount == 0)
                   {
-                    quadPoints[iQuad * 3 + 0] =
-                      quadraturePointsVector[iCell *
-                                               (numberQuadraturePoints * 3) +
-                                             iQuad * 3 + 0];
-                    quadPoints[iQuad * 3 + 1] =
-                      quadraturePointsVector[iCell *
-                                               (numberQuadraturePoints * 3) +
-                                             iQuad * 3 + 1];
-                    quadPoints[iQuad * 3 + 2] =
-                      quadraturePointsVector[iCell *
-                                               (numberQuadraturePoints * 3) +
-                                             iQuad * 3 + 2];
+                    chargePoint[0] = d_atomCoords[3 * iAtom + 0];
+                    chargePoint[1] = d_atomCoords[3 * iAtom + 1];
+                    chargePoint[2] = d_atomCoords[3 * iAtom + 2];
                   }
-                sparseFlag = 0;
-
-                for (int iImageAtomCount = -1; iImageAtomCount < imageIdsSize;
-                     ++iImageAtomCount)
+                else
                   {
-                    std::vector<double> x(3, 0.0);
-                    dealii::Point<3>    chargePoint(0.0, 0.0, 0.0);
-                    if (iImageAtomCount == -1)
-                      {
-                        chargePoint[0] = d_atomCoords[3 * iAtom + 0];
-                        chargePoint[1] = d_atomCoords[3 * iAtom + 1];
-                        chargePoint[2] = d_atomCoords[3 * iAtom + 2];
-                      }
-                    else
-                      {
-                        chargePoint[0] =
-                          d_periodicImageCoord[iAtom][3 * iImageAtomCount + 0];
-                        chargePoint[1] =
-                          d_periodicImageCoord[iAtom][3 * iImageAtomCount + 1];
-                        chargePoint[2] =
-                          d_periodicImageCoord[iAtom][3 * iImageAtomCount + 2];
-                      }
+                    chargePoint[0] =
+                      d_periodicImageCoord[iAtom][3 * iImageAtomCount + 0];
+                    chargePoint[1] =
+                      d_periodicImageCoord[iAtom][3 * iImageAtomCount + 1];
+                    chargePoint[2] =
+                      d_periodicImageCoord[iAtom][3 * iImageAtomCount + 2];
+                  }
 
-                    // Any equivalent step available?
-                    // if (chargePoint.distance(cell->center()) >
-                    // d_nlPSPCutOff)
-                    //   continue;
 
-                    for (int iPsp = 0; iPsp < numberSphericalFunctions; ++iPsp)
+                for (unsigned int iPsp = 0; iPsp < numberSphericalFunctions;
+                     ++iPsp)
+                  {
+                    std::shared_ptr<AtomCenteredSphericalFunctionBase>
+                      SphericalFunction =
+                        d_sphericalFunctionsContainer[std::make_pair(Zno,
+                                                                     iPsp)];
+                    double radialProjVal;
+                    for (int iQuadPoint = 0;
+                         iQuadPoint < numberQuadraturePoints;
+                         ++iQuadPoint)
                       {
-                        std::shared_ptr<AtomCenteredSphericalFunctionBase>
-                          SphericalFunction =
-                            d_sphericalFunctionsContainer[std::make_pair(Zno,
-                                                                         iPsp)];
-                        double radialProjVal;
-                        for (int iQuadPoint = 0;
-                             iQuadPoint < numberQuadraturePoints;
-                             ++iQuadPoint)
+                        x[0] = quadPoints[3 * iQuadPoint] - chargePoint[0];
+                        x[1] = quadPoints[3 * iQuadPoint + 1] - chargePoint[1];
+                        x[2] = quadPoints[3 * iQuadPoint + 2] - chargePoint[2];
+                        const double r =
+                          std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
+                        // std::cout<<"DEBUG: r "<<r<<std::endl;
+                        if (cutOffType == 0)
                           {
-                            x[0] = quadPoints[3 * iQuadPoint] - chargePoint[0];
-                            x[1] =
-                              quadPoints[3 * iQuadPoint + 1] - chargePoint[1];
-                            x[2] =
-                              quadPoints[3 * iQuadPoint + 2] - chargePoint[2];
-                            const double r = std::sqrt(
-                              x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
-                            if (cutOffType == 0)
-                              {
-                                double RadVal =
-                                  SphericalFunction->getRadialValue(r);
+                            double RadVal =
+                              SphericalFunction->getRadialValue(r);
+                            // std::cout<<"DEBUG: RadialVal
+                            // "<<RadVal<<std::endl;
 
-                                if (RadVal >= cutOffVal)
-                                  {
-                                    sparseFlag = 1;
-                                    break;
-                                  }
-                              }
-                            else if (cutOffType == 1 && r < cutOffVal)
+                            if (RadVal >= cutOffVal)
                               {
                                 sparseFlag = 1;
                                 break;
                               }
-                          } // quadrature loop
-                        if (sparseFlag == 1)
-                          break;
-
-                      } // iPsp loop ("l" loop)
-
+                          }
+                        else if (cutOffType == 1 && r < cutOffVal)
+                          {
+                            sparseFlag = 1;
+                            break;
+                          }
+                      } // quadrature loop
                     if (sparseFlag == 1)
                       break;
 
-
-                  } // image atom loop
+                  } // iPsp loop ("l" loop)
 
                 if (sparseFlag == 1)
-                  {
-                    dealii::CellId cell    = basisOperationsPtr->cellID(iCell);
-                    sparsityPattern[iCell] = matCount;
-                    d_elementIdsInAtomCompactSupport[iAtom].push_back(cell);
-                    d_elementIndexesInAtomCompactSupport[iAtom].push_back(
-                      iCell);
-                    matCount += 1;
-                    isAtomIdInProcessor = true;
-                  }
-              } // iCell
-          }
+                  break;
 
-#ifdef DEBUG
-        if (d_dftParamsPtr->verbosity >= 4)
-          std::cout << "No.of non zero elements in the compact support of
-            atom "
-                    << iAtom << " is "
-                    << d_elementIteratorsInAtomCompactSupport[iAtom].size()
-                    << std::endl;
-#endif
+
+              } // image atom loop
+
+            if (sparseFlag == 1)
+              {
+                dealii::CellId cell    = basisOperationsPtr->cellID(iCell);
+                sparsityPattern[iCell] = matCount;
+                d_elementIdsInAtomCompactSupport[iAtom].push_back(cell);
+                d_elementIndexesInAtomCompactSupport[iAtom].push_back(iCell);
+                matCount += 1;
+                isAtomIdInProcessor = true;
+              }
+
+          } // iCell
+
+
+        //#ifdef DEBUG
+        std::cout << "No.of non zero elements in the compact support of atom "
+                  << iAtom << " is "
+                  << d_elementIndexesInAtomCompactSupport[iAtom].size()
+                  << std::endl;
+        //#endif
 
         if (isAtomIdInProcessor)
           {

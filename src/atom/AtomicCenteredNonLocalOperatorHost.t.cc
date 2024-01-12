@@ -84,6 +84,7 @@ namespace dftfe
         BLASWrapperPtrHost)
   {
     d_locallyOwnedCells = basisOperationsPtr->nCells();
+    std::cout << "Quadrature Index: " << quadratureIndex << std::endl;
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberAtomsOfInterest =
       d_atomCenteredSphericalFunctionContainer->getNumAtomCentersSize();
@@ -119,6 +120,10 @@ namespace dftfe
     // std::vector<ValueType> sphericalFunctionBasis(maxkPoints *
     //                                                  numberQuadraturePoints,
     //                                                0.0);
+    d_CMatrixEntriesConjugate.clear();
+    d_CMatrixEntriesConjugate.resize(numberAtomsOfInterest);
+    d_CMatrixEntriesTranspose.clear();
+    d_CMatrixEntriesTranspose.resize(numberAtomsOfInterest);
 
     for (unsigned int ChargeId = 0; ChargeId < numberAtomsOfInterest;
          ++ChargeId)
@@ -129,7 +134,6 @@ namespace dftfe
         const unsigned int atomId = ChargeId;
         std::vector<double> imageCoordinates =
           periodicImageCoord.find(atomId)->second;
-
         const unsigned int Zno = atomicNumber[ChargeId];
         const unsigned int NumRadialSphericalFunctions =
           d_atomCenteredSphericalFunctionContainer
@@ -145,10 +149,6 @@ namespace dftfe
 
         unsigned int imageIdsSize = imageCoordinates.size() / 3;
 
-
-        //
-        // allocate element Matrices
-        //
         if (numberElementsInAtomCompactSupport > 0)
           {
             d_CMatrixEntriesConjugate[ChargeId].resize(
@@ -189,7 +189,6 @@ namespace dftfe
               {
                 std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
                   sphericalFunction.find(std::make_pair(Zno, alpha))->second;
-
                 unsigned int       lQuantumNumber = sphFn->getQuantumNumberl();
                 const unsigned int startIndex =
                   d_atomCenteredSphericalFunctionContainer
@@ -210,11 +209,11 @@ namespace dftfe
                 // std::fill(sphericalFunctionBasis.begin(),
                 //           sphericalFunctionBasis.end(),
                 //           ValueType(0.0));
-                for (int iImageAtomCount = -1; iImageAtomCount < imageIdsSize;
-                     ++imageIdsSize)
+                for (int iImageAtomCount = 0; iImageAtomCount < imageIdsSize;
+                     ++iImageAtomCount)
                   {
                     dealii::Point<3> chargePoint(0.0, 0.0, 0.0);
-                    if (iImageAtomCount == -1)
+                    if (iImageAtomCount == 0)
                       {
                         chargePoint = nuclearCoordinates;
                       }
@@ -935,6 +934,12 @@ namespace dftfe
       d_SphericalFunctionKetTimesVectorParFlattened);
   }
 
-
+  template <typename ValueType>
+  const std::map<unsigned int, std::vector<ValueType>> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
+    getScaledShapeFnTimesWaveFunction()
+  {
+    return (d_ShapeFnTimesWavefunction);
+  }
 
 } // namespace dftfe

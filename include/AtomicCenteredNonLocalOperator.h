@@ -339,6 +339,9 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::HOST> &dst,
       const std::pair<unsigned int, unsigned int> &cellRange);
 
+    const std::map<unsigned int, std::vector<ValueType>> &
+    getScaledShapeFnTimesWaveFunction();
+
   private:
     std::map<unsigned int, std::vector<ValueType>> d_ShapeFnTimesWavefunction;
   };

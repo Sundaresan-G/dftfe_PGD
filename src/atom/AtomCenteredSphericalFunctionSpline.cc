@@ -178,7 +178,7 @@ namespace dftfe
           }
       }
     // std::cout<<"---------------------------------------------"<<std::endl;
-    d_rMin = radVec[1];
+    d_rMin = radVec[0];
 
     // orbVec[0] = orbVec[1];
     alglib::real_1d_array x;
@@ -219,6 +219,7 @@ namespace dftfe
       r = d_rMin;
 
     double v = alglib::spline1dcalc(d_radialSplineObject, r);
+    // std::cout<<r<<" "<<v<<std::endl;
 
     return v;
   }
