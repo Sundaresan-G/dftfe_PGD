@@ -404,7 +404,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
   //
   // element level matrix-vector multiplications
   //
-  // d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+  d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
   const dataTypes::number zero(0.0), one(1.0);
 
   const unsigned int inc = 1;
@@ -419,8 +419,6 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
   if (dftPtr->d_dftParamsPtr->isPseudopotential &&
       dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
     {
-      // d_ONCVnonLocalOperator
-
       for (unsigned int iAtom = 0;
            iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
            ++iAtom)
@@ -452,8 +450,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
                                  });
                 }
 
-              // d_ONCVnonLocalOperator->applyCTonX(d_cellWaveFunctionMatrix,std::make_pair(iCell,iCell+1));
-              // d_ONCVPtr->applynonLocalHamiltonianMatrix();
+              d_ONCVnonLocalOperator->applyCTonX(
+                d_cellWaveFunctionMatrix,
+                std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
               for (unsigned int iAtom = 0;
                    iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
                    ++iAtom)
@@ -523,7 +522,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
       // compute V*C^{T}*X
       //
 
-      // d_ONCVPtr->applynonLocalHamiltonianMatrix();
+      d_oncvClassPtr->applynonLocalHamiltonianMatrix();
       for (unsigned int iAtom = 0;
            iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
            ++iAtom)
@@ -594,7 +593,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
       if (dftPtr->d_dftParamsPtr->isPseudopotential &&
           dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
         {
-          // d_ONCVnonLocalOperator->applyConVCTX(d_cellHamMatrixTimesWaveMatrix,std::make_pair(iCell,iCell+1));
+          d_ONCVnonLocalOperator->applyConVCTX(
+            d_cellHamMatrixTimesWaveMatrix,
+            std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
 
           for (unsigned int iAtom = 0;
                iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();

@@ -145,7 +145,7 @@ namespace dftfe
       d_maxSingleAtomContribution; // maximum number of nonlocal indexes across
                                    // all atoms of interset
     std::vector<unsigned int> d_numberCellsAccumNonLocalAtoms;
-    unsigned int              d_numberNodesPerElement; // Access from BasisOperator WHile
+    unsigned int d_numberNodesPerElement; // Access from BasisOperator WHile
                                           // filling CMatrixEntries
     unsigned int d_locallyOwnedCells;
     unsigned int d_numberWaveFunctions;
@@ -254,8 +254,8 @@ namespace dftfe
 
 
 
-    std::vector<std::vector<std::vector<dataTypes::number>>>
-      d_CMatrixEntriesConjugate, d_CMatrixEntriesTranspose;
+    std::vector<std::vector<std::vector<ValueType>>> d_CMatrixEntriesConjugate,
+      d_CMatrixEntriesTranspose;
 
 
     void
@@ -268,7 +268,7 @@ namespace dftfe
     applyCTonX(
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X,
-      std::pair<unsigned int, unsigned int> &cellRange);
+      const std::pair<unsigned int, unsigned int> cellRange);
 
     void
     applyCTonX(
@@ -279,8 +279,8 @@ namespace dftfe
     void
     applyConVCTX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
-        &                                    Xout,
-      std::pair<unsigned int, unsigned int> &cellRange);
+        &                                         Xout,
+      const std::pair<unsigned int, unsigned int> cellRange);
 
     void
     applyConVCTX(
@@ -340,7 +340,7 @@ namespace dftfe
       const std::pair<unsigned int, unsigned int> &cellRange);
 
   private:
-    std::map<unsigned int, std::vector<double>> d_ShapeFnTimesWavefunction;
+    std::map<unsigned int, std::vector<ValueType>> d_ShapeFnTimesWavefunction;
   };
 
   template <typename ValueType>

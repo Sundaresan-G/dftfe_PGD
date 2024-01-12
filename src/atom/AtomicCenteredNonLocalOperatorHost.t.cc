@@ -489,35 +489,22 @@ namespace dftfe
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              ++iElemComp)
           {
-#ifdef USE_COMPLEX
             d_CMatrixEntriesConjugate[ChargeId][iElemComp].resize(
-              maxkPoints * d_numberNodesPerElement * NumTotalSphericalFunctions,
-              std::complex<double>(0.0));
+              d_numberNodesPerElement * NumTotalSphericalFunctions,
+              ValueType(0.0));
             d_CMatrixEntriesTranspose[ChargeId][iElemComp].resize(
-              maxkPoints * d_numberNodesPerElement * NumTotalSphericalFunctions,
-              std::complex<double>(0.0));
+              d_numberNodesPerElement * NumTotalSphericalFunctions,
+              ValueType(0.0));
 
-            std::vector<std::complex<double>> &CMatrixEntriesConjugateAtomElem =
-              d_CMatrixEntriesConjugate[ChargeId][iElemComp];
-
-            std::vector<std::complex<double>> &CMatrixEntriesTransposeAtomElem =
-              d_CMatrixEntriesTranspose[ChargeId][iElemComp];
-
-#else
-            d_CMatrixEntriesConjugate[ChargeId][iElemComp].resize(
-              d_numberNodesPerElement * NumTotalSphericalFunctions, 0.0);
-            d_CMatrixEntriesTranspose[ChargeId][iElemComp].resize(
-              d_numberNodesPerElement * NumTotalSphericalFunctions, 0.0);
-
-            std::vector<double> &CMatrixEntriesConjugateAtomElem =
+            std::vector<ValueType> &CMatrixEntriesConjugateAtomElem =
               d_CMatrixEntriesConjugate[ChargeId][iElemComp];
 
 
-            std::vector<double> &CMatrixEntriesTransposeAtomElem =
+            std::vector<ValueType> &CMatrixEntriesTransposeAtomElem =
               d_CMatrixEntriesTranspose[ChargeId][iElemComp];
 
 
-#endif
+
             for (int kPoint = 0; kPoint < maxkPoints; ++kPoint)
               {
                 for (int iPseudoWave = 0;
@@ -595,10 +582,10 @@ namespace dftfe
     applyCTonX(
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X,
-      std::pair<unsigned int, unsigned int> &cellRange)
+      const std::pair<unsigned int, unsigned int> cellRange)
   {
-    const dataTypes::number zero(0.0), one(1.0);
-    const unsigned int      inc                       = 1;
+    const ValueType    zero(0.0), one(1.0);
+    const unsigned int inc                            = 1;
     d_AllReduceCompleted                              = false;
     int                              numberOfElements = d_locallyOwnedCells;
     const std::vector<unsigned int> &atomicNumber =
@@ -657,16 +644,17 @@ namespace dftfe
             const unsigned int id =
               d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
                 atomId, alpha)];
-            dcopy_(&d_numberWaveFunctions,
-                   &d_ShapeFnTimesWavefunction[atomId]
-                                              [d_numberWaveFunctions * alpha],
-                   &inc,
-                   d_SphericalFunctionKetTimesVectorParFlattened.data() +
-                     d_SphericalFunctionKetTimesVectorParFlattened
-                         .getMPIPatternP2P()
-                         ->globalToLocal(id) *
-                       d_numberWaveFunctions,
-                   &inc);
+            d_BLASWrapperPtr->xcopy(
+              d_numberWaveFunctions,
+              &d_ShapeFnTimesWavefunction[atomId]
+                                         [d_numberWaveFunctions * alpha],
+              inc,
+              d_SphericalFunctionKetTimesVectorParFlattened.data() +
+                d_SphericalFunctionKetTimesVectorParFlattened
+                    .getMPIPatternP2P()
+                    ->globalToLocal(id) *
+                  d_numberWaveFunctions,
+              inc);
           }
       }
   }
@@ -677,8 +665,8 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X)
   {
-    const dataTypes::number zero(0.0), one(1.0);
-    const unsigned int      inc                       = 1;
+    const ValueType    zero(0.0), one(1.0);
+    const unsigned int inc                            = 1;
     d_AllReduceCompleted                              = false;
     int                              numberOfElements = d_locallyOwnedCells;
     const std::vector<unsigned int> &atomicNumber =
@@ -737,16 +725,17 @@ namespace dftfe
             const unsigned int id =
               d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
                 atomId, alpha)];
-            dcopy_(&d_numberWaveFunctions,
-                   &d_ShapeFnTimesWavefunction[atomId]
-                                              [d_numberWaveFunctions * alpha],
-                   &inc,
-                   d_SphericalFunctionKetTimesVectorParFlattened.data() +
-                     d_SphericalFunctionKetTimesVectorParFlattened
-                         .getMPIPatternP2P()
-                         ->globalToLocal(id) *
-                       d_numberWaveFunctions,
-                   &inc);
+            d_BLASWrapperPtr->xcopy(
+              d_numberWaveFunctions,
+              &d_ShapeFnTimesWavefunction[atomId]
+                                         [d_numberWaveFunctions * alpha],
+              inc,
+              d_SphericalFunctionKetTimesVectorParFlattened.data() +
+                d_SphericalFunctionKetTimesVectorParFlattened
+                    .getMPIPatternP2P()
+                    ->globalToLocal(id) *
+                  d_numberWaveFunctions,
+              inc);
           }
       }
     d_SphericalFunctionKetTimesVectorParFlattened.accumulateAddLocallyOwned();
@@ -815,7 +804,7 @@ namespace dftfe
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
         &Xout)
   {
-    const dataTypes::number                        zero(0.0), one(1.0);
+    const ValueType                                zero(0.0), one(1.0);
     const unsigned int                             inc = 1;
     const std::map<unsigned int, std::vector<int>> sparsityPattern =
       d_atomCenteredSphericalFunctionContainer->getSparsityPattern();
@@ -864,10 +853,10 @@ namespace dftfe
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
     applyConVCTX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
-        &                                    Xout,
-      std::pair<unsigned int, unsigned int> &cellRange)
+        &                                         Xout,
+      const std::pair<unsigned int, unsigned int> cellRange)
   {
-    const dataTypes::number                        zero(0.0), one(1.0);
+    const ValueType                                zero(0.0), one(1.0);
     const unsigned int                             inc = 1;
     const std::map<unsigned int, std::vector<int>> sparsityPattern =
       d_atomCenteredSphericalFunctionContainer->getSparsityPattern();

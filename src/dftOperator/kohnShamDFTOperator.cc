@@ -211,7 +211,8 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
-        // d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(numberWaveFunctions);
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          numberWaveFunctions);
       }
 
 

@@ -629,10 +629,11 @@ node is stored
     std::vector<dealii::types::global_dof_index>
       d_FullflattenedArrayMacroCellLocalProcIndexIdMap;
 
-    std::vector<unsigned int>      d_normalCellIdToMacroCellIdMap;
-    std::vector<unsigned int>      d_macroCellIdToNormalCellIdMap;
-    std::vector<dataTypes::number> d_cellWaveFunctionMatrix,
-      d_cellHamMatrixTimesWaveMatrix;
+    std::vector<unsigned int> d_normalCellIdToMacroCellIdMap;
+    std::vector<unsigned int> d_macroCellIdToNormalCellIdMap;
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::HOST>
+      d_cellWaveFunctionMatrix, d_cellHamMatrixTimesWaveMatrix;
     std::map<unsigned int,
              dftfe::utils::MemoryStorage<dataTypes::number,
                                          dftfe::utils::MemorySpace::HOST>>
