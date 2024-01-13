@@ -77,6 +77,7 @@ namespace dftfe
                                d_radialSplineObject);
 
     d_cutOff = radVec[numMeshSize - 1];
+    std::cout << "RmaxCut: " << d_cutOff << std::endl;
     pspFile.close();
   }
 
@@ -135,6 +136,8 @@ namespace dftfe
                                d_radialSplineObject);
 
     d_cutOff = maxRowIndex == -1 ? radVec[maxRowId] : radVec[maxRowIndex];
+    std::cout << "RmaxCut2: " << d_cutOff << " " << radVec[maxRowId]
+              << std::endl;
     pspFile.close();
   }
   AtomCenteredSphericalFunctionSpline::AtomCenteredSphericalFunctionSpline(
@@ -207,6 +210,7 @@ namespace dftfe
                                d_radialSplineObject);
 
     d_cutOff = radVec[maxRowId];
+    std::cout << "RmaxCut: " << d_cutOff << std::endl;
     pspFile.close();
   }
   double

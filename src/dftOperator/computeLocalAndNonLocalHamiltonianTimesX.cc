@@ -538,7 +538,6 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
               double nonlocalConstantV =
                 dftPtr->d_nonLocalPseudoPotentialConstants[atomId]
                                                           [iPseudoAtomicWave];
-
               const unsigned int localId =
                 dftPtr->d_projectorKetTimesVectorParFlattened
                   .getMPIPatternP2P()
@@ -618,39 +617,39 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
       if (dftPtr->d_dftParamsPtr->isPseudopotential &&
           dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
         {
-          // d_ONCVnonLocalOperator->applyConVCTX(
-          //   d_cellHamMatrixTimesWaveMatrix,
-          //   std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
+          d_ONCVnonLocalOperator->applyConVCTX(
+            d_cellHamMatrixTimesWaveMatrix,
+            std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
 
-          for (unsigned int iAtom = 0;
-               iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
-               ++iAtom)
-            {
-              const unsigned int atomId =
-                dftPtr->d_nonLocalAtomIdsInElement[iCell][iAtom];
-              const unsigned int numberPseudoWaveFunctions =
-                dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-              const int nonZeroElementMatrixId =
-                dftPtr->d_sparsityPattern[atomId][iCell];
+          // for (unsigned int iAtom = 0;
+          //      iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
+          //      ++iAtom)
+          //   {
+          //     const unsigned int atomId =
+          //       dftPtr->d_nonLocalAtomIdsInElement[iCell][iAtom];
+          //     const unsigned int numberPseudoWaveFunctions =
+          //       dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
+          //     const int nonZeroElementMatrixId =
+          //       dftPtr->d_sparsityPattern[atomId][iCell];
 
-              d_BLASWrapperPtrHost->xgemm(
-                'N',
-                'N',
-                numberWaveFunctions,
-                d_numberNodesPerElement,
-                numberPseudoWaveFunctions,
-                &one,
-                &projectorKetTimesVector[atomId][0],
-                numberWaveFunctions,
-                &dftPtr->d_nonLocalProjectorElementMatricesTranspose
-                   [atomId][nonZeroElementMatrixId]
-                   [d_kPointIndex * d_numberNodesPerElement *
-                    numberPseudoWaveFunctions],
-                numberPseudoWaveFunctions,
-                &one,
-                &d_cellHamMatrixTimesWaveMatrix[0],
-                numberWaveFunctions);
-            }
+          //     d_BLASWrapperPtrHost->xgemm(
+          //       'N',
+          //       'N',
+          //       numberWaveFunctions,
+          //       d_numberNodesPerElement,
+          //       numberPseudoWaveFunctions,
+          //       &one,
+          //       &projectorKetTimesVector[atomId][0],
+          //       numberWaveFunctions,
+          //       &dftPtr->d_nonLocalProjectorElementMatricesTranspose
+          //          [atomId][nonZeroElementMatrixId]
+          //          [d_kPointIndex * d_numberNodesPerElement *
+          //           numberPseudoWaveFunctions],
+          //       numberPseudoWaveFunctions,
+          //       &one,
+          //       &d_cellHamMatrixTimesWaveMatrix[0],
+          //       numberWaveFunctions);
+          //   }
         }
       for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
         {

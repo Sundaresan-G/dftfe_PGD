@@ -84,7 +84,6 @@ namespace dftfe
         BLASWrapperPtrHost)
   {
     d_locallyOwnedCells = basisOperationsPtr->nCells();
-    std::cout << "Quadrature Index: " << quadratureIndex << std::endl;
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberAtomsOfInterest =
       d_atomCenteredSphericalFunctionContainer->getNumAtomCentersSize();
@@ -125,9 +124,11 @@ namespace dftfe
     d_CMatrixEntriesTranspose.clear();
     d_CMatrixEntriesTranspose.resize(numberAtomsOfInterest);
 
-    for (unsigned int ChargeId = 0; ChargeId < numberAtomsOfInterest;
-         ++ChargeId)
+    const std::vector<unsigned int> atomIdsInProc =
+      d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
+    for (unsigned int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; ++iAtom)
       {
+        unsigned int       ChargeId = atomIdsInProc[iAtom];
         dealii::Point<3>   nuclearCoordinates(atomCoordinates[3 * ChargeId + 0],
                                             atomCoordinates[3 * ChargeId + 1],
                                             atomCoordinates[3 * ChargeId + 2]);
@@ -183,7 +184,6 @@ namespace dftfe
           {
             const unsigned int elementIndex =
               elementIndexesInAtomCompactSupport[iElemComp];
-            unsigned int totalSphFns = 0;
             for (unsigned int alpha = 0; alpha < NumRadialSphericalFunctions;
                  ++alpha)
               {
@@ -252,71 +252,79 @@ namespace dftfe
                           chargePoint[2];
                         sphericalHarmonicUtils::convertCartesianToSpherical(
                           x, r, theta, phi);
-                        radialVal              = sphFn->getRadialValue(r);
-                        unsigned int tempIndex = 0;
-                        for (int mQuantumNumber = -lQuantumNumber;
-                             mQuantumNumber <= lQuantumNumber;
-                             mQuantumNumber++)
+                        if (r <= sphFn->getRadialCutOff())
                           {
-                            sphericalHarmonicUtils::getSphericalHarmonicVal(
-                              theta,
-                              phi,
-                              lQuantumNumber,
-                              mQuantumNumber,
-                              sphericalHarmonicVal);
+                            radialVal = sphFn->getRadialValue(r);
 
-                            sphericalFunctionValue =
-                              radialVal * sphericalHarmonicVal;
-
-
-
-                            //
-                            // kpoint loop
-                            //
-#ifdef USE_COMPLEX
-                            pointMinusLatticeVector[0] =
-                              x[0] + nuclearCoordinates[0];
-                            pointMinusLatticeVector[1] =
-                              x[1] + nuclearCoordinates[1];
-                            pointMinusLatticeVector[2] =
-                              x[2] + nuclearCoordinates[2];
-                            for (int kPoint = 0; kPoint < maxkPoints; ++kPoint)
+                            unsigned int tempIndex = 0;
+                            for (int mQuantumNumber = int(-lQuantumNumber);
+                                 mQuantumNumber <= int(lQuantumNumber);
+                                 mQuantumNumber++)
                               {
-                                angle = d_kPointCoordinates[3 * kPoint + 0] *
-                                          pointMinusLatticeVector[0] +
-                                        d_kPointCoordinates[3 * kPoint + 1] *
-                                          pointMinusLatticeVector[1] +
-                                        d_kPointCoordinates[3 * kPoint + 2] *
-                                          pointMinusLatticeVector[2];
+                                sphericalHarmonicUtils::getSphericalHarmonicVal(
+                                  theta,
+                                  phi,
+                                  lQuantumNumber,
+                                  mQuantumNumber,
+                                  sphericalHarmonicVal);
 
-                                sphericalFunctionBasisReal
-                                  [kPoint * numberQuadraturePoints *
-                                     (2 * lQuantumNumber + 1) +
-                                   tempIndex * numberQuadraturePoints +
-                                   iQuadPoint] +=
-                                  cos(angle) * sphericalFunctionValue;
-                                sphericalFunctionBasisImag
-                                  [kPoint * numberQuadraturePoints *
-                                     (2 * lQuantumNumber + 1) +
-                                   tempIndex * numberQuadraturePoints +
-                                   iQuadPoint] +=
-                                  -sin(angle) * sphericalFunctionValue;
-
-                                // sphericalFunctionBasis[kPoint *
-                                // numberQuadraturePoints +
-                                //  iQuadPoint] +=
-                                // exp(-angle) * sphericalFunctionValue;
+                                sphericalFunctionValue =
+                                  radialVal * sphericalHarmonicVal;
 
 
-                              } // k-Point Loop
+
+                                //
+                                // kpoint loop
+                                //
+#ifdef USE_COMPLEX
+                                pointMinusLatticeVector[0] =
+                                  x[0] + nuclearCoordinates[0];
+                                pointMinusLatticeVector[1] =
+                                  x[1] + nuclearCoordinates[1];
+                                pointMinusLatticeVector[2] =
+                                  x[2] + nuclearCoordinates[2];
+                                for (int kPoint = 0; kPoint < maxkPoints;
+                                     ++kPoint)
+                                  {
+                                    angle =
+                                      d_kPointCoordinates[3 * kPoint + 0] *
+                                        pointMinusLatticeVector[0] +
+                                      d_kPointCoordinates[3 * kPoint + 1] *
+                                        pointMinusLatticeVector[1] +
+                                      d_kPointCoordinates[3 * kPoint + 2] *
+                                        pointMinusLatticeVector[2];
+
+                                    sphericalFunctionBasisReal
+                                      [kPoint * numberQuadraturePoints *
+                                         (2 * lQuantumNumber + 1) +
+                                       tempIndex * numberQuadraturePoints +
+                                       iQuadPoint] +=
+                                      cos(angle) * sphericalFunctionValue;
+                                    sphericalFunctionBasisImag
+                                      [kPoint * numberQuadraturePoints *
+                                         (2 * lQuantumNumber + 1) +
+                                       tempIndex * numberQuadraturePoints +
+                                       iQuadPoint] +=
+                                      -sin(angle) * sphericalFunctionValue;
+
+                                    // sphericalFunctionBasis[kPoint *
+                                    // numberQuadraturePoints +
+                                    //  iQuadPoint] +=
+                                    // exp(-angle) * sphericalFunctionValue;
+
+
+                                  } // k-Point Loop
 #else
-                            ZetalmDeltaVl[tempIndex * numberQuadraturePoints +
-                                          iQuadPoint] += sphericalFunctionValue;
-                            // sphericalFunctionBasis[iQuadPoint] +=
-                            // sphericalFunctionValue;
+                                ZetalmDeltaVl[tempIndex *
+                                                numberQuadraturePoints +
+                                              iQuadPoint] +=
+                                  sphericalFunctionValue;
+                                // sphericalFunctionBasis[iQuadPoint] +=
+                                // sphericalFunctionValue;
 #endif
-                            tempIndex++;
-                          } // Angular momentum m loop
+                                tempIndex++;
+                              } // Angular momentum m loop
+                          }
 
                       } // quad loop
 
@@ -324,11 +332,11 @@ namespace dftfe
 
 #ifdef USE_COMPLEX
                 for (int kPoint = 0; kPoint < maxkPoints; ++kPoint)
-                  for (int iQuadPoint = 0; iQuadPoint < numberQuadraturePoints;
-                       ++iQuadPoint)
+                  for (unsigned int beta = startIndex; beta < endIndex; beta++)
                     {
-                      for (unsigned int beta = startIndex; beta < endIndex;
-                           beta++)
+                      for (int iQuadPoint = 0;
+                           iQuadPoint < numberQuadraturePoints;
+                           ++iQuadPoint)
                         {
                           sphericalFunctionBasisRealTimesJxW
                             [iElemComp * maxkPoints *
@@ -360,7 +368,7 @@ namespace dftfe
                               real(JxwVector[elementIndex *
                                                numberQuadraturePoints +
                                              iQuadPoint]);
-                        }
+                        } // quadPoint
 
                       // sphericalFunctionBasisTimesJxW
                       //   [iElemComp * maxkPoints * NumTotalSphericalFunctions
@@ -375,13 +383,13 @@ namespace dftfe
                       //                                iQuadPoint] *
                       //     JxwVector[elementIndex*numberQuadraturePoints +
                       //     iQuadPoint];
-                    }
+                    } // beta
 #else
-                for (int iQuadPoint = 0; iQuadPoint < numberQuadraturePoints;
-                     ++iQuadPoint)
+                for (unsigned int beta = startIndex; beta < endIndex; beta++)
                   {
-                    for (unsigned int beta = startIndex; beta < endIndex;
-                         beta++)
+                    for (int iQuadPoint = 0;
+                         iQuadPoint < numberQuadraturePoints;
+                         ++iQuadPoint)
                       {
                         ZetalmDeltaVlTimesJxW[iElemComp *
                                                 NumTotalSphericalFunctions *
@@ -393,6 +401,7 @@ namespace dftfe
                                         iQuadPoint] *
                           JxwVector[elementIndex * numberQuadraturePoints +
                                     iQuadPoint];
+
                         // sphericalFunctionBasisTimesJxW[iElemComp *
                         // NumTotalSphericalFunctions *
                         //                         numberQuadraturePoints +
@@ -401,15 +410,11 @@ namespace dftfe
                         //   sphericalFunctionBasis[iQuadPoint] *
                         //   JxwVector[elementIndex*numberQuadraturePoints +
                         //   iQuadPoint];
-                      }
-                  }
+                      } // quadPoint
+                  }     // beta
 #endif
               } // alpha loop
-                // if(totalSphFns != NumTotalSphericalFunctions)
-                // {
-            //   pcout<<"Error!! Not all spherical FUnctions considered in the
-            //   function"<<std::endl; std::exit(0);
-            // }
+
 
           } // element loop
 

@@ -36,6 +36,7 @@ namespace dftfe
     // std::cout << "Initialising Container Class: " << std::endl;
     d_atomicNumbers               = atomicNumbers;
     d_sphericalFunctionsContainer = listOfSphericalFunctions;
+    std::map<unsigned int, unsigned int> startIndexLocation;
     for (const auto &[key, value] : listOfSphericalFunctions)
       {
         unsigned int atomicNumber = key.first;
@@ -48,18 +49,18 @@ namespace dftfe
               d_numRadialSphericalFunctions[atomicNumber] + 1;
             d_numSphericalFunctions[atomicNumber] =
               d_numSphericalFunctions[atomicNumber] + (2 * lIndex + 1);
-            for (unsigned int i = 0; i < 2 * lIndex + 1; i++)
-              d_totalSphericalFunctionIndexStart[atomicNumber].push_back(
-                d_totalSphericalFunctionIndexStart[atomicNumber].back() + 1);
+            d_totalSphericalFunctionIndexStart[atomicNumber].push_back(
+              startIndexLocation[atomicNumber]);
+            startIndexLocation[atomicNumber] += 2 * lIndex + 1;
           }
         else
           {
             d_numRadialSphericalFunctions[atomicNumber] = 1;
             d_numSphericalFunctions[atomicNumber]       = (2 * lIndex + 1);
-            d_totalSphericalFunctionIndexStart[atomicNumber].push_back(0);
-            for (unsigned int i = 0; i < 2 * lIndex; i++)
-              d_totalSphericalFunctionIndexStart[atomicNumber].push_back(
-                d_totalSphericalFunctionIndexStart[atomicNumber].back() + 1);
+            startIndexLocation[atomicNumber]            = 0;
+            d_totalSphericalFunctionIndexStart[atomicNumber].push_back(
+              startIndexLocation[atomicNumber]);
+            startIndexLocation[atomicNumber] += 2 * lIndex + 1;
           }
       }
   }
@@ -70,9 +71,9 @@ namespace dftfe
     const std::vector<unsigned int> &imageIds)
   {
     d_atomCoords = atomCoords;
-    // std::cout << "Setting Image coordinates " << std::endl;
+
     setImageCoordinates(imageIds, periodicCoords);
-    // std::cout << "Finished Setting Image coordinates " << std::endl;
+
     // AssertChecks
     AssertThrow(
       d_atomicNumbers.size() == d_atomCoords.size() / 3,
@@ -92,7 +93,7 @@ namespace dftfe
         d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 1]);
         d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 2]);
       }
-    std::cout << "DEBUG: Size of imageIds: " << imageIds.size() << std::endl;
+
 
 
     for (unsigned int jImageAtom = 0; jImageAtom < imageIds.size();
@@ -276,12 +277,11 @@ namespace dftfe
     int                cumulativeSplineId = 0;
     int                waveFunctionId;
     const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
-    std::cout << "Quadrature Index: " << quadratureIndex << std::endl;
+
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberQuadraturePoints =
       basisOperationsPtr->nQuadsPerCell();
-    std::cout << "Number of Quadrature Points: " << numberQuadraturePoints
-              << std::endl;
+
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       quadraturePointsVector = basisOperationsPtr->quadPoints();
     //
@@ -289,11 +289,9 @@ namespace dftfe
     //
     unsigned int       numberGlobalCharges = d_atomicNumbers.size();
     const unsigned int numberElements      = totalLocallyOwnedCells;
-    std::cout << "DEBUG: Total number of cells" << totalLocallyOwnedCells
-              << std::endl;
+
     std::vector<int> sparsityPattern(numberElements, -1);
-    std::cout << "DEBUG: Number of atoms " << numberAtomsOfInterest
-              << std::endl;
+
     for (int iAtom = 0; iAtom < numberAtomsOfInterest; ++iAtom)
       {
         //
@@ -305,15 +303,14 @@ namespace dftfe
         //
         //
         int numberSphericalFunctions = d_numRadialSphericalFunctions[Zno];
-        std::cout << "DEBUG: Number of sphericalFunctions "
-                  << numberSphericalFunctions << std::endl;
+
         //
         // get the global charge Id of the current nonlocal atom
         //
 
 
         unsigned int imageIdsSize = d_periodicImageCoord[iAtom].size() / 3;
-        std::cout << "DEBUG: Size of imageIds" << imageIdsSize << std::endl;
+
         //
         // resize the data structure corresponding to sparsity pattern
         //
@@ -322,7 +319,7 @@ namespace dftfe
         //
         // parallel loop over all elements
         //
-
+        double maxR = 0.0;
         for (int iCell = 0; iCell < totalLocallyOwnedCells; iCell++)
           {
             std::vector<double> quadPoints(numberQuadraturePoints * 3, 0.0);
@@ -389,6 +386,8 @@ namespace dftfe
                             if (RadVal >= cutOffVal)
                               {
                                 sparseFlag = 1;
+                                if (r > maxR)
+                                  maxR = r;
                                 break;
                               }
                           }
@@ -423,11 +422,11 @@ namespace dftfe
 
 
         //#ifdef DEBUG
-        std::cout << "No.of non zero elements in the compact support of atom "
-                  << iAtom << " is "
-                  << d_elementIndexesInAtomCompactSupport[iAtom].size()
-                  << std::endl;
-        //#endif
+        // std::cout << "No.of non zero elements in the compact support of atom "
+        //           << iAtom << " is "
+        //           << d_elementIndexesInAtomCompactSupport[iAtom].size()
+        //           << std::endl;
+        // //#endif
 
         if (isAtomIdInProcessor)
           {

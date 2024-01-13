@@ -252,10 +252,14 @@ namespace dftfe
         flattenedArray);
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
-      dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-        dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-        numberWaveFunctions,
-        dftPtr->d_projectorKetTimesVectorParFlattened);
+      {
+        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
+          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
+          numberWaveFunctions,
+          dftPtr->d_projectorKetTimesVectorParFlattened);
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          numberWaveFunctions);
+      }
 
 
 
@@ -316,6 +320,8 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          numberWaveFunctions);
       }
   }
 
