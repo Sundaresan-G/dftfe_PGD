@@ -453,132 +453,134 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
               d_ONCVnonLocalOperator->applyCTonX(
                 d_cellWaveFunctionMatrix,
                 std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
-              for (unsigned int iAtom = 0;
-                   iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
-                   ++iAtom)
-                {
-                  const unsigned int atomId =
-                    dftPtr->d_nonLocalAtomIdsInElement[iCell][iAtom];
-                  const unsigned int numberPseudoWaveFunctions =
-                    dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-                  const int nonZeroElementMatrixId =
-                    dftPtr->d_sparsityPattern[atomId][iCell];
+              // for (unsigned int iAtom = 0;
+              //      iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
+              //      ++iAtom)
+              //   {
+              //     const unsigned int atomId =
+              //       dftPtr->d_nonLocalAtomIdsInElement[iCell][iAtom];
+              //     const unsigned int numberPseudoWaveFunctions =
+              //       dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
+              //     const int nonZeroElementMatrixId =
+              //       dftPtr->d_sparsityPattern[atomId][iCell];
 
-                  d_BLASWrapperPtrHost->xgemm(
-                    'N',
-                    'N',
-                    numberWaveFunctions,
-                    numberPseudoWaveFunctions,
-                    d_numberNodesPerElement,
-                    &one,
-                    &d_cellWaveFunctionMatrix[0],
-                    numberWaveFunctions,
-                    &dftPtr->d_nonLocalProjectorElementMatricesConjugate
-                       [atomId][nonZeroElementMatrixId]
-                       [d_kPointIndex * d_numberNodesPerElement *
-                        numberPseudoWaveFunctions],
-                    d_numberNodesPerElement,
-                    &one,
-                    &projectorKetTimesVector[atomId][0],
-                    numberWaveFunctions);
-                }
+              //     d_BLASWrapperPtrHost->xgemm(
+              //       'N',
+              //       'N',
+              //       numberWaveFunctions,
+              //       numberPseudoWaveFunctions,
+              //       d_numberNodesPerElement,
+              //       &one,
+              //       &d_cellWaveFunctionMatrix[0],
+              //       numberWaveFunctions,
+              //       &dftPtr->d_nonLocalProjectorElementMatricesConjugate
+              //          [atomId][nonZeroElementMatrixId]
+              //          [d_kPointIndex * d_numberNodesPerElement *
+              //           numberPseudoWaveFunctions],
+              //       d_numberNodesPerElement,
+              //       &one,
+              //       &projectorKetTimesVector[atomId][0],
+              //       numberWaveFunctions);
+              //   }
             }
         }
 
-      dftPtr->d_projectorKetTimesVectorParFlattened.setValue(0.0);
+      // dftPtr->d_projectorKetTimesVectorParFlattened.setValue(0.0);
 
-      for (unsigned int iAtom = 0;
-           iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-           ++iAtom)
-        {
-          const unsigned int atomId =
-            dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-          const unsigned int numberPseudoWaveFunctions =
-            dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
+      // for (unsigned int iAtom = 0;
+      //      iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      //      ++iAtom)
+      //   {
+      //     const unsigned int atomId =
+      //       dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+      //     const unsigned int numberPseudoWaveFunctions =
+      //       dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
 
-          for (unsigned int iPseudoAtomicWave = 0;
-               iPseudoAtomicWave < numberPseudoWaveFunctions;
-               ++iPseudoAtomicWave)
-            {
-              const unsigned int id =
-                dftPtr->d_projectorIdsNumberingMapCurrentProcess[std::make_pair(
-                  atomId, iPseudoAtomicWave)];
+      //     for (unsigned int iPseudoAtomicWave = 0;
+      //          iPseudoAtomicWave < numberPseudoWaveFunctions;
+      //          ++iPseudoAtomicWave)
+      //       {
+      //         const unsigned int id =
+      //           dftPtr->d_projectorIdsNumberingMapCurrentProcess[std::make_pair(
+      //             atomId, iPseudoAtomicWave)];
 
-              std::memcpy(dftPtr->d_projectorKetTimesVectorParFlattened.data() +
-                            dftPtr->d_projectorKetTimesVectorParFlattened
-                                .getMPIPatternP2P()
-                                ->globalToLocal(id) *
-                              numberWaveFunctions,
-                          &projectorKetTimesVector[atomId][numberWaveFunctions *
-                                                           iPseudoAtomicWave],
-                          numberWaveFunctions * sizeof(dataTypes::number));
-            }
-        }
+      //         std::memcpy(dftPtr->d_projectorKetTimesVectorParFlattened.data()
+      //         +
+      //                       dftPtr->d_projectorKetTimesVectorParFlattened
+      //                           .getMPIPatternP2P()
+      //                           ->globalToLocal(id) *
+      //                         numberWaveFunctions,
+      //                     &projectorKetTimesVector[atomId][numberWaveFunctions
+      //                     *
+      //                                                      iPseudoAtomicWave],
+      //                     numberWaveFunctions * sizeof(dataTypes::number));
+      //       }
+      //   }
 
-      dftPtr->d_projectorKetTimesVectorParFlattened.accumulateAddLocallyOwned();
-      dftPtr->d_projectorKetTimesVectorParFlattened.updateGhostValues();
+      // dftPtr->d_projectorKetTimesVectorParFlattened.accumulateAddLocallyOwned();
+      // dftPtr->d_projectorKetTimesVectorParFlattened.updateGhostValues();
 
       //
       // compute V*C^{T}*X
       //
 
       d_oncvClassPtr->applynonLocalHamiltonianMatrix();
-      for (unsigned int iAtom = 0;
-           iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-           ++iAtom)
-        {
-          const unsigned int atomId =
-            dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-          const unsigned int numberPseudoWaveFunctions =
-            dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-          for (unsigned int iPseudoAtomicWave = 0;
-               iPseudoAtomicWave < numberPseudoWaveFunctions;
-               ++iPseudoAtomicWave)
-            {
-              double nonlocalConstantV =
-                dftPtr->d_nonLocalPseudoPotentialConstants[atomId]
-                                                          [iPseudoAtomicWave];
-              const unsigned int localId =
-                dftPtr->d_projectorKetTimesVectorParFlattened
-                  .getMPIPatternP2P()
-                  ->globalToLocal(
-                    dftPtr->d_projectorIdsNumberingMapCurrentProcess
-                      [std::make_pair(atomId, iPseudoAtomicWave)]);
-              std::transform(
-                dftPtr->d_projectorKetTimesVectorParFlattened.begin() +
-                  localId * numberWaveFunctions,
-                dftPtr->d_projectorKetTimesVectorParFlattened.begin() +
-                  localId * numberWaveFunctions + numberWaveFunctions,
-                projectorKetTimesVector[atomId].begin() +
-                  numberWaveFunctions * iPseudoAtomicWave,
-                [&nonlocalConstantV](auto &a) {
-                  return nonlocalConstantV * a;
-                });
-            }
-        }
+      // for (unsigned int iAtom = 0;
+      //      iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      //      ++iAtom)
+      //   {
+      //     const unsigned int atomId =
+      //       dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+      //     const unsigned int numberPseudoWaveFunctions =
+      //       dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
+      //     for (unsigned int iPseudoAtomicWave = 0;
+      //          iPseudoAtomicWave < numberPseudoWaveFunctions;
+      //          ++iPseudoAtomicWave)
+      //       {
+      //         double nonlocalConstantV =
+      //           dftPtr->d_nonLocalPseudoPotentialConstants[atomId]
+      //                                                     [iPseudoAtomicWave];
+      //         const unsigned int localId =
+      //           dftPtr->d_projectorKetTimesVectorParFlattened
+      //             .getMPIPatternP2P()
+      //             ->globalToLocal(
+      //               dftPtr->d_projectorIdsNumberingMapCurrentProcess
+      //                 [std::make_pair(atomId, iPseudoAtomicWave)]);
+      //         std::transform(
+      //           dftPtr->d_projectorKetTimesVectorParFlattened.begin() +
+      //             localId * numberWaveFunctions,
+      //           dftPtr->d_projectorKetTimesVectorParFlattened.begin() +
+      //             localId * numberWaveFunctions + numberWaveFunctions,
+      //           projectorKetTimesVector[atomId].begin() +
+      //             numberWaveFunctions * iPseudoAtomicWave,
+      //           [&nonlocalConstantV](auto &a) {
+      //             return nonlocalConstantV * a;
+      //           });
+      //       }
+      //   }
     }
-  const std::map<unsigned int, std::vector<dataTypes::number>>
-    temp_projectorTimesVector =
-      d_ONCVnonLocalOperator->getScaledShapeFnTimesWaveFunction();
-  for (unsigned int iAtom = 0;
-       iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-       ++iAtom)
-    {
-      const unsigned int atomId =
-        dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-      std::vector<dataTypes::number> tempVector =
-        temp_projectorTimesVector.find(atomId)->second;
-      dftfe::utils::MemoryStorage<dataTypes::number,
-                                  dftfe::utils::MemorySpace::HOST>
-        tempVectorReference = projectorKetTimesVector.find(atomId)->second;
-      pcout << "DEBUG: Size of the two vectors: " << tempVector.size() << " "
-            << tempVectorReference.size() << std::endl;
-      for (int i = 0; i < tempVector.size(); i++)
-        {
-          pcout << "Debug: " << i << " " << tempVector[i] << " "
-                << tempVectorReference[i] << std::endl;
-        }
-    }
+  // const std::map<unsigned int, std::vector<dataTypes::number>>
+  //   temp_projectorTimesVector =
+  //     d_ONCVnonLocalOperator->getScaledShapeFnTimesWaveFunction();
+  // for (unsigned int iAtom = 0;
+  //      iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+  //      ++iAtom)
+  //   {
+  //     const unsigned int atomId =
+  //       dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+  //     std::vector<dataTypes::number> tempVector =
+  //       temp_projectorTimesVector.find(atomId)->second;
+  //     dftfe::utils::MemoryStorage<dataTypes::number,
+  //                                 dftfe::utils::MemorySpace::HOST>
+  //       tempVectorReference = projectorKetTimesVector.find(atomId)->second;
+  //     pcout << "DEBUG: Size of the two vectors: " << tempVector.size() << " "
+  //           << tempVectorReference.size() << std::endl;
+  //     for (int i = 0; i < tempVector.size(); i++)
+  //       {
+  //         pcout << "Debug: " << i << " " << std::abs(tempVector[i]-
+  //         tempVectorReference[i]) << std::endl;
+  //       }
+  //   }
 
 
 

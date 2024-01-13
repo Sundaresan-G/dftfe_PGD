@@ -176,10 +176,7 @@ namespace dftfe
   {
     std::vector<unsigned int> atomicNumbers;
     std::vector<double>       atomCoords;
-    std::vector<double>       imageCoordsTemp;
-    std::vector<unsigned int> imageIdsTemp;
-    setImageCoordinates(
-      atomLocations, imageIds, periodicCoords, imageIdsTemp, imageCoordsTemp);
+
 
     for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
       {
@@ -190,8 +187,8 @@ namespace dftfe
 
 
     d_atomicProjectorFnsContainer->initaliseCoordinates(atomCoords,
-                                                        imageCoordsTemp,
-                                                        imageIdsTemp);
+                                                        periodicCoords,
+                                                        imageIds);
 
 
     if (updateNonlocalSparsity)

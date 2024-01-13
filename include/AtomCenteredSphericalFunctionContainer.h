@@ -48,9 +48,9 @@ namespace dftfe
            &listOfSphericalFunctions);
 
     void
-    initaliseCoordinates(const std::vector<double> &      atomCoords,
-                         const std::vector<double> &      periodicCoords,
-                         const std::vector<unsigned int> &imageIds);
+    initaliseCoordinates(const std::vector<double> &             atomCoords,
+                         const std::vector<std::vector<double>> &periodicCoords,
+                         const std::vector<int> &                imageIds);
     unsigned int
     getNumAtomCentersSize();
 
@@ -118,8 +118,8 @@ namespace dftfe
 
     std::vector<std::vector<unsigned int>> d_elementIndexesInAtomCompactSupport;
     void
-    setImageCoordinates(const std::vector<unsigned int> &imageIds,
-                        const std::vector<double> &      periodicCoords);
+    setImageCoordinates(const std::vector<int> &                imageIds,
+                        const std::vector<std::vector<double>> &periodicCoords);
 
 
 

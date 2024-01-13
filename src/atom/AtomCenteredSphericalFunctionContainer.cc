@@ -66,13 +66,13 @@ namespace dftfe
   }
   void
   AtomCenteredSphericalFunctionContainer::initaliseCoordinates(
-    const std::vector<double> &      atomCoords,
-    const std::vector<double> &      periodicCoords,
-    const std::vector<unsigned int> &imageIds)
+    const std::vector<double> &             atomCoords,
+    const std::vector<std::vector<double>> &periodicCoords,
+    const std::vector<int> &                imageIds)
   {
     d_atomCoords = atomCoords;
-
     setImageCoordinates(imageIds, periodicCoords);
+
 
     // AssertChecks
     AssertThrow(
@@ -83,8 +83,8 @@ namespace dftfe
 
   void
   AtomCenteredSphericalFunctionContainer::setImageCoordinates(
-    const std::vector<unsigned int> &imageIds,
-    const std::vector<double> &      periodicCoords)
+    const std::vector<int> &                imageIds,
+    const std::vector<std::vector<double>> &periodicCoords)
   {
     d_periodicImageCoord.clear();
     for (unsigned int iAtom = 0; iAtom < d_atomicNumbers.size(); iAtom++)
@@ -94,18 +94,12 @@ namespace dftfe
         d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 2]);
       }
 
-
-
-    for (unsigned int jImageAtom = 0; jImageAtom < imageIds.size();
-         jImageAtom++)
+    for (int iImageId = 0; iImageId < imageIds.size(); iImageId++)
       {
-        // assumes dim =3;
-        d_periodicImageCoord[imageIds[jImageAtom]].push_back(
-          periodicCoords[3 * jImageAtom + 0]);
-        d_periodicImageCoord[imageIds[jImageAtom]].push_back(
-          periodicCoords[3 * jImageAtom + 1]);
-        d_periodicImageCoord[imageIds[jImageAtom]].push_back(
-          periodicCoords[3 * jImageAtom + 2]);
+        const int chargeId = imageIds[iImageId];
+        d_periodicImageCoord[chargeId].push_back(periodicCoords[iImageId][0]);
+        d_periodicImageCoord[chargeId].push_back(periodicCoords[iImageId][1]);
+        d_periodicImageCoord[chargeId].push_back(periodicCoords[iImageId][2]);
       }
   }
 
@@ -422,7 +416,8 @@ namespace dftfe
 
 
         //#ifdef DEBUG
-        // std::cout << "No.of non zero elements in the compact support of atom "
+        // std::cout << "No.of non zero elements in the compact support of atom
+        // "
         //           << iAtom << " is "
         //           << d_elementIndexesInAtomCompactSupport[iAtom].size()
         //           << std::endl;

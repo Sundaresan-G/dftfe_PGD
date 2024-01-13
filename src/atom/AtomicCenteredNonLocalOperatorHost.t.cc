@@ -109,12 +109,11 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer
         ->getPeriodicImageCoordinatesList();
     const unsigned int maxkPoints = d_kPointWeights.size();
+    std::cout << "DEBUG: Max K-points: " << maxkPoints << std::endl;
     const std::map<std::pair<unsigned int, unsigned int>,
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       sphericalFunction =
         d_atomCenteredSphericalFunctionContainer->getSphericalFunctions();
-    std::vector<std::complex<double>> complexProjectorComponent(
-      maxkPoints * numberQuadraturePoints, 0.0);
 
     // std::vector<ValueType> sphericalFunctionBasis(maxkPoints *
     //                                                  numberQuadraturePoints,
@@ -494,10 +493,10 @@ namespace dftfe
              ++iElemComp)
           {
             d_CMatrixEntriesConjugate[ChargeId][iElemComp].resize(
-              d_numberNodesPerElement * NumTotalSphericalFunctions,
+              d_numberNodesPerElement * NumTotalSphericalFunctions * maxkPoints,
               ValueType(0.0));
             d_CMatrixEntriesTranspose[ChargeId][iElemComp].resize(
-              d_numberNodesPerElement * NumTotalSphericalFunctions,
+              d_numberNodesPerElement * NumTotalSphericalFunctions * maxkPoints,
               ValueType(0.0));
 
             std::vector<ValueType> &CMatrixEntriesConjugateAtomElem =
@@ -562,6 +561,11 @@ namespace dftfe
                       //      NumTotalSphericalFunctions +
                       //    NumTotalSphericalFunctions * iNode + iPseudoWave]
                       //      = std::conj(temp);
+                      // std::cout
+                      //   << "DEBUG: CMatrix Entries: "
+                      //   << (d_numberNodesPerElement * iPseudoWave + iNode)
+                      //   << " " << tempReal <<" "<<tempImag<< std::endl;
+
 
 #else
                       CMatrixEntriesConjugateAtomElem[d_numberNodesPerElement *
@@ -880,7 +884,10 @@ namespace dftfe
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
             const int nonZeroElementMatrixId =
               sparsityPattern.find(atomId)->second[iElem];
-            //std::cout<<"DEBUG: atomId shapeFnTimesWavefunctionSize, Xout size: "<<atomId<<" "<<d_ShapeFnTimesWavefunction[atomId].size()<<" "<<Xout.size()<<std::endl;
+            // std::cout<<"DEBUG: atomId shapeFnTimesWavefunctionSize, Xout
+            // size: "<<atomId<<"
+            // "<<d_ShapeFnTimesWavefunction[atomId].size()<<"
+            // "<<Xout.size()<<std::endl;
             d_BLASWrapperPtr->xgemm(
               'N',
               'N',
@@ -896,7 +903,8 @@ namespace dftfe
                                          numberSphericalFunctions],
               numberSphericalFunctions,
               &one,
-              &Xout[(iElem-cellRange.first) * d_numberNodesPerElement * d_numberNodesPerElement],
+              &Xout[(iElem - cellRange.first) * d_numberNodesPerElement *
+                    d_numberNodesPerElement],
               d_numberWaveFunctions);
 
           } // iAtom
