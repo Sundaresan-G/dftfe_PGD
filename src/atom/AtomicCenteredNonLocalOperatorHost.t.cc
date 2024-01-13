@@ -880,7 +880,7 @@ namespace dftfe
                 ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
             const int nonZeroElementMatrixId =
               sparsityPattern.find(atomId)->second[iElem];
-
+            //std::cout<<"DEBUG: atomId shapeFnTimesWavefunctionSize, Xout size: "<<atomId<<" "<<d_ShapeFnTimesWavefunction[atomId].size()<<" "<<Xout.size()<<std::endl;
             d_BLASWrapperPtr->xgemm(
               'N',
               'N',
@@ -896,7 +896,7 @@ namespace dftfe
                                          numberSphericalFunctions],
               numberSphericalFunctions,
               &one,
-              &Xout[iElem * d_numberNodesPerElement * d_numberNodesPerElement],
+              &Xout[(iElem-cellRange.first) * d_numberNodesPerElement * d_numberNodesPerElement],
               d_numberWaveFunctions);
 
           } // iAtom
