@@ -1176,8 +1176,7 @@ namespace dftfe
     //
     // initialize pseudopotential data for both local and nonlocal part
     //
-    pcout << "dft.cc Number of cells DEBUG: "
-          << basisOperationsPtrHost->nCells() << std::endl;
+
     d_oncvClassPtr->initialise(basisOperationsPtrHost,
                                d_BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)

@@ -771,9 +771,7 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     if (couplingtype == CouplingStructure::diagonal)
       {
-        unsigned int startIndex =
-          0; // Find out the most optimized way of doing this...
-        // d_atomCenteredSphericalFunctionContainer->getTotalSphericalFunctionIndexStart(atomId);
+        unsigned int startIndex = 0; 
         for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
           {
             const unsigned int atomId = atomIdsInProc[iAtom];
