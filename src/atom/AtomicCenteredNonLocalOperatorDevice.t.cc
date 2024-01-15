@@ -307,7 +307,12 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    initialiseOperatorActionOnX(unsigned int kPointIndex)
+    initialiseOperatorActionOnX(
+      unsigned int kPointIndex,
+      std::map<unsigned int,
+               dftfe::utils::MemoryStorage<ValueType,
+                                           dftfe::utils::MemorySpace::DEVICE>>
+        &shapeFnTimesWavefunctionMatrix)
   {
     d_kPointIndex = kPointIndex;
     // d_ShapeFnTimesWavefunction.clear();
@@ -328,7 +333,15 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    initialiseFlattenedDataStructure(unsigned int numberWaveFunctions)
+    initialiseFlattenedDataStructure(
+      unsigned int numberWaveFunctions,
+      std::map<unsigned int,
+               dftfe::utils::MemoryStorage<ValueType,
+                                           dftfe::utils::MemorySpace::DEVICE>>
+        &shapeFnTimesWavefunctionMatrix,
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &sphericalFunctionKetTimesVectorParFlattened)
   {
     d_numberWaveFunctions = numberWaveFunctions;
     // dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(

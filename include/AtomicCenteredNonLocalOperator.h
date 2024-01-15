@@ -75,10 +75,20 @@ namespace dftfe
 
 
     virtual void
-    initialiseOperatorActionOnX(unsigned int kPointIndex) = 0;
+    initialiseOperatorActionOnX(
+      unsigned int kPointIndex,
+      std::map<unsigned int,
+               dftfe::utils::MemoryStorage<ValueType, memorySpace>>
+        &shapeFnTimesWavefunctionMatrix) = 0;
 
     virtual void
-    initialiseFlattenedDataStructure(unsigned int numberWaveFunctions) = 0;
+    initialiseFlattenedDataStructure(
+      unsigned int numberWaveFunctions,
+      std::map<unsigned int,
+               dftfe::utils::MemoryStorage<ValueType, memorySpace>>
+        &shapeFnTimesWavefunctionMatri,
+      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened) = 0;
 
     unsigned int
     getTotalAtomInCurrentProcessor();
@@ -165,10 +175,23 @@ namespace dftfe
   {
   public:
     void
-    initialiseOperatorActionOnX(unsigned int kPointIndex) override;
+    initialiseOperatorActionOnX(
+      unsigned int kPointIndex,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix) override;
 
     void
-    initialiseFlattenedDataStructure(unsigned int numberWaveFunctions) override;
+    initialiseFlattenedDataStructure(
+      unsigned int numberWaveFunctions,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix,
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::HOST>
+        &sphericalFunctionKetTimesVectorParFlattened) override;
 
     void
     computeCMatrixEntries(
@@ -184,6 +207,10 @@ namespace dftfe
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_numberNodesPerElement;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_this_mpi_process;
+
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_AllReduceCompleted;
@@ -260,14 +287,24 @@ namespace dftfe
 
     void
     applyV_onCTX(
-      CouplingStructure couplingtype,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &couplingMatrix);
+      const CouplingStructure couplingtype,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &couplingMatrix,
+      const dftfe::linearAlgebra::MultiVector<ValueType,
+                                              dftfe::utils::MemorySpace::HOST>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix);
 
     void
     applyCTonX(
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X,
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::HOST>
+        &sphericalFunctionKetTimesVectorParFlattened,
       const std::pair<unsigned int, unsigned int> cellRange);
 
     void
@@ -279,7 +316,11 @@ namespace dftfe
     void
     applyConVCTX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
-        &                                         Xout,
+        &Xout,
+       std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange);
 
     void
@@ -355,10 +396,23 @@ namespace dftfe
   {
   public:
     void
-    initialiseOperatorActionOnX(unsigned int kPointIndex) override;
+    initialiseOperatorActionOnX(
+      unsigned int kPointIndex,
+      std::map<unsigned int,
+               dftfe::utils::MemoryStorage<ValueType,
+                                           dftfe::utils::MemorySpace::DEVICE>>
+        &shapeFnTimesWavefunctionMatrix) override;
 
     void
-    initialiseFlattenedDataStructure(unsigned int numberWaveFunctions) override;
+    initialiseFlattenedDataStructure(
+      unsigned int numberWaveFunctions,
+      std::map<unsigned int,
+               dftfe::utils::MemoryStorage<ValueType,
+                                           dftfe::utils::MemorySpace::DEVICE>>
+        &shapeFnTimesWavefunctionMatrix,
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &sphericalFunctionKetTimesVectorParFlattened) override;
 
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,

@@ -404,7 +404,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
   //
   // element level matrix-vector multiplications
   //
-  d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+  d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex,
+                                                      projectorKetTimesVector);
+  d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
   const dataTypes::number zero(0.0), one(1.0);
 
   const unsigned int inc = 1;
@@ -419,14 +421,14 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
   if (dftPtr->d_dftParamsPtr->isPseudopotential &&
       dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
     {
-      for (unsigned int iAtom = 0;
-           iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-           ++iAtom)
-        {
-          const unsigned int atomId =
-            dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-          projectorKetTimesVector[atomId].setValue(0.0);
-        }
+      // for (unsigned int iAtom = 0;
+      //      iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      //      ++iAtom)
+      //   {
+      //     const unsigned int atomId =
+      //       dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+      //     projectorKetTimesVector[atomId].setValue(0.0);
+      //   }
       for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
         {
           if (dftPtr->d_nonLocalAtomIdsInElement[iCell].size() > 0)
@@ -452,6 +454,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
 
               d_ONCVnonLocalOperator->applyCTonX(
                 d_cellWaveFunctionMatrix,
+                d_SphericalFunctionKetTimesVectorParFlattened,
                 std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
               // for (unsigned int iAtom = 0;
               //      iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
@@ -524,7 +527,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
       // compute V*C^{T}*X
       //
 
-      d_oncvClassPtr->applynonLocalHamiltonianMatrix();
+      d_oncvClassPtr->applynonLocalHamiltonianMatrix(d_SphericalFunctionKetTimesVectorParFlattened, projectorKetTimesVector);
       // for (unsigned int iAtom = 0;
       //      iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
       //      ++iAtom)
@@ -621,6 +624,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
         {
           d_ONCVnonLocalOperator->applyConVCTX(
             d_cellHamMatrixTimesWaveMatrix,
+            projectorKetTimesVector,
             std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
 
           // for (unsigned int iAtom = 0;

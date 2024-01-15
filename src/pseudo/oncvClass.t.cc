@@ -513,7 +513,14 @@ namespace dftfe
   }
   template <typename ValueType>
   void
-  oncvClass<ValueType>::applynonLocalHamiltonianMatrix()
+  oncvClass<ValueType>::applynonLocalHamiltonianMatrix(
+    const dftfe::linearAlgebra::MultiVector<ValueType,
+                                            dftfe::utils::MemorySpace::HOST>
+      &sphericalFunctionKetTimesVectorParFlattened,
+    std::map<
+      unsigned int,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+      &shapeFnTimesWavefunctionMatrix)
   {
     if (!d_nonlocalHamiltonianEntriesUpdated)
       {
@@ -544,8 +551,11 @@ namespace dftfe
 
     if (!d_useDevice)
       {
-        d_nonLocalOperatorHost->applyV_onCTX(CouplingStructure::diagonal,
-                                             d_nonLocalHamiltonianEntriesHost);
+        d_nonLocalOperatorHost->applyV_onCTX(
+          CouplingStructure::diagonal,
+          d_nonLocalHamiltonianEntriesHost,
+          sphericalFunctionKetTimesVectorParFlattened,
+          shapeFnTimesWavefunctionMatrix);
       }
     else
       {

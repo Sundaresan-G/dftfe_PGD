@@ -1603,7 +1603,7 @@ namespace dftfe
         nonLocalGhostAtomIdsInCurrentProcessRenum.add_index(newAtomId);
       }
 
-    if (this_mpi_process == 0 && false)
+    if (this_mpi_process == 0 && true)
       {
         for (std::map<int, int>::const_iterator it =
                oldToNewNonLocalAtomIds.begin();
@@ -1619,7 +1619,7 @@ namespace dftfe
           std::cout << ownedNonLocalAtomIdsSizesAllProcess[iProc] << ",";
         std::cout << std::endl;
       }
-    if (false)
+    if (true)
       {
         std::stringstream ss1;
         nonLocalOwnedAtomIdsInCurrentProcess.print(ss1);
@@ -1725,7 +1725,7 @@ namespace dftfe
         d_ghostProjectorIdsCurrentProcess.add_indices(g.begin(), g.end());
         localGhostCount++;
       }
-    if (false)
+    if (true)
       {
         std::stringstream ss1;
         d_locallyOwnedProjectorIdsCurrentProcess.print(ss1);
@@ -1777,7 +1777,7 @@ namespace dftfe
           }
       }
 
-    if (false)
+    if (true)
       {
         for (std::map<std::pair<unsigned int, unsigned int>,
                       unsigned int>::const_iterator it =

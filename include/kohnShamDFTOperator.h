@@ -638,6 +638,9 @@ node is stored
              dftfe::utils::MemoryStorage<dataTypes::number,
                                          dftfe::utils::MemorySpace::HOST>>
       projectorKetTimesVector;
+    dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                      dftfe::utils::MemorySpace::HOST>
+      d_SphericalFunctionKetTimesVectorParFlattened;      
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,

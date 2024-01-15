@@ -172,7 +172,14 @@ namespace dftfe
 
 
     void
-    applynonLocalHamiltonianMatrix();
+    applynonLocalHamiltonianMatrix(
+      const dftfe::linearAlgebra::MultiVector<ValueType,
+                                              dftfe::utils::MemorySpace::HOST>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix);
 
 
   private:
