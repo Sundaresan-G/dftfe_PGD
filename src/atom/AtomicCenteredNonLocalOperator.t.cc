@@ -73,8 +73,6 @@ namespace dftfe
         basisOperationsPtr)
   {
     const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
-    const unsigned int numberAtomsOfInterest =
-      d_atomCenteredSphericalFunctionContainer->getNumAtomCentersSize();
     const unsigned int numberNodesPerElement =
       basisOperationsPtr->nDofsPerCell();
     const unsigned int numCells = totalLocallyOwnedCells;
@@ -93,6 +91,7 @@ namespace dftfe
     // // data structures for memory optimization of projectorKetTimesVector
     // //
     std::vector<unsigned int> atomIdsAllProcessFlattened;
+    MPI_Barrier(d_mpi_communicator);
     pseudoUtils::exchangeLocalList(atomIdsInCurrentProcess,
                                    atomIdsAllProcessFlattened,
                                    d_n_mpi_processes,
@@ -121,7 +120,7 @@ namespace dftfe
     atomIdsAllProcessFlattened.clear();
 
     dealii::IndexSet ownedAtomIdsInCurrentProcess;
-    ownedAtomIdsInCurrentProcess.set_size(numberAtoms);
+    ownedAtomIdsInCurrentProcess.set_size(numberAtoms); // Check this
     ownedAtomIdsInCurrentProcess.add_indices(atomIdsInCurrentProcess.begin(),
                                              atomIdsInCurrentProcess.end());
     dealii::IndexSet ghostAtomIdsInCurrentProcess(ownedAtomIdsInCurrentProcess);
@@ -187,10 +186,10 @@ namespace dftfe
          it++)
       {
         unsigned int newAtomId = oldToNewAtomIds[*it];
-        ghostAtomIdsInCurrentProcess.add_index(newAtomId);
+        ghostAtomIdsInCurrentProcessRenum.add_index(newAtomId);
       }
 
-    if (d_this_mpi_process == 0 && true)
+    if (d_this_mpi_process == 0 && false)
       {
         for (std::map<int, int>::const_iterator it = oldToNewAtomIds.begin();
              it != oldToNewAtomIds.end();
@@ -205,7 +204,7 @@ namespace dftfe
           std::cout << ownedAtomIdsSizesAllProcess[iProc] << ",";
         std::cout << std::endl;
       }
-    if (true)
+    if (false)
       {
         std::stringstream ss1;
         ownedAtomIdsInCurrentProcess.print(ss1);
@@ -320,7 +319,7 @@ namespace dftfe
                                                               g.end());
         localGhostCount++;
       }
-    if (true)
+    if (false)
       {
         std::stringstream ss1;
         d_locallyOwnedSphericalFunctionIdsCurrentProcess.print(ss1);
@@ -374,7 +373,7 @@ namespace dftfe
           }
       }
 
-    if (true)
+    if (false)
       {
         for (std::map<std::pair<unsigned int, unsigned int>,
                       unsigned int>::const_iterator it =

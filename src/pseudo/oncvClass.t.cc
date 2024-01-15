@@ -28,6 +28,7 @@ namespace dftfe
     const unsigned int                          nOMPThreads,
     const std::map<unsigned int, unsigned int> &atomAttributes,
     const bool                                  reproducibleOutput,
+    const int                                   verbosity,
     const bool                                  useDevice)
     : d_mpiCommParent(mpi_comm_parent)
     , d_this_mpi_process(
@@ -40,6 +41,7 @@ namespace dftfe
     d_floatingNuclearCharges = floatingNuclearCharges;
     d_nOMPThreads            = nOMPThreads;
     d_reproducible_output    = reproducibleOutput;
+    d_verbosity              = verbosity;
     d_atomTypeAtributes      = atomAttributes;
     d_useDevice              = useDevice;
   }
@@ -114,7 +116,6 @@ namespace dftfe
     unsigned int                            numEigenValues)
   {
     MPI_Barrier(d_mpiCommParent);
-    pcout << "Initialising  ONCV class: " << std::endl;
     d_BasisOperatorHostPtr = basisOperationsPtr;
     d_BLASWrapperHostPtr   = BLASWrapperPtrHost;
 #if defined(DFTFE_WITH_DEVICE)
@@ -200,7 +201,7 @@ namespace dftfe
         d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
-        if (true)
+        if (d_verbosity >= 2)
           pcout
             << "ONCVclass: Time taken for computeSparseStructureNonLocalProjectors: "
             << TotalTime << std::endl;
@@ -221,7 +222,7 @@ namespace dftfe
 #endif
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
-    if (true)
+    if (d_verbosity >= 2)
       pcout << "ONCVclass: Time taken for non local psp init: " << TotalTime
             << std::endl;
   }
@@ -242,11 +243,9 @@ namespace dftfe
         unsigned int numRadProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Zno);
-        pcout << "Num Rad Projectors: " << numRadProjectors << std::endl;
         unsigned int numTotalProjectors =
           d_atomicProjectorFnsContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-        pcout << "Num Total Projectors: " << numTotalProjectors << std::endl;
         char denominatorDataFileName[256];
         strcpy(denominatorDataFileName,
                (d_dftfeScratchFolderName + "/z" + std::to_string(Zno) + "/" +
@@ -288,14 +287,13 @@ namespace dftfe
          it != d_atomTypes.end();
          ++it)
       {
-        pcout << "Filling projectors for atom: " << *it << std::endl;
         char         pseudoAtomDataFile[256];
         unsigned int cumulativeSplineId = 0;
         strcpy(pseudoAtomDataFile,
                (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
                 "/PseudoAtomDat")
                  .c_str());
-        pcout << "Reading from: " << pseudoAtomDataFile << std::endl;
+
         unsigned int  Zno = *it;
         std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
         unsigned int  numberOfProjectors;
@@ -304,10 +302,6 @@ namespace dftfe
         projectorIdDetails.resize(numberOfProjectors);
         std::string   readLine;
         std::set<int> radFunctionIds;
-        pcout << "Number of projectors: " << numberOfProjectors << std::endl;
-
-
-
         atomicFunctionIdDetails.resize(numberOfProjectors);
         for (unsigned int i = 0; i < numberOfProjectors; ++i)
           {
@@ -345,8 +339,6 @@ namespace dftfe
         std::string  tempProjRadialFunctionFileName;
         unsigned int numProj;
         unsigned int alpha = 0;
-        pcout << "Number of L components Projectors: " << radFunctionIds.size()
-              << std::endl;
         for (std::set<int>::iterator i = radFunctionIds.begin();
              i != radFunctionIds.end();
              ++i)
@@ -377,10 +369,6 @@ namespace dftfe
                 d_atomicProjectorFnsMap[std::make_pair(Zno, alpha)] =
                   std::make_shared<AtomCenteredSphericalFunctionSpline>(
                     projRadialFunctionFileName, lQuantumNo, 0, j, numProj + 1);
-                std::cout << "Radial Value for Projector: "
-                          << d_atomicProjectorFnsMap[std::make_pair(Zno, alpha)]
-                               ->getRadialValue(0.0)
-                          << std::endl;
                 alpha++;
               }
           } // i loop
@@ -394,7 +382,6 @@ namespace dftfe
   void
   oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForLocalPotential()
   {
-    pcout << "Debug Line: 298" << std::endl;
     d_atomicLocalPotVector.clear();
     d_atomicLocalPotVector.resize(d_nOMPThreads);
 
@@ -510,7 +497,6 @@ namespace dftfe
     imageCoordsTemp.clear();
     imageCoordsTemp.resize(imageIds.size() * 3, 0.0);
     std::vector<unsigned int> imageLoc(int(atomLocations.size()), 0.0);
-    pcout << "ImageLocation size: " << imageLoc.size() << std::endl;
     for (int jImage = 0; jImage < imageIds.size(); jImage++)
       {
         unsigned int atomId = (imageIds[jImage]);
@@ -525,18 +511,6 @@ namespace dftfe
         imageLoc[atomId] += 1;
       }
   }
-  // template <typename ValueType>
-  // void
-  // oncvClass<ValueType>::compareSparsityPatternAndCMatrix(const
-  // std::map<unsigned int, std::vector<int>> & sparsityPatternRef)
-  // {
-  //   const std::map<unsigned int, std::vector<int>> sparsityPattern =
-  //   d_atomicProjectorFnsContainer->getSparsityPattern();
-
-  //   pcout<<"Size of sparsity Patterns: "<<sparsityPatternRef.size()<<"
-  //   "<<sparsityPattern.size()<<std::endl;
-
-  // }
   template <typename ValueType>
   void
   oncvClass<ValueType>::applynonLocalHamiltonianMatrix()

@@ -109,7 +109,6 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer
         ->getPeriodicImageCoordinatesList();
     const unsigned int maxkPoints = d_kPointWeights.size();
-    std::cout << "DEBUG: Max K-points: " << maxkPoints << std::endl;
     const std::map<std::pair<unsigned int, unsigned int>,
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       sphericalFunction =

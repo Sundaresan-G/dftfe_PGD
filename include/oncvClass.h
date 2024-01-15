@@ -56,6 +56,7 @@ namespace dftfe
               const unsigned int            nOMPThreads,
               const std::map<unsigned int, unsigned int> &atomAttributes,
               const bool                                  reproducibleOutput,
+              const int                                   verbosity,
               const bool                                  useDevice);
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.

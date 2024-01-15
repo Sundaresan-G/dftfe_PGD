@@ -814,7 +814,6 @@ namespace dftfe
 
     nlccFlag = pspFlags[0];
     pawFlag  = pspFlags[1];
-    pcout << "Flags: " << pawFlag << " " << nlccFlag << std::endl;
     nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
     pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
     if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
@@ -827,13 +826,14 @@ namespace dftfe
         // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
         // "<<basisOperationsPtrHost->nCells()<<std::endl;
         d_oncvClassPtr = std::make_shared<dftfe::oncvClass<dataTypes::number>>(
-          d_mpiCommParent,
+          mpi_communicator, // domain decomposition communicator
           d_dftfeScratchFolderName,
           atomTypes,
           d_dftParamsPtr->floatingNuclearCharges,
           d_nOMPThreads,
           d_atomTypeAtributes,
           d_dftParamsPtr->reproducible_output,
+          d_dftParamsPtr->verbosity,
           d_dftParamsPtr->useDevice);
       }
     else if (d_dftParamsPtr->isPseudopotential == true &&
@@ -916,14 +916,14 @@ namespace dftfe
           pcout << "initPseudoPotentialAll: Time taken for non local psp init: "
                 << init_nonlocal2 << std::endl;
         // Will replace the above lines,
-        pcout << "dft.cc Number of cells DEBUG: "
-              << basisOperationsPtrHost->nCells() << std::endl;
-        d_oncvClassPtr->initialiseNonLocalContribution(atomLocations,
-                                                       d_imageIdsTrunc,
-                                                       d_imagePositionsTrunc,
-                                                       d_kPointWeights,
-                                                       d_kPointCoordinates,
-                                                       updateNonlocalSparsity);
+
+        d_oncvClassPtr->initialiseNonLocalContribution(
+          atomLocations,
+          d_imageIdsTrunc,
+          d_imagePositionsTrunc,
+          d_kPointWeights,     // accounts for interpool
+          d_kPointCoordinates, // accounts for interpool
+          updateNonlocalSparsity);
 
 
         // d_oncvClassPtr->compareSparsityPatternAndCMatrix(d_sparsityPattern);

@@ -56,11 +56,7 @@ namespace dftfe
 
     d_rMin    = radVec[1];
     orbVec[0] = orbVec[1];
-    std::cout << "Value of the Datas at : " << radVec[0] << " is " << orbVec[0]
-              << std::endl;
-    std::cout << "numMeshSize = : " << numMeshSize << std::endl;
-    std::cout << "Value of final Datas at : " << radVec[numMeshSize - 1]
-              << " is " << orbVec[numMeshSize - 1] << std::endl;
+
     alglib::real_1d_array x;
     x.setcontent(numMeshSize, &radVec[0]);
     alglib::real_1d_array y;
@@ -77,7 +73,6 @@ namespace dftfe
                                d_radialSplineObject);
 
     d_cutOff = radVec[numMeshSize - 1];
-    std::cout << "RmaxCut: " << d_cutOff << std::endl;
     pspFile.close();
   }
 
@@ -90,7 +85,6 @@ namespace dftfe
     int          maxRowIndex)
   {
     d_lQuantumNumber = l;
-    // std::cout<<"Opening FIle: "<<filename<<std::endl;
     std::ifstream       pspFile(filename);
     double              orbValue      = 0.0;
     double              radialValue   = 0.0;
@@ -112,11 +106,9 @@ namespace dftfe
         if (radialPower != 0)
           orbValue *= pow(radialValue, radialPower);
         orbVec.push_back(orbValue);
-        // std::cout<<radialValue<<" "<<orbValue<<std::endl;
         if (orbValue > truncationTol)
           maxRowId = iRow;
       }
-    // std::cout<<"---------------------------------------------"<<std::endl;
     d_rMin = radVec[1];
 
     // orbVec[0] = orbVec[1];
@@ -136,8 +128,6 @@ namespace dftfe
                                d_radialSplineObject);
 
     d_cutOff = maxRowIndex == -1 ? radVec[maxRowId] : radVec[maxRowIndex];
-    std::cout << "RmaxCut2: " << d_cutOff << " " << radVec[maxRowId]
-              << std::endl;
     pspFile.close();
   }
   AtomCenteredSphericalFunctionSpline::AtomCenteredSphericalFunctionSpline(
@@ -180,7 +170,6 @@ namespace dftfe
               maxRowId = iRow;
           }
       }
-    // std::cout<<"---------------------------------------------"<<std::endl;
     d_rMin = radVec[0];
 
     // orbVec[0] = orbVec[1];
@@ -210,7 +199,6 @@ namespace dftfe
                                d_radialSplineObject);
 
     d_cutOff = radVec[maxRowId];
-    std::cout << "RmaxCut: " << d_cutOff << std::endl;
     pspFile.close();
   }
   double
@@ -223,8 +211,6 @@ namespace dftfe
       r = d_rMin;
 
     double v = alglib::spline1dcalc(d_radialSplineObject, r);
-    // std::cout<<r<<" "<<v<<std::endl;
-
     return v;
   }
 
