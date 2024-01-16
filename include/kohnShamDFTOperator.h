@@ -640,7 +640,7 @@ node is stored
       projectorKetTimesVector;
     dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                       dftfe::utils::MemorySpace::HOST>
-      d_SphericalFunctionKetTimesVectorParFlattened;      
+      d_SphericalFunctionKetTimesVectorParFlattened;
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,

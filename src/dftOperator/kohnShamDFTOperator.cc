@@ -212,7 +212,9 @@ namespace dftfe
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,projectorKetTimesVector,d_SphericalFunctionKetTimesVectorParFlattened);
+          numberWaveFunctions,
+          projectorKetTimesVector,
+          d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -258,7 +260,9 @@ namespace dftfe
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,projectorKetTimesVector,d_SphericalFunctionKetTimesVectorParFlattened);
+          numberWaveFunctions,
+          projectorKetTimesVector,
+          d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -321,7 +325,9 @@ namespace dftfe
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,projectorKetTimesVector,d_SphericalFunctionKetTimesVectorParFlattened);
+          numberWaveFunctions,
+          projectorKetTimesVector,
+          d_SphericalFunctionKetTimesVectorParFlattened);
       }
   }
 

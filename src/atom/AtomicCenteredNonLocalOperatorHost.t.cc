@@ -604,11 +604,16 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange)
   {
     const ValueType    zero(0.0), one(1.0);
-    const unsigned int inc                            = 1;
-    d_AllReduceCompleted                              = false;
+    const unsigned int inc = 1;
+    d_AllReduceCompleted   = false;
+    // std::cout<<"DEBUG 612 processor: "<<d_this_mpi_process<<std::endl;
     int                              numberOfElements = d_locallyOwnedCells;
     const std::vector<unsigned int> &atomicNumber =
       d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
@@ -644,13 +649,13 @@ namespace dftfe
                                          numberSphericalFunctions],
               d_numberNodesPerElement,
               &one,
-              &d_ShapeFnTimesWavefunction[atomId][0],
+              &shapeFnTimesWavefunctionMatrix[atomId][0],
               d_numberWaveFunctions);
 
           } // iAtom
 
       } // iElem
-
+        // std::cout<<"DEBUG 658 processor: "<<d_this_mpi_process<<std::endl;
 
     const std::vector<unsigned int> atomIdsInProc =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
@@ -668,8 +673,8 @@ namespace dftfe
                 atomId, alpha)];
             d_BLASWrapperPtr->xcopy(
               d_numberWaveFunctions,
-              &d_ShapeFnTimesWavefunction[atomId]
-                                         [d_numberWaveFunctions * alpha],
+              &shapeFnTimesWavefunctionMatrix[atomId]
+                                             [d_numberWaveFunctions * alpha],
               inc,
               sphericalFunctionKetTimesVectorParFlattened.data() +
                 sphericalFunctionKetTimesVectorParFlattened.getMPIPatternP2P()
@@ -678,6 +683,7 @@ namespace dftfe
               inc);
           }
       }
+    // std::cout<<"DEBUG 682 processor: "<<d_this_mpi_process<<std::endl;
   }
   template <typename ValueType>
   void
@@ -686,82 +692,85 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X)
   {
-    const ValueType    zero(0.0), one(1.0);
-    const unsigned int inc                            = 1;
-    d_AllReduceCompleted                              = false;
-    int                              numberOfElements = d_locallyOwnedCells;
-    const std::vector<unsigned int> &atomicNumber =
-      d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
-    const std::map<unsigned int, std::vector<int>> sparsityPattern =
-      d_atomCenteredSphericalFunctionContainer->getSparsityPattern();
-    for (int iElem = 0; iElem < d_locallyOwnedCells; iElem++)
-      {
-        const std::vector<int> atomIdsInElement =
-          d_atomCenteredSphericalFunctionContainer->getAtomIdsInElement(iElem);
-        int numOfAtomsInElement = atomIdsInElement.size();
-        for (int iAtom = 0; iAtom < numOfAtomsInElement; iAtom++)
-          {
-            unsigned int       atomId = atomIdsInElement[iAtom];
-            unsigned int       Zno    = atomicNumber[atomId];
-            const unsigned int numberSphericalFunctions =
-              d_atomCenteredSphericalFunctionContainer
-                ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-            const int nonZeroElementMatrixId =
-              sparsityPattern.find(atomId)->second[iElem];
+    // std::cout<<"DEBUG Line 689: "<<d_this_mpi_process<<std::endl;
 
-            d_BLASWrapperPtr->xgemm(
-              'N',
-              'N',
-              d_numberWaveFunctions,
-              numberSphericalFunctions,
-              d_numberNodesPerElement,
-              &one,
-              &X[0],
-              d_numberWaveFunctions,
-              &d_CMatrixEntriesConjugate[atomId][nonZeroElementMatrixId]
-                                        [d_kPointIndex *
-                                         d_numberNodesPerElement *
-                                         numberSphericalFunctions],
-              d_numberNodesPerElement,
-              &one,
-              &d_ShapeFnTimesWavefunction[atomId][0],
-              d_numberWaveFunctions);
+    // const ValueType    zero(0.0), one(1.0);
+    // const unsigned int inc                            = 1;
+    // d_AllReduceCompleted                              = false;
+    // int                              numberOfElements = d_locallyOwnedCells;
+    // const std::vector<unsigned int> &atomicNumber =
+    //   d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
+    // const std::map<unsigned int, std::vector<int>> sparsityPattern =
+    //   d_atomCenteredSphericalFunctionContainer->getSparsityPattern();
+    // for (int iElem = 0; iElem < d_locallyOwnedCells; iElem++)
+    //   {
+    //     const std::vector<int> atomIdsInElement =
+    //       d_atomCenteredSphericalFunctionContainer->getAtomIdsInElement(iElem);
+    //     int numOfAtomsInElement = atomIdsInElement.size();
+    //     for (int iAtom = 0; iAtom < numOfAtomsInElement; iAtom++)
+    //       {
+    //         unsigned int       atomId = atomIdsInElement[iAtom];
+    //         unsigned int       Zno    = atomicNumber[atomId];
+    //         const unsigned int numberSphericalFunctions =
+    //           d_atomCenteredSphericalFunctionContainer
+    //             ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+    //         const int nonZeroElementMatrixId =
+    //           sparsityPattern.find(atomId)->second[iElem];
 
-          } // iAtom
+    //         d_BLASWrapperPtr->xgemm(
+    //           'N',
+    //           'N',
+    //           d_numberWaveFunctions,
+    //           numberSphericalFunctions,
+    //           d_numberNodesPerElement,
+    //           &one,
+    //           &X[0],
+    //           d_numberWaveFunctions,
+    //           &d_CMatrixEntriesConjugate[atomId][nonZeroElementMatrixId]
+    //                                     [d_kPointIndex *
+    //                                      d_numberNodesPerElement *
+    //                                      numberSphericalFunctions],
+    //           d_numberNodesPerElement,
+    //           &one,
+    //           &d_ShapeFnTimesWavefunction[atomId][0],
+    //           d_numberWaveFunctions);
 
-      } // iElem
+    //       } // iAtom
+
+    //   } // iElem
 
 
-    const std::vector<unsigned int> atomIdsInProc =
-      d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
-    for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
-      {
-        const unsigned int atomId = atomIdsInProc[iAtom];
-        unsigned int       Zno    = atomicNumber[atomId];
-        const unsigned int numberSphericalFunctions =
-          d_atomCenteredSphericalFunctionContainer
-            ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-        for (unsigned int alpha = 0; alpha < numberSphericalFunctions; alpha++)
-          {
-            const unsigned int id =
-              d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
-                atomId, alpha)];
-            d_BLASWrapperPtr->xcopy(
-              d_numberWaveFunctions,
-              &d_ShapeFnTimesWavefunction[atomId]
-                                         [d_numberWaveFunctions * alpha],
-              inc,
-              d_SphericalFunctionKetTimesVectorParFlattened.data() +
-                d_SphericalFunctionKetTimesVectorParFlattened
-                    .getMPIPatternP2P()
-                    ->globalToLocal(id) *
-                  d_numberWaveFunctions,
-              inc);
-          }
-      }
-    d_SphericalFunctionKetTimesVectorParFlattened.accumulateAddLocallyOwned();
-    d_SphericalFunctionKetTimesVectorParFlattened.updateGhostValues();
-    d_AllReduceCompleted = true;
+    // const std::vector<unsigned int> atomIdsInProc =
+    //   d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
+    // for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
+    //   {
+    //     const unsigned int atomId = atomIdsInProc[iAtom];
+    //     unsigned int       Zno    = atomicNumber[atomId];
+    //     const unsigned int numberSphericalFunctions =
+    //       d_atomCenteredSphericalFunctionContainer
+    //         ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+    //     for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
+    //     alpha++)
+    //       {
+    //         const unsigned int id =
+    //           d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
+    //             atomId, alpha)];
+    //         d_BLASWrapperPtr->xcopy(
+    //           d_numberWaveFunctions,
+    //           &d_ShapeFnTimesWavefunction[atomId]
+    //                                      [d_numberWaveFunctions * alpha],
+    //           inc,
+    //           d_SphericalFunctionKetTimesVectorParFlattened.data() +
+    //             d_SphericalFunctionKetTimesVectorParFlattened
+    //                 .getMPIPatternP2P()
+    //                 ->globalToLocal(id) *
+    //               d_numberWaveFunctions,
+    //           inc);
+    //       }
+    //   }
+    // d_SphericalFunctionKetTimesVectorParFlattened.accumulateAddLocallyOwned();
+    // d_SphericalFunctionKetTimesVectorParFlattened.updateGhostValues();
+    // d_AllReduceCompleted = true;
   }
 
   template <typename ValueType>
@@ -786,6 +795,8 @@ namespace dftfe
     //     d_SphericalFunctionKetTimesVectorParFlattened.updateGhostValues();
     //     d_AllReduceCompleted = true;
     //   }
+    // std::cout<<"DEBUG 791 processor: and atoms in
+    // proc"<<d_this_mpi_process<<" "<<d_totalAtomsInCurrentProc<<std::endl;
     const std::vector<unsigned int> &atomicNumber =
       d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
     const std::vector<unsigned int> atomIdsInProc =
@@ -822,6 +833,7 @@ namespace dftfe
               }
           }
       }
+    // std::cout<<"DEBUG 828 processor: "<<d_this_mpi_process<<std::endl;
   }
   template <typename ValueType>
   void
@@ -880,14 +892,15 @@ namespace dftfe
     applyConVCTX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
         &Xout,
-       std::map<
+      std::map<
         unsigned int,
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
         &shapeFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange)
   {
-    const ValueType                                zero(0.0), one(1.0);
-    const unsigned int                             inc = 1;
+    const ValueType    zero(0.0), one(1.0);
+    const unsigned int inc = 1;
+    // std::cout<<"DEBUG 897 processor: "<<d_this_mpi_process<<std::endl;
     const std::map<unsigned int, std::vector<int>> sparsityPattern =
       d_atomCenteredSphericalFunctionContainer->getSparsityPattern();
     const std::vector<unsigned int> &atomicNumber =
@@ -928,6 +941,7 @@ namespace dftfe
           } // iAtom
 
       } // iElem
+        // std::cout<<"DEBUG 939 processor: "<<d_this_mpi_process<<std::endl;
   }
   template <typename ValueType>
   void
@@ -940,6 +954,7 @@ namespace dftfe
         &shapeFnTimesWavefunctionMatrix)
   {
     d_kPointIndex = kPointIndex;
+    // std::cout<<"DEBUG 945 processor: "<<d_this_mpi_process<<std::endl;
     const std::vector<unsigned int> atomIdsInProcessor =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     const std::vector<unsigned int> &atomicNumber =
@@ -947,12 +962,13 @@ namespace dftfe
     for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
       {
         unsigned int atomId = atomIdsInProcessor[iAtom];
-        unsigned int Zno    = atomicNumber[atomId];
-        unsigned int numberSphericalFunctions =
-          d_atomCenteredSphericalFunctionContainer
-            ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+        // unsigned int Zno    = atomicNumber[atomId];
+        // unsigned int numberSphericalFunctions =
+        //   d_atomCenteredSphericalFunctionContainer
+        //     ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
         shapeFnTimesWavefunctionMatrix[atomId].setValue(0.0);
       }
+    // std::cout<<"DEBUG 959 processor: "<<d_this_mpi_process<<std::endl;
     // d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
   }
 
@@ -974,10 +990,12 @@ namespace dftfe
     //   d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
     //   numberWaveFunctions,
     //   d_SphericalFunctionKetTimesVectorParFlattened);
+    // std::cout<<"DEBUG 977 processor: "<<d_this_mpi_process<<std::endl;
     dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
       d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
       numberWaveFunctions,
       sphericalFunctionKetTimesVectorParFlattened);
+    // std::cout<<"DEBUG 981 processor: "<<d_this_mpi_process<<std::endl;
     shapeFnTimesWavefunctionMatrix.clear();
     const std::vector<unsigned int> atomIdsInProcessor =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
@@ -990,8 +1008,11 @@ namespace dftfe
         unsigned int numberSphericalFunctions =
           d_atomCenteredSphericalFunctionContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-        shapeFnTimesWavefunctionMatrix[atomId].setValue(0.0);
+        shapeFnTimesWavefunctionMatrix[atomId].resize(numberSphericalFunctions *
+                                                        d_numberWaveFunctions,
+                                                      ValueType(0.0));
       }
+    // std::cout<<"DEBUG 999 processor: "<<d_this_mpi_process<<std::endl;
   }
 
   template <typename ValueType>

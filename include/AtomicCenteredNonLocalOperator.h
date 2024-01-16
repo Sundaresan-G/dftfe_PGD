@@ -305,6 +305,10 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange);
 
     void
@@ -317,7 +321,7 @@ namespace dftfe
     applyConVCTX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
         &Xout,
-       std::map<
+      std::map<
         unsigned int,
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
         &shapeFnTimesWavefunctionMatrix,

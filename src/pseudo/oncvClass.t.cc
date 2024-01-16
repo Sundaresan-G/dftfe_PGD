@@ -546,6 +546,7 @@ namespace dftfe
           }
         d_nonLocalHamiltonianEntriesHost.resize(Entries.size());
         d_nonLocalHamiltonianEntriesHost.copyFrom(Entries);
+        d_nonlocalHamiltonianEntriesUpdated = true;
       }
 
 
