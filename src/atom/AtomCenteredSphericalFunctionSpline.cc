@@ -96,8 +96,8 @@ namespace dftfe
     std::vector<std::vector<double>> radialFunctionData(0);
     unsigned int                     numMeshSize = 0;
     dftUtils::readFile(totalColSize, radialFunctionData, filename);
-    numMeshSize  = radialFunctionData.size();
-    int maxRowId = 0;
+    numMeshSize           = radialFunctionData.size();
+    unsigned int maxRowId = 0;
     for (int iRow = 0; iRow < numMeshSize; iRow++)
       {
         radialValue = radialFunctionData[iRow][0];
@@ -126,8 +126,8 @@ namespace dftfe
                                natural_bound_typeR,
                                0.0,
                                d_radialSplineObject);
-
-    d_cutOff = maxRowIndex == -1 ? radVec[maxRowId] : radVec[maxRowIndex];
+    unsigned int maxIndex = std::min(maxRowId + 10, numMeshSize - 1);
+    d_cutOff = maxRowIndex == -1 ? radVec[maxIndex] : radVec[maxRowIndex];
     pspFile.close();
   }
   AtomCenteredSphericalFunctionSpline::AtomCenteredSphericalFunctionSpline(
@@ -153,8 +153,8 @@ namespace dftfe
     std::vector<std::vector<double>> radialFunctionData(0);
     unsigned int                     numMeshSize = 0;
     dftUtils::readFile(2, radialFunctionData, filename);
-    numMeshSize  = radialFunctionData.size();
-    int maxRowId = 0;
+    numMeshSize           = radialFunctionData.size();
+    unsigned int maxRowId = 0;
     for (int iRow = 0; iRow < numMeshSize; iRow++)
       {
         radialValue = radialFunctionData[iRow][0];
@@ -197,8 +197,8 @@ namespace dftfe
                                natural_bound_typeR,
                                valueBC_R,
                                d_radialSplineObject);
-
-    d_cutOff = radVec[maxRowId];
+    unsigned int maxIndex = std::min(maxRowId + 10, numMeshSize - 1);
+    d_cutOff              = radVec[maxIndex];
     pspFile.close();
   }
   double

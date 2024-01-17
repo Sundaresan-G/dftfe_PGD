@@ -129,6 +129,9 @@ namespace dftfe
     const std::map<unsigned int, std::vector<int>> &
     getSparsityPattern();
 
+    bool
+    atomSupportInElement(unsigned int iElem);
+
   private:
     // A flattened vector that stores the coordinates of the atoms of interest
     // in the unit cell

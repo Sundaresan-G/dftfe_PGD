@@ -63,6 +63,7 @@ namespace dftfe
     // Reading single atom rho initial guess
     pcout << std::endl
           << "Reading initial guess for electron-density....." << std::endl;
+    std::map<unsigned int, alglib::spline1dinterpolant> denSpline;
     std::map<unsigned int, std::vector<std::vector<double>>>
                                    singleAtomElectronDensity;
     std::map<unsigned int, double> outerMostPointDen;
@@ -74,7 +75,57 @@ namespace dftfe
          it != atomTypes.end();
          it++)
       {
-        outerMostPointDen[*it] = d_oncvClassPtr->getRmaxValenceDensity(*it);
+        char densityFile[256];
+        if (d_dftParamsPtr->isPseudopotential)
+          {
+            strcpy(densityFile,
+                   (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
+                    "/density.inp")
+                     .c_str());
+          }
+        else
+          {
+            sprintf(
+              densityFile,
+              "%s/data/electronicStructure/allElectron/z%u/singleAtomData/density.inp",
+              DFTFE_PATH,
+              *it);
+          }
+
+        dftUtils::readFile(2, singleAtomElectronDensity[*it], densityFile);
+        unsigned int        numRows = singleAtomElectronDensity[*it].size() - 1;
+        std::vector<double> xData(numRows), yData(numRows);
+
+        unsigned int maxRowId = 0;
+        for (unsigned int irow = 0; irow < numRows; ++irow)
+          {
+            xData[irow] = singleAtomElectronDensity[*it][irow][0];
+            yData[irow] = singleAtomElectronDensity[*it][irow][1];
+
+            if (yData[irow] > truncationTol)
+              maxRowId = irow;
+          }
+
+        if (d_dftParamsPtr->isPseudopotential)
+          yData[0] = yData[1];
+
+        // interpolate rho
+        alglib::real_1d_array x;
+        x.setcontent(numRows, &xData[0]);
+        alglib::real_1d_array y;
+        y.setcontent(numRows, &yData[0]);
+        alglib::ae_int_t natural_bound_type_L = 1;
+        alglib::ae_int_t natural_bound_type_R = 1;
+        spline1dbuildcubic(x,
+                           y,
+                           numRows,
+                           natural_bound_type_L,
+                           0.0,
+                           natural_bound_type_R,
+                           0.0,
+                           denSpline[*it]);
+        outerMostPointDen[*it] = xData[maxRowId];
+
         if (outerMostPointDen[*it] > maxRhoTail)
           maxRhoTail = outerMostPointDen[*it];
       }
@@ -216,7 +267,7 @@ namespace dftfe
             interpoolcomm, numberDofs, kptGroupLowHighPlusOneIndices);
 
         d_rhoInNodalValues = 0;
-#pragma omp parallel for num_threads(d_nOMPThreads)
+#pragma omp parallel for num_threads(d_nOMPThreads) firstprivate(denSpline)
         for (unsigned int dof = 0; dof < numberDofs; ++dof)
           {
             if (dof < kptGroupLowHighPlusOneIndices[2 * kptGroupTaskId + 1] &&
@@ -255,11 +306,9 @@ namespace dftfe
 
                         if (distanceToAtom <=
                             outerMostPointDen[atomLocations[chargeId][0]])
-                          {
-                            rhoNodalValue +=
-                              d_oncvClassPtr->getRadialValenceDensity(
-                                atomLocations[chargeId][0], distanceToAtom);
-                          }
+                          rhoNodalValue += alglib::spline1dcalc(
+                            denSpline[atomLocations[chargeId][0]],
+                            distanceToAtom);
                       }
 
                     d_rhoInNodalValues.local_element(dof) =
@@ -359,7 +408,7 @@ namespace dftfe
         // loop over elements
         basisOperationsPtrHost->reinit(0, 0, d_densityQuadratureId);
         const unsigned int n_q_points = basisOperationsPtrHost->nQuadsPerCell();
-#pragma omp parallel for num_threads(d_nOMPThreads)
+#pragma omp parallel for num_threads(d_nOMPThreads) firstprivate(denSpline)
         for (auto iCell = 0; iCell < basisOperationsPtrHost->nCells(); ++iCell)
           {
             auto cellid = basisOperationsPtrHost->cellID(iCell);
@@ -397,8 +446,8 @@ namespace dftfe
                         outerMostPointDen[atomLocations[n][0]])
                       {
                         rhoValueAtQuadPt +=
-                          d_oncvClassPtr->getRadialValenceDensity(
-                            atomLocations[n][0], distanceToAtom);
+                          alglib::spline1dcalc(denSpline[atomLocations[n][0]],
+                                               distanceToAtom);
                       }
                     else
                       {
@@ -423,9 +472,9 @@ namespace dftfe
                            [masterAtomId]
                            [0]]) // outerMostPointPseudo[atomLocations[masterAtomId][0]])
                       {
-                        rhoValueAtQuadPt +=
-                          d_oncvClassPtr->getRadialValenceDensity(
-                            atomLocations[masterAtomId][0], distanceToAtom);
+                        rhoValueAtQuadPt += alglib::spline1dcalc(
+                          denSpline[atomLocations[masterAtomId][0]],
+                          distanceToAtom);
                       }
                   }
 
@@ -447,7 +496,7 @@ namespace dftfe
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
           {
-#pragma omp parallel for num_threads(d_nOMPThreads)
+#pragma omp parallel for num_threads(d_nOMPThreads) firstprivate(denSpline)
             for (unsigned int iCell = 0;
                  iCell < basisOperationsPtrHost->nCells();
                  ++iCell)
@@ -493,14 +542,15 @@ namespace dftfe
                         if (distanceToAtom <=
                             outerMostPointDen[atomLocations[n][0]])
                           {
+                            // rhoValueAtQuadPt+=alglib::spline1dcalc(denSpline[atomLocations[n][0]],
+                            // distanceToAtom);
                             double value, radialDensityFirstDerivative,
                               radialDensitySecondDerivative;
-                            std::vector<double> Vec;
-                            d_oncvClassPtr->getRadialValenceDensity(
-                              atomLocations[n][0], distanceToAtom, Vec);
-                            value                         = Vec[0];
-                            radialDensityFirstDerivative  = Vec[1];
-                            radialDensitySecondDerivative = Vec[2];
+                            alglib::spline1ddiff(denSpline[atomLocations[n][0]],
+                                                 distanceToAtom,
+                                                 value,
+                                                 radialDensityFirstDerivative,
+                                                 radialDensitySecondDerivative);
 
                             gradRhoXValueAtQuadPt +=
                               radialDensityFirstDerivative *
@@ -541,14 +591,12 @@ namespace dftfe
                           {
                             double value, radialDensityFirstDerivative,
                               radialDensitySecondDerivative;
-                            std::vector<double> Vec;
-                            d_oncvClassPtr->getRadialValenceDensity(
-                              atomLocations[masterAtomId][0],
+                            alglib::spline1ddiff(
+                              denSpline[atomLocations[masterAtomId][0]],
                               distanceToAtom,
-                              Vec);
-                            value                         = Vec[0];
-                            radialDensityFirstDerivative  = Vec[1];
-                            radialDensitySecondDerivative = Vec[2];
+                              value,
+                              radialDensityFirstDerivative,
+                              radialDensitySecondDerivative);
 
                             gradRhoXValueAtQuadPt +=
                               radialDensityFirstDerivative *

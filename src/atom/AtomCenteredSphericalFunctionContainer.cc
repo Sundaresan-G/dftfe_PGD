@@ -87,6 +87,9 @@ namespace dftfe
     const std::vector<std::vector<double>> &periodicCoords)
   {
     d_periodicImageCoord.clear();
+    std::cout << "PeriodicCoords original Size: " << periodicCoords.size()
+              << std::endl;
+    std::cout << "ImageIds original Size: " << imageIds.size() << std::endl;
     for (unsigned int iAtom = 0; iAtom < d_atomicNumbers.size(); iAtom++)
       {
         d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 0]);
@@ -101,6 +104,20 @@ namespace dftfe
         d_periodicImageCoord[chargeId].push_back(periodicCoords[iImageId][1]);
         d_periodicImageCoord[chargeId].push_back(periodicCoords[iImageId][2]);
       }
+
+    // for (int iCharge = 0; iCharge < d_periodicImageCoord.size(); iCharge++)
+    //   {
+    //     int size = d_periodicImageCoord[iCharge].size() / 3;
+    //     for (int i = 0; i < size; i++)
+    //       {
+    //         std::cout << "Processor charges and locations: " << iCharge << "
+    //         "
+    //                   << d_periodicImageCoord[iCharge][3 * i + 0] << " "
+    //                   << d_periodicImageCoord[iCharge][3 * i + 1] << " "
+    //                   << d_periodicImageCoord[iCharge][3 * i + 2] <<
+    //                   std::endl;
+    //       }
+    //   }
   }
 
   unsigned int
@@ -304,6 +321,8 @@ namespace dftfe
 
 
         unsigned int imageIdsSize = d_periodicImageCoord[iAtom].size() / 3;
+        std::cout << "DEBUG: imageIdsSize " << imageIdsSize
+                  << " for iAtom: " << iAtom << std::endl;
 
         //
         // resize the data structure corresponding to sparsity pattern
@@ -313,9 +332,10 @@ namespace dftfe
         //
         // parallel loop over all elements
         //
-        double maxR = 0.0;
+
         for (int iCell = 0; iCell < totalLocallyOwnedCells; iCell++)
           {
+            double              maxR = 0.0;
             std::vector<double> quadPoints(numberQuadraturePoints * 3, 0.0);
             for (int iQuad = 0; iQuad < numberQuadraturePoints; iQuad++)
               {
@@ -350,7 +370,10 @@ namespace dftfe
                     chargePoint[2] =
                       d_periodicImageCoord[iAtom][3 * iImageAtomCount + 2];
                   }
-
+                // if (iCell == 0)
+                //   std::cout << "ChargePoint coordinates: " << chargePoint[0]
+                //             << " " << chargePoint[1] << " " << chargePoint[2]
+                //             << std::endl;
 
                 for (unsigned int iPsp = 0; iPsp < numberSphericalFunctions;
                      ++iPsp)
@@ -382,6 +405,11 @@ namespace dftfe
                                 sparseFlag = 1;
                                 if (r > maxR)
                                   maxR = r;
+                                // std::cout
+                                //   << "Cell ID  r and ChargePoint: " << iCell
+                                //   << " " << r << " " << chargePoint[0] << " "
+                                //   << chargePoint[1] << " " << chargePoint[2]
+                                //   << std::endl;
                                 break;
                               }
                           }
@@ -474,6 +502,11 @@ namespace dftfe
     return (d_sparsityPattern);
   }
 
-
+  bool
+  AtomCenteredSphericalFunctionContainer::atomSupportInElement(
+    unsigned int iElem)
+  {
+    return (d_AtomIdsInElement[iElem].size() > 0 ? true : false);
+  }
 
 } // end of namespace dftfe

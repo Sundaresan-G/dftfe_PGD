@@ -84,7 +84,9 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer->getNumAtomCentersSize();
     const std::vector<unsigned int> &atomicNumber =
       d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
-
+    for (int i = 0; i < atomIdsInCurrentProcess.size(); i++)
+      std::cout << "Nonlocal Atom in proc: " << d_this_mpi_process << " "
+                << atomIdsInCurrentProcess[i] << std::endl;
 
 
     // //
@@ -436,6 +438,15 @@ namespace dftfe
                                      memorySpace>::getMaxSingleAtomEntries()
   {
     return (d_maxSingleAtomContribution);
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  bool
+  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
+    atomSupportInElement(unsigned int iElem)
+  {
+    return (
+      d_atomCenteredSphericalFunctionContainer->atomSupportInElement(iElem));
   }
 
 } // namespace dftfe

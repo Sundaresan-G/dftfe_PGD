@@ -101,6 +101,9 @@ namespace dftfe
 
     unsigned int
     getMaxSingleAtomEntries();
+
+    bool
+    atomSupportInElement(unsigned int iElem);
 #ifdef USE_COMPLEX
     std::vector<distributedCPUVec<std::complex<double>>>
       d_SphericalFunctionKetTimesVectorPar;
@@ -111,6 +114,7 @@ namespace dftfe
 
     std::map<std::pair<unsigned int, unsigned int>, unsigned int>
       d_sphericalFunctionIdsNumberingMapCurrentProcess;
+
 
   protected:
     unsigned int        d_numberOfVectors;
@@ -233,7 +237,12 @@ namespace dftfe
     using AtomicCenteredNonLocalOperatorBase<ValueType,
                                              dftfe::utils::MemorySpace::HOST>::
       d_sphericalFunctionIdsNumberingMapCurrentProcess;
-
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::pcout;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_mpi_communicator;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_SphericalFunctionKetTimesVectorPar;
@@ -299,12 +308,20 @@ namespace dftfe
         &shapeFnTimesWavefunctionMatrix);
 
     void
-    applyCTonX(
-      const dftfe::utils::MemoryStorage<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &X,
+    applyAllReduceonCTX(
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &shapeFnTimesWavefunctionMatrix);
+
+
+    void
+    applyCTonX(
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::HOST> &X,
       std::map<
         unsigned int,
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
