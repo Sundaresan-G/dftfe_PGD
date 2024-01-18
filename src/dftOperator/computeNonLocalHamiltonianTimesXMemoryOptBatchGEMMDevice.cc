@@ -47,6 +47,10 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
   if (d_totalNonlocalElems > 0 && !skip1)
     {
+
+      //d_ONCVnonLocalOperator->applyCTonX(d_A, d_projectorKetTimesVectorParFlattenedDevice, std::make_pair(0,d_totalNonlocalElems));
+
+
       dftfe::utils::deviceBlasWrapper::gemmBatched(
         d_deviceBlasHandle,
         dftfe::utils::DEVICEBLAS_OP_N,
@@ -85,10 +89,15 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   // called separately inside chebyshevFilter. So skip this if either skip1 or
   // skip2 are set to true
   if (!skip1 && !skip2)
-    projectorKetTimesVector.setValue(0);
+   {
+      projectorKetTimesVector.setValue(0);
+   } 
 
 
   if (d_totalNonlocalElems > 0 && !skip1)
+  {
+
+    //This condition can be removed
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
     copyToDealiiParallelNonLocalVec<<<
       (numberWaveFunctions + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
@@ -118,6 +127,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
                          projectorKetTimesVector.begin()),
                        d_projectorIdsParallelNumberingMapDevice.begin());
 #endif
+  }
 
   // Operations related to skip2 (extraction and C^{T}*X) are over. So return
   // control back to chebyshevFilter
@@ -126,6 +136,8 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
   if (!skip1)
     {
+      
+      //d_ONCVnonLocalOperator->applyAllReduceonCTX(projectorKetTimesVector,d_projectorKetTimesVectorParFlattenedDevice);
       projectorKetTimesVector.accumulateAddLocallyOwned(1);
       projectorKetTimesVector.updateGhostValues(1);
     }
@@ -179,10 +191,12 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.begin());
 #endif
 
+      //d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,d_projectorKetTimesVectorParFlattenedDevice);
+
       //
       // compute C*V*C^{\dagger}*x
       //
-
+       // d_ONCVnonLocalOperator->applyConVCTX(d_cellHamMatrixTimesWaveMatrixNonLocalDevice,d_projectorKetTimesVectorParFlattenedDevice,std::make_pair(0,d_totalNonlocalElems));
       strideA = numberWaveFunctions * d_maxSingleAtomPseudoWfc;
       strideB = d_maxSingleAtomPseudoWfc * d_numberNodesPerElement;
       strideC = numberWaveFunctions * d_numberNodesPerElement;

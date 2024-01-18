@@ -60,7 +60,7 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       const distributedDeviceVec<ValueType> 
-        &sphericalFunctionKetTimesVectorParFlattened,,
+        &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType,
                                 dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix)
   {}    

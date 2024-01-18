@@ -428,6 +428,9 @@ namespace dftfe
     distributedDeviceVec<dataTypes::number>
       d_parallelProjectorKetTimesBlockVectorDevice;
 
+    distributedDeviceVec<dataTypes::number>
+      d_parallelSphericalFnKetTimesBlockVectorDevice;
+
     distributedCPUVec<dataTypes::number> d_parallelVecSingleComponent;
 
     //

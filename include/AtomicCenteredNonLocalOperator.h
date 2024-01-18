@@ -476,7 +476,7 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       const distributedDeviceVec<ValueType> 
-        &sphericalFunctionKetTimesVectorParFlattened,,
+        &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType,
                                 dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix);   
 
@@ -503,9 +503,9 @@ namespace dftfe
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice;
-    // dftfe::utils::MemoryStorage<dataTypes::number,
-    //                             dftfe::utils::MemorySpace::DEVICE>
-    //   d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE>
+      d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       d_projectorKetTimesVectorParFlattenedDevice;
