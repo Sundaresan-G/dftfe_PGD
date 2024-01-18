@@ -165,17 +165,20 @@ namespace dftfe
       return 0;
   }
 
+
+
   unsigned int
-  AtomCenteredSphericalFunctionContainer::getTotalNumberOfSphericalFunctions()
+  AtomCenteredSphericalFunctionContainer::
+    getTotalNumberOfSphericalFunctionsInCurrentProcessor()
   {
     unsigned int totalShapeFns = 0;
-    for (std::map<unsigned int, unsigned int>::const_iterator it =
-           d_numSphericalFunctions.begin();
-         it != d_numSphericalFunctions.end();
-         ++it)
+    for (int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
       {
-        totalShapeFns += it->second;
+        unsigned int atomId = d_AtomIdsInCurrentProcess[iAtom];
+        unsigned int Zno    = d_atomicNumbers[atomId];
+        totalShapeFns += d_numSphericalFunctions.find(Zno)->second;
       }
+
     return (totalShapeFns);
   }
 

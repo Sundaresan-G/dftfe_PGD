@@ -181,6 +181,13 @@ namespace dftfe
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
         &shapeFnTimesWavefunctionMatrix);
 
+    void
+    applynonLocalHamiltonianMatrix(
+      const distributedDeviceVec<ValueType>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &shapeFnTimesWavefunctionMatrix);
+
 
   private:
     /**
@@ -221,7 +228,7 @@ namespace dftfe
       d_atomicNonLocalPseudoPotentialConstants;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       d_nonLocalHamiltonianEntriesHost;
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
          d_nonLocalHamiltonianEntriesDevice;
     bool d_nonlocalHamiltonianEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>

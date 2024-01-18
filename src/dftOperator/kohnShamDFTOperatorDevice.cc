@@ -653,7 +653,11 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           BVec,
           d_parallelProjectorKetTimesBlockVectorDevice);
-       // d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(BVec,d_parallelSphericalFnKetTimesBlockVectorDevice);
+
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          BVec,
+          d_sphericalFnTimesVectorParFlattenedDevice,
+          d_parallelSphericalFnKetTimesBlockVectorDevice);
 
         d_totalPseudoWfcNonLocal = 0;
         d_totalNonlocalElems     = 0;

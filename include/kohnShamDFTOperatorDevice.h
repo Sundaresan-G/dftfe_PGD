@@ -563,6 +563,10 @@ namespace dftfe
       d_projectorKetTimesVectorParFlattenedDevice;
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
+      d_sphericalFnTimesVectorParFlattenedDevice;
+
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE>
       d_projectorKetTimesVectorAllCellsDevice;
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>

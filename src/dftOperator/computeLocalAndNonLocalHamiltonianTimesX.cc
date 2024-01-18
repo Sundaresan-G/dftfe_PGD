@@ -476,10 +476,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
 
 
 
-  
-  double TimerLocalHX = 0.0; 
-  double TimerAssembly = 0.0;
-  double TimerCY = 0.0;
+  double TimerLocalHX      = 0.0;
+  double TimerAssembly     = 0.0;
+  double TimerCY           = 0.0;
   double TimerStartCXStart = MPI_Wtime();
   for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
     {
@@ -514,7 +513,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
         &zero,
         &d_cellHamMatrixTimesWaveMatrix[0],
         numberWaveFunctions);
-      TimerLocalHX += MPI_Wtime() - tempTime;  
+      TimerLocalHX += MPI_Wtime() - tempTime;
       tempTime = MPI_Wtime();
       if (dftPtr->d_dftParamsPtr->isPseudopotential)
         {
@@ -553,8 +552,8 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
           //       numberWaveFunctions);
           //   }
         }
-        TimerCY += MPI_Wtime() - tempTime;
-        tempTime = MPI_Wtime();
+      TimerCY += MPI_Wtime() - tempTime;
+      tempTime = MPI_Wtime();
 
       for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
         {
@@ -596,11 +595,11 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
                     scalarX * src.data()[localNodeId + i];
             }
         }
-        TimerAssembly += MPI_Wtime() - tempTime;
+      TimerAssembly += MPI_Wtime() - tempTime;
     } // cell loop
   double TimerCXEnd = MPI_Wtime() - TimerStartCXStart;
-      std::cout<<"HX Timer: CX "<<TimerCXEnd<<std::endl;
-    std::cout<<"HX Timer: CY "<<TimerCY<<std::endl;
-    std::cout<<"HX Timer: Assembly "<<TimerAssembly<<std::endl;
-    std::cout<<"HX Timer: local HX "<<TimerLocalHX<<std::endl;
+  std::cout << "HX Timer: CX " << TimerCXEnd << std::endl;
+  std::cout << "HX Timer: CY " << TimerCY << std::endl;
+  std::cout << "HX Timer: Assembly " << TimerAssembly << std::endl;
+  std::cout << "HX Timer: local HX " << TimerLocalHX << std::endl;
 }

@@ -43,8 +43,9 @@ namespace dftfe
     d_numberOfVectors           = numVectors;
     d_maxSingleAtomContribution = d_atomCenteredSphericalFunctionContainer
                                     ->getMaximumNumberOfSphericalFunctions();
-    d_totalNonLocalEntries = d_atomCenteredSphericalFunctionContainer
-                               ->getTotalNumberOfSphericalFunctions();
+    d_totalNonLocalEntries =
+      d_atomCenteredSphericalFunctionContainer
+        ->getTotalNumberOfSphericalFunctionsInCurrentProcessor();
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void

@@ -194,6 +194,7 @@ SET(DEVICE_SRC
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
   ./utils/FEBasisOperationsKernelsDevice.cc
+  ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 
 ELSEIF ("${GPU_LANG}" STREQUAL "hip")
@@ -223,6 +224,7 @@ SET(DEVICE_SRC
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
   ./utils/FEBasisOperationsKernelsDevice.cc
+  ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 
 ENDIF()

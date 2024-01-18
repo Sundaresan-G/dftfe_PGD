@@ -76,6 +76,9 @@ namespace dftfe
     getTotalNumberOfSphericalFunctions();
 
     unsigned int
+    getTotalNumberOfSphericalFunctionsInCurrentProcessor();
+
+    unsigned int
     getMaximumNumberOfSphericalFunctions();
 
     void

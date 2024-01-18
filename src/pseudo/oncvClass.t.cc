@@ -198,7 +198,11 @@ namespace dftfe
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
-        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+        if (d_useDevice)
+          d_nonLocalOperatorDevice->InitalisePartitioner(
+            d_BasisOperatorHostPtr);
+        else
+          d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -550,18 +554,64 @@ namespace dftfe
       }
 
 
-    if (!d_useDevice)
+
+    d_nonLocalOperatorHost->applyV_onCTX(
+      CouplingStructure::diagonal,
+      d_nonLocalHamiltonianEntriesHost,
+      sphericalFunctionKetTimesVectorParFlattened,
+      shapeFnTimesWavefunctionMatrix);
+  }
+
+
+  template <typename ValueType>
+  void
+  oncvClass<ValueType>::applynonLocalHamiltonianMatrix(
+    const distributedDeviceVec<ValueType>
+      &sphericalFunctionKetTimesVectorParFlattened,
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+      &shapeFnTimesWavefunctionMatrix)
+  {
+    if (!d_nonlocalHamiltonianEntriesUpdated)
       {
-        d_nonLocalOperatorHost->applyV_onCTX(
-          CouplingStructure::diagonal,
-          d_nonLocalHamiltonianEntriesHost,
-          sphericalFunctionKetTimesVectorParFlattened,
-          shapeFnTimesWavefunctionMatrix);
+        const std::vector<unsigned int> atomIdsInProcessor =
+          d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+        std::vector<unsigned int> atomicNumber =
+          d_atomicProjectorFnsContainer->getAtomicNumbers();
+        d_nonLocalHamiltonianEntriesHost.clear();
+        std::vector<double> Entries;
+        for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+          {
+            unsigned int atomId = atomIdsInProcessor[iAtom];
+            unsigned int Zno    = atomicNumber[atomId];
+            unsigned int numberSphericalFunctions =
+              d_atomicProjectorFnsContainer
+                ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+            for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
+                 alpha++)
+              {
+                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                Entries.push_back(V);
+              }
+          }
+        d_nonLocalHamiltonianEntriesHost.resize(Entries.size());
+        d_nonLocalHamiltonianEntriesHost.copyFrom(Entries);
+
+        d_nonLocalHamiltonianEntriesDevice.clear();
+        d_nonLocalHamiltonianEntriesDevice.resize(
+          d_nonLocalHamiltonianEntriesHost.size());
+        d_nonLocalHamiltonianEntriesDevice.copyFrom(
+          d_nonLocalHamiltonianEntriesHost);
+
+        d_nonlocalHamiltonianEntriesUpdated = true;
       }
-    else
-      {
-        // d_nonLocalOperatorDevice->applyV_onCTX(CouplingStructure::diagonal,d_nonLocalHamiltonianEntriesDevice);
-      }
+
+
+
+    d_nonLocalOperatorDevice->applyV_onCTX(
+      CouplingStructure::diagonal,
+      d_nonLocalHamiltonianEntriesDevice,
+      sphericalFunctionKetTimesVectorParFlattened,
+      shapeFnTimesWavefunctionMatrix);
   }
 
 } // namespace dftfe
