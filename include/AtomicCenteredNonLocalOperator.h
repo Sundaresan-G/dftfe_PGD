@@ -328,10 +328,6 @@ namespace dftfe
         &shapeFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange);
 
-    void
-    applyCTonX(
-      const dftfe::utils::MemoryStorage<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &X);
 
 
     void
@@ -350,56 +346,6 @@ namespace dftfe
         &Xout);
 
 
-
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class dst
-    // and src have the same size
-    void
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst);
-
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class This is
-    // same as the previous function but does it for cell wise data The
-    // cellRange is to determine what cells the operation is carried out on dst
-    // and src have the same size
-    void
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange);
-
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class src and
-    // dst will have different sizes
-    void
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst);
-
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class This is
-    // same as the previous function but does it for cell wise data The
-    // cellRange is to determine what cells the operation is carried out on src
-    // and dst will have different sizes
-    void
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange);
 
     const std::map<unsigned int, std::vector<ValueType>> &
     getScaledShapeFnTimesWaveFunction();
@@ -434,6 +380,12 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
         &sphericalFunctionKetTimesVectorParFlattened) override;
+
+    void
+    initialiseDeviceVectors();
+
+    void
+    freeDeviceVectors();    
 
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
@@ -506,62 +458,38 @@ namespace dftfe
 
     void
     applyCTonX(
-      const dftfe::utils::MemoryStorage<double,
-                                        dftfe::utils::MemorySpace::DEVICE> &X,
+      const ValueType ** X,
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix,
       std::pair<unsigned int, unsigned int> &cellRange);
 
-
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class dst
-    // and src have the same size
     void
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE>
-        &dst);
+    applyAllReduceonCTX(
+      distributedDeviceVec<ValueType> 
+        &sphericalFunctionKetTimesVectorParFlattened,
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix);
 
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class This is
-    // same as the previous function but does it for cell wise data The
-    // cellRange is to determine what cells the operation is carried out on dst
-    // and src have the same size
     void
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &                                                                   src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange);
+    applyV_onCTX(
+      const CouplingStructure couplingtype,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
+        &couplingMatrix,
+      const distributedDeviceVec<ValueType> 
+        &sphericalFunctionKetTimesVectorParFlattened,,
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix);   
 
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class src and
-    // dst will have different sizes
-    void
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE>
-        &dst);
 
-    // Assumes that constraints.distribute is called on src and
-    // update_ghost_Values() on src src is not changed inside this class This is
-    // same as the previous function but does it for cell wise data The
-    // cellRange is to determine what cells the operation is carried out on src
-    // and dst will have different sizes
     void
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &                                                                   src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange);
+    applyConVCTX(
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE>
+        &Xout,
+      const dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> &shapeFnTimesWavefunctionMatrix,
+      const std::pair<unsigned int, unsigned int> cellRange);                                               
+
 
   private:
     // Data structures moved from KSOperatorDevice
@@ -575,9 +503,9 @@ namespace dftfe
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
+    // dftfe::utils::MemoryStorage<dataTypes::number,
+    //                             dftfe::utils::MemorySpace::DEVICE>
+    //   d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       d_projectorKetTimesVectorParFlattenedDevice;

@@ -23,60 +23,47 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &                                                                   src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE> &dst)
-  {}
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &                                                                   src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange)
-  {}
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &                                                                   src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE> &dst)
-  {}
-
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::DEVICE>
-        &                                                                   src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange)
-  {}
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    applyCTonX(
-      const dftfe::utils::MemoryStorage<double,
-                                        dftfe::utils::MemorySpace::DEVICE> &X,
+  applyCTonX(
+      const ValueType ** X,
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix,
       std::pair<unsigned int, unsigned int> &cellRange)
   {}
 
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+  applyConVCTX(
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE>
+        &Xout,
+      const dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> &shapeFnTimesWavefunctionMatrix,
+      const std::pair<unsigned int, unsigned int> cellRange)
+  {}  
 
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+  applyAllReduceonCTX(
+      distributedDeviceVec<ValueType> 
+        &sphericalFunctionKetTimesVectorParFlattened,
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix)
+  {}  
+
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+  applyV_onCTX(
+      const CouplingStructure couplingtype,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
+        &couplingMatrix,
+      const distributedDeviceVec<ValueType> 
+        &sphericalFunctionKetTimesVectorParFlattened,,
+      dftfe::utils::MemoryStorage<ValueType,
+                                dftfe::utils::MemorySpace::DEVICE> & shapeFnTimesWavefunctionMatrix)
+  {}    
 
   template <typename ValueType>
   void

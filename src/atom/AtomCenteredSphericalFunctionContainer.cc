@@ -87,9 +87,9 @@ namespace dftfe
     const std::vector<std::vector<double>> &periodicCoords)
   {
     d_periodicImageCoord.clear();
-    std::cout << "PeriodicCoords original Size: " << periodicCoords.size()
-              << std::endl;
-    std::cout << "ImageIds original Size: " << imageIds.size() << std::endl;
+    // std::cout << "PeriodicCoords original Size: " << periodicCoords.size()
+    //           << std::endl;
+    // std::cout << "ImageIds original Size: " << imageIds.size() << std::endl;
     for (unsigned int iAtom = 0; iAtom < d_atomicNumbers.size(); iAtom++)
       {
         d_periodicImageCoord[iAtom].push_back(d_atomCoords[3 * iAtom + 0]);
@@ -321,8 +321,8 @@ namespace dftfe
 
 
         unsigned int imageIdsSize = d_periodicImageCoord[iAtom].size() / 3;
-        std::cout << "DEBUG: imageIdsSize " << imageIdsSize
-                  << " for iAtom: " << iAtom << std::endl;
+        // std::cout << "DEBUG: imageIdsSize " << imageIdsSize
+        //           << " for iAtom: " << iAtom << std::endl;
 
         //
         // resize the data structure corresponding to sparsity pattern

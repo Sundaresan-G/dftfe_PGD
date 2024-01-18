@@ -24,55 +24,6 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst)
-  {}
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    apply_C_V_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange)
-  {}
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst)
-  {}
-
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    apply_CCT_onX(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &                                                                 src,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &dst,
-      const std::pair<unsigned int, unsigned int> &cellRange)
-  {}
-
-
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
     computeCMatrixEntries(
       std::shared_ptr<
         dftfe::basis::
@@ -711,13 +662,7 @@ namespace dftfe
             // std::cout<<std::endl;
       }     // iElem
   }
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    applyCTonX(
-      const dftfe::utils::MemoryStorage<ValueType,
-                                        dftfe::utils::MemorySpace::HOST> &X)
-  {}
+
 
   template <typename ValueType>
   void
@@ -765,12 +710,12 @@ namespace dftfe
                  alpha++)
               {
                 double nonlocalConstantV = couplingMatrix[startIndex++];
-              const unsigned int localId =
-                sphericalFunctionKetTimesVectorParFlattened
-                  .getMPIPatternP2P()
-                  ->globalToLocal(
-                    d_sphericalFunctionIdsNumberingMapCurrentProcess
-                      [std::make_pair(atomId, alpha)]);
+                const unsigned int localId =
+                  sphericalFunctionKetTimesVectorParFlattened
+                    .getMPIPatternP2P()
+                    ->globalToLocal(
+                      d_sphericalFunctionIdsNumberingMapCurrentProcess
+                        [std::make_pair(atomId, alpha)]);
 
                 std::transform(
                   sphericalFunctionKetTimesVectorParFlattened.begin() +
