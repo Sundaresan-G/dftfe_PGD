@@ -566,7 +566,7 @@ namespace dftfe
   template <typename ValueType>
   void
   oncvClass<ValueType>::applynonLocalHamiltonianMatrix(
-    const distributedDeviceVec<ValueType>
+    distributedDeviceVec<ValueType>
       &sphericalFunctionKetTimesVectorParFlattened,
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       &shapeFnTimesWavefunctionMatrix)

@@ -183,7 +183,7 @@ namespace dftfe
 
     void
     applynonLocalHamiltonianMatrix(
-      const distributedDeviceVec<ValueType>
+      distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &shapeFnTimesWavefunctionMatrix);

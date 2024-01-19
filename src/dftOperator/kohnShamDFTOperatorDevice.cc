@@ -287,6 +287,7 @@ namespace dftfe
         dftfe::utils::deviceFree(d_B);
         dftfe::utils::deviceFree(d_C);
       }
+    d_ONCVnonLocalOperator->freeDeviceVectors();
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -463,7 +464,8 @@ namespace dftfe
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     getParallelProjectorKetTimesBlockVectorDevice()
   {
-    return d_parallelProjectorKetTimesBlockVectorDevice;
+    // return d_parallelProjectorKetTimesBlockVectorDevice;
+    return d_parallelSphericalFnKetTimesBlockVectorDevice;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -902,10 +904,7 @@ namespace dftfe
         d_projectorKetTimesVectorAllCellsReductionDevice.copyFrom(
           d_projectorKetTimesVectorAllCellsReduction);
 
-        d_nonLocalPseudoPotentialConstantsDevice.resize(
-          d_nonLocalPseudoPotentialConstants.size());
-        d_nonLocalPseudoPotentialConstantsDevice.copyFrom(
-          d_nonLocalPseudoPotentialConstants);
+
 
         d_cellNodeIdMapNonLocalToLocalDevice.resize(
           d_cellNodeIdMapNonLocalToLocal.size());
@@ -1068,6 +1067,9 @@ namespace dftfe
   {
     d_kPointIndex = kPointIndex;
     d_spinIndex   = spinIndex;
+
+    d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {

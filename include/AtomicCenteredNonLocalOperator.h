@@ -76,12 +76,6 @@ namespace dftfe
         basisOperationsPtr);
 
 
-    virtual void
-    initialiseOperatorActionOnX(
-      unsigned int kPointIndex,
-      std::map<unsigned int,
-               dftfe::utils::MemoryStorage<ValueType, memorySpace>>
-        &shapeFnTimesWavefunctionMatrix) = 0;
 
     // virtual void
     // initialiseFlattenedDataStructure(
@@ -166,6 +160,7 @@ namespace dftfe
     unsigned int d_locallyOwnedCells;
     unsigned int d_numberWaveFunctions;
     unsigned int d_kPointIndex;
+    bool         d_isMallocCalled = false;
   };
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -186,7 +181,7 @@ namespace dftfe
       std::map<
         unsigned int,
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &shapeFnTimesWavefunctionMatrix) override;
+        &shapeFnTimesWavefunctionMatrix);
 
     void
     initialiseFlattenedDataStructure(
@@ -365,12 +360,7 @@ namespace dftfe
   {
   public:
     void
-    initialiseOperatorActionOnX(
-      unsigned int kPointIndex,
-      std::map<unsigned int,
-               dftfe::utils::MemoryStorage<ValueType,
-                                           dftfe::utils::MemorySpace::DEVICE>>
-        &shapeFnTimesWavefunctionMatrix) override;
+    initialiseOperatorActionOnX(unsigned int kPointIndex);
 
     void
     initialiseFlattenedDataStructure(
@@ -432,6 +422,9 @@ namespace dftfe
       dftfe::utils::MemorySpace::DEVICE>::d_numberOfVectors;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_isMallocCalled;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
       dftfe::utils::MemorySpace::DEVICE>::
       d_totalAtomsInCurrentProc; // number of atoms of interst with
                                  // compact in current processor
@@ -466,10 +459,10 @@ namespace dftfe
 
     void
     applyCTonX(
-      const ValueType **X,
+      ValueType **X,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &                                    shapeFnTimesWavefunctionMatrix,
-      std::pair<unsigned int, unsigned int> &cellRange);
+        &                                   shapeFnTimesWavefunctionMatrix,
+      std::pair<unsigned int, unsigned int> cellRange);
 
     void
     applyAllReduceonCTX(
@@ -484,7 +477,7 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<double,
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
-      const distributedDeviceVec<ValueType>
+      distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &shapeFnTimesWavefunctionMatrix);
@@ -504,7 +497,7 @@ namespace dftfe
     // Pointer of pointers for BatchedGEMM call in applyCTonX()
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp;
     ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp;
-    bool        d_isMallocCalled = false;
+
 
     // Data structures moved from KSOperatorDevice
     std::vector<dataTypes::number>

@@ -36,6 +36,7 @@ namespace dftfe
         dealii::Utilities::MPI::n_mpi_processes(mpi_comm_parent))
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
+    , d_isMallocCalled(false)
   {
     d_BLASWrapperPtr = BLASWrapperPtr;
     d_atomCenteredSphericalFunctionContainer =

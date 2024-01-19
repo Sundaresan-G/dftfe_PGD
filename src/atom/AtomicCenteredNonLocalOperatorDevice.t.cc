@@ -27,25 +27,25 @@ namespace dftfe
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
     applyCTonX(
-      const ValueType **X,
+      ValueType **X,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &                                    shapeFnTimesWavefunctionMatrix,
-      std::pair<unsigned int, unsigned int> &cellRange)
+        &                                   shapeFnTimesWavefunctionMatrix,
+      std::pair<unsigned int, unsigned int> cellRange)
   {
-    const dataTypes::number scalarCoeffAlpha = ValueType(1.0),
-                            scalarCoeffBeta  = ValueType(0.0);
+    const ValueType scalarCoeffAlpha = ValueType(1.0),
+                    scalarCoeffBeta  = ValueType(0.0);
 
     d_BLASWrapperPtr->xgemmBatched('N',
                                    'N',
                                    d_numberWaveFunctions,
                                    d_maxSingleAtomContribution,
                                    d_numberNodesPerElement,
-                                   scalarCoeffAlpha,
+                                   &scalarCoeffAlpha,
                                    (const ValueType **)X,
                                    d_numberWaveFunctions,
                                    (const ValueType **)devicePointerCDagger,
                                    d_numberNodesPerElement,
-                                   scalarCoeffBeta,
+                                   &scalarCoeffBeta,
                                    devicePointerCDaggerOutTemp,
                                    d_numberWaveFunctions,
                                    d_totalNonlocalElems);
@@ -56,12 +56,12 @@ namespace dftfe
       d_numberWaveFunctions,
       d_maxSingleAtomContribution,
       d_totalNonlocalElems * d_maxSingleAtomContribution,
-      scalarCoeffAlpha,
+      &scalarCoeffAlpha,
       d_sphericalFnTimesVectorAllCellsDevice.begin(),
       d_numberWaveFunctions,
       d_sphericalFnTimesVectorAllCellsReductionDevice.begin(),
       d_totalNonlocalElems * d_maxSingleAtomContribution,
-      scalarCoeffBeta,
+      &scalarCoeffBeta,
       shapeFnTimesWavefunctionMatrix.begin(),
       d_numberWaveFunctions);
   }
@@ -80,9 +80,9 @@ namespace dftfe
     long long int strideA = d_numberWaveFunctions * d_maxSingleAtomContribution;
     long long int strideB =
       d_maxSingleAtomContribution * d_numberNodesPerElement;
-    long long int strideC = d_numberWaveFunctions * d_numberNodesPerElement;
-    const dataTypes::number scalarCoeffAlpha = ValueType(1.0),
-                            scalarCoeffBeta  = ValueType(0.0);
+    long long int   strideC = d_numberWaveFunctions * d_numberNodesPerElement;
+    const ValueType scalarCoeffAlpha = ValueType(1.0),
+                    scalarCoeffBeta  = ValueType(0.0);
 
 
     d_BLASWrapperPtr->xgemmStridedBatched(
@@ -91,7 +91,7 @@ namespace dftfe
       d_numberWaveFunctions,
       d_numberNodesPerElement,
       d_maxSingleAtomContribution,
-      scalarCoeffAlpha,
+      &scalarCoeffAlpha,
       shapeFnTimesWavefunctionMatrix.begin(),
       d_numberWaveFunctions,
       strideA,
@@ -100,7 +100,7 @@ namespace dftfe
           d_numberNodesPerElement,
       d_maxSingleAtomContribution,
       strideB,
-      scalarCoeffBeta,
+      &scalarCoeffBeta,
       Xout.begin(),
       d_numberWaveFunctions,
       strideC,
@@ -120,8 +120,8 @@ namespace dftfe
       copyToDealiiParallelNonLocalVec(
         d_numberWaveFunctions,
         d_totalNonLocalEntries,
-        shapeFnTimesWavefunctionMatrix,
-        sphericalFunctionKetTimesVectorParFlattened,
+        shapeFnTimesWavefunctionMatrix.begin(),
+        sphericalFunctionKetTimesVectorParFlattened.begin(),
         d_shapeFnIdsParallelNumberingMapDevice.begin());
 
 
@@ -137,7 +137,7 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<double,
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
-      const distributedDeviceVec<ValueType>
+      distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &shapeFnTimesWavefunctionMatrix)
@@ -418,12 +418,7 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    initialiseOperatorActionOnX(
-      unsigned int kPointIndex,
-      std::map<unsigned int,
-               dftfe::utils::MemoryStorage<ValueType,
-                                           dftfe::utils::MemorySpace::DEVICE>>
-        &shapeFnTimesWavefunctionMatrix)
+    initialiseOperatorActionOnX(unsigned int kPointIndex)
   {
     d_kPointIndex = kPointIndex;
     for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
@@ -462,6 +457,24 @@ namespace dftfe
                                           d_totalNonLocalEntries);
   }
 
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    initialiseDeviceVectors()
+  {}
 
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    freeDeviceVectors()
+  {
+    if (d_isMallocCalled)
+      {
+        free(hostPointerCDagger);
+        free(hostPointerCDaggeOutTemp);
+        dftfe::utils::deviceFree(devicePointerCDagger);
+        dftfe::utils::deviceFree(devicePointerCDaggerOutTemp);
+      }
+  }
 
 } // namespace dftfe
