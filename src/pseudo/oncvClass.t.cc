@@ -44,6 +44,7 @@ namespace dftfe
     d_verbosity              = verbosity;
     d_atomTypeAtributes      = atomAttributes;
     d_useDevice              = useDevice;
+    pcout << "GPU variant: " << std::endl;
   }
 
   template <typename ValueType>
@@ -567,9 +568,7 @@ namespace dftfe
   void
   oncvClass<ValueType>::applynonLocalHamiltonianMatrix(
     distributedDeviceVec<ValueType>
-      &sphericalFunctionKetTimesVectorParFlattened,
-    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-      &shapeFnTimesWavefunctionMatrix)
+      &sphericalFunctionKetTimesVectorParFlattened)
   {
     if (!d_nonlocalHamiltonianEntriesUpdated)
       {
@@ -601,7 +600,6 @@ namespace dftfe
           d_nonLocalHamiltonianEntriesHost.size());
         d_nonLocalHamiltonianEntriesDevice.copyFrom(
           d_nonLocalHamiltonianEntriesHost);
-
         d_nonlocalHamiltonianEntriesUpdated = true;
       }
 
@@ -610,8 +608,7 @@ namespace dftfe
     d_nonLocalOperatorDevice->applyV_onCTX(
       CouplingStructure::diagonal,
       d_nonLocalHamiltonianEntriesDevice,
-      sphericalFunctionKetTimesVectorParFlattened,
-      shapeFnTimesWavefunctionMatrix);
+      sphericalFunctionKetTimesVectorParFlattened);
   }
 
 } // namespace dftfe

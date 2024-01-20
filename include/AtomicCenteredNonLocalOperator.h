@@ -426,6 +426,10 @@ namespace dftfe
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::
+      d_sphericalFunctionIdsNumberingMapCurrentProcess;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::
       d_totalAtomsInCurrentProc; // number of atoms of interst with
                                  // compact in current processor
     using AtomicCenteredNonLocalOperatorBase<
@@ -478,20 +482,16 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &shapeFnTimesWavefunctionMatrix);
+        &sphericalFunctionKetTimesVectorParFlattened);
 
 
     void
     applyConVCTX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &Xout,
-      const dftfe::utils::MemoryStorage<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE>
-        &shapeFnTimesWavefunctionMatrix,
+        &                                         Xout,
       const std::pair<unsigned int, unsigned int> cellRange);
 
+    std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
 
   private:
     // Pointer of pointers for BatchedGEMM call in applyCTonX()
@@ -541,8 +541,6 @@ namespace dftfe
     std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_cellNodeIdMapNonLocalToLocalDevice;
-
-    std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
   };
 
 

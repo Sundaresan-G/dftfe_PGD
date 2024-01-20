@@ -214,7 +214,7 @@ namespace dftfe
       {
         const unsigned int numberElementsInCompactSupport =
           d_elementIndexesInAtomCompactSupport[iAtom].size();
-        numberCellsAccumNonLocalAtoms[iAtom] = numberElementsInCompactSupport;
+        numberCellsAccumNonLocalAtoms[iAtom] = totalNonLocalElements;
         totalNonLocalElements += numberElementsInCompactSupport;
       }
   }

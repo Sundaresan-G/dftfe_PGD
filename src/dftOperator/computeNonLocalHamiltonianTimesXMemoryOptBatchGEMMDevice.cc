@@ -41,17 +41,31 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   //
   // compute C^{\dagger}*X
   //
+  dftfe::utils::deviceSynchronize();
+
   unsigned int strideA = numberWaveFunctions * d_numberNodesPerElement;
   unsigned int strideB = d_numberNodesPerElement * d_maxSingleAtomPseudoWfc;
   unsigned int strideC = numberWaveFunctions * d_maxSingleAtomPseudoWfc;
   unsigned int totalNonLocalElements =
     d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
+
+
   if (totalNonLocalElements > 0 && !skip1)
     {
       d_ONCVnonLocalOperator->applyCTonX(
         d_A,
-        d_projectorKetTimesVectorParFlattenedDevice,
+        d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::HOST>
+        tempSphFnReduceHost;
+      tempSphFnReduceHost.resize(
+        d_sphericalFnTimesVectorParFlattenedDevice.size());
+      tempSphFnReduceHost.copyFrom(d_sphericalFnTimesVectorParFlattenedDevice);
+      // for (int i = 0; i < tempSphFnReduceHost.size(); i++)
+      //   std::cout << "Entries in Reduced Vector: " << tempSphFnReduceHost[i]
+      //             << std::endl;
     }
 
   // this routine was interfering with overlapping communication and compute. So
@@ -72,7 +86,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   if (!skip1)
     {
       d_ONCVnonLocalOperator->applyAllReduceonCTX(
-        projectorKetTimesVector, d_projectorKetTimesVectorParFlattenedDevice);
+        projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
     }
 
   //
@@ -84,8 +98,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       //
       // compute V*C^{\dagger}*X
 
-      d_oncvClassPtr->applynonLocalHamiltonianMatrix(
-        projectorKetTimesVector, d_projectorKetTimesVectorParFlattenedDevice);
+      d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector);
 
       //
       // compute C*V*C^{\dagger}*x
@@ -93,9 +106,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       // For multiple CTX change beta to 1.0 from here
       d_ONCVnonLocalOperator->applyConVCTX(
         d_cellHamMatrixTimesWaveMatrixNonLocalDevice,
-        d_projectorKetTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-
 
 
       for (unsigned int iAtom = 0; iAtom < d_totalNonlocalAtomsCurrentProc;

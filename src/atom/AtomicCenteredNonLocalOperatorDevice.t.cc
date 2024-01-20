@@ -34,7 +34,17 @@ namespace dftfe
   {
     const ValueType scalarCoeffAlpha = ValueType(1.0),
                     scalarCoeffBeta  = ValueType(0.0);
-
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: Number of wfc: " << d_numberWaveFunctions <<
+    // std::endl; std::cout << "DEBUG: Number of Nodes per element: "
+    //           << d_numberNodesPerElement << std::endl;
+    // std::cout << "DEBUG: MAX atom Contribution: " <<
+    // d_maxSingleAtomContribution
+    //           << std::endl;
+    // std::cout << "DEBUG: Total Nonlocal Elements: " << d_totalNonlocalElems
+    //           << std::endl;
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: CTX Line 38" << std::endl;
     d_BLASWrapperPtr->xgemmBatched('N',
                                    'N',
                                    d_numberWaveFunctions,
@@ -50,11 +60,15 @@ namespace dftfe
                                    d_numberWaveFunctions,
                                    d_totalNonlocalElems);
 
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: CTX Line 53" << std::endl;
+
+
     d_BLASWrapperPtr->xgemm(
       'N',
       'N',
       d_numberWaveFunctions,
-      d_maxSingleAtomContribution,
+      d_totalNonLocalEntries,
       d_totalNonlocalElems * d_maxSingleAtomContribution,
       &scalarCoeffAlpha,
       d_sphericalFnTimesVectorAllCellsDevice.begin(),
@@ -64,6 +78,8 @@ namespace dftfe
       &scalarCoeffBeta,
       shapeFnTimesWavefunctionMatrix.begin(),
       d_numberWaveFunctions);
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: CTX Line 70" << std::endl;
   }
 
   template <typename ValueType>
@@ -71,10 +87,7 @@ namespace dftfe
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
     applyConVCTX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &Xout,
-      const dftfe::utils::MemoryStorage<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE>
-        &shapeFnTimesWavefunctionMatrix,
+        &                                         Xout,
       const std::pair<unsigned int, unsigned int> cellRange)
   {
     long long int strideA = d_numberWaveFunctions * d_maxSingleAtomContribution;
@@ -92,7 +105,7 @@ namespace dftfe
       d_numberNodesPerElement,
       d_maxSingleAtomContribution,
       &scalarCoeffAlpha,
-      shapeFnTimesWavefunctionMatrix.begin(),
+      d_sphericalFnTimesVectorAllCellsDevice.begin(),
       d_numberWaveFunctions,
       strideA,
       d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice.begin() +
@@ -138,10 +151,22 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &shapeFnTimesWavefunctionMatrix)
+        &sphericalFunctionKetTimesVectorParFlattened)
   {
+    //   dftfe::utils::MemoryStorage<double,
+    //                           dftfe::utils::MemorySpace::HOST>
+    //                           nonLocalPseudoPotentialConstantsHost;
+    //     nonLocalPseudoPotentialConstantsHost.resize(couplingMatrix.size());
+    //     nonLocalPseudoPotentialConstantsHost.copyFrom(couplingMatrix) ;
+
+    // // for(int i = 0; i < nonLocalPseudoPotentialConstantsHost.size(); i++)
+    // // {
+    // //   std::cout<<"nonlocal COnstatns:
+    // "<<nonLocalPseudoPotentialConstantsHost[i]<<std::endl;
+    // // }
+    // // std::cout<<std::endl;
+
+
     if (couplingtype == CouplingStructure::diagonal)
       {
         d_BLASWrapperPtr->stridedBlockScale(
@@ -158,8 +183,16 @@ namespace dftfe
         d_totalNonlocalElems,
         d_maxSingleAtomContribution,
         sphericalFunctionKetTimesVectorParFlattened.begin(),
-        shapeFnTimesWavefunctionMatrix.begin(),
+        d_sphericalFnTimesVectorAllCellsDevice.begin(),
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.begin());
+
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::HOST>
+      tempprojectorKetReduceHost;
+    tempprojectorKetReduceHost.resize(
+      d_sphericalFnTimesVectorAllCellsDevice.size());
+    tempprojectorKetReduceHost.copyFrom(d_sphericalFnTimesVectorAllCellsDevice);
+
   }
 
   template <typename ValueType>
@@ -174,44 +207,71 @@ namespace dftfe
           FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
         basisOperationsPtr)
   {
-    const unsigned int d_numberNodesPerElement =
-      basisOperationsPtr->nDofsPerCell();
-    d_cellHamMatrixTimesWaveMatrixNonLocalDevice.resize(
-      d_totalNonlocalElems * d_numberWaveFunctions * d_numberNodesPerElement);
+    d_numberNodesPerElement = basisOperationsPtr->nDofsPerCell();
+    // std::cout << "DEBUG: TOtal number of nodes: " << d_numberNodesPerElement
+    //           << std::endl;
+    // std::cout << "DEBUG: TOtal nonLocal ENtries: " << d_totalNonLocalEntries
+    //           << std::endl;
+    // std::cout << "DEBUG: TOtal nonlocal elements: " << d_totalNonlocalElems
+    //           << std::endl;
+
+
     d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
     d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
       d_kPointWeights.size() * d_totalNonlocalElems * d_numberNodesPerElement *
         d_maxSingleAtomContribution,
       ValueType(0.0));
+    // std::cout
+    //   << "SIZES DEBUG:
+    //   d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size(): "
+    //   << d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size() <<
+    //   std::endl;
     d_cellHamiltonianMatrixNonLocalFlattenedTranspose.clear();
     d_cellHamiltonianMatrixNonLocalFlattenedTranspose.resize(
       d_kPointWeights.size() * d_totalNonlocalElems * d_numberNodesPerElement *
         d_maxSingleAtomContribution,
       ValueType(0.0));
-
+    // std::cout
+    //   << "SIZES DEBUG:
+    //   d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size(): "
+    //   << d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size() <<
+    //   std::endl;
     d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
     d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
       d_totalNonlocalElems * d_numberNodesPerElement, 0);
-    d_sphericalFnTimesVectorAllCellsDevice.resize(d_totalNonlocalElems *
-                                                    d_numberWaveFunctions *
-                                                    d_maxSingleAtomContribution,
-                                                  ValueType(0.0));
+
     d_shapeFnIdsParallelNumberingMap.clear();
     d_shapeFnIdsParallelNumberingMap.resize(d_totalNonLocalEntries, 0);
+    // std::cout << "SIZES DEBUG: d_shapeFnIdsParallelNumberingMap.size(): "
+    //           << d_shapeFnIdsParallelNumberingMap.size() << std::endl;
     d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.clear();
     d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.resize(
       d_totalNonlocalElems * d_maxSingleAtomContribution, -1);
+    // std::cout
+    //   << "SIZES DEBUG:
+    //   d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size(): "
+    //   << d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size()
+    //   << std::endl;
     d_nonlocalElemIdToLocalElemIdMap.clear();
     d_nonlocalElemIdToLocalElemIdMap.resize(d_totalNonlocalElems, 0);
-    d_sphericalFnTimesVectorAllCellsReduction.clear();
+    // std::cout << "SIZES DEBUG: d_nonlocalElemIdToLocalElemIdMap.size(): "
+    //           << d_nonlocalElemIdToLocalElemIdMap.size() << std::endl;
+    // d_sphericalFnTimesVectorAllCellsReduction.clear();
     d_sphericalFnTimesVectorAllCellsReduction.resize(
       d_totalNonlocalElems * d_maxSingleAtomContribution *
         d_totalNonLocalEntries,
       ValueType(0.0));
-
-    d_cellNodeIdMapNonLocalToLocal.clear();
+    // std::cout
+    //   << "SIZES DEBUG: d_sphericalFnTimesVectorAllCellsReduction.size(): "
+    //   << d_sphericalFnTimesVectorAllCellsReduction.size() << std::endl;
+    // d_cellNodeIdMapNonLocalToLocal.clear();
     d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
                                           d_numberNodesPerElement);
+    // std::cout << "SIZES DEBUG: d_cellNodeIdMapNonLocalToLocal.size(): "
+    //           << d_cellNodeIdMapNonLocalToLocal.size() << std::endl;
+
+
+
     std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     const std::vector<unsigned int> &atomicNumber =
@@ -222,12 +282,17 @@ namespace dftfe
     unsigned int countElem        = 0;
     unsigned int countAlpha       = 0;
     unsigned int numShapeFnsAccum = 0;
+
+
     for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
       {
+        // std::cout<<"DEBUG: Line 225"<<std::endl;
         const unsigned int        atomId = atomIdsInCurrentProcess[iAtom];
         std::vector<unsigned int> elementIndexesInAtomCompactSupport =
           d_atomCenteredSphericalFunctionContainer
             ->d_elementIndexesInAtomCompactSupport[atomId];
+        unsigned int totalAtomIdElementIterators =
+          elementIndexesInAtomCompactSupport.size();
 
         const unsigned int Zno = atomicNumber[atomId];
         const unsigned int numberSphericalFunctions =
@@ -236,17 +301,19 @@ namespace dftfe
 
         for (unsigned int alpha = 0; alpha < numberSphericalFunctions; alpha++)
           {
-            const unsigned int id =
-              nonLocalOperatorHost->d_SphericalFunctionKetTimesVectorPar[0]
-                .get_partitioner()
-                ->global_to_local(
-                  nonLocalOperatorHost
-                    ->d_sphericalFunctionIdsNumberingMapCurrentProcess
-                      [std::make_pair(atomId, alpha)]);
-
+            // std::cout<<"DEBUG: Line 238"<<std::endl;
+            unsigned int globalId =
+              d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
+                atomId, alpha)];
+            // std::cout<<"DEBUG: global ID: "<<globalId<<std::endl;
+            const unsigned int id = d_SphericalFunctionKetTimesVectorPar[0]
+                                      .get_partitioner()
+                                      ->global_to_local(globalId);
+            // std::cout<<"DEBUG: id "<<id<<std::endl;
             d_shapeFnIdsParallelNumberingMap[countAlpha] = id;
 
-            for (unsigned int iElemComp = 0; iElemComp < d_totalNonlocalElems;
+            for (unsigned int iElemComp = 0;
+                 iElemComp < totalAtomIdElementIterators;
                  iElemComp++)
               {
                 d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec
@@ -254,14 +321,22 @@ namespace dftfe
                      d_maxSingleAtomContribution +
                    iElemComp * d_maxSingleAtomContribution + alpha] = id;
 
-                countAlpha++;
+                // std::cout << "DEBUGIMP MAP: " << id << " " << countAlpha << " "
+                //           << (d_numberCellsAccumNonLocalAtoms[iAtom] *
+                //                 d_maxSingleAtomContribution +
+                //               iElemComp * d_maxSingleAtomContribution + alpha)
+                //           << std::endl;
               }
+            countAlpha++;
           }
-        for (unsigned int iElemComp = 0; iElemComp < d_totalNonlocalElems;
+        for (unsigned int iElemComp = 0;
+             iElemComp < totalAtomIdElementIterators;
              ++iElemComp)
           {
             const unsigned int elementId =
               elementIndexesInAtomCompactSupport[iElemComp];
+            // std::cout<<"DEBUG: Line 275 and elementId"<<"
+            // "<<elementId<<std::endl;
             for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
                  ++iNode)
               {
@@ -269,6 +344,7 @@ namespace dftfe
                   d_numberWaveFunctions *
                   basisOperationsPtr->d_cellDofIndexToProcessDofIndexMap
                     [elementId * d_numberNodesPerElement + iNode];
+                // std::cout<<"LocalNode ID: "<<  localNodeId<<std::endl;
                 d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal
                   [countElemNode] = localNodeId;
                 d_cellNodeIdMapNonLocalToLocal[countElemNode] =
@@ -277,7 +353,8 @@ namespace dftfe
               }
           }
 
-        for (unsigned int iElemComp = 0; iElemComp < d_totalNonlocalElems;
+        for (unsigned int iElemComp = 0;
+             iElemComp < totalAtomIdElementIterators;
              ++iElemComp)
           {
             const unsigned int elementId =
@@ -340,7 +417,7 @@ namespace dftfe
         numShapeFnsAccum += numberSphericalFunctions;
       }
 
-
+    // std::cout<<"DEBUG: Line 344"<<std::endl;
 
     // Do the copying from HostPtr to temp structures
     d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.resize(
@@ -382,6 +459,59 @@ namespace dftfe
       d_cellNodeIdMapNonLocalToLocal.size());
     d_cellNodeIdMapNonLocalToLocalDevice.copyFrom(
       d_cellNodeIdMapNonLocalToLocal);
+  }
+
+
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    initialiseOperatorActionOnX(unsigned int kPointIndex)
+  {
+    d_kPointIndex = kPointIndex;
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: Filling CT on GPU" << std::endl;
+    for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
+      {
+        hostPointerCDagger[i] =
+          d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.begin() +
+          d_kPointIndex * d_totalNonlocalElems * d_numberNodesPerElement *
+            d_maxSingleAtomContribution +
+          i * d_numberNodesPerElement * d_maxSingleAtomContribution;
+      }
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: starting H2D copy Line 460" << std::endl;
+    dftfe::utils::deviceMemcpyH2D(devicePointerCDagger,
+                                  hostPointerCDagger,
+                                  d_totalNonlocalElems * sizeof(ValueType *));
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: Finished H2D copy Line 460" << std::endl;
+  }
+
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    initialiseFlattenedDataStructure(
+      unsigned int numberWaveFunctions,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &shapeFnTimesWavefunctionMatrix,
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &sphericalFunctionKetTimesVectorParFlattened)
+  {
+    d_numberWaveFunctions = numberWaveFunctions;
+    dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
+      d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
+      numberWaveFunctions,
+      sphericalFunctionKetTimesVectorParFlattened);
+    d_sphericalFnTimesVectorAllCellsDevice.resize(d_totalNonlocalElems *
+                                                    d_numberWaveFunctions *
+                                                    d_maxSingleAtomContribution,
+                                                  ValueType(0.0));
+    // std::cout << "SIZES DEBUG: d_sphericalFnTimesVectorAllCellsDevice.size():
+    // "
+    //           << d_sphericalFnTimesVectorAllCellsDevice.size() << std::endl;
+
+
     if (d_isMallocCalled)
       {
         free(hostPointerCDagger);
@@ -401,60 +531,29 @@ namespace dftfe
           i * d_numberWaveFunctions * d_maxSingleAtomContribution;
       }
 
-
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: starting cudaMalloc Line 504" << std::endl;
     dftfe::utils::deviceMalloc((void **)&devicePointerCDagger,
                                d_totalNonlocalElems * sizeof(ValueType *));
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: starting cudaMalloc Line 508" << std::endl;
     dftfe::utils::deviceMalloc((void **)&devicePointerCDaggerOutTemp,
                                d_totalNonlocalElems * sizeof(ValueType *));
-
+    // dftfe::utils::deviceSynchronize();
+    // std::cout << "DEBUG: starting H2D copy Line 512" << std::endl;
     dftfe::utils::deviceMemcpyH2D(devicePointerCDaggerOutTemp,
                                   hostPointerCDaggeOutTemp,
                                   d_totalNonlocalElems * sizeof(ValueType *));
 
     d_isMallocCalled = true;
-  }
 
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    initialiseOperatorActionOnX(unsigned int kPointIndex)
-  {
-    d_kPointIndex = kPointIndex;
-    for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
-      {
-        hostPointerCDagger[i] =
-          d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.begin() +
-          d_kPointIndex * d_totalNonlocalElems * d_numberNodesPerElement *
-            d_maxSingleAtomContribution +
-          i * d_numberNodesPerElement * d_maxSingleAtomContribution;
-      }
-
-    dftfe::utils::deviceMemcpyH2D(devicePointerCDagger,
-                                  hostPointerCDagger,
-                                  d_totalNonlocalElems * sizeof(ValueType *));
-  }
-
-  template <typename ValueType>
-  void
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    initialiseFlattenedDataStructure(
-      unsigned int numberWaveFunctions,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &shapeFnTimesWavefunctionMatrix,
-      dftfe::linearAlgebra::MultiVector<ValueType,
-                                        dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFunctionKetTimesVectorParFlattened)
-  {
-    d_numberWaveFunctions = numberWaveFunctions;
-    dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-      d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
-      numberWaveFunctions,
-      sphericalFunctionKetTimesVectorParFlattened);
 
     shapeFnTimesWavefunctionMatrix.clear();
     shapeFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
                                           d_totalNonLocalEntries);
+
+    // std::cout << "SIZES DEBUG: shapeFnTimesWavefunctionMatrix.size(): "
+    //           << shapeFnTimesWavefunctionMatrix.size() << std::endl;
   }
 
   template <typename ValueType>
