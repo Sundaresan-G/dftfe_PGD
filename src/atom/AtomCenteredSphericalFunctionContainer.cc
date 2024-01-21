@@ -212,8 +212,9 @@ namespace dftfe
     totalNonLocalElements = 0;
     for (unsigned int iAtom = 0; iAtom < totalAtomsInCurrentProcessor; iAtom++)
       {
+        unsigned int       atomId = d_AtomIdsInCurrentProcess[iAtom];
         const unsigned int numberElementsInCompactSupport =
-          d_elementIndexesInAtomCompactSupport[iAtom].size();
+          d_elementIndexesInAtomCompactSupport[atomId].size();
         numberCellsAccumNonLocalAtoms[iAtom] = totalNonLocalElements;
         totalNonLocalElements += numberElementsInCompactSupport;
       }

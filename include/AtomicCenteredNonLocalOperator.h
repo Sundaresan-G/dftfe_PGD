@@ -380,7 +380,12 @@ namespace dftfe
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_BLASWrapperPtr;
 
-
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_mpi_communicator;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_this_mpi_process;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::
@@ -500,32 +505,24 @@ namespace dftfe
 
 
     // Data structures moved from KSOperatorDevice
-    std::vector<dataTypes::number>
-      d_cellHamiltonianMatrixNonLocalFlattenedConjugate;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice;
-    std::vector<dataTypes::number>
-      d_cellHamiltonianMatrixNonLocalFlattenedTranspose;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
+    std::vector<ValueType> d_cellHamiltonianMatrixNonLocalFlattenedConjugate;
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+                           d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice;
+    std::vector<ValueType> d_cellHamiltonianMatrixNonLocalFlattenedTranspose;
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorAllCellsDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
                         d_sphericalFnTimesVectorDevice;
     std::vector<double> d_nonLocalPseudoPotentialConstants;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
       d_nonLocalPseudoPotentialConstantsDevice;
 
-    std::vector<dataTypes::number> d_sphericalFnTimesVectorAllCellsReduction;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
+    std::vector<ValueType> d_sphericalFnTimesVectorAllCellsReduction;
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorAllCellsReductionDevice;
     std::vector<dftfe::global_size_type>
       d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal;

@@ -220,6 +220,7 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     if (d_useDevice)
       {
+        MPI_Barrier(d_mpiCommParent);
         d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
         d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
           d_nonLocalOperatorHost, d_BasisOperatorHostPtr);

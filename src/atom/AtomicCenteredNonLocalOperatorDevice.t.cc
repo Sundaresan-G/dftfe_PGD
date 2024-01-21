@@ -192,7 +192,6 @@ namespace dftfe
     tempprojectorKetReduceHost.resize(
       d_sphericalFnTimesVectorAllCellsDevice.size());
     tempprojectorKetReduceHost.copyFrom(d_sphericalFnTimesVectorAllCellsDevice);
-
   }
 
   template <typename ValueType>
@@ -221,21 +220,27 @@ namespace dftfe
       d_kPointWeights.size() * d_totalNonlocalElems * d_numberNodesPerElement *
         d_maxSingleAtomContribution,
       ValueType(0.0));
-    // std::cout
-    //   << "SIZES DEBUG:
-    //   d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size(): "
-    //   << d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size() <<
-    //   std::endl;
+    // std::cout<< "Size of kPoint: "<<d_kPointWeights.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<< "Size of
+    // d_totalNonlocalElems "<<d_totalNonlocalElems<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<< "Size of
+    // d_numberNodesPerElement "<<d_numberNodesPerElement<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<< "Size of
+    // d_maxSingleAtomPseudoWfc "<<d_maxSingleAtomContribution<<"
+    // "<<d_this_mpi_process<<std::endl;
+
     d_cellHamiltonianMatrixNonLocalFlattenedTranspose.clear();
     d_cellHamiltonianMatrixNonLocalFlattenedTranspose.resize(
       d_kPointWeights.size() * d_totalNonlocalElems * d_numberNodesPerElement *
         d_maxSingleAtomContribution,
       ValueType(0.0));
+    MPI_Barrier(d_mpi_communicator);
     // std::cout
     //   << "SIZES DEBUG:
-    //   d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size(): "
-    //   << d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size() <<
-    //   std::endl;
+    //   d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size(): " <<
+    //   d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size() <<"
+    //   "<<d_this_mpi_process<<std::endl;
+
     d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
     d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
       d_totalNonlocalElems * d_numberNodesPerElement, 0);
@@ -283,7 +288,31 @@ namespace dftfe
     unsigned int countAlpha       = 0;
     unsigned int numShapeFnsAccum = 0;
 
-
+    MPI_Barrier(d_mpi_communicator);
+    // std::cout<<"DEBUG: Line 282 "<<std::endl;
+    // std::cout<<"DEBUG:
+    // d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size()
+    // "<<d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size()
+    // "<<d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.size()
+    // "<<d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_shapeFnIdsParallelNumberingMap.size()
+    // "<<d_shapeFnIdsParallelNumberingMap.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size()
+    // "<<d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_sphericalFnTimesVectorAllCellsReduction.size()
+    // "<<d_sphericalFnTimesVectorAllCellsReduction.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_cellNodeIdMapNonLocalToLocal.size()
+    // "<<d_cellNodeIdMapNonLocalToLocal.size()<<"
+    // "<<d_this_mpi_process<<std::endl;
+    int totalElements = 0;
     for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
       {
         // std::cout<<"DEBUG: Line 225"<<std::endl;
@@ -293,7 +322,7 @@ namespace dftfe
             ->d_elementIndexesInAtomCompactSupport[atomId];
         unsigned int totalAtomIdElementIterators =
           elementIndexesInAtomCompactSupport.size();
-
+        totalElements += totalAtomIdElementIterators;
         const unsigned int Zno = atomicNumber[atomId];
         const unsigned int numberSphericalFunctions =
           d_atomCenteredSphericalFunctionContainer
@@ -301,7 +330,6 @@ namespace dftfe
 
         for (unsigned int alpha = 0; alpha < numberSphericalFunctions; alpha++)
           {
-            // std::cout<<"DEBUG: Line 238"<<std::endl;
             unsigned int globalId =
               d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
                 atomId, alpha)];
@@ -320,12 +348,6 @@ namespace dftfe
                   [d_numberCellsAccumNonLocalAtoms[iAtom] *
                      d_maxSingleAtomContribution +
                    iElemComp * d_maxSingleAtomContribution + alpha] = id;
-
-                // std::cout << "DEBUGIMP MAP: " << id << " " << countAlpha << " "
-                //           << (d_numberCellsAccumNonLocalAtoms[iAtom] *
-                //                 d_maxSingleAtomContribution +
-                //               iElemComp * d_maxSingleAtomContribution + alpha)
-                //           << std::endl;
               }
             countAlpha++;
           }
@@ -335,8 +357,7 @@ namespace dftfe
           {
             const unsigned int elementId =
               elementIndexesInAtomCompactSupport[iElemComp];
-            // std::cout<<"DEBUG: Line 275 and elementId"<<"
-            // "<<elementId<<std::endl;
+
             for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
                  ++iNode)
               {
@@ -381,7 +402,14 @@ namespace dftfe
                             [ikpoint * d_numberNodesPerElement *
                                numberSphericalFunctions +
                              d_numberNodesPerElement * alpha + iNode];
-
+                      // std::cout<<"ElementIndex: "<<(ikpoint *
+                      // d_totalNonlocalElems *
+                      //      d_numberNodesPerElement *
+                      //      d_maxSingleAtomContribution +
+                      //    countElem * d_numberNodesPerElement *
+                      //      d_maxSingleAtomContribution +
+                      //    d_maxSingleAtomContribution * iNode + alpha)<<"
+                      //    "<<d_this_mpi_process<<std::endl;
                       d_cellHamiltonianMatrixNonLocalFlattenedTranspose
                         [ikpoint * d_totalNonlocalElems *
                            d_numberNodesPerElement *
@@ -417,9 +445,31 @@ namespace dftfe
         numShapeFnsAccum += numberSphericalFunctions;
       }
 
-    // std::cout<<"DEBUG: Line 344"<<std::endl;
-
-    // Do the copying from HostPtr to temp structures
+    // std::cout<<"DEBUG: Line 344 "<<d_this_mpi_process<<std::endl;
+    // std::cout<<"DEBUG: Total ElementIterators: "<<totalElements<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size()
+    // "<<d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size()
+    // "<<d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.size()
+    // "<<d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_shapeFnIdsParallelNumberingMap.size()
+    // "<<d_shapeFnIdsParallelNumberingMap.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.size()
+    // "<<d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_sphericalFnTimesVectorAllCellsReductionDevice.size()
+    // "<<d_sphericalFnTimesVectorAllCellsReduction.size()<<"
+    // "<<d_this_mpi_process<<std::endl; std::cout<<"DEBUG:
+    // d_cellNodeIdMapNonLocalToLocalDevice.size()
+    // "<<d_cellNodeIdMapNonLocalToLocal.size()<<"
+    // "<<d_this_mpi_process<<std::endl; Do the copying from HostPtr to temp
+    // structures
     d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.resize(
       d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size());
     d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.copyFrom(
@@ -450,10 +500,10 @@ namespace dftfe
     d_sphericalFnTimesVectorAllCellsReductionDevice.copyFrom(
       d_sphericalFnTimesVectorAllCellsReduction);
 
-    d_nonLocalPseudoPotentialConstantsDevice.resize(
-      d_nonLocalPseudoPotentialConstants.size());
-    d_nonLocalPseudoPotentialConstantsDevice.copyFrom(
-      d_nonLocalPseudoPotentialConstants);
+    // d_nonLocalPseudoPotentialConstantsDevice.resize(
+    //   d_nonLocalPseudoPotentialConstants.size());
+    // d_nonLocalPseudoPotentialConstantsDevice.copyFrom(
+    //   d_nonLocalPseudoPotentialConstants);
 
     d_cellNodeIdMapNonLocalToLocalDevice.resize(
       d_cellNodeIdMapNonLocalToLocal.size());
