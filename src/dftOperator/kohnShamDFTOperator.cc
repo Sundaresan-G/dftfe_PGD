@@ -76,7 +76,7 @@ namespace dftfe
   {
     computing_timer.enter_subsection("kohnShamDFTOperatorClass setup");
 
-    basisOperationsPtrHost = dftPtr->basisOperationsPtrHost;
+    d_basisOperationsPtrHost = dftPtr->d_basisOperationsPtrHost;
 
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);

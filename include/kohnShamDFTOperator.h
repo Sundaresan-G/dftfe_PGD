@@ -682,7 +682,7 @@ node is stored
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,
                                       dftfe::utils::MemorySpace::HOST>>
-      basisOperationsPtrHost;
+      d_basisOperationsPtrHost;
 
     /// flag for precomputing stiffness matrix contribution from
     /// sum{Vext}-sum{Vnuc}
