@@ -569,7 +569,7 @@ namespace dftfe
   void
   oncvClass<ValueType>::applynonLocalHamiltonianMatrix(
     distributedDeviceVec<ValueType>
-      &sphericalFunctionKetTimesVectorParFlattened)
+      &sphericalFunctionKetTimesVectorParFlattened,const bool flagCopyToCellVector)
   {
     if (!d_nonlocalHamiltonianEntriesUpdated)
       {
@@ -609,7 +609,7 @@ namespace dftfe
     d_nonLocalOperatorDevice->applyV_onCTX(
       CouplingStructure::diagonal,
       d_nonLocalHamiltonianEntriesDevice,
-      sphericalFunctionKetTimesVectorParFlattened);
+      sphericalFunctionKetTimesVectorParFlattened,flagCopyToCellVector);
   }
 
 } // namespace dftfe

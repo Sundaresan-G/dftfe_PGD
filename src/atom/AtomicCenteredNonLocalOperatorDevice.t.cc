@@ -138,8 +138,8 @@ namespace dftfe
         d_shapeFnIdsParallelNumberingMapDevice.begin());
 
 
-    sphericalFunctionKetTimesVectorParFlattened.accumulateAddLocallyOwned();
-    sphericalFunctionKetTimesVectorParFlattened.updateGhostValues();
+    sphericalFunctionKetTimesVectorParFlattened.accumulateAddLocallyOwned(1);
+    sphericalFunctionKetTimesVectorParFlattened.updateGhostValues(1);
   }
 
   template <typename ValueType>
@@ -151,20 +151,8 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened)
+        &sphericalFunctionKetTimesVectorParFlattened, const bool flagCopyToCellVector)
   {
-    //   dftfe::utils::MemoryStorage<double,
-    //                           dftfe::utils::MemorySpace::HOST>
-    //                           nonLocalPseudoPotentialConstantsHost;
-    //     nonLocalPseudoPotentialConstantsHost.resize(couplingMatrix.size());
-    //     nonLocalPseudoPotentialConstantsHost.copyFrom(couplingMatrix) ;
-
-    // // for(int i = 0; i < nonLocalPseudoPotentialConstantsHost.size(); i++)
-    // // {
-    // //   std::cout<<"nonlocal COnstatns:
-    // "<<nonLocalPseudoPotentialConstantsHost[i]<<std::endl;
-    // // }
-    // // std::cout<<std::endl;
 
 
     if (couplingtype == CouplingStructure::diagonal)
@@ -177,6 +165,7 @@ namespace dftfe
           sphericalFunctionKetTimesVectorParFlattened.begin());
       }
 
+    if(flagCopyToCellVector)
     dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
       copyFromParallelNonLocalVecToAllCellsVec(
         d_numberWaveFunctions,
@@ -186,12 +175,6 @@ namespace dftfe
         d_sphericalFnTimesVectorAllCellsDevice.begin(),
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.begin());
 
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::HOST>
-      tempprojectorKetReduceHost;
-    tempprojectorKetReduceHost.resize(
-      d_sphericalFnTimesVectorAllCellsDevice.size());
-    tempprojectorKetReduceHost.copyFrom(d_sphericalFnTimesVectorAllCellsDevice);
   }
 
   template <typename ValueType>
