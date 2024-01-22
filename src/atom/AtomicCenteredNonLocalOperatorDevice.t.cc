@@ -151,10 +151,9 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened, const bool flagCopyToCellVector)
+        &        sphericalFunctionKetTimesVectorParFlattened,
+      const bool flagCopyToCellVector)
   {
-
-
     if (couplingtype == CouplingStructure::diagonal)
       {
         d_BLASWrapperPtr->stridedBlockScale(
@@ -165,16 +164,15 @@ namespace dftfe
           sphericalFunctionKetTimesVectorParFlattened.begin());
       }
 
-    if(flagCopyToCellVector)
-    dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
-      copyFromParallelNonLocalVecToAllCellsVec(
-        d_numberWaveFunctions,
-        d_totalNonlocalElems,
-        d_maxSingleAtomContribution,
-        sphericalFunctionKetTimesVectorParFlattened.begin(),
-        d_sphericalFnTimesVectorAllCellsDevice.begin(),
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.begin());
-
+    if (flagCopyToCellVector)
+      dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
+        copyFromParallelNonLocalVecToAllCellsVec(
+          d_numberWaveFunctions,
+          d_totalNonlocalElems,
+          d_maxSingleAtomContribution,
+          sphericalFunctionKetTimesVectorParFlattened.begin(),
+          d_sphericalFnTimesVectorAllCellsDevice.begin(),
+          d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.begin());
   }
 
   template <typename ValueType>

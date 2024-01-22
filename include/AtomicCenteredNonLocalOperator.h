@@ -487,8 +487,8 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,
-        const bool flagCopyToCellVector);
+        &        sphericalFunctionKetTimesVectorParFlattened,
+      const bool flagCopyToCellVector);
 
 
     void

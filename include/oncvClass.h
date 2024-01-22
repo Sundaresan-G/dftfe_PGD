@@ -184,7 +184,8 @@ namespace dftfe
     void
     applynonLocalHamiltonianMatrix(
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,const bool flagCopyToCellVector);
+        &        sphericalFunctionKetTimesVectorParFlattened,
+      const bool flagCopyToCellVector);
 
 
   private:

@@ -56,8 +56,6 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         d_A,
         d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-
-
     }
 
   // this routine was interfering with overlapping communication and compute. So
@@ -90,7 +88,8 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       //
       // compute V*C^{\dagger}*X
 
-      d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,true);
+      d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
+                                                     true);
 
       //
       // compute C*V*C^{\dagger}*x
@@ -202,10 +201,10 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         src,
         d_cellWaveFunctionMatrix.begin(),
         d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
-            d_ONCVnonLocalOperator->applyCTonX(
+      d_ONCVnonLocalOperator->applyCTonX(
         d_A,
         d_sphericalFnTimesVectorParFlattenedDevice,
-        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));  
+        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
 
       // dftfe::utils::deviceBlasWrapper::gemmBatched(
       //   d_deviceBlasHandle,
@@ -243,10 +242,10 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
   projectorKetTimesVector.setValue(0);
 
-      d_ONCVnonLocalOperator->applyAllReduceonCTX(
-        projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
+  d_ONCVnonLocalOperator->applyAllReduceonCTX(
+    projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
 
 
-    d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,false);
-
+  d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
+                                                 false);
 }
