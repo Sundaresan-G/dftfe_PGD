@@ -71,9 +71,9 @@ namespace dftfe
                 "/coreDensity.inp")
                  .c_str());
 
-        d_atomicCoreDensityMap[atomicNumber] =
-          std::make_shared<AtomCenteredSphericalFunctionSpline>(
-            coreDataFile, 0, 0, 1, 2);
+        // d_atomicCoreDensityMap[atomicNumber] =
+        //   std::make_shared<AtomCenteredSphericalFunctionSpline>(
+        //     coreDataFile, 0, 0, 1, 2);
         atomicValenceDensityMap[atomicNumber] =
           std::make_shared<AtomCenteredSphericalFunctionSpline>(
             valenceDataFile, 0, 0, 1, 2);
@@ -86,14 +86,14 @@ namespace dftfe
             d_atomicValenceDensityVector[i][*it] =
               std::make_shared<AtomCenteredSphericalFunctionSpline>(
                 valenceDataFile, 0, 0, 1, 2);
-            d_atomicCoreDensityVector[i][*it] =
-              std::make_shared<AtomCenteredSphericalFunctionSpline>(
-                coreDataFile, 0, 0, 1, 2);
+            // d_atomicCoreDensityVector[i][*it] =
+            //   std::make_shared<AtomCenteredSphericalFunctionSpline>(
+            //     coreDataFile, 0, 0, 1, 2);
           }
-        if (IntegralCoreRho > 1E-8)
-          d_atomTypeCoreFlagMap[atomicNumber] = true;
-        else
-          d_atomTypeCoreFlagMap[atomicNumber] = false;
+        // if (IntegralCoreRho > 1E-8)
+        //   d_atomTypeCoreFlagMap[atomicNumber] = true;
+        // else
+        //   d_atomTypeCoreFlagMap[atomicNumber] = false;
       } //*it loop
   }
 
