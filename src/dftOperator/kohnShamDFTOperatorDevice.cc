@@ -287,6 +287,7 @@ namespace dftfe
         dftfe::utils::deviceFree(d_B);
         dftfe::utils::deviceFree(d_C);
       }
+    d_ONCVnonLocalOperator->freeDeviceVectors();
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -463,7 +464,8 @@ namespace dftfe
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     getParallelProjectorKetTimesBlockVectorDevice()
   {
-    return d_parallelProjectorKetTimesBlockVectorDevice;
+    // return d_parallelProjectorKetTimesBlockVectorDevice;
+    return d_parallelSphericalFnKetTimesBlockVectorDevice;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -486,7 +488,8 @@ namespace dftfe
 
     d_basisOperationsPtrDevice = dftPtr->d_basisOperationsPtrDevice;
     d_basisOperationsPtrHost   = dftPtr->d_basisOperationsPtrHost;
-
+    d_oncvClassPtr             = dftPtr->d_oncvClassPtr;
+    d_ONCVnonLocalOperator     = d_oncvClassPtr->d_nonLocalOperatorDevice;
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
     d_sqrtMassVector.reinit(d_invSqrtMassVector);
@@ -653,6 +656,11 @@ namespace dftfe
           BVec,
           d_parallelProjectorKetTimesBlockVectorDevice);
 
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          BVec,
+          d_sphericalFnTimesVectorParFlattenedDevice,
+          d_parallelSphericalFnKetTimesBlockVectorDevice);
+
         d_totalPseudoWfcNonLocal = 0;
         d_totalNonlocalElems     = 0;
         d_totalNonlocalAtomsCurrentProc =
@@ -684,6 +692,7 @@ namespace dftfe
         d_cellHamMatrixTimesWaveMatrixNonLocalDevice.resize(
           d_totalNonlocalElems * numberWaveFunctions * d_numberNodesPerElement,
           dataTypes::number(0.0));
+
         d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
         d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
           dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
@@ -697,6 +706,7 @@ namespace dftfe
         d_nonLocalPseudoPotentialConstants.clear();
         d_nonLocalPseudoPotentialConstants.resize(d_totalPseudoWfcNonLocal,
                                                   0.0);
+
         d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
         d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
           d_totalNonlocalElems * d_numberNodesPerElement, 0);
@@ -704,10 +714,13 @@ namespace dftfe
           d_totalNonlocalElems * numberWaveFunctions * d_maxSingleAtomPseudoWfc,
           dataTypes::number(0.0));
 
+
         d_projectorIdsParallelNumberingMap.clear();
         d_projectorIdsParallelNumberingMap.resize(d_totalPseudoWfcNonLocal, 0);
+
         d_projectorKetTimesVectorParFlattenedDevice.resize(
           numberWaveFunctions * d_totalPseudoWfcNonLocal, 0.0);
+
 
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.clear();
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.resize(
@@ -722,9 +735,13 @@ namespace dftfe
             d_totalPseudoWfcNonLocal,
           dataTypes::number(0.0));
 
+
+
         d_cellNodeIdMapNonLocalToLocal.clear();
         d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
                                               d_numberNodesPerElement);
+
+
 
         unsigned int countElemNode   = 0;
         unsigned int countElem       = 0;
@@ -753,11 +770,7 @@ namespace dftfe
                         [std::make_pair(atomId, ipseudowfc)]);
 
                 d_projectorIdsParallelNumberingMap[countPseudoWfc1] = id;
-                // std::cout<<"iAtom: "<< iAtom<<", ipseudo: "<< ipseudowfc <<",
-                // netpseudo: "<<countPseudoWfc1<<", parallel id:
-                // "<<id<<std::endl;
-                // d_nonLocalPseudoPotentialConstants[countPseudoWfc1]
-                //   =dftPtr->d_nonLocalPseudoPotentialConstants[atomId][ipseudowfc];
+
                 d_nonLocalPseudoPotentialConstants[id] =
                   dftPtr
                     ->d_nonLocalPseudoPotentialConstants[atomId][ipseudowfc];
@@ -766,12 +779,12 @@ namespace dftfe
                      dftPtr->d_elementIteratorsInAtomCompactSupport[atomId]
                        .size();
                      ++iElemComp)
-                  d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec
-                    [d_numberCellsAccumNonLocalAtoms[iAtom] *
-                       d_maxSingleAtomPseudoWfc +
-                     iElemComp * d_maxSingleAtomPseudoWfc + ipseudowfc] =
-                      id; // countPseudoWfc1;//id;
-
+                  {
+                    d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec
+                      [d_numberCellsAccumNonLocalAtoms[iAtom] *
+                         d_maxSingleAtomPseudoWfc +
+                       iElemComp * d_maxSingleAtomPseudoWfc + ipseudowfc] = id;
+                  }
                 countPseudoWfc1++;
               }
 
@@ -896,10 +909,7 @@ namespace dftfe
         d_projectorKetTimesVectorAllCellsReductionDevice.copyFrom(
           d_projectorKetTimesVectorAllCellsReduction);
 
-        d_nonLocalPseudoPotentialConstantsDevice.resize(
-          d_nonLocalPseudoPotentialConstants.size());
-        d_nonLocalPseudoPotentialConstantsDevice.copyFrom(
-          d_nonLocalPseudoPotentialConstants);
+
 
         d_cellNodeIdMapNonLocalToLocalDevice.resize(
           d_cellNodeIdMapNonLocalToLocal.size());
@@ -922,11 +932,13 @@ namespace dftfe
         h_d_C = (dataTypes::number **)malloc(d_totalNonlocalElems *
                                              sizeof(dataTypes::number *));
 
+
         for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
-            h_d_A[i] = d_cellWaveFunctionMatrix.begin() +
-                       d_nonlocalElemIdToLocalElemIdMap[i] *
-                         numberWaveFunctions * d_numberNodesPerElement;
+            h_d_A[i] =
+              d_cellWaveFunctionMatrix.begin() +
+              d_ONCVnonLocalOperator->d_nonlocalElemIdToLocalElemIdMap[i] *
+                numberWaveFunctions * d_numberNodesPerElement;
             h_d_C[i] = d_projectorKetTimesVectorAllCellsDevice.begin() +
                        i * numberWaveFunctions * d_maxSingleAtomPseudoWfc;
           }
@@ -934,9 +946,11 @@ namespace dftfe
         dftfe::utils::deviceMalloc((void **)&d_A,
                                    d_totalNonlocalElems *
                                      sizeof(dataTypes::number *));
+
         dftfe::utils::deviceMalloc((void **)&d_B,
                                    d_totalNonlocalElems *
                                      sizeof(dataTypes::number *));
+
         dftfe::utils::deviceMalloc((void **)&d_C,
                                    d_totalNonlocalElems *
                                      sizeof(dataTypes::number *));
@@ -1063,8 +1077,13 @@ namespace dftfe
     d_kPointIndex = kPointIndex;
     d_spinIndex   = spinIndex;
 
+
+
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
+        // std::cout << "DEBUGKS Total nolocal Elements: " <<
+        // d_totalNonlocalElems
+        //           << std::endl;
         for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
             h_d_B[i] =
@@ -1072,10 +1091,18 @@ namespace dftfe
               d_kPointIndex * d_totalNonlocalElems * d_numberNodesPerElement *
                 d_maxSingleAtomPseudoWfc +
               i * d_numberNodesPerElement * d_maxSingleAtomPseudoWfc;
+            // std::cout
+            //   << "DEBUG: i and value: " << i << " "
+            //   << d_cellHamiltonianMatrixNonLocalFlattenedConjugate
+            //        [d_kPointIndex * d_totalNonlocalElems *
+            //           d_numberNodesPerElement * d_maxSingleAtomPseudoWfc +
+            //         i * d_numberNodesPerElement * d_maxSingleAtomPseudoWfc]
+            //   << std::endl;
           }
 
         dftfe::utils::deviceMemcpyH2D(
           d_B, h_d_B, d_totalNonlocalElems * sizeof(dataTypes::number *));
+        d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
       }
   }
 

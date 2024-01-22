@@ -23,8 +23,10 @@
 #include <headers.h>
 #include <operator.h>
 #include <BLASWrapper.h>
+#include <oncvClass.h>
 #include <FEBasisOperations.h>
-
+#include <oncvClass.h>
+#include <AtomicCenteredNonLocalOperator.h>
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -598,6 +600,7 @@ node is stored
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperPtrHost;
 
+
     /// data structures to store diagonal of inverse square root mass matrix and
     /// square root of mass matrix
     distributedCPUVec<double> d_invSqrtMassVector, d_sqrtMassVector;
@@ -670,19 +673,30 @@ node is stored
     std::vector<dealii::types::global_dof_index>
       d_FullflattenedArrayMacroCellLocalProcIndexIdMap;
 
-    std::vector<unsigned int>      d_normalCellIdToMacroCellIdMap;
-    std::vector<unsigned int>      d_macroCellIdToNormalCellIdMap;
-    std::vector<dataTypes::number> d_cellWaveFunctionMatrix,
-      d_cellHamMatrixTimesWaveMatrix;
+    std::vector<unsigned int> d_normalCellIdToMacroCellIdMap;
+    std::vector<unsigned int> d_macroCellIdToNormalCellIdMap;
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::HOST>
+      d_cellWaveFunctionMatrix, d_cellHamMatrixTimesWaveMatrix;
     std::map<unsigned int,
              dftfe::utils::MemoryStorage<dataTypes::number,
                                          dftfe::utils::MemorySpace::HOST>>
       projectorKetTimesVector;
+    dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                      dftfe::utils::MemorySpace::HOST>
+      d_SphericalFunctionKetTimesVectorParFlattened;
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,
                                       dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtrHost;
+
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<dataTypes::number,
+                                     dftfe::utils::MemorySpace::HOST>>
+      d_ONCVnonLocalOperator;
 
     /// flag for precomputing stiffness matrix contribution from
     /// sum{Vext}-sum{Vnuc}

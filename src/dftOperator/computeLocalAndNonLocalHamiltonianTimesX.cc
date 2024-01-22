@@ -404,6 +404,12 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
   //
   // element level matrix-vector multiplications
   //
+  double TimerStartInit = MPI_Wtime();
+  d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex,
+                                                      projectorKetTimesVector);
+  d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
+  double TimerEndInit = MPI_Wtime() - TimerStartInit;
+  std::cout << "HX Timer: Init " << TimerEndInit << std::endl;
   const dataTypes::number zero(0.0), one(1.0);
 
   const unsigned int inc = 1;
@@ -418,17 +424,10 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
   if (dftPtr->d_dftParamsPtr->isPseudopotential &&
       dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
     {
-      for (unsigned int iAtom = 0;
-           iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-           ++iAtom)
-        {
-          const unsigned int atomId =
-            dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-          projectorKetTimesVector[atomId].setValue(0.0);
-        }
+      double TimerStartCTX = MPI_Wtime();
       for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
         {
-          if (dftPtr->d_nonLocalAtomIdsInElement[iCell].size() > 0)
+          if (d_ONCVnonLocalOperator->atomSupportInElement(iCell))
             {
               for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
                    ++iNode)
@@ -447,114 +446,43 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
                                  [&scalarCoeffAlpha](auto &a) {
                                    return scalarCoeffAlpha * a;
                                  });
-                }
+                } // scaling
 
+              d_ONCVnonLocalOperator->applyCTonX(
+                d_cellWaveFunctionMatrix,
+                projectorKetTimesVector,
+                std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
 
-              for (unsigned int iAtom = 0;
-                   iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
-                   ++iAtom)
-                {
-                  const unsigned int atomId =
-                    dftPtr->d_nonLocalAtomIdsInElement[iCell][iAtom];
-                  const unsigned int numberPseudoWaveFunctions =
-                    dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-                  const int nonZeroElementMatrixId =
-                    dftPtr->d_sparsityPattern[atomId][iCell];
+            } // if nonlocalAtomPResent
+        }     // Cell Loop
+      d_ONCVnonLocalOperator->applyAllReduceonCTX(
+        d_SphericalFunctionKetTimesVectorParFlattened, projectorKetTimesVector);
 
-                  d_BLASWrapperPtrHost->xgemm(
-                    'N',
-                    'N',
-                    numberWaveFunctions,
-                    numberPseudoWaveFunctions,
-                    d_numberNodesPerElement,
-                    &one,
-                    &d_cellWaveFunctionMatrix[0],
-                    numberWaveFunctions,
-                    &dftPtr->d_nonLocalProjectorElementMatricesConjugate
-                       [atomId][nonZeroElementMatrixId]
-                       [d_kPointIndex * d_numberNodesPerElement *
-                        numberPseudoWaveFunctions],
-                    d_numberNodesPerElement,
-                    &one,
-                    &projectorKetTimesVector[atomId][0],
-                    numberWaveFunctions);
-                }
-            }
-        }
-
-      dftPtr->d_projectorKetTimesVectorParFlattened.setValue(0.0);
-
-      for (unsigned int iAtom = 0;
-           iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-           ++iAtom)
-        {
-          const unsigned int atomId =
-            dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-          const unsigned int numberPseudoWaveFunctions =
-            dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-
-          for (unsigned int iPseudoAtomicWave = 0;
-               iPseudoAtomicWave < numberPseudoWaveFunctions;
-               ++iPseudoAtomicWave)
-            {
-              const unsigned int id =
-                dftPtr->d_projectorIdsNumberingMapCurrentProcess[std::make_pair(
-                  atomId, iPseudoAtomicWave)];
-
-              std::memcpy(dftPtr->d_projectorKetTimesVectorParFlattened.data() +
-                            dftPtr->d_projectorKetTimesVectorParFlattened
-                                .getMPIPatternP2P()
-                                ->globalToLocal(id) *
-                              numberWaveFunctions,
-                          &projectorKetTimesVector[atomId][numberWaveFunctions *
-                                                           iPseudoAtomicWave],
-                          numberWaveFunctions * sizeof(dataTypes::number));
-            }
-        }
-
-      dftPtr->d_projectorKetTimesVectorParFlattened.accumulateAddLocallyOwned();
-      dftPtr->d_projectorKetTimesVectorParFlattened.updateGhostValues();
-
+      double TimerEndCTX = MPI_Wtime() - TimerStartCTX;
+      std::cout << "HX Timer: CTX " << TimerEndCTX << std::endl;
       //
       // compute V*C^{T}*X
       //
-      for (unsigned int iAtom = 0;
-           iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-           ++iAtom)
-        {
-          const unsigned int atomId =
-            dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-          const unsigned int numberPseudoWaveFunctions =
-            dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-          for (unsigned int iPseudoAtomicWave = 0;
-               iPseudoAtomicWave < numberPseudoWaveFunctions;
-               ++iPseudoAtomicWave)
-            {
-              double nonlocalConstantV =
-                dftPtr->d_nonLocalPseudoPotentialConstants[atomId]
-                                                          [iPseudoAtomicWave];
 
-              const unsigned int localId =
-                dftPtr->d_projectorKetTimesVectorParFlattened
-                  .getMPIPatternP2P()
-                  ->globalToLocal(
-                    dftPtr->d_projectorIdsNumberingMapCurrentProcess
-                      [std::make_pair(atomId, iPseudoAtomicWave)]);
-              std::transform(
-                dftPtr->d_projectorKetTimesVectorParFlattened.begin() +
-                  localId * numberWaveFunctions,
-                dftPtr->d_projectorKetTimesVectorParFlattened.begin() +
-                  localId * numberWaveFunctions + numberWaveFunctions,
-                projectorKetTimesVector[atomId].begin() +
-                  numberWaveFunctions * iPseudoAtomicWave,
-                [&nonlocalConstantV](auto &a) {
-                  return nonlocalConstantV * a;
-                });
-            }
-        }
-    }
+      double TimerStartVX = MPI_Wtime();
+      d_oncvClassPtr->applynonLocalHamiltonianMatrix(
+        d_SphericalFunctionKetTimesVectorParFlattened, projectorKetTimesVector);
+
+
+
+      double TimerEndVX = MPI_Wtime() - TimerStartVX;
+      std::cout << "HX Timer: VX " << TimerEndVX << std::endl;
+    } // nonlocal
+
+
+
+  double TimerLocalHX      = 0.0;
+  double TimerAssembly     = 0.0;
+  double TimerCY           = 0.0;
+  double TimerStartCXStart = MPI_Wtime();
   for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
     {
+      double tempTime = MPI_Wtime();
       for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
         {
           dealii::types::global_dof_index localNodeId =
@@ -585,39 +513,48 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
         &zero,
         &d_cellHamMatrixTimesWaveMatrix[0],
         numberWaveFunctions);
-      if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-          dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
+      TimerLocalHX += MPI_Wtime() - tempTime;
+      tempTime = MPI_Wtime();
+      if (dftPtr->d_dftParamsPtr->isPseudopotential)
         {
-          for (unsigned int iAtom = 0;
-               iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
-               ++iAtom)
-            {
-              const unsigned int atomId =
-                dftPtr->d_nonLocalAtomIdsInElement[iCell][iAtom];
-              const unsigned int numberPseudoWaveFunctions =
-                dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-              const int nonZeroElementMatrixId =
-                dftPtr->d_sparsityPattern[atomId][iCell];
+          d_ONCVnonLocalOperator->applyConVCTX(
+            d_cellHamMatrixTimesWaveMatrix,
+            projectorKetTimesVector,
+            std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
+          // for (unsigned int iAtom = 0;
+          //      iAtom < dftPtr->d_nonLocalAtomIdsInElement[iCell].size();
+          //      ++iAtom)
+          //   {
+          //     const unsigned int atomId =
+          //       dftPtr->d_nonLocalAtomIdsInElement[iCell][iAtom];
 
-              d_BLASWrapperPtrHost->xgemm(
-                'N',
-                'N',
-                numberWaveFunctions,
-                d_numberNodesPerElement,
-                numberPseudoWaveFunctions,
-                &one,
-                &projectorKetTimesVector[atomId][0],
-                numberWaveFunctions,
-                &dftPtr->d_nonLocalProjectorElementMatricesTranspose
-                   [atomId][nonZeroElementMatrixId]
-                   [d_kPointIndex * d_numberNodesPerElement *
-                    numberPseudoWaveFunctions],
-                numberPseudoWaveFunctions,
-                &one,
-                &d_cellHamMatrixTimesWaveMatrix[0],
-                numberWaveFunctions);
-            }
+          //     const unsigned int numberPseudoWaveFunctions =
+          //       dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
+          //     const int nonZeroElementMatrixId =
+          //       dftPtr->d_sparsityPattern[atomId][iCell];
+
+          //     d_BLASWrapperPtrHost->xgemm(
+          //       'N',
+          //       'N',
+          //       numberWaveFunctions,
+          //       d_numberNodesPerElement,
+          //       numberPseudoWaveFunctions,
+          //       &one,
+          //       &projectorKetTimesVector[atomId][0],
+          //       numberWaveFunctions,
+          //       &dftPtr->d_nonLocalProjectorElementMatricesTranspose
+          //          [atomId][nonZeroElementMatrixId]
+          //          [d_kPointIndex * d_numberNodesPerElement *
+          //           numberPseudoWaveFunctions],
+          //       numberPseudoWaveFunctions,
+          //       &one,
+          //       &d_cellHamMatrixTimesWaveMatrix[0],
+          //       numberWaveFunctions);
+          //   }
         }
+      TimerCY += MPI_Wtime() - tempTime;
+      tempTime = MPI_Wtime();
+
       for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
         {
           dealii::types::global_dof_index localNodeId =
@@ -658,5 +595,11 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
                     scalarX * src.data()[localNodeId + i];
             }
         }
+      TimerAssembly += MPI_Wtime() - tempTime;
     } // cell loop
+  double TimerCXEnd = MPI_Wtime() - TimerStartCXStart;
+  std::cout << "HX Timer: CX " << TimerCXEnd << std::endl;
+  std::cout << "HX Timer: CY " << TimerCY << std::endl;
+  std::cout << "HX Timer: Assembly " << TimerAssembly << std::endl;
+  std::cout << "HX Timer: local HX " << TimerLocalHX << std::endl;
 }

@@ -77,7 +77,8 @@ namespace dftfe
     computing_timer.enter_subsection("kohnShamDFTOperatorClass setup");
 
     d_basisOperationsPtrHost = dftPtr->d_basisOperationsPtrHost;
-
+    d_oncvClassPtr           = dftPtr->d_oncvClassPtr;
+    d_ONCVnonLocalOperator   = d_oncvClassPtr->d_nonLocalOperatorHost;
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
     d_sqrtMassVector.reinit(d_invSqrtMassVector);
@@ -210,6 +211,10 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          numberWaveFunctions,
+          projectorKetTimesVector,
+          d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -249,10 +254,16 @@ namespace dftfe
         flattenedArray);
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
-      dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-        dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-        numberWaveFunctions,
-        dftPtr->d_projectorKetTimesVectorParFlattened);
+      {
+        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
+          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
+          numberWaveFunctions,
+          dftPtr->d_projectorKetTimesVectorParFlattened);
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          numberWaveFunctions,
+          projectorKetTimesVector,
+          d_SphericalFunctionKetTimesVectorParFlattened);
+      }
 
 
 
@@ -313,6 +324,10 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
+        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+          numberWaveFunctions,
+          projectorKetTimesVector,
+          d_SphericalFunctionKetTimesVectorParFlattened);
       }
   }
 
