@@ -158,7 +158,7 @@ namespace dftfe
           "WRITE BANDS",
           "false",
           dealii::Patterns::Bool(),
-          "[Standard] Write bands for every k-point to an outputfile called 'bands.out' in the units of Ha. This can be used after GS (Ground-state) or NSCF (Non-Self consistent field iteration) modes of solve. This option is by default on for NSCF mode of solve. Outputs a file name 'bands.out'. The first line has 2 entries with first one denoting the number of k-points and second entry denoting the number of eigenvalues(bands) for each k-point. Subsequent lines have 3 columns with first column indicating the k-point index, second column indicating band index and third column indicating corresponding eigenvalue.");
+          "[Standard] Write bands for every k-point to an outputfile called 'bands.out' in the units of Ha. This can be used after GS (Ground-state) or NSCF (Non-Self consistent field iteration) modes of solve. This option is by default on for NSCF mode of solve. Outputs a file name 'bands.out'. The first line has 3 entries with first one denoting the number of k-points and second entry denoting the number of eigenvalues(bands) for each k-point and third the fermi energy in Ha. Subsequent lines have 4 columns with first column indicating the k-point index, second column indicating band index, third column indicating corresponding eigenvalue and fourth column indicating the corresponding occupation number.");
       }
       prm.leave_subsection();
 
@@ -740,16 +740,34 @@ namespace dftfe
           "[Standard] Mixing parameter to be used in density mixing schemes. For default value of 0.0, it is heuristically set for different mixing schemes (0.2 for Anderson, and 0.5 for Kerker and LRD.");
 
         prm.declare_entry(
+          "ADAPT ANDERSON MIXING PARAMETER",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Boolean parameter specifying whether to adapt the Anderson mixing parameter based on algorithm 1 in [CPC. 292, 108865 (2023)].");
+
+        prm.declare_entry(
           "KERKER MIXING PARAMETER",
           "0.05",
           dealii::Patterns::Double(0.0, 1000.0),
           "[Standard] Mixing parameter to be used in Kerker mixing scheme which usually represents Thomas Fermi wavevector (k\_{TF}**2).");
 
         prm.declare_entry(
+          "RESTA SCREENING LENGTH",
+          "6.61",
+          dealii::Patterns::Double(0.0, 1000.0),
+          "[Standard] Screening length estimate to be used in the Resta preconditioner.");
+
+        prm.declare_entry(
+          "RESTA FERMI WAVEVECTOR",
+          "5.81",
+          dealii::Patterns::Double(0.0, 1000.0),
+          "[Standard] Fermi wavevector estimate to be used in the Resta preconditioner.");
+
+        prm.declare_entry(
           "MIXING METHOD",
           "ANDERSON",
           dealii::Patterns::Selection(
-            "ANDERSON|ANDERSON_WITH_KERKER|LOW_RANK_DIELECM_PRECOND"),
+            "ANDERSON|ANDERSON_WITH_KERKER|ANDERSON_WITH_RESTA|LOW_RANK_DIELECM_PRECOND"),
           "[Standard] Method for density mixing. ANDERSON is the default option.");
 
 
@@ -1514,11 +1532,15 @@ namespace dftfe
       selfConsistentSolverTolerance = prm.get_double("TOLERANCE");
       mixingHistory                 = prm.get_integer("MIXING HISTORY");
       mixingParameter               = prm.get_double("MIXING PARAMETER");
-      kerkerParameter               = prm.get_double("KERKER MIXING PARAMETER");
-      mixingMethod                  = prm.get("MIXING METHOD");
-      constraintMagnetization       = prm.get_bool("CONSTRAINT MAGNETIZATION");
-      startingWFCType               = prm.get("STARTING WFC");
-      computeEnergyEverySCF         = prm.get_bool("COMPUTE ENERGY EACH ITER");
+      adaptAndersonMixingParameter =
+        prm.get_bool("ADAPT ANDERSON MIXING PARAMETER");
+      kerkerParameter         = prm.get_double("KERKER MIXING PARAMETER");
+      restaFermiWavevector    = prm.get_double("RESTA FERMI WAVEVECTOR");
+      restaScreeningLength    = prm.get_double("RESTA SCREENING LENGTH");
+      mixingMethod            = prm.get("MIXING METHOD");
+      constraintMagnetization = prm.get_bool("CONSTRAINT MAGNETIZATION");
+      startingWFCType         = prm.get("STARTING WFC");
+      computeEnergyEverySCF   = prm.get_bool("COMPUTE ENERGY EACH ITER");
 
       prm.enter_subsection("LOW RANK DIELECM PRECOND");
       {
@@ -1682,11 +1704,6 @@ namespace dftfe
         dealii::ExcMessage(
           "DFT-FE Error: Implementation of this feature is not completed yet."));
 
-    if (spinPolarized == 1 && mixingMethod == "ANDERSON_WITH_KERKER")
-      AssertThrow(
-        false,
-        dealii::ExcMessage(
-          "DFT-FE Error: Implementation of this feature is not completed yet."));
     if (spinPolarized == 1 &&
         (extrapolateDensity >= 1 || reuseDensityGeoOpt == 2))
       AssertThrow(
@@ -1936,7 +1953,8 @@ namespace dftfe
           chebyshevTolerance = 1.0e+4;
         else if (mixingMethod == "LOW_RANK_DIELECM_PRECOND")
           chebyshevTolerance = 2.0e-3;
-        else if (mixingMethod == "ANDERSON_WITH_KERKER")
+        else if (mixingMethod == "ANDERSON_WITH_KERKER" ||
+                 mixingMethod == "ANDERSON_WITH_RESTA")
           chebyshevTolerance = 1.0e-2;
         else if (solverMode != "NSCF")
           chebyshevTolerance = 5.0e-2;
@@ -1946,7 +1964,8 @@ namespace dftfe
       {
         if (mixingMethod == "LOW_RANK_DIELECM_PRECOND")
           mixingParameter = 0.5;
-        else if (mixingMethod == "ANDERSON_WITH_KERKER")
+        else if (mixingMethod == "ANDERSON_WITH_KERKER" ||
+                 mixingMethod == "ANDERSON_WITH_RESTA")
           mixingParameter = 0.5;
         else
           mixingParameter = 0.2;

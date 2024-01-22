@@ -191,8 +191,11 @@ node is stored
      */
     void
     computeVEff(
-      const std::map<dealii::CellId, std::vector<double>> *rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &phiValues,
       const std::map<dealii::CellId, std::vector<double>>
         &externalPotCorrValues,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
@@ -209,9 +212,12 @@ node is stored
      */
     void
     computeVEffSpinPolarized(
-      const std::map<dealii::CellId, std::vector<double>> *rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiValues,
-      unsigned int                                         spinIndex,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &          phiValues,
+      unsigned int spinIndex,
       const std::map<dealii::CellId, std::vector<double>>
         &externalPotCorrValues,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
@@ -227,9 +233,14 @@ node is stored
      */
     void
     computeVEff(
-      const std::map<dealii::CellId, std::vector<double>> *rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> *gradRhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &phiValues,
       const std::map<dealii::CellId, std::vector<double>>
         &externalPotCorrValues,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
@@ -248,10 +259,15 @@ node is stored
      */
     void
     computeVEffSpinPolarized(
-      const std::map<dealii::CellId, std::vector<double>> *rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> *gradRhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiValues,
-      const unsigned int                                   spinIndex,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                phiValues,
+      const unsigned int spinIndex,
       const std::map<dealii::CellId, std::vector<double>>
         &externalPotCorrValues,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
@@ -264,9 +280,14 @@ node is stored
      */
     void
     computeVEffPrime(
-      const std::map<dealii::CellId, std::vector<double>> &rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoPrimeValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues);
 
     /**
@@ -275,9 +296,14 @@ node is stored
      */
     void
     computeVEffPrimeSpinPolarized(
-      const std::map<dealii::CellId, std::vector<double>> &rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoPrimeValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
       const unsigned int                                   spinIndex,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues);
 
@@ -288,11 +314,20 @@ node is stored
      */
     void
     computeVEffPrime(
-      const std::map<dealii::CellId, std::vector<double>> &rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoPrimeValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoPrimeValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
       const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues);
 
@@ -302,11 +337,20 @@ node is stored
      */
     void
     computeVEffPrimeSpinPolarized(
-      const std::map<dealii::CellId, std::vector<double>> &rhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoPrimeValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoPrimeValues,
-      const std::map<dealii::CellId, std::vector<double>> &phiPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
       const unsigned int                                   spinIndex,
       const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
       const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues);
