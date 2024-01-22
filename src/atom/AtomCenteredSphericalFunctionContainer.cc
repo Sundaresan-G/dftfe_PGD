@@ -442,7 +442,7 @@ namespace dftfe
                   << iAtom << " is "
                   << d_elementIndexesInAtomCompactSupport[iAtom].size()
                   << std::endl;
-        //#endif
+        #endif
 
         if (isAtomIdInProcessor)
           {
