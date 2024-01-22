@@ -72,17 +72,24 @@ namespace dftfe
                  .c_str());
 
         d_atomicCoreDensityMap[atomicNumber] =
-          new AtomCenteredSphericalFunctionSpline(coreDataFile, 0, 0, 1, 2);
+          std::make_shared<AtomCenteredSphericalFunctionSpline>(
+            coreDataFile, 0, 0, 1, 2);
         atomicValenceDensityMap[atomicNumber] =
-          new AtomCenteredSphericalFunctionSpline(valenceDataFile, 0, 0, 1, 2);
+          std::make_shared<AtomCenteredSphericalFunctionSpline>(
+            valenceDataFile, 0, 0, 1, 2);
         double IntegralRho =
           atomicValenceDensityMap[atomicNumber]->getIntegralValue();
         double IntegralCoreRho =
           d_atomicCoreDensityMap[atomicNumber]->getIntegralValue();
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
-          d_atomicValenceDensityVector[i][*it] =
-            new AtomCenteredSphericalFunctionSpline(
-              valenceDataFile, 0, 0, 1, 2);
+          {
+            d_atomicValenceDensityVector[i][*it] =
+              std::make_shared<AtomCenteredSphericalFunctionSpline>(
+                valenceDataFile, 0, 0, 1, 2);
+            d_atomicCoreDensityVector[i][*it] =
+              std::make_shared<AtomCenteredSphericalFunctionSpline>(
+                coreDataFile, 0, 0, 1, 2);
+          }
         if (IntegralCoreRho > 1E-8)
           d_atomTypeCoreFlagMap[atomicNumber] = true;
         else
@@ -403,7 +410,7 @@ namespace dftfe
                  .c_str());
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
           d_atomicLocalPotVector[i][*it] =
-            new AtomCenteredSphericalFunctionSpline(
+            std::make_shared<AtomCenteredSphericalFunctionSpline>(
               LocalDataFile,
               0,
               false,

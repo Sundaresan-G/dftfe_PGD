@@ -325,8 +325,6 @@ namespace dftfe
 
 
         unsigned int imageIdsSize = d_periodicImageCoord[iAtom].size() / 3;
-        // std::cout << "DEBUG: imageIdsSize " << imageIdsSize
-        //           << " for iAtom: " << iAtom << std::endl;
 
         //
         // resize the data structure corresponding to sparsity pattern
@@ -374,10 +372,7 @@ namespace dftfe
                     chargePoint[2] =
                       d_periodicImageCoord[iAtom][3 * iImageAtomCount + 2];
                   }
-                // if (iCell == 0)
-                //   std::cout << "ChargePoint coordinates: " << chargePoint[0]
-                //             << " " << chargePoint[1] << " " << chargePoint[2]
-                //             << std::endl;
+
 
                 for (unsigned int iPsp = 0; iPsp < numberSphericalFunctions;
                      ++iPsp)
@@ -396,24 +391,19 @@ namespace dftfe
                         x[2] = quadPoints[3 * iQuadPoint + 2] - chargePoint[2];
                         const double r =
                           std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
-                        // std::cout<<"DEBUG: r "<<r<<std::endl;
+
                         if (cutOffType == 0)
                           {
                             double RadVal =
                               SphericalFunction->getRadialValue(r);
-                            // std::cout<<"DEBUG: RadialVal
-                            // "<<RadVal<<std::endl;
+
 
                             if (RadVal >= cutOffVal)
                               {
                                 sparseFlag = 1;
                                 if (r > maxR)
                                   maxR = r;
-                                // std::cout
-                                //   << "Cell ID  r and ChargePoint: " << iCell
-                                //   << " " << r << " " << chargePoint[0] << " "
-                                //   << chargePoint[1] << " " << chargePoint[2]
-                                //   << std::endl;
+
                                 break;
                               }
                           }
@@ -447,13 +437,12 @@ namespace dftfe
           } // iCell
 
 
-        //#ifdef DEBUG
-        // std::cout << "No.of non zero elements in the compact support of atom
-        // "
-        //           << iAtom << " is "
-        //           << d_elementIndexesInAtomCompactSupport[iAtom].size()
-        //           << std::endl;
-        // //#endif
+#ifdef DEBUG
+        std::cout << "No.of non zero elements in the compact support of atom "
+                  << iAtom << " is "
+                  << d_elementIndexesInAtomCompactSupport[iAtom].size()
+                  << std::endl;
+        //#endif
 
         if (isAtomIdInProcessor)
           {

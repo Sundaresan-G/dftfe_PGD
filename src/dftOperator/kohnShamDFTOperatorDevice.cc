@@ -698,27 +698,14 @@ namespace dftfe
           dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
             d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
           dataTypes::number(0.0));
-        // std::cout
-        //   << "KSSIZES DEBUG:
-        //   d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size(): "
-        //   << d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size()
-        //   << std::endl;
         d_cellHamiltonianMatrixNonLocalFlattenedTranspose.clear();
         d_cellHamiltonianMatrixNonLocalFlattenedTranspose.resize(
           dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
             d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
           dataTypes::number(0.0));
-        // std::cout
-        //   << "KSSIZES DEBUG:
-        //   d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size(): "
-        //   << d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size()
-        //   << std::endl;
         d_nonLocalPseudoPotentialConstants.clear();
         d_nonLocalPseudoPotentialConstants.resize(d_totalPseudoWfcNonLocal,
                                                   0.0);
-        // std::cout
-        //   << "KSSIZES DEBUG: d_nonLocalPseudoPotentialConstants.size(): "
-        //   << d_nonLocalPseudoPotentialConstants.size() << std::endl;
 
         d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
         d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
@@ -726,35 +713,18 @@ namespace dftfe
         d_projectorKetTimesVectorAllCellsDevice.resize(
           d_totalNonlocalElems * numberWaveFunctions * d_maxSingleAtomPseudoWfc,
           dataTypes::number(0.0));
-        // std::cout
-        //   << "KSSIZES DEBUG: d_projectorKetTimesVectorAllCellsDevice.size():
-        //   "
-        //   << d_projectorKetTimesVectorAllCellsDevice.size() << std::endl;
 
 
         d_projectorIdsParallelNumberingMap.clear();
         d_projectorIdsParallelNumberingMap.resize(d_totalPseudoWfcNonLocal, 0);
-        // std::cout
-        //   << "KSSIZES DEBUG: d_projectorIdsParallelNumberingMap.size(): "
-        //   << d_projectorIdsParallelNumberingMap.size() << std::endl;
 
         d_projectorKetTimesVectorParFlattenedDevice.resize(
           numberWaveFunctions * d_totalPseudoWfcNonLocal, 0.0);
-        // std::cout
-        //   << "KSSIZES DEBUG:
-        //   d_projectorKetTimesVectorParFlattenedDevice.size(): "
-        //   << d_projectorKetTimesVectorParFlattenedDevice.size() << std::endl;
 
 
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.clear();
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.resize(
           d_totalNonlocalElems * d_maxSingleAtomPseudoWfc, -1);
-
-        // std::cout
-        //   << "KSSIZES DEBUG:
-        //   d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size(): "
-        //   << d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size()
-        //   << std::endl;
 
         d_nonlocalElemIdToLocalElemIdMap.clear();
         d_nonlocalElemIdToLocalElemIdMap.resize(d_totalNonlocalElems, 0);
@@ -765,16 +735,12 @@ namespace dftfe
             d_totalPseudoWfcNonLocal,
           dataTypes::number(0.0));
 
-        // std::cout
-        //   << "KSSIZES DEBUG:
-        //   d_projectorKetTimesVectorAllCellsReduction.size(): "
-        //   << d_projectorKetTimesVectorAllCellsReduction.size() << std::endl;
+
 
         d_cellNodeIdMapNonLocalToLocal.clear();
         d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
                                               d_numberNodesPerElement);
-        // std::cout << "KSSIZES DEBUG: d_cellNodeIdMapNonLocalToLocal.size(): "
-        //           << d_cellNodeIdMapNonLocalToLocal.size() << std::endl;
+
 
 
         unsigned int countElemNode   = 0;
@@ -804,11 +770,7 @@ namespace dftfe
                         [std::make_pair(atomId, ipseudowfc)]);
 
                 d_projectorIdsParallelNumberingMap[countPseudoWfc1] = id;
-                // std::cout<<"iAtom: "<< iAtom<<", ipseudo: "<< ipseudowfc <<",
-                // netpseudo: "<<countPseudoWfc1<<", parallel id:
-                // "<<id<<std::endl;
-                // d_nonLocalPseudoPotentialConstants[countPseudoWfc1]
-                //   =dftPtr->d_nonLocalPseudoPotentialConstants[atomId][ipseudowfc];
+
                 d_nonLocalPseudoPotentialConstants[id] =
                   dftPtr
                     ->d_nonLocalPseudoPotentialConstants[atomId][ipseudowfc];
@@ -821,14 +783,7 @@ namespace dftfe
                     d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec
                       [d_numberCellsAccumNonLocalAtoms[iAtom] *
                          d_maxSingleAtomPseudoWfc +
-                       iElemComp * d_maxSingleAtomPseudoWfc + ipseudowfc] =
-                        id; // countPseudoWfc1;//id;
-                            // std::cout<<"KSDEBUGIMP MAP: "<<id<<"
-                            // "<<countPseudoWfc1<<"
-                            // "<<(d_numberCellsAccumNonLocalAtoms[iAtom] *
-                            //      d_maxSingleAtomPseudoWfc +
-                            //    iElemComp * d_maxSingleAtomPseudoWfc +
-                            //    ipseudowfc)<<std::endl;
+                       iElemComp * d_maxSingleAtomPseudoWfc + ipseudowfc] = id;
                   }
                 countPseudoWfc1++;
               }

@@ -273,13 +273,18 @@ namespace dftfe
 
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsVector;
-    std::vector<std::map<unsigned int, AtomCenteredSphericalFunctionBase *>>
+    std::vector<std::map<unsigned int,
+                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
       d_atomicLocalPotVector;
-    std::vector<std::map<unsigned int, AtomCenteredSphericalFunctionBase *>>
+    std::vector<std::map<unsigned int,
+                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
       d_atomicValenceDensityVector;
-    std::map<unsigned int, AtomCenteredSphericalFunctionBase *>
+    std::vector<std::map<unsigned int,
+                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
+      d_atomicCoreDensityVector;
+    std::map<unsigned int, std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicCoreDensityMap;
-    std::map<unsigned int, AtomCenteredSphericalFunctionBase *>
+    std::map<unsigned int, std::shared_ptr<AtomCenteredSphericalFunctionBase>>
          atomicValenceDensityMap;
     bool d_reproducible_output;
     /// FIXME: eventually it should be a map of atomic number to struct-

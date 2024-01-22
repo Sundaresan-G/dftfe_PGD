@@ -93,23 +93,14 @@ namespace dftfe
     getTotalNonLocalElementsInCurrentProcessor();
 
     unsigned int
-    getTotalNonLocalEntries();
+    getTotalNonLocalEntriesCurrentProcessor();
 
     unsigned int
     getMaxSingleAtomEntries();
 
     bool
     atomSupportInElement(unsigned int iElem);
-#ifdef USE_COMPLEX
-    std::vector<distributedCPUVec<std::complex<double>>>
-      d_SphericalFunctionKetTimesVectorPar;
 
-#else
-    std::vector<distributedCPUVec<double>> d_SphericalFunctionKetTimesVectorPar;
-#endif
-
-    std::map<std::pair<unsigned int, unsigned int>, unsigned int>
-      d_sphericalFunctionIdsNumberingMapCurrentProcess;
 
 
   protected:
@@ -123,6 +114,17 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer;
     std::shared_ptr<const utils::mpi::MPIPatternP2P<memorySpace>>
       d_mpiPatternP2P;
+
+#ifdef USE_COMPLEX
+    std::vector<distributedCPUVec<std::complex<double>>>
+      d_SphericalFunctionKetTimesVectorPar;
+
+#else
+    std::vector<distributedCPUVec<double>> d_SphericalFunctionKetTimesVectorPar;
+#endif
+
+    std::map<std::pair<unsigned int, unsigned int>, unsigned int>
+      d_sphericalFunctionIdsNumberingMapCurrentProcess;
 
     std::map<unsigned int, std::vector<unsigned int>>
       d_cellIdToAtomIdsLocalCompactSupportMap;
@@ -336,12 +338,6 @@ namespace dftfe
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
         &shapeFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange);
-
-    void
-    applyConVCTX(
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
-        &Xout);
-
 
 
     const std::map<unsigned int, std::vector<ValueType>> &
