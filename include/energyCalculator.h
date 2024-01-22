@@ -111,7 +111,7 @@ namespace dftfe
       const double                            fermiEnergy,
       const double                            fermiEnergyUp,
       const double                            fermiEnergyDown,
-      const excManager *                      excManagerPtr,
+      const std::shared_ptr<excManager>       excManagerPtr,
       const dispersionCorrection &            dispersionCorr,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &phiTotRhoInValues,
@@ -154,9 +154,9 @@ namespace dftfe
         dftfe::basis::FEBasisOperations<dataTypes::number,
                                         double,
                                         dftfe::utils::MemorySpace::HOST>>
-        &                basisOperationsPtr,
-      const unsigned int quadratureId,
-      const excManager * excManagerPtr,
+        &                               basisOperationsPtr,
+      const unsigned int                quadratureId,
+      const std::shared_ptr<excManager> excManagerPtr,
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &densityInValues,
@@ -181,9 +181,9 @@ namespace dftfe
         dftfe::basis::FEBasisOperations<dataTypes::number,
                                         double,
                                         dftfe::utils::MemorySpace::HOST>>
-        &                basisOperationsPtr,
-      const unsigned int quadratureId,
-      const excManager * excManagerPtr,
+        &                               basisOperationsPtr,
+      const unsigned int                quadratureId,
+      const std::shared_ptr<excManager> excManagerPtr,
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &densityInValues,

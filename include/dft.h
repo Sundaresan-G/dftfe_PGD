@@ -1038,8 +1038,8 @@ namespace dftfe
 
 
 
-    excManager *         d_excManagerPtr;
-    dispersionCorrection d_dispersionCorr;
+    std::shared_ptr<excManager> d_excManagerPtr;
+    dispersionCorrection        d_dispersionCorr;
 
     /**
      * stores required data for Kohn-Sham problem

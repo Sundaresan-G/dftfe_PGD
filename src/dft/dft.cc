@@ -194,7 +194,7 @@ namespace dftfe
                                                              mpi_comm_domain,
                                                              _interpoolcomm);
 
-    d_excManagerPtr                   = new excManager;
+    d_excManagerPtr                   = std::make_shared<excManager>();
     d_isRestartGroundStateCalcFromChk = false;
 
 #if defined(DFTFE_WITH_DEVICE)
@@ -221,7 +221,6 @@ namespace dftfe
 
     d_elpaScala->elpaDeallocateHandles(*d_dftParamsPtr);
     delete d_elpaScala;
-    delete d_excManagerPtr;
   }
 
   namespace internaldft
