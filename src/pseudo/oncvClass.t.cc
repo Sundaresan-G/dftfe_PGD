@@ -205,7 +205,7 @@ namespace dftfe
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
-          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
+          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-10, 0);
         if (d_useDevice)
           d_nonLocalOperatorDevice->InitalisePartitioner(
             d_BasisOperatorHostPtr);

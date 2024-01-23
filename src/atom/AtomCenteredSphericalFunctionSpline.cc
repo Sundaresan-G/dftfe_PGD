@@ -109,7 +109,7 @@ namespace dftfe
         if (orbValue > truncationTol)
           maxRowId = iRow;
       }
-    d_rMin = radVec[1];
+    d_rMin = radVec[0];
 
     // orbVec[0] = orbVec[1];
     alglib::real_1d_array x;

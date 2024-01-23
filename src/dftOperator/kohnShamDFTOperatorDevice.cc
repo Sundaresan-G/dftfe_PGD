@@ -667,6 +667,11 @@ namespace dftfe
          d_maxSingleAtomPseudoWfc = d_ONCVnonLocalOperator->getMaxSingleAtomEntries();
          d_numberCellsNonLocalAtoms = d_ONCVnonLocalOperator->getAtomWiseNumberCellsInCompactSupport();
          d_numberCellsAccumNonLocalAtoms = d_ONCVnonLocalOperator->getAtomWiseNumberCellsAccumulated();
+         std::cout<<"d_totalPseudoWfcNonLocal: "<<d_totalPseudoWfcNonLocal<<" in: "<<this_mpi_process<<std::endl;
+         std::cout<<"d_totalNonlocalElems: "<<d_totalNonlocalElems<<" in: "<<this_mpi_process<<std::endl;
+         std::cout<<"d_totalNonlocalAtomsCurrentProc: "<<d_totalNonlocalAtomsCurrentProc<<" in: "<<this_mpi_process<<std::endl;
+         std::cout<<"d_maxSingleAtomPseudoWfc: "<<d_maxSingleAtomPseudoWfc<<" in: "<<this_mpi_process<<std::endl;
+
         // d_totalNonlocalAtomsCurrentProc =
         //   dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
         // unsigned int maxPseudoWfc = 0;
