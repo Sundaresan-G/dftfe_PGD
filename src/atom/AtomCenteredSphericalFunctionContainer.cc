@@ -217,6 +217,8 @@ namespace dftfe
           d_elementIndexesInAtomCompactSupport[atomId].size();
         numberCellsAccumNonLocalAtoms[iAtom] = totalNonLocalElements;
         totalNonLocalElements += numberElementsInCompactSupport;
+        // std::cout<<"DEBUGTotalnonlocalElements: "<<totalNonLocalElements<<"
+        // "<<d_this_mpi_process<<std::endl;
       }
   }
 
@@ -372,7 +374,10 @@ namespace dftfe
                     chargePoint[2] =
                       d_periodicImageCoord[iAtom][3 * iImageAtomCount + 2];
                   }
-
+                // if(iCell == 0)
+                //   std::cout<<"DEBUG coordinates: "<<iAtom<<"
+                //   "<<chargePoint[0]<<" "<<chargePoint[1]<<"
+                //   "<<chargePoint[2]<<std::endl;
 
                 for (unsigned int iPsp = 0; iPsp < numberSphericalFunctions;
                      ++iPsp)
@@ -398,12 +403,16 @@ namespace dftfe
                               SphericalFunction->getRadialValue(r);
 
 
-                            if (RadVal >= cutOffVal)
+                            if (std::fabs(RadVal) >= cutOffVal)
                               {
                                 sparseFlag = 1;
                                 if (r > maxR)
                                   maxR = r;
-
+                                // std::cout
+                                //   << "DEBUG: iAtom RadVal projIndex Cell: "
+                                //   << iAtom << " " << r << " "
+                                //   << std::fabs(RadVal) << " " << iPsp << " "
+                                //   << iCell << std::endl;
                                 break;
                               }
                           }
@@ -428,6 +437,8 @@ namespace dftfe
               {
                 dealii::CellId cell    = basisOperationsPtr->cellID(iCell);
                 sparsityPattern[iCell] = matCount;
+                // std::cout<<"Debug: iAtom iCell cellid maxR: "<<iAtom<<"
+                // "<<iCell<<" "<<cell<<" "<<maxR<<std::endl;
                 d_elementIdsInAtomCompactSupport[iAtom].push_back(cell);
                 d_elementIndexesInAtomCompactSupport[iAtom].push_back(iCell);
                 matCount += 1;
@@ -442,7 +453,7 @@ namespace dftfe
                   << iAtom << " is "
                   << d_elementIndexesInAtomCompactSupport[iAtom].size()
                   << std::endl;
-        #endif
+#endif
 
         if (isAtomIdInProcessor)
           {

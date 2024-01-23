@@ -343,6 +343,8 @@ namespace dftfe
     const std::map<unsigned int, std::vector<ValueType>> &
     getScaledShapeFnTimesWaveFunction();
 
+
+
   private:
     std::map<unsigned int, std::vector<ValueType>> d_ShapeFnTimesWavefunction;
   };
@@ -495,6 +497,30 @@ namespace dftfe
 
     std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
 
+
+    std::vector<ValueType> &
+    getCellHamiltonianMatrixNonLocalFlattenedConjugate();
+    std::vector<ValueType> &
+    getCellHamiltonianMatrixNonLocalFlattenedTranspose();
+    std::vector<dftfe::global_size_type> &
+    getFlattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal();
+    std::vector<unsigned int> &
+    getShapeFnIdsParallelNumberingMap();
+    std::vector<int> &
+    getIndexMapFromPaddedNonLocalVecToParallelNonLocalVec();
+    std::vector<unsigned int> &
+    getNonLocalElemIdToLocalElemIdMap();
+    std::vector<ValueType> &
+    getSphericalFnTimesVectorAllCellsReduction();
+    std::vector<unsigned int> &
+    getCellNodeIdMapNonLocalToLocal();
+
+    std::vector<unsigned int> &
+    getAtomWiseNumberCellsInCompactSupport();
+
+    std::vector<unsigned int> &
+    getAtomWiseNumberCellsAccumulated();
+
   private:
     // Pointer of pointers for BatchedGEMM call in applyCTonX()
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp;
@@ -535,6 +561,7 @@ namespace dftfe
     std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_cellNodeIdMapNonLocalToLocalDevice;
+    std::vector<unsigned int> d_numberCellsForEachAtom;  
   };
 
 

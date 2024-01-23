@@ -415,6 +415,10 @@ namespace dftfe
     return (d_totalAtomsInCurrentProc);
   }
 
+
+
+
+
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
   AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::

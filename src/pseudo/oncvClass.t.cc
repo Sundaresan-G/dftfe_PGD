@@ -145,7 +145,7 @@ namespace dftfe
     d_excManagerPtr                 = excFunctionalPtr;
     d_numEigenValues                = numEigenValues;
 
-    createAtomCenteredSphericalFunctionsForDensities();
+    // createAtomCenteredSphericalFunctionsForDensities();
     createAtomCenteredSphericalFunctionsForProjectors();
     createAtomCenteredSphericalFunctionsForLocalPotential();
 

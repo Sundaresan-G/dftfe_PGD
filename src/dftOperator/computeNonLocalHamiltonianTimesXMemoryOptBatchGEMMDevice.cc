@@ -52,10 +52,14 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
   if (totalNonLocalElements > 0 && !skip1)
     {
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Starting CTX: "<<std::endl;
       d_ONCVnonLocalOperator->applyCTonX(
         d_A,
         d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Finished CTX: "<<std::endl;
     }
 
   // this routine was interfering with overlapping communication and compute. So
@@ -75,8 +79,12 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
   if (!skip1)
     {
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Starting Allreduce: "<<std::endl;
       d_ONCVnonLocalOperator->applyAllReduceonCTX(
         projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Finished Allreduce: "<<std::endl;
     }
 
   //
@@ -87,23 +95,30 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     {
       //
       // compute V*C^{\dagger}*X
-
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Starting scalingV: "<<std::endl;
       d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
                                                      true);
-
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Finished scalingV: "<<std::endl;
       //
       // compute C*V*C^{\dagger}*x
       //
       // For multiple CTX change beta to 1.0 from here
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Starting CY: "<<std::endl;
       d_ONCVnonLocalOperator->applyConVCTX(
         d_cellHamMatrixTimesWaveMatrixNonLocalDevice,
         std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-
+        // dftfe::utils::deviceSynchronize();
+        // std::cout<<"Finished CY: "<<std::endl;
 
       for (unsigned int iAtom = 0; iAtom < d_totalNonlocalAtomsCurrentProc;
            ++iAtom)
         {
           const unsigned int accum = d_numberCellsAccumNonLocalAtoms[iAtom];
+          // std::cout<<"DEBUG: accum "<<std::endl;
+          // std::cout<<"d_numberCellsNonLocalAtoms[iAtom] "<<d_numberCellsNonLocalAtoms[iAtom] <<std::endl;
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
           addNonLocalContributionDeviceKernel<<<
             (numberWaveFunctions + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /

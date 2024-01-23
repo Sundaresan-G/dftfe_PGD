@@ -661,223 +661,101 @@ namespace dftfe
           d_sphericalFnTimesVectorParFlattenedDevice,
           d_parallelSphericalFnKetTimesBlockVectorDevice);
 
-        d_totalPseudoWfcNonLocal = 0;
-        d_totalNonlocalElems     = 0;
-        d_totalNonlocalAtomsCurrentProc =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-        unsigned int maxPseudoWfc = 0;
-        d_numberCellsAccumNonLocalAtoms.resize(d_totalNonlocalAtomsCurrentProc);
-        std::vector<unsigned int> numPseduoWfcsAccum(
-          d_totalNonlocalAtomsCurrentProc);
-        for (unsigned int iAtom = 0;
-             iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-             ++iAtom)
-          {
-            const unsigned int atomId =
-              dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-            const unsigned int numberSingleAtomPseudoWaveFunctions =
-              dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-            if (numberSingleAtomPseudoWaveFunctions > maxPseudoWfc)
-              maxPseudoWfc = numberSingleAtomPseudoWaveFunctions;
+         d_totalPseudoWfcNonLocal = d_ONCVnonLocalOperator->getTotalNonLocalEntriesCurrentProcessor();        
+         d_totalNonlocalElems     = d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
+         d_totalNonlocalAtomsCurrentProc =  d_ONCVnonLocalOperator->getTotalAtomInCurrentProcessor();
+         d_maxSingleAtomPseudoWfc = d_ONCVnonLocalOperator->getMaxSingleAtomEntries();
+         d_numberCellsNonLocalAtoms = d_ONCVnonLocalOperator->getAtomWiseNumberCellsInCompactSupport();
+         d_numberCellsAccumNonLocalAtoms = d_ONCVnonLocalOperator->getAtomWiseNumberCellsAccumulated();
+        // d_totalNonlocalAtomsCurrentProc =
+        //   dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+        // unsigned int maxPseudoWfc = 0;
+        // d_numberCellsAccumNonLocalAtoms.resize(d_totalNonlocalAtomsCurrentProc);
+        // std::vector<unsigned int> numPseduoWfcsAccum(
+        //   d_totalNonlocalAtomsCurrentProc);
+        // for (unsigned int iAtom = 0;
+        //      iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+        //      ++iAtom)
+        //   {
+        //     const unsigned int atomId =
+        //       dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+        //     const unsigned int numberSingleAtomPseudoWaveFunctions =
+        //       dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
+        //     if (numberSingleAtomPseudoWaveFunctions > maxPseudoWfc)
+        //       maxPseudoWfc = numberSingleAtomPseudoWaveFunctions;
 
-            numPseduoWfcsAccum[iAtom] = d_totalPseudoWfcNonLocal;
-            d_totalPseudoWfcNonLocal += numberSingleAtomPseudoWaveFunctions;
-            const unsigned int numberElementsInCompactSupport =
-              dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-            d_numberCellsAccumNonLocalAtoms[iAtom] = d_totalNonlocalElems;
-            d_totalNonlocalElems += numberElementsInCompactSupport;
-          }
+        //     numPseduoWfcsAccum[iAtom] = d_totalPseudoWfcNonLocal;
+        //     d_totalPseudoWfcNonLocal += numberSingleAtomPseudoWaveFunctions;
+        //     const unsigned int numberElementsInCompactSupport =
+        //       dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
+        //     d_numberCellsAccumNonLocalAtoms[iAtom] = d_totalNonlocalElems;
+        //     d_totalNonlocalElems += numberElementsInCompactSupport;
+        //   }
 
-        d_maxSingleAtomPseudoWfc = maxPseudoWfc;
+        // d_maxSingleAtomPseudoWfc = maxPseudoWfc;
         d_cellHamMatrixTimesWaveMatrixNonLocalDevice.resize(
           d_totalNonlocalElems * numberWaveFunctions * d_numberNodesPerElement,
           dataTypes::number(0.0));
 
         d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
-          dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
-            d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
-          dataTypes::number(0.0));
+        d_cellHamiltonianMatrixNonLocalFlattenedConjugate = d_ONCVnonLocalOperator->getCellHamiltonianMatrixNonLocalFlattenedConjugate();       
+        // d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
+        //   dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
+        //     d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
+        //   dataTypes::number(0.0));
         d_cellHamiltonianMatrixNonLocalFlattenedTranspose.clear();
-        d_cellHamiltonianMatrixNonLocalFlattenedTranspose.resize(
-          dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
-            d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
-          dataTypes::number(0.0));
-        d_nonLocalPseudoPotentialConstants.clear();
-        d_nonLocalPseudoPotentialConstants.resize(d_totalPseudoWfcNonLocal,
-                                                  0.0);
+        d_cellHamiltonianMatrixNonLocalFlattenedTranspose = d_ONCVnonLocalOperator->getCellHamiltonianMatrixNonLocalFlattenedTranspose();
+        // d_cellHamiltonianMatrixNonLocalFlattenedTranspose.resize(
+        //   dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
+        //     d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
+        //   dataTypes::number(0.0));
+        
 
         d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
-          d_totalNonlocalElems * d_numberNodesPerElement, 0);
+        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal = d_ONCVnonLocalOperator->getFlattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal();
+        // d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
+        //   d_totalNonlocalElems * d_numberNodesPerElement, 0);
+
+
         d_projectorKetTimesVectorAllCellsDevice.resize(
           d_totalNonlocalElems * numberWaveFunctions * d_maxSingleAtomPseudoWfc,
           dataTypes::number(0.0));
 
 
         d_projectorIdsParallelNumberingMap.clear();
-        d_projectorIdsParallelNumberingMap.resize(d_totalPseudoWfcNonLocal, 0);
+        d_projectorIdsParallelNumberingMap = d_ONCVnonLocalOperator->getShapeFnIdsParallelNumberingMap();
+        // d_projectorIdsParallelNumberingMap.resize(d_totalPseudoWfcNonLocal, 0);
 
         d_projectorKetTimesVectorParFlattenedDevice.resize(
           numberWaveFunctions * d_totalPseudoWfcNonLocal, 0.0);
 
 
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.clear();
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.resize(
-          d_totalNonlocalElems * d_maxSingleAtomPseudoWfc, -1);
+        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec = d_ONCVnonLocalOperator->getIndexMapFromPaddedNonLocalVecToParallelNonLocalVec();
+        // d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.resize(
+        //   d_totalNonlocalElems * d_maxSingleAtomPseudoWfc, -1);
 
         d_nonlocalElemIdToLocalElemIdMap.clear();
-        d_nonlocalElemIdToLocalElemIdMap.resize(d_totalNonlocalElems, 0);
+        d_nonlocalElemIdToLocalElemIdMap = d_ONCVnonLocalOperator->getNonLocalElemIdToLocalElemIdMap();
+        // d_nonlocalElemIdToLocalElemIdMap.resize(d_totalNonlocalElems, 0);
 
         d_projectorKetTimesVectorAllCellsReduction.clear();
-        d_projectorKetTimesVectorAllCellsReduction.resize(
-          d_totalNonlocalElems * d_maxSingleAtomPseudoWfc *
-            d_totalPseudoWfcNonLocal,
-          dataTypes::number(0.0));
-
+        d_projectorKetTimesVectorAllCellsReduction = d_ONCVnonLocalOperator->getSphericalFnTimesVectorAllCellsReduction();
+        // d_projectorKetTimesVectorAllCellsReduction.resize(
+        //   d_totalNonlocalElems * d_maxSingleAtomPseudoWfc *
+        //     d_totalPseudoWfcNonLocal,
+        //   dataTypes::number(0.0));
+        
 
 
         d_cellNodeIdMapNonLocalToLocal.clear();
-        d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
-                                              d_numberNodesPerElement);
+        d_cellNodeIdMapNonLocalToLocal = d_ONCVnonLocalOperator->getCellNodeIdMapNonLocalToLocal();
+        // d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
+        //                                       d_numberNodesPerElement);
 
 
 
-        unsigned int countElemNode   = 0;
-        unsigned int countElem       = 0;
-        unsigned int countPseudoWfc1 = 0;
-        d_numberCellsNonLocalAtoms.resize(d_totalNonlocalAtomsCurrentProc);
-        for (unsigned int iAtom = 0; iAtom < d_totalNonlocalAtomsCurrentProc;
-             ++iAtom)
-          {
-            const unsigned int atomId =
-              dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-            const unsigned int numberPseudoWaveFunctions =
-              dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
 
-            d_numberCellsNonLocalAtoms[iAtom] =
-              dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-
-            for (unsigned int ipseudowfc = 0;
-                 ipseudowfc < numberPseudoWaveFunctions;
-                 ++ipseudowfc)
-              {
-                const unsigned int id =
-                  dftPtr->d_projectorKetTimesVectorPar[0]
-                    .get_partitioner()
-                    ->global_to_local(
-                      dftPtr->d_projectorIdsNumberingMapCurrentProcess
-                        [std::make_pair(atomId, ipseudowfc)]);
-
-                d_projectorIdsParallelNumberingMap[countPseudoWfc1] = id;
-
-                d_nonLocalPseudoPotentialConstants[id] =
-                  dftPtr
-                    ->d_nonLocalPseudoPotentialConstants[atomId][ipseudowfc];
-                for (unsigned int iElemComp = 0;
-                     iElemComp <
-                     dftPtr->d_elementIteratorsInAtomCompactSupport[atomId]
-                       .size();
-                     ++iElemComp)
-                  {
-                    d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec
-                      [d_numberCellsAccumNonLocalAtoms[iAtom] *
-                         d_maxSingleAtomPseudoWfc +
-                       iElemComp * d_maxSingleAtomPseudoWfc + ipseudowfc] = id;
-                  }
-                countPseudoWfc1++;
-              }
-
-            for (unsigned int iElemComp = 0;
-                 iElemComp <
-                 dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-                 ++iElemComp)
-              {
-                const unsigned int elementId =
-                  dftPtr->d_elementIdsInAtomCompactSupport[atomId][iElemComp];
-                for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                     ++iNode)
-                  {
-                    dealii::types::global_dof_index localNodeId =
-                      d_flattenedArrayCellLocalProcIndexIdMap
-                        [elementId * d_numberNodesPerElement + iNode];
-                    d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal
-                      [countElemNode] = localNodeId;
-                    d_cellNodeIdMapNonLocalToLocal[countElemNode] =
-                      elementId * d_numberNodesPerElement + iNode;
-                    countElemNode++;
-                  }
-              }
-
-            for (unsigned int iElemComp = 0;
-                 iElemComp <
-                 dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-                 ++iElemComp)
-              {
-                const unsigned int elementId =
-                  dftPtr->d_elementIdsInAtomCompactSupport[atomId][iElemComp];
-                d_nonlocalElemIdToLocalElemIdMap[countElem] = elementId;
-
-                for (unsigned int ikpoint = 0;
-                     ikpoint < dftPtr->d_kPointWeights.size();
-                     ikpoint++)
-                  for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                       ++iNode)
-                    {
-                      for (unsigned int iPseudoWave = 0;
-                           iPseudoWave < numberPseudoWaveFunctions;
-                           ++iPseudoWave)
-                        {
-                          d_cellHamiltonianMatrixNonLocalFlattenedConjugate
-                            [ikpoint * d_totalNonlocalElems *
-                               d_numberNodesPerElement *
-                               d_maxSingleAtomPseudoWfc +
-                             countElem * d_maxSingleAtomPseudoWfc *
-                               d_numberNodesPerElement +
-                             d_numberNodesPerElement * iPseudoWave + iNode] =
-                              dftPtr
-                                ->d_nonLocalProjectorElementMatricesConjugate
-                                  [atomId][iElemComp]
-                                  [ikpoint * d_numberNodesPerElement *
-                                     numberPseudoWaveFunctions +
-                                   d_numberNodesPerElement * iPseudoWave +
-                                   iNode];
-
-                          d_cellHamiltonianMatrixNonLocalFlattenedTranspose
-                            [ikpoint * d_totalNonlocalElems *
-                               d_numberNodesPerElement *
-                               d_maxSingleAtomPseudoWfc +
-                             countElem * d_numberNodesPerElement *
-                               d_maxSingleAtomPseudoWfc +
-                             d_maxSingleAtomPseudoWfc * iNode + iPseudoWave] =
-                              dftPtr
-                                ->d_nonLocalProjectorElementMatricesTranspose
-                                  [atomId][iElemComp]
-                                  [ikpoint * d_numberNodesPerElement *
-                                     numberPseudoWaveFunctions +
-                                   numberPseudoWaveFunctions * iNode +
-                                   iPseudoWave];
-                        }
-                    }
-
-
-                for (unsigned int iPseudoWave = 0;
-                     iPseudoWave < numberPseudoWaveFunctions;
-                     ++iPseudoWave)
-                  {
-                    const unsigned int columnStartId =
-                      (numPseduoWfcsAccum[iAtom] + iPseudoWave) *
-                      d_totalNonlocalElems * d_maxSingleAtomPseudoWfc;
-                    const unsigned int columnRowId =
-                      countElem * d_maxSingleAtomPseudoWfc + iPseudoWave;
-                    d_projectorKetTimesVectorAllCellsReduction[columnStartId +
-                                                               columnRowId] =
-                      dataTypes::number(1.0);
-                  }
-
-                countElem++;
-              }
-          }
 
         d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.resize(
           d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size());

@@ -495,4 +495,95 @@ namespace dftfe
       }
   }
 
+  template <typename ValueType>
+  std::vector<ValueType> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    getCellHamiltonianMatrixNonLocalFlattenedConjugate()
+  {
+    return (d_cellHamiltonianMatrixNonLocalFlattenedConjugate);
+  }
+  template <typename ValueType>
+  std::vector<ValueType> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    getCellHamiltonianMatrixNonLocalFlattenedTranspose()
+  {
+    return (d_cellHamiltonianMatrixNonLocalFlattenedTranspose);
+  }
+  template <typename ValueType>
+  std::vector<dftfe::global_size_type> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    getFlattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal()
+  {
+    return (d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal);
+  }
+
+  template <typename ValueType>
+  std::vector<unsigned int> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    getShapeFnIdsParallelNumberingMap()
+  {
+    return (d_shapeFnIdsParallelNumberingMap);
+  }
+
+  template <typename ValueType>
+  std::vector<int> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    getIndexMapFromPaddedNonLocalVecToParallelNonLocalVec()
+  {
+    return (d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec);
+  }  
+
+  template <typename ValueType>
+  std::vector<unsigned int> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    getNonLocalElemIdToLocalElemIdMap()
+  {
+    return (d_nonlocalElemIdToLocalElemIdMap);
+  }    
+  template <typename ValueType>
+  std::vector<ValueType> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    getSphericalFnTimesVectorAllCellsReduction()
+  {
+    return (d_sphericalFnTimesVectorAllCellsReduction);
+  }  
+
+  template <typename ValueType>
+  std::vector<unsigned int> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+  getCellNodeIdMapNonLocalToLocal()
+  {
+    return (d_cellNodeIdMapNonLocalToLocal);
+  } 
+
+  template <typename ValueType>
+  std::vector<unsigned int> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+  getAtomWiseNumberCellsInCompactSupport()
+  {
+    d_numberCellsForEachAtom.clear();
+    d_numberCellsForEachAtom.resize(d_totalAtomsInCurrentProc,0);
+    std::vector<unsigned int> atomIdsInCurrentProcess =
+      d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
+    for(unsigned int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
+    {
+
+        const unsigned int        atomId = atomIdsInCurrentProcess[iAtom];
+        std::vector<unsigned int> elementIndexesInAtomCompactSupport =
+          d_atomCenteredSphericalFunctionContainer
+            ->d_elementIndexesInAtomCompactSupport[atomId];
+      d_numberCellsForEachAtom[iAtom] = elementIndexesInAtomCompactSupport.size();
+    }
+    return (d_numberCellsForEachAtom);
+  } 
+
+  template <typename ValueType>
+  std::vector<unsigned int> &
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+  getAtomWiseNumberCellsAccumulated()
+  {
+    return (d_numberCellsAccumNonLocalAtoms);
+  }
+
+
 } // namespace dftfe
