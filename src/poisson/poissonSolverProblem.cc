@@ -186,6 +186,7 @@ namespace dftfe
     distributedCPUVec<double> tempvec;
     tempvec.reinit(rhs);
     tempvec = 0.0;
+    tempvec.update_ghost_values();
     d_constraintsInfo.distribute(tempvec);
 
     dealii::FEEvaluation<3, FEOrderElectro, FEOrderElectro + 1> fe_eval(

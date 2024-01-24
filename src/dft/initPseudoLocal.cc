@@ -347,7 +347,7 @@ namespace dftfe
                     MPI_SUM,
                     interpoolcomm);
     MPI_Barrier(interpoolcomm);
-
+    phiExt.update_ghost_values();
     d_basisOperationsPtrElectroHost
       ->d_constraintInfo[d_phiExtDofHandlerIndexElectro]
       .distribute(phiExt);
