@@ -44,7 +44,6 @@ namespace dftfe
     d_verbosity              = verbosity;
     d_atomTypeAtributes      = atomAttributes;
     d_useDevice              = useDevice;
-    pcout << "GPU variant: " << std::endl;
   }
 
   template <typename ValueType>
@@ -202,10 +201,11 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
+        d_nonlocalHamiltonianEntriesUpdated = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
-          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-10, 0);
+          d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
         if (d_useDevice)
           d_nonLocalOperatorDevice->InitalisePartitioner(
             d_BasisOperatorHostPtr);
@@ -239,6 +239,80 @@ namespace dftfe
       pcout << "ONCVclass: Time taken for non local psp init: " << TotalTime
             << std::endl;
   }
+
+  template <typename ValueType>
+  void
+  oncvClass<ValueType>::initialiseNonLocalContribution(
+    const std::vector<std::vector<double>> &atomLocations,
+    const std::vector<int> &                imageIds,
+    const std::vector<std::vector<double>> &periodicCoords,
+    const std::vector<double> &             kPointWeights,
+    const std::vector<double> &             kPointCoordinates,
+    const bool                              updateNonlocalSparsity,
+    const std::map<unsigned int, std::vector<int>> & sparsityPattern,
+   const std::vector<std::vector<dealii::CellId>> & elementIdsInAtomCompactSupport,
+   const std::vector<std::vector<unsigned int>>& elementIndexesInAtomCompactSupport,
+   const std::vector<unsigned int> & atomIdsInCurrentProcess,
+   unsigned int numberElements)
+  {
+    std::vector<unsigned int> atomicNumbers;
+    std::vector<double>       atomCoords;
+
+
+    for (int iAtom = 0; iAtom < atomLocations.size(); iAtom++)
+      {
+        atomicNumbers.push_back(atomLocations[iAtom][0]);
+        for (int dim = 2; dim < 5; dim++)
+          atomCoords.push_back(atomLocations[iAtom][dim]);
+      }
+
+
+    d_atomicProjectorFnsContainer->initaliseCoordinates(atomCoords,
+                                                        periodicCoords,
+                                                        imageIds);
+
+
+    if (updateNonlocalSparsity)
+      {
+        d_nonlocalHamiltonianEntriesUpdated = false;
+        MPI_Barrier(d_mpiCommParent);
+        double InitTime = MPI_Wtime();
+        d_atomicProjectorFnsContainer->getDataForSparseStructure(sparsityPattern, elementIdsInAtomCompactSupport, elementIndexesInAtomCompactSupport, atomIdsInCurrentProcess, numberElements);
+        if (d_useDevice)
+          d_nonLocalOperatorDevice->InitalisePartitioner(
+            d_BasisOperatorHostPtr);
+        else
+          d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+        MPI_Barrier(d_mpiCommParent);
+        double TotalTime = MPI_Wtime() - InitTime;
+        if (d_verbosity >= 2)
+          pcout
+            << "ONCVclass: Time taken for computeSparseStructureNonLocalProjectors: "
+            << TotalTime << std::endl;
+      }
+    MPI_Barrier(d_mpiCommParent);
+    double InitTimeTotal = MPI_Wtime();
+    d_nonLocalOperatorHost->initKpoints(kPointWeights, kPointCoordinates);
+    d_nonLocalOperatorHost->computeCMatrixEntries(d_BasisOperatorHostPtr,
+                                                  d_nlpspQuadratureId,
+                                                  d_BLASWrapperHostPtr);
+#if defined(DFTFE_WITH_DEVICE)
+    if (d_useDevice)
+      {
+        MPI_Barrier(d_mpiCommParent);
+        d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
+        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
+          d_nonLocalOperatorHost, d_BasisOperatorHostPtr);
+      }
+#endif
+    MPI_Barrier(d_mpiCommParent);
+    double TotalTime = MPI_Wtime() - InitTimeTotal;
+    if (d_verbosity >= 2)
+      pcout << "ONCVclass: Time taken for non local psp init: " << TotalTime
+            << std::endl;
+  }
+
+
 
   template <typename ValueType>
   void
@@ -283,7 +357,7 @@ namespace dftfe
           }
         d_atomicNonLocalPseudoPotentialConstants[Zno] =
           pseudoPotentialConstants;
-        d_nonlocalHamiltonianEntriesUpdated = false;
+
       } //*it
   }
 
@@ -553,7 +627,7 @@ namespace dftfe
             for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                  alpha++)
               {
-                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];                
                 Entries.push_back(V);
               }
           }
@@ -587,6 +661,8 @@ namespace dftfe
           d_atomicProjectorFnsContainer->getAtomicNumbers();
         d_nonLocalHamiltonianEntriesHost.clear();
         std::vector<double> Entries;
+        Entries.resize(d_nonLocalOperatorDevice->getTotalNonLocalEntriesCurrentProcessor(),
+                                                  0.0);
         for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
           {
             unsigned int atomId = atomIdsInProcessor[iAtom];
@@ -597,8 +673,9 @@ namespace dftfe
             for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                  alpha++)
               {
-                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
-                Entries.push_back(V);
+                unsigned int globalId = d_nonLocalOperatorDevice->getGlobalIdofAtomIdSphericalFnPair(atomId, alpha);
+                const unsigned int id = d_nonLocalOperatorDevice->getLocalIdOfDistributedVec(globalId);
+                Entries[id] = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];  
               }
           }
         d_nonLocalHamiltonianEntriesHost.resize(Entries.size());

@@ -41,7 +41,6 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   //
   // compute C^{\dagger}*X
   //
-  dftfe::utils::deviceSynchronize();
 
   unsigned int strideA = numberWaveFunctions * d_numberNodesPerElement;
   unsigned int strideB = d_numberNodesPerElement * d_maxSingleAtomPseudoWfc;
@@ -58,8 +57,8 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         d_A,
         d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Finished CTX: "<<std::endl;
+
+
     }
 
   // this routine was interfering with overlapping communication and compute. So
@@ -83,10 +82,8 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         // std::cout<<"Starting Allreduce: "<<std::endl;
       d_ONCVnonLocalOperator->applyAllReduceonCTX(
         projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Finished Allreduce: "<<std::endl;
-    }
 
+    }
   //
   // Start operations related to skip1 (V*C^{\dagger}*X, C*V*C^{\dagger}*X and
   // assembly)
@@ -110,8 +107,6 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       d_ONCVnonLocalOperator->applyConVCTX(
         d_cellHamMatrixTimesWaveMatrixNonLocalDevice,
         std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Finished CY: "<<std::endl;
 
       for (unsigned int iAtom = 0; iAtom < d_totalNonlocalAtomsCurrentProc;
            ++iAtom)

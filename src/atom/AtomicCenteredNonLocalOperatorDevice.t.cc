@@ -273,7 +273,6 @@ namespace dftfe
                  ++iNode)
               {
                 dftfe::global_size_type localNodeId =
-                  d_numberWaveFunctions *
                   basisOperationsPtr->d_cellDofIndexToProcessDofIndexMap
                     [elementId * d_numberNodesPerElement + iNode];
                 d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal

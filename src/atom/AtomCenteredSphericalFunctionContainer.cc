@@ -258,6 +258,41 @@ namespace dftfe
   {
     return d_sphericalFunctionsContainer;
   }
+
+  void
+  AtomCenteredSphericalFunctionContainer::getDataForSparseStructure(
+   const std::map<unsigned int, std::vector<int>> & sparsityPattern,
+   const std::vector<std::vector<dealii::CellId>> & elementIdsInAtomCompactSupport,
+   const std::vector<std::vector<unsigned int>>& elementIndexesInAtomCompactSupport,
+   const std::vector<unsigned int> & atomIdsInCurrentProcess,
+   unsigned int numberElements)
+  {
+        d_sparsityPattern.clear();
+    d_elementIdsInAtomCompactSupport.clear();
+    d_elementIndexesInAtomCompactSupport.clear();
+    d_AtomIdsInCurrentProcess.clear();
+
+    d_sparsityPattern = sparsityPattern;
+    d_elementIdsInAtomCompactSupport = elementIdsInAtomCompactSupport;
+    d_elementIndexesInAtomCompactSupport = elementIndexesInAtomCompactSupport;
+    d_AtomIdsInCurrentProcess = atomIdsInCurrentProcess;
+        d_AtomIdsInElement.clear();
+    d_AtomIdsInElement.resize(numberElements);
+
+    for (int iCell = 0; iCell < numberElements; ++iCell)
+      {
+        for (int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
+          {
+            if (d_sparsityPattern[d_AtomIdsInCurrentProcess[iAtom]][iCell] >= 0)
+              {
+                d_AtomIdsInElement[iCell].push_back(
+                  d_AtomIdsInCurrentProcess[iAtom]);
+              }
+          }
+      }
+
+  }
+
   template <typename NumberType>
   void
   AtomCenteredSphericalFunctionContainer::computeSparseStructure(

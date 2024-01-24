@@ -135,6 +135,14 @@ namespace dftfe
     bool
     atomSupportInElement(unsigned int iElem);
 
+    void
+    getDataForSparseStructure(
+   const std::map<unsigned int, std::vector<int>> & sparsityPattern,
+   const std::vector<std::vector<dealii::CellId>> & elementIdsInAtomCompactSupport,
+   const std::vector<std::vector<unsigned int>>& elementIndexesInAtomCompactSupport,
+   const std::vector<unsigned int> & atomIdsInCurrentProcess,
+   unsigned int numberElements);
+
   private:
     // A flattened vector that stores the coordinates of the atoms of interest
     // in the unit cell

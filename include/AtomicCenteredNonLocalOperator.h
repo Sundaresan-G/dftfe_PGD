@@ -101,6 +101,11 @@ namespace dftfe
     bool
     atomSupportInElement(unsigned int iElem);
 
+    unsigned int 
+    getGlobalIdofAtomIdSphericalFnPair(const unsigned int atomId, const unsigned int alpha);
+
+    unsigned int
+    getLocalIdOfDistributedVec(const unsigned int globalId);
 
 
   protected:

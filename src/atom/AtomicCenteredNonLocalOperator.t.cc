@@ -452,4 +452,21 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer->atomSupportInElement(iElem));
   }
 
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  unsigned int
+  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::getGlobalIdofAtomIdSphericalFnPair(const unsigned int atomId, const unsigned int alpha)
+  {
+    return d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
+                atomId, alpha)];
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  unsigned int
+  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::getLocalIdOfDistributedVec(const unsigned int globalId)
+  {
+    return (d_SphericalFunctionKetTimesVectorPar[0]
+                                      .get_partitioner()
+                                      ->global_to_local(globalId));
+  }
+
 } // namespace dftfe
