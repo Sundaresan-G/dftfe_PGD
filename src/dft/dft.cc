@@ -4177,7 +4177,7 @@ namespace dftfe
               std::make_pair(i, i + 1),
               tempVec);
 #endif
-
+            tempVec[0].update_ghost_values();
             constraintsNoneEigenDataInfo.distribute(tempVec[0]);
             visualizeWaveFunctions[count] = tempVec[0];
 
