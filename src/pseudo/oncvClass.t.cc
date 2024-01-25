@@ -243,17 +243,19 @@ namespace dftfe
   template <typename ValueType>
   void
   oncvClass<ValueType>::initialiseNonLocalContribution(
-    const std::vector<std::vector<double>> &atomLocations,
-    const std::vector<int> &                imageIds,
-    const std::vector<std::vector<double>> &periodicCoords,
-    const std::vector<double> &             kPointWeights,
-    const std::vector<double> &             kPointCoordinates,
-    const bool                              updateNonlocalSparsity,
-    const std::map<unsigned int, std::vector<int>> & sparsityPattern,
-   const std::vector<std::vector<dealii::CellId>> & elementIdsInAtomCompactSupport,
-   const std::vector<std::vector<unsigned int>>& elementIndexesInAtomCompactSupport,
-   const std::vector<unsigned int> & atomIdsInCurrentProcess,
-   unsigned int numberElements)
+    const std::vector<std::vector<double>> &        atomLocations,
+    const std::vector<int> &                        imageIds,
+    const std::vector<std::vector<double>> &        periodicCoords,
+    const std::vector<double> &                     kPointWeights,
+    const std::vector<double> &                     kPointCoordinates,
+    const bool                                      updateNonlocalSparsity,
+    const std::map<unsigned int, std::vector<int>> &sparsityPattern,
+    const std::vector<std::vector<dealii::CellId>>
+      &elementIdsInAtomCompactSupport,
+    const std::vector<std::vector<unsigned int>>
+      &                              elementIndexesInAtomCompactSupport,
+    const std::vector<unsigned int> &atomIdsInCurrentProcess,
+    unsigned int                     numberElements)
   {
     std::vector<unsigned int> atomicNumbers;
     std::vector<double>       atomCoords;
@@ -277,7 +279,12 @@ namespace dftfe
         d_nonlocalHamiltonianEntriesUpdated = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
-        d_atomicProjectorFnsContainer->getDataForSparseStructure(sparsityPattern, elementIdsInAtomCompactSupport, elementIndexesInAtomCompactSupport, atomIdsInCurrentProcess, numberElements);
+        d_atomicProjectorFnsContainer->getDataForSparseStructure(
+          sparsityPattern,
+          elementIdsInAtomCompactSupport,
+          elementIndexesInAtomCompactSupport,
+          atomIdsInCurrentProcess,
+          numberElements);
         if (d_useDevice)
           d_nonLocalOperatorDevice->InitalisePartitioner(
             d_BasisOperatorHostPtr);
@@ -627,7 +634,7 @@ namespace dftfe
             for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                  alpha++)
               {
-                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];                
+                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
                 Entries.push_back(V);
               }
           }
@@ -661,8 +668,9 @@ namespace dftfe
           d_atomicProjectorFnsContainer->getAtomicNumbers();
         d_nonLocalHamiltonianEntriesHost.clear();
         std::vector<double> Entries;
-        Entries.resize(d_nonLocalOperatorDevice->getTotalNonLocalEntriesCurrentProcessor(),
-                                                  0.0);
+        Entries.resize(
+          d_nonLocalOperatorDevice->getTotalNonLocalEntriesCurrentProcessor(),
+          0.0);
         for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
           {
             unsigned int atomId = atomIdsInProcessor[iAtom];
@@ -673,9 +681,14 @@ namespace dftfe
             for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                  alpha++)
               {
-                unsigned int globalId = d_nonLocalOperatorDevice->getGlobalIdofAtomIdSphericalFnPair(atomId, alpha);
-                const unsigned int id = d_nonLocalOperatorDevice->getLocalIdOfDistributedVec(globalId);
-                Entries[id] = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];  
+                unsigned int globalId =
+                  d_nonLocalOperatorDevice->getGlobalIdofAtomIdSphericalFnPair(
+                    atomId, alpha);
+                const unsigned int id =
+                  d_nonLocalOperatorDevice->getLocalIdOfDistributedVec(
+                    globalId);
+                Entries[id] =
+                  d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
               }
           }
         d_nonLocalHamiltonianEntriesHost.resize(Entries.size());

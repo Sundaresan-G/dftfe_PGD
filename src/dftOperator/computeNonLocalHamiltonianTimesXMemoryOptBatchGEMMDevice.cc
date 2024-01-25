@@ -35,30 +35,14 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     const bool                               skip1,
     const bool                               skip2)
 {
-  const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0),
-                          scalarCoeffBeta  = dataTypes::number(0.0);
-
-  //
-  // compute C^{\dagger}*X
-  //
-
-  unsigned int strideA = numberWaveFunctions * d_numberNodesPerElement;
-  unsigned int strideB = d_numberNodesPerElement * d_maxSingleAtomPseudoWfc;
-  unsigned int strideC = numberWaveFunctions * d_maxSingleAtomPseudoWfc;
-  unsigned int totalNonLocalElements =
-    d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
-
-
-  if (totalNonLocalElements > 0 && !skip1)
+  if (d_totalNonlocalElems > 0 && !skip1)
     {
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Starting CTX: "<<std::endl;
+      // dftfe::utils::deviceSynchronize();
+      // std::cout<<"Starting CTX: "<<std::endl;
       d_ONCVnonLocalOperator->applyCTonX(
-        d_A,
+        d_wfcPointers,
         d_sphericalFnTimesVectorParFlattenedDevice,
-        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-
-
+        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
     }
 
   // this routine was interfering with overlapping communication and compute. So
@@ -78,77 +62,17 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
   if (!skip1)
     {
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Starting Allreduce: "<<std::endl;
       d_ONCVnonLocalOperator->applyAllReduceonCTX(
         projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
-
     }
-  //
-  // Start operations related to skip1 (V*C^{\dagger}*X, C*V*C^{\dagger}*X and
-  // assembly)
-  //
-  if (totalNonLocalElements > 0)
+
+  if (d_totalNonlocalElems > 0)
     {
-      //
-      // compute V*C^{\dagger}*X
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Starting scalingV: "<<std::endl;
       d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
                                                      true);
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Finished scalingV: "<<std::endl;
-      //
-      // compute C*V*C^{\dagger}*x
-      //
-      // For multiple CTX change beta to 1.0 from here
-        // dftfe::utils::deviceSynchronize();
-        // std::cout<<"Starting CY: "<<std::endl;
       d_ONCVnonLocalOperator->applyConVCTX(
-        d_cellHamMatrixTimesWaveMatrixNonLocalDevice,
-        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-
-      for (unsigned int iAtom = 0; iAtom < d_totalNonlocalAtomsCurrentProc;
-           ++iAtom)
-        {
-          const unsigned int accum = d_numberCellsAccumNonLocalAtoms[iAtom];
-          // std::cout<<"DEBUG: accum "<<std::endl;
-          // std::cout<<"d_numberCellsNonLocalAtoms[iAtom] "<<d_numberCellsNonLocalAtoms[iAtom] <<std::endl;
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-          addNonLocalContributionDeviceKernel<<<
-            (numberWaveFunctions + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE *
-              d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-            numberWaveFunctions,
-            d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrixNonLocalDevice.begin() +
-              accum * d_numberNodesPerElement * numberWaveFunctions),
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrix.begin()),
-            d_cellNodeIdMapNonLocalToLocalDevice.begin() +
-              accum * d_numberNodesPerElement);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-          hipLaunchKernelGGL(
-            addNonLocalContributionDeviceKernel,
-            (numberWaveFunctions + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE *
-              d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::DEVICE_BLOCK_SIZE,
-            0,
-            0,
-            numberWaveFunctions,
-            d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrixNonLocalDevice.begin() +
-              accum * d_numberNodesPerElement * numberWaveFunctions),
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrix.begin()),
-            d_cellNodeIdMapNonLocalToLocalDevice.begin() +
-              accum * d_numberNodesPerElement);
-#endif
-        }
+        d_cellHamMatrixTimesWaveMatrix,
+        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
     }
 
   if (std::is_same<dataTypes::number, std::complex<double>>::value)
@@ -200,10 +124,9 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   //
   // compute C^{\dagger}*X
   //
-  unsigned int totalNonLocalElements =
-    d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
 
-  if (totalNonLocalElements > 0)
+
+  if (d_totalNonlocalElems > 0)
     {
       dftfe::utils::deviceKernelsGeneric::stridedCopyToBlock(
         numberWaveFunctions,
@@ -212,50 +135,14 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         d_cellWaveFunctionMatrix.begin(),
         d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
       d_ONCVnonLocalOperator->applyCTonX(
-        d_A,
+        d_wfcPointers,
         d_sphericalFnTimesVectorParFlattenedDevice,
-        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-
-      // dftfe::utils::deviceBlasWrapper::gemmBatched(
-      //   d_deviceBlasHandle,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   numberWaveFunctions,
-      //   d_maxSingleAtomPseudoWfc,
-      //   d_numberNodesPerElement,
-      //   &scalarCoeffAlpha,
-      //   (const dataTypes::number **)d_A,
-      //   numberWaveFunctions,
-      //   (const dataTypes::number **)d_B,
-      //   d_numberNodesPerElement,
-      //   &scalarCoeffBeta,
-      //   d_C,
-      //   numberWaveFunctions,
-      //   d_totalNonlocalElems);
-
-      // dftfe::utils::deviceBlasWrapper::gemm(
-      //   d_deviceBlasHandle,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   numberWaveFunctions,
-      //   d_totalPseudoWfcNonLocal,
-      //   d_totalNonlocalElems * d_maxSingleAtomPseudoWfc,
-      //   &scalarCoeffAlpha,
-      //   d_projectorKetTimesVectorAllCellsDevice.begin(),
-      //   numberWaveFunctions,
-      //   d_projectorKetTimesVectorAllCellsReductionDevice.begin(),
-      //   d_totalNonlocalElems * d_maxSingleAtomPseudoWfc,
-      //   &scalarCoeffBeta,
-      //   d_projectorKetTimesVectorParFlattenedDevice.begin(),
-      //   numberWaveFunctions);
+        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
     }
 
   projectorKetTimesVector.setValue(0);
-
   d_ONCVnonLocalOperator->applyAllReduceonCTX(
     projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
-
-
   d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
                                                  false);
 }

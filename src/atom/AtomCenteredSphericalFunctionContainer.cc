@@ -204,11 +204,14 @@ namespace dftfe
     getTotalAtomsAndNonLocalElementsInCurrentProcessor(
       unsigned int &             totalAtomsInCurrentProcessor,
       unsigned int &             totalNonLocalElements,
+      std::vector<unsigned int> &numberCellsForEachAtom,
       std::vector<unsigned int> &numberCellsAccumNonLocalAtoms)
   {
     totalAtomsInCurrentProcessor = d_AtomIdsInCurrentProcess.size();
     numberCellsAccumNonLocalAtoms.clear();
     numberCellsAccumNonLocalAtoms.resize(totalAtomsInCurrentProcessor, 0);
+    numberCellsForEachAtom.clear();
+    numberCellsForEachAtom.resize(totalAtomsInCurrentProcessor, 0);
     totalNonLocalElements = 0;
     for (unsigned int iAtom = 0; iAtom < totalAtomsInCurrentProcessor; iAtom++)
       {
@@ -217,8 +220,7 @@ namespace dftfe
           d_elementIndexesInAtomCompactSupport[atomId].size();
         numberCellsAccumNonLocalAtoms[iAtom] = totalNonLocalElements;
         totalNonLocalElements += numberElementsInCompactSupport;
-        // std::cout<<"DEBUGTotalnonlocalElements: "<<totalNonLocalElements<<"
-        // "<<d_this_mpi_process<<std::endl;
+        numberCellsForEachAtom[iAtom] = numberElementsInCompactSupport;
       }
   }
 
@@ -261,22 +263,24 @@ namespace dftfe
 
   void
   AtomCenteredSphericalFunctionContainer::getDataForSparseStructure(
-   const std::map<unsigned int, std::vector<int>> & sparsityPattern,
-   const std::vector<std::vector<dealii::CellId>> & elementIdsInAtomCompactSupport,
-   const std::vector<std::vector<unsigned int>>& elementIndexesInAtomCompactSupport,
-   const std::vector<unsigned int> & atomIdsInCurrentProcess,
-   unsigned int numberElements)
+    const std::map<unsigned int, std::vector<int>> &sparsityPattern,
+    const std::vector<std::vector<dealii::CellId>>
+      &elementIdsInAtomCompactSupport,
+    const std::vector<std::vector<unsigned int>>
+      &                              elementIndexesInAtomCompactSupport,
+    const std::vector<unsigned int> &atomIdsInCurrentProcess,
+    unsigned int                     numberElements)
   {
-        d_sparsityPattern.clear();
+    d_sparsityPattern.clear();
     d_elementIdsInAtomCompactSupport.clear();
     d_elementIndexesInAtomCompactSupport.clear();
     d_AtomIdsInCurrentProcess.clear();
 
-    d_sparsityPattern = sparsityPattern;
-    d_elementIdsInAtomCompactSupport = elementIdsInAtomCompactSupport;
+    d_sparsityPattern                    = sparsityPattern;
+    d_elementIdsInAtomCompactSupport     = elementIdsInAtomCompactSupport;
     d_elementIndexesInAtomCompactSupport = elementIndexesInAtomCompactSupport;
-    d_AtomIdsInCurrentProcess = atomIdsInCurrentProcess;
-        d_AtomIdsInElement.clear();
+    d_AtomIdsInCurrentProcess            = atomIdsInCurrentProcess;
+    d_AtomIdsInElement.clear();
     d_AtomIdsInElement.resize(numberElements);
 
     for (int iCell = 0; iCell < numberElements; ++iCell)
@@ -290,7 +294,6 @@ namespace dftfe
               }
           }
       }
-
   }
 
   template <typename NumberType>

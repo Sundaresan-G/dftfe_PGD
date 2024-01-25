@@ -933,7 +933,7 @@ namespace dftfe
           d_kPointCoordinates, // accounts for interpool
           updateNonlocalSparsity,
           d_sparsityPattern,
-          dummy ,
+          dummy,
           d_elementIdsInAtomCompactSupport,
           d_nonLocalAtomIdsInCurrentProcess,
           d_basisOperationsPtrHost->nCells());

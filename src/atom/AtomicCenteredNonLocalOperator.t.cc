@@ -60,6 +60,7 @@ namespace dftfe
       ->getTotalAtomsAndNonLocalElementsInCurrentProcessor(
         d_totalAtomsInCurrentProc,
         d_totalNonlocalElems,
+        d_numberCellsForEachAtom,
         d_numberCellsAccumNonLocalAtoms);
   }
 
@@ -417,8 +418,6 @@ namespace dftfe
 
 
 
-
-
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
   AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
@@ -454,19 +453,22 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
-  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::getGlobalIdofAtomIdSphericalFnPair(const unsigned int atomId, const unsigned int alpha)
+  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
+    getGlobalIdofAtomIdSphericalFnPair(const unsigned int atomId,
+                                       const unsigned int alpha)
   {
     return d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
-                atomId, alpha)];
+      atomId, alpha)];
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
-  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::getLocalIdOfDistributedVec(const unsigned int globalId)
+  AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
+    getLocalIdOfDistributedVec(const unsigned int globalId)
   {
     return (d_SphericalFunctionKetTimesVectorPar[0]
-                                      .get_partitioner()
-                                      ->global_to_local(globalId));
+              .get_partitioner()
+              ->global_to_local(globalId));
   }
 
 } // namespace dftfe

@@ -79,8 +79,35 @@ namespace dftfe
             sphericalFnTimesWfcParallelVec[index];
         }
     }
+    template <typename ValueType>
+    __global__ void
+    addNonLocalContributionDeviceKernel(
+      const unsigned int  contiguousBlockSize,
+      const unsigned int  numContiguousBlocks,
+      const ValueType *   xVec,
+      ValueType *         yVec,
+      const unsigned int *xVecToyVecBlockIdMap)
+    {
+      const dealii::types::global_dof_index globalThreadId =
+        blockIdx.x * blockDim.x + threadIdx.x;
+      const dealii::types::global_dof_index numberEntries =
+        numContiguousBlocks * contiguousBlockSize;
 
-
+      for (unsigned int index = globalThreadId; index < numberEntries;
+           index += blockDim.x * gridDim.x)
+        {
+          dealii::types::global_dof_index blockIndex =
+            index / contiguousBlockSize;
+          dealii::types::global_dof_index intraBlockIndex =
+            index % contiguousBlockSize;
+          yVec[xVecToyVecBlockIdMap[blockIndex] * contiguousBlockSize +
+               intraBlockIndex] =
+            dftfe::utils::add(
+              yVec[xVecToyVecBlockIdMap[blockIndex] * contiguousBlockSize +
+                   intraBlockIndex],
+              xVec[index]);
+        }
+    }
 
   } // namespace
 
@@ -166,6 +193,59 @@ namespace dftfe
 #endif
     }
 
+    template <typename ValueType>
+    void
+    addNonLocalContribution(
+      const unsigned int numberCellsForAtom,
+      const unsigned int numberNodesPerElement,
+      const unsigned int numberWfc,
+      const unsigned int numberCellsTraversed,
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &nonLocalContribution,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &TotalContribution,
+      const dftfe::utils::MemoryStorage<unsigned int,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &cellNodeIdMapNonLocalToLocal)
+    {
+#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+      addNonLocalContributionDeviceKernel<<<
+        (numberWfc + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+          dftfe::utils::DEVICE_BLOCK_SIZE * numberCellsForAtom *
+          numberNodesPerElement,
+        dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+        numberWfc,
+        numberCellsForAtom * numberNodesPerElement,
+        dftfe::utils::makeDataTypeDeviceCompatible(
+          nonLocalContribution.begin() +
+          numberCellsTraversed * numberNodesPerElement * numberWfc),
+        dftfe::utils::makeDataTypeDeviceCompatible(TotalContribution.begin()),
+        cellNodeIdMapNonLocalToLocal.begin() +
+          numberCellsTraversed * numberNodesPerElement);
+#elif DFTFE_WITH_DEVICE_LANG_HIP
+      hipLaunchKernelGGL(
+        addNonLocalContributionDeviceKernel,
+        (numberWfc + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+          dftfe::utils::DEVICE_BLOCK_SIZE * d_numberCellsNonLocalAtoms[iAtom] *
+          numberNodesPerElement,
+        dftfe::utils::DEVICE_BLOCK_SIZE,
+        0,
+        0,
+        numberWfc,
+        d_numberCellsNonLocalAtoms[iAtom] * numberNodesPerElement,
+        dftfe::utils::makeDataTypeDeviceCompatible(
+          nonLocalContribution.begin() +
+          numberCellsTraversed * numberNodesPerElement * numberWfc),
+        dftfe::utils::makeDataTypeDeviceCompatible(
+          d_cellHamMatrixTimesWaveMatrix.begin()),
+        TotalContribution.begin() +
+          numberCellsTraversed * numberNodesPerElement);
+#endif
+    }
+
+
+
     template void
     copyToDealiiParallelNonLocalVec(
       const unsigned int  numWfcs,
@@ -200,6 +280,39 @@ namespace dftfe
       const std::complex<double> *sphericalFnTimesWfcParallelVec,
       std::complex<double> *      sphericalFnTimesWfcAllCellsVec,
       const int *                 indexMapPaddedToParallelVec);
+
+
+    template void
+    addNonLocalContribution(
+      const unsigned int numberCellsForAtom,
+      const unsigned int numberNodesPerElement,
+      const unsigned int numberWfc,
+      const unsigned int numberCellsTraversed,
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &nonLocalContribution,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
+        &TotalContribution,
+      const dftfe::utils::MemoryStorage<unsigned int,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &cellNodeIdMapNonLocalToLocal);
+
+    template void
+    addNonLocalContribution(
+      const unsigned int numberCellsForAtom,
+      const unsigned int numberNodesPerElement,
+      const unsigned int numberWfc,
+      const unsigned int numberCellsTraversed,
+      const dftfe::utils::MemoryStorage<std::complex<double>,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &nonLocalContribution,
+      dftfe::utils::MemoryStorage<std::complex<double>,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        &TotalContribution,
+      const dftfe::utils::MemoryStorage<unsigned int,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &cellNodeIdMapNonLocalToLocal);
+
 
   } // namespace AtomicCenteredNonLocalOperatorKernelsDevice
 

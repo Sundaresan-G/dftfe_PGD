@@ -587,65 +587,11 @@ namespace dftfe
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
       d_kSquareTimesHalfVecDevice;
 
-    /// for non local
-
-    std::vector<dataTypes::number>
-      d_cellHamiltonianMatrixNonLocalFlattenedConjugate;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice;
-    std::vector<dataTypes::number>
-      d_cellHamiltonianMatrixNonLocalFlattenedTranspose;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_projectorKetTimesVectorParFlattenedDevice;
+    unsigned int d_totalNonlocalElems;
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorParFlattenedDevice;
 
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_projectorKetTimesVectorAllCellsDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-                        d_projectorKetTimesVectorDevice;
-    std::vector<double> d_nonLocalPseudoPotentialConstants;
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-      d_nonLocalPseudoPotentialConstantsDevice;
-
-    std::vector<dataTypes::number> d_projectorKetTimesVectorAllCellsReduction;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-                              d_projectorKetTimesVectorAllCellsReductionDevice;
-    std::vector<unsigned int> d_pseudoWfcAccumNonlocalAtoms;
-    unsigned int              d_totalNonlocalAtomsCurrentProc;
-    unsigned int              d_totalNonlocalElems;
-    unsigned int              d_totalPseudoWfcNonLocal;
-    unsigned int              d_maxSingleAtomPseudoWfc;
-    std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
-    std::vector<unsigned int> d_pseduoWfcNonLocalAtoms;
-    std::vector<unsigned int> d_numberCellsNonLocalAtoms;
-    std::vector<unsigned int> d_numberCellsAccumNonLocalAtoms;
-    std::vector<dealii::types::global_dof_index>
-      d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal;
-    dftfe::utils::MemoryStorage<dealii::types::global_dof_index,
-                                dftfe::utils::MemorySpace::DEVICE>
-                              d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice;
-    std::vector<unsigned int> d_projectorIdsParallelNumberingMap;
-    dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
-                     d_projectorIdsParallelNumberingMapDevice;
-    std::vector<int> d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec;
-    dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
-                              d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice;
-    std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
-    dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
-                              d_cellNodeIdMapNonLocalToLocalDevice;
     std::vector<unsigned int> d_normalCellIdToMacroCellIdMap;
     std::vector<unsigned int> d_macroCellIdToNormalCellIdMap;
 
@@ -653,8 +599,8 @@ namespace dftfe
       d_locallyOwnedProcBoundaryNodesVectorDevice;
 
     bool                d_isMallocCalled = false;
-    dataTypes::number **d_A, **d_B, **d_C;
-    dataTypes::number **h_d_A, **h_d_B, **h_d_C;
+    dataTypes::number **d_wfcPointers;
+    dataTypes::number **h_d_wfcPointers;
 
     /**
      * @brief implementation of matrix-vector product using cell-level stiffness matrices.

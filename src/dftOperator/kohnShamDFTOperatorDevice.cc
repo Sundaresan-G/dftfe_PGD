@@ -280,12 +280,8 @@ namespace dftfe
   {
     if (d_isMallocCalled)
       {
-        free(h_d_A);
-        free(h_d_B);
-        free(h_d_C);
-        dftfe::utils::deviceFree(d_A);
-        dftfe::utils::deviceFree(d_B);
-        dftfe::utils::deviceFree(d_C);
+        free(h_d_wfcPointers);
+        dftfe::utils::deviceFree(d_wfcPointers);
       }
     d_ONCVnonLocalOperator->freeDeviceVectors();
   }
@@ -651,132 +647,40 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-          BVec,
-          d_parallelProjectorKetTimesBlockVectorDevice);
-
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
           BVec,
           d_sphericalFnTimesVectorParFlattenedDevice,
           d_parallelSphericalFnKetTimesBlockVectorDevice);
-
-         d_totalPseudoWfcNonLocal = d_ONCVnonLocalOperator->getTotalNonLocalEntriesCurrentProcessor();        
-         d_totalNonlocalElems     = d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
-         d_totalNonlocalAtomsCurrentProc =  d_ONCVnonLocalOperator->getTotalAtomInCurrentProcessor();
-         d_maxSingleAtomPseudoWfc = d_ONCVnonLocalOperator->getMaxSingleAtomEntries();
-         d_numberCellsNonLocalAtoms = d_ONCVnonLocalOperator->getAtomWiseNumberCellsInCompactSupport();
-         d_numberCellsAccumNonLocalAtoms = d_ONCVnonLocalOperator->getAtomWiseNumberCellsAccumulated();
-
-
-
-        d_cellHamMatrixTimesWaveMatrixNonLocalDevice.resize(
-          d_totalNonlocalElems * numberWaveFunctions * d_numberNodesPerElement,
-          dataTypes::number(0.0));
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugate = d_ONCVnonLocalOperator->getCellHamiltonianMatrixNonLocalFlattenedConjugate();       
-        d_cellHamiltonianMatrixNonLocalFlattenedTranspose.clear();
-        d_cellHamiltonianMatrixNonLocalFlattenedTranspose = d_ONCVnonLocalOperator->getCellHamiltonianMatrixNonLocalFlattenedTranspose();     
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal = d_ONCVnonLocalOperator->getFlattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal();
-        d_projectorKetTimesVectorAllCellsDevice.resize(
-          d_totalNonlocalElems * numberWaveFunctions * d_maxSingleAtomPseudoWfc,
-          dataTypes::number(0.0));
-        d_projectorIdsParallelNumberingMap.clear();
-        d_projectorIdsParallelNumberingMap = d_ONCVnonLocalOperator->getShapeFnIdsParallelNumberingMap();
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.clear();
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec = d_ONCVnonLocalOperator->getIndexMapFromPaddedNonLocalVecToParallelNonLocalVec();
-        d_nonlocalElemIdToLocalElemIdMap.clear();
-        d_nonlocalElemIdToLocalElemIdMap = d_ONCVnonLocalOperator->getNonLocalElemIdToLocalElemIdMap();
-        d_projectorKetTimesVectorAllCellsReduction.clear();
-        d_projectorKetTimesVectorAllCellsReduction = d_ONCVnonLocalOperator->getSphericalFnTimesVectorAllCellsReduction();    
-        d_cellNodeIdMapNonLocalToLocal.clear();
-        d_cellNodeIdMapNonLocalToLocal = d_ONCVnonLocalOperator->getCellNodeIdMapNonLocalToLocal();
-
-
-
-
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.resize(
-          d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size());
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.copyFrom(
-          d_cellHamiltonianMatrixNonLocalFlattenedConjugate);
-
-        d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice.resize(
-          d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size());
-        d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice.copyFrom(
-          d_cellHamiltonianMatrixNonLocalFlattenedTranspose);
-
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice.resize(
-          d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.size());
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice.copyFrom(
-          d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal);
-
-        d_projectorIdsParallelNumberingMapDevice.resize(
-          d_projectorIdsParallelNumberingMap.size());
-        d_projectorIdsParallelNumberingMapDevice.copyFrom(
-          d_projectorIdsParallelNumberingMap);
-
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.resize(
-          d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size());
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.copyFrom(
-          d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec);
-
-        d_projectorKetTimesVectorAllCellsReductionDevice.resize(
-          d_projectorKetTimesVectorAllCellsReduction.size());
-        d_projectorKetTimesVectorAllCellsReductionDevice.copyFrom(
-          d_projectorKetTimesVectorAllCellsReduction);
-
-
-
-        d_cellNodeIdMapNonLocalToLocalDevice.resize(
-          d_cellNodeIdMapNonLocalToLocal.size());
-        d_cellNodeIdMapNonLocalToLocalDevice.copyFrom(
-          d_cellNodeIdMapNonLocalToLocal);
-
+        d_totalNonlocalElems =
+          d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
         if (d_isMallocCalled)
           {
-            free(h_d_A);
-            free(h_d_B);
-            free(h_d_C);
-            dftfe::utils::deviceFree(d_A);
-            dftfe::utils::deviceFree(d_B);
-            dftfe::utils::deviceFree(d_C);
+            free(h_d_wfcPointers);
+            dftfe::utils::deviceFree(d_wfcPointers);
           }
-        h_d_A = (dataTypes::number **)malloc(d_totalNonlocalElems *
-                                             sizeof(dataTypes::number *));
-        h_d_B = (dataTypes::number **)malloc(d_totalNonlocalElems *
-                                             sizeof(dataTypes::number *));
-        h_d_C = (dataTypes::number **)malloc(d_totalNonlocalElems *
-                                             sizeof(dataTypes::number *));
+        h_d_wfcPointers = (dataTypes::number **)malloc(
+          d_totalNonlocalElems * sizeof(dataTypes::number *));
 
 
+        const std::vector<unsigned int> nonLocalElementIdtoLocalElementIdMap =
+          d_ONCVnonLocalOperator->getNonLocalElemIdToLocalElemIdMap();
         for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
-            h_d_A[i] =
-              d_cellWaveFunctionMatrix.begin() +
-              d_ONCVnonLocalOperator->d_nonlocalElemIdToLocalElemIdMap[i] *
-                numberWaveFunctions * d_numberNodesPerElement;
-            h_d_C[i] = d_projectorKetTimesVectorAllCellsDevice.begin() +
-                       i * numberWaveFunctions * d_maxSingleAtomPseudoWfc;
+            h_d_wfcPointers[i] = d_cellWaveFunctionMatrix.begin() +
+                                 nonLocalElementIdtoLocalElementIdMap[i] *
+                                   numberWaveFunctions *
+                                   d_numberNodesPerElement;
           }
 
-        dftfe::utils::deviceMalloc((void **)&d_A,
+        dftfe::utils::deviceMalloc((void **)&d_wfcPointers,
                                    d_totalNonlocalElems *
                                      sizeof(dataTypes::number *));
 
-        dftfe::utils::deviceMalloc((void **)&d_B,
-                                   d_totalNonlocalElems *
-                                     sizeof(dataTypes::number *));
 
-        dftfe::utils::deviceMalloc((void **)&d_C,
-                                   d_totalNonlocalElems *
-                                     sizeof(dataTypes::number *));
-
-        dftfe::utils::deviceMemcpyH2D(
-          d_A, h_d_A, d_totalNonlocalElems * sizeof(dataTypes::number *));
-        dftfe::utils::deviceMemcpyH2D(
-          d_C, h_d_C, d_totalNonlocalElems * sizeof(dataTypes::number *));
-
+        dftfe::utils::deviceMemcpyH2D(d_wfcPointers,
+                                      h_d_wfcPointers,
+                                      d_totalNonlocalElems *
+                                        sizeof(dataTypes::number *));
         d_isMallocCalled = true;
       }
 
@@ -898,17 +802,6 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
-          {
-            h_d_B[i] =
-              d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.begin() +
-              d_kPointIndex * d_totalNonlocalElems * d_numberNodesPerElement *
-                d_maxSingleAtomPseudoWfc +
-              i * d_numberNodesPerElement * d_maxSingleAtomPseudoWfc;
-          }
-
-        dftfe::utils::deviceMemcpyH2D(
-          d_B, h_d_B, d_totalNonlocalElems * sizeof(dataTypes::number *));
         d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
       }
   }

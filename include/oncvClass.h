@@ -125,17 +125,19 @@ namespace dftfe
 
     void
     initialiseNonLocalContribution(
-    const std::vector<std::vector<double>> &atomLocations,
-    const std::vector<int> &                imageIds,
-    const std::vector<std::vector<double>> &periodicCoords,
-    const std::vector<double> &             kPointWeights,
-    const std::vector<double> &             kPointCoordinates,
-    const bool                              updateNonlocalSparsity,
-    const std::map<unsigned int, std::vector<int>> & sparsityPattern,
-   const std::vector<std::vector<dealii::CellId>> & elementIdsInAtomCompactSupport,
-   const std::vector<std::vector<unsigned int>>& elementIndexesInAtomCompactSupport,
-   const std::vector<unsigned int> & atomIdsInCurrentProcess,
-   unsigned int numberElements);
+      const std::vector<std::vector<double>> &        atomLocations,
+      const std::vector<int> &                        imageIds,
+      const std::vector<std::vector<double>> &        periodicCoords,
+      const std::vector<double> &                     kPointWeights,
+      const std::vector<double> &                     kPointCoordinates,
+      const bool                                      updateNonlocalSparsity,
+      const std::map<unsigned int, std::vector<int>> &sparsityPattern,
+      const std::vector<std::vector<dealii::CellId>>
+        &elementIdsInAtomCompactSupport,
+      const std::vector<std::vector<unsigned int>>
+        &                              elementIndexesInAtomCompactSupport,
+      const std::vector<unsigned int> &atomIdsInCurrentProcess,
+      unsigned int                     numberElements);
 
 
     /**

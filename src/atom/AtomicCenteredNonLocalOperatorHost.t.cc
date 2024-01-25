@@ -825,12 +825,5 @@ namespace dftfe
       }
   }
 
-  template <typename ValueType>
-  const std::map<unsigned int, std::vector<ValueType>> &
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    getScaledShapeFnTimesWaveFunction()
-  {
-    return (d_ShapeFnTimesWavefunction);
-  }
 
 } // namespace dftfe
