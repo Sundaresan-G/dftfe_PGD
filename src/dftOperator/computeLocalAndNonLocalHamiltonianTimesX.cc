@@ -401,6 +401,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
 {
   const unsigned int kpointSpinIndex =
     (1 + dftPtr->d_dftParamsPtr->spinPolarized) * d_kPointIndex + d_spinIndex;
+    const dataTypes::number zero(0.0), one(1.0);
   //
   // element level matrix-vector multiplications
   //
