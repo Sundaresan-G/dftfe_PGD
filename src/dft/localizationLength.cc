@@ -63,6 +63,7 @@ namespace dftfe
           std::make_pair(iWave, iWave + 1),
           tempVec);
 
+        tempVec[0].update_ghost_values();
         constraintsNoneEigenDataInfo.distribute(tempVec[0]);
 
         typename dealii::DoFHandler<3>::active_cell_iterator
