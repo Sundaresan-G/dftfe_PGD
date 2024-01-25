@@ -664,7 +664,6 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
     const std::vector<unsigned int> atomIdsInProc =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
-    MPI_Barrier(d_mpi_communicator);
     if (couplingtype == CouplingStructure::diagonal)
       {
         unsigned int startIndex = 0;

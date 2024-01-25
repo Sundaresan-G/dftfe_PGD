@@ -210,8 +210,6 @@ namespace dftfe
       d_kPointWeights.size() * d_totalNonlocalElems * d_numberNodesPerElement *
         d_maxSingleAtomContribution,
       ValueType(0.0));
-    MPI_Barrier(d_mpi_communicator);
-
     d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
     d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
       d_totalNonlocalElems * d_numberNodesPerElement, 0);
@@ -246,8 +244,6 @@ namespace dftfe
     unsigned int countElem        = 0;
     unsigned int countAlpha       = 0;
     unsigned int numShapeFnsAccum = 0;
-
-    MPI_Barrier(d_mpi_communicator);
 
     int totalElements = 0;
     for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
