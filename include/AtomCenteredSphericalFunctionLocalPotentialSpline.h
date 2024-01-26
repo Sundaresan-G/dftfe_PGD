@@ -20,7 +20,7 @@
 #ifndef DFTFE_ATOMCENTEREDSPHERICALFUNCTIONLOCALPOTENTIALSPLINE_H
 #define DFTFE_ATOMCENTEREDSPHERICALFUNCTIONLOCALPOTENTIALSPLINE_H
 
-#include "AtomCenteredSphericalFunctionBase.h"
+#include "AtomCenteredSphericalFunctionSpline.h"
 #include "string"
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 #include <vector>
@@ -37,25 +37,14 @@
 namespace dftfe
 {
   class AtomCenteredSphericalFunctionLocalPotentialSpline
-    : public AtomCenteredSphericalFunctionBase
+    : public AtomCenteredSphericalFunctionSpline
   {
   public:
-    AtomCenteredSphericalFunctionLocalPotentialSpline( std::string filename,  double atomAttribute, double truncationTol = 1E-10, double maxAllowedTail = 8.0001);
-
-
-    double
-    getRadialValue(double r) const override;
-
-    std::vector<double>
-    getDerivativeValue(double r) const override;
-
-    double
-    getrMinVal() const;
-
-  private:
-    double d_rMin;
-
-    alglib::spline1dinterpolant d_radialSplineObject;
+    AtomCenteredSphericalFunctionLocalPotentialSpline(
+      std::string filename,
+      double      atomAttribute,
+      double      truncationTol  = 1E-10,
+      double      maxAllowedTail = 8.0001);
   };
 
 } // end of namespace dftfe

@@ -166,7 +166,8 @@ SET(TARGET_SRC
   ./src/atom/AtomCenteredSphericalFunctionSpline.cc
   ./src/atom/AtomCenteredSphericalFunctionValenceDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
-  ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc)
+  ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 

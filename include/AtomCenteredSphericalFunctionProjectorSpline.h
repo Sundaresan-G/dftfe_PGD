@@ -17,8 +17,8 @@
 // @author  Vishal Subramanian, Kartick Ramakrishnan, Sambit Das
 //
 
-#ifndef DFTFE_ATOMCENTEREDSPHERICALFUNCTIONCOREDENSITYSPLINE_H
-#define DFTFE_ATOMCENTEREDSPHERICALFUNCTIONCOREDENSITYSPLINE_H
+#ifndef DFTFE_ATOMCENTEREDSPHERICALFUNCTIONPROJECTORSPLINE_H
+#define DFTFE_ATOMCENTEREDSPHERICALFUNCTIONPROJECTORSPLINE_H
 
 #include "AtomCenteredSphericalFunctionSpline.h"
 #include "string"
@@ -36,16 +36,19 @@
 
 namespace dftfe
 {
-  class AtomCenteredSphericalFunctionCoreDensitySpline
+  class AtomCenteredSphericalFunctionProjectorSpline
     : public AtomCenteredSphericalFunctionSpline
   {
   public:
-    AtomCenteredSphericalFunctionCoreDensitySpline(
-      std::string filename,
-      double      truncationTol    = 1E-10,
-      bool        consider0thEntry = true);
+    AtomCenteredSphericalFunctionProjectorSpline(std::string  filename,
+                                                 unsigned int l,
+                                                 int          radialPower,
+                                                 int          colIndex,
+                                                 int          totalColSize,
+                                                 double truncationTol  = 1E-10,
+                                                 bool consider0thEntry = true);
   };
 
 } // end of namespace dftfe
 
-#endif // DFTFE_ATOMCENTEREDSPHERICALFUNCTIONCOREDENSITYSPLINE_H
+#endif // DFTFE_ATOMCENTEREDSPHERICALFUNCTIONPROJECTORSPLINE_H

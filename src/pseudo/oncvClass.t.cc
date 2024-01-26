@@ -54,12 +54,11 @@ namespace dftfe
     d_atomicCoreDensityVector.resize(d_nOMPThreads);
     d_atomicValenceDensityVector.clear();
     d_atomicValenceDensityVector.resize(d_nOMPThreads);
-    
+
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
       {
-        
         unsigned int atomicNumber = *it;
         char         valenceDataFile[256];
         strcpy(valenceDataFile,
@@ -74,10 +73,9 @@ namespace dftfe
 
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
           {
-
-            d_atomicValenceDensityVector[i][*it] =
-              std::make_shared<AtomCenteredSphericalFunctionValenceDensitySpline>(
-                valenceDataFile, 1E-10, false);
+            d_atomicValenceDensityVector[i][*it] = std::make_shared<
+              AtomCenteredSphericalFunctionValenceDensitySpline>(
+              valenceDataFile, 1E-10, false);
             d_atomicCoreDensityVector[i][*it] =
               std::make_shared<AtomCenteredSphericalFunctionCoreDensitySpline>(
                 coreDataFile, 1E-12, true);
@@ -454,8 +452,14 @@ namespace dftfe
             for (int j = 1; j < numProj + 1; j++)
               {
                 d_atomicProjectorFnsMap[std::make_pair(Zno, alpha)] =
-                  std::make_shared<AtomCenteredSphericalFunctionSpline>(
-                    projRadialFunctionFileName, lQuantumNo, 0, j, numProj + 1);
+                  std::make_shared<
+                    AtomCenteredSphericalFunctionProjectorSpline>(
+                    projRadialFunctionFileName,
+                    lQuantumNo,
+                    0,
+                    j,
+                    numProj + 1,
+                    1E-12);
                 alpha++;
               }
           } // i loop
@@ -484,17 +488,11 @@ namespace dftfe
                  .c_str());
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
           d_atomicLocalPotVector[i][*it] =
-            std::make_shared<AtomCenteredSphericalFunctionSpline>(
+            std::make_shared<AtomCenteredSphericalFunctionLocalPotentialSpline>(
               LocalDataFile,
-              0,
-              false,
-              1,
-              false,
-              true,
-              d_reproducible_output ? 8.0001 : 10.0001,
-              d_reproducible_output ? 1.0e-8 : 1.0e-7,
               d_atomTypeAtributes[*it],
-              -1);
+              d_reproducible_output ? 1.0e-8 : 1.0e-7,
+              d_reproducible_output ? 8.0001 : 10.0001);
 
       } //*it loop
   }
@@ -531,7 +529,7 @@ namespace dftfe
   oncvClass<ValueType>::getRmaxCoreDensity(unsigned int Zno)
   {
     unsigned int threadId = omp_get_thread_num();
-    
+
     return (d_atomicCoreDensityVector[threadId][Zno]->getRadialCutOff());
   }
 
@@ -540,7 +538,8 @@ namespace dftfe
   oncvClass<ValueType>::getRadialCoreDensity(unsigned int Zno, double rad)
   {
     unsigned int threadId = omp_get_thread_num();
-    double       Value    = d_atomicCoreDensityVector[threadId][Zno]->getRadialValue(rad);
+    double       Value =
+      d_atomicCoreDensityVector[threadId][Zno]->getRadialValue(rad);
     return (Value);
   }
   template <typename ValueType>

@@ -109,14 +109,15 @@ namespace dftfe
                                0.0,
                                denSpline[*it]);
             outerMostPointDen[*it] = xData[maxRowId];
-            
+
             if (outerMostPointDen[*it] > maxRhoTail)
               maxRhoTail = outerMostPointDen[*it];
           }
         else
           {
             outerMostPointDen[*it] = d_oncvClassPtr->getRmaxValenceDensity(*it);
-            pcout<<"OuterMost Point for Zno: "<<*it<<" "<<outerMostPointDen[*it]<<std::endl;
+            pcout << "OuterMost Point for Zno: " << *it << " "
+                  << outerMostPointDen[*it] << std::endl;
             if (outerMostPointDen[*it] > maxRhoTail)
               maxRhoTail = outerMostPointDen[*it];
           }
@@ -297,8 +298,10 @@ namespace dftfe
                                 rhoNodalValue +=
                                   d_oncvClassPtr->getRadialValenceDensity(
                                     atomLocations[chargeId][0], distanceToAtom);
-                                // pcout<<distanceToAtom<<" "<<                                    d_oncvClassPtr->getRadialValenceDensity(
-                                //     atomLocations[chargeId][0], distanceToAtom)<<std::endl;  
+                                // pcout<<distanceToAtom<<" "<<
+                                // d_oncvClassPtr->getRadialValenceDensity(
+                                //     atomLocations[chargeId][0],
+                                //     distanceToAtom)<<std::endl;
                               }
                           }
                       }
@@ -423,10 +426,12 @@ namespace dftfe
                         else
                           {
                             rhoValueAtQuadPt +=
-                            d_oncvClassPtr->getRadialValenceDensity(
-                              atomLocations[n][0], distanceToAtom);
-                                    //                       pcout<<distanceToAtom<<" "<<                                    d_oncvClassPtr->getRadialValenceDensity(
-                                    // atomLocations[n][0], distanceToAtom)<<std::endl;  
+                              d_oncvClassPtr->getRadialValenceDensity(
+                                atomLocations[n][0], distanceToAtom);
+                            //                       pcout<<distanceToAtom<<"
+                            //                       "<<
+                            //                       d_oncvClassPtr->getRadialValenceDensity(
+                            // atomLocations[n][0], distanceToAtom)<<std::endl;
                           }
                       }
                     else

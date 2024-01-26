@@ -19,18 +19,20 @@
 #include "vector"
 namespace dftfe
 {
-  AtomCenteredSphericalFunctionCoreDensitySpline::AtomCenteredSphericalFunctionCoreDensitySpline( std::string filename, double truncationTol,  bool consider0thEntry )
+  AtomCenteredSphericalFunctionCoreDensitySpline::
+    AtomCenteredSphericalFunctionCoreDensitySpline(std::string filename,
+                                                   double      truncationTol,
+                                                   bool        consider0thEntry)
   {
     d_lQuantumNumber = 0;
     std::vector<std::vector<double>> radialFunctionData(0);
     unsigned int                     fileReadFlag =
       dftUtils::readPsiFile(2, radialFunctionData, filename);
     d_DataPresent = fileReadFlag;
-    d_cutOff  = 0.0;
-    d_rMin = 0.0;
+    d_cutOff      = 0.0;
+    d_rMin        = 0.0;
     if (fileReadFlag)
       {
-
         unsigned int        numRows = radialFunctionData.size() - 1;
         std::vector<double> xData(numRows), yData(numRows);
 
@@ -62,45 +64,10 @@ namespace dftfe
                            0.0,
                            d_radialSplineObject);
         d_cutOff = xData[maxRowId];
-        d_rMin = xData[0];
+        d_rMin   = xData[0];
       }
   }
 
 
-  double
-  AtomCenteredSphericalFunctionCoreDensitySpline::getRadialValue(double r) const
-  {
-    if(!d_DataPresent)
-      return 0.0;  
-    if (r >= d_cutOff)
-      return 0.0;
 
-    if (r <= d_rMin)
-      r = d_rMin;
-
-    double v = alglib::spline1dcalc(d_radialSplineObject, r);
-    return v;
-  }
-
-  std::vector<double>
-  AtomCenteredSphericalFunctionCoreDensitySpline::getDerivativeValue(double r) const
-  {
-    std::vector<double> Value(3, 0.0);
-            if(!d_DataPresent)
-      return Value;
-    if (r >= d_cutOff)
-      return Value;
-
-    if (r <= d_rMin)
-      r = d_rMin;
-    alglib::spline1ddiff(d_radialSplineObject, r, Value[0], Value[1], Value[2]);
-
-    return Value;
-  }
-
-  double
-  AtomCenteredSphericalFunctionCoreDensitySpline::getrMinVal() const
-  {
-    return d_rMin;
-  }
 } // end of namespace dftfe

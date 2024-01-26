@@ -20,7 +20,7 @@
 #ifndef DFTFE_ATOMCENTEREDSPHERICALFUNCTIONVALENCEDENSITYSPLINE_H
 #define DFTFE_ATOMCENTEREDSPHERICALFUNCTIONVALENCEDENSITYSPLINE_H
 
-#include "AtomCenteredSphericalFunctionBase.h"
+#include "AtomCenteredSphericalFunctionSpline.h"
 #include "string"
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 #include <vector>
@@ -37,24 +37,13 @@
 namespace dftfe
 {
   class AtomCenteredSphericalFunctionValenceDensitySpline
-    : public AtomCenteredSphericalFunctionBase
+    : public AtomCenteredSphericalFunctionSpline
   {
   public:
-    AtomCenteredSphericalFunctionValenceDensitySpline( std::string filename, double truncationTol = 1E-10,  bool consider0thEntry = true );
-
-    double
-    getRadialValue(double r) const override;
-
-    std::vector<double>
-    getDerivativeValue(double r) const override;
-
-    double
-    getrMinVal() const;
-
-  private:
-    double d_rMin;
-
-    alglib::spline1dinterpolant d_radialSplineObject;
+    AtomCenteredSphericalFunctionValenceDensitySpline(
+      std::string filename,
+      double      truncationTol    = 1E-10,
+      bool        consider0thEntry = true);
   };
 
 } // end of namespace dftfe

@@ -40,25 +40,6 @@ namespace dftfe
     : public AtomCenteredSphericalFunctionBase
   {
   public:
-    AtomCenteredSphericalFunctionSpline( std::string filename,  unsigned int l, double trunctationTol = 1E-10,  bool consider0thEntry = true );
-
-    AtomCenteredSphericalFunctionSpline(std::string  filename,
-                                        unsigned int l,
-                                        int          radialPower,
-                                        int          colIndex     = 1,
-                                        int          totalColSize = 2,
-                                        int          maxRowIndex  = -1);
-    AtomCenteredSphericalFunctionSpline(std::string filename,
-                                        int         typeBoundaryConditionL,
-                                        bool        valueBoundaryConditionL,
-                                        int         typeBoundaryConditionR,
-                                        bool        valueBoundaryConditionR,
-                                        bool        tailCheck,
-                                        double      maxAllowedTail,
-                                        double      truncationTol,
-                                        double      alpha       = 0.0,
-                                        int         radialPower = 0);
-
     double
     getRadialValue(double r) const override;
 
@@ -68,7 +49,7 @@ namespace dftfe
     double
     getrMinVal() const;
 
-  private:
+  protected:
     double d_rMin;
 
     alglib::spline1dinterpolant d_radialSplineObject;

@@ -22,14 +22,10 @@
 
 #include "vector"
 #include "map"
-#include "AtomCenteredSphericalFunctionBase.h"
-#include "AtomCenteredSphericalFunctionBessel.h"
-#include "AtomCenteredSphericalFunctionSinc.h"
-#include "AtomCenteredSphericalFunctionGaussian.h"
-#include "AtomCenteredSphericalFunctionSpline.h"
 #include "AtomCenteredSphericalFunctionValenceDensitySpline.h"
 #include "AtomCenteredSphericalFunctionCoreDensitySpline.h"
 #include "AtomCenteredSphericalFunctionLocalPotentialSpline.h"
+#include "AtomCenteredSphericalFunctionProjectorSpline.h"
 #include "AtomCenteredSphericalFunctionContainer.h"
 #include "AtomicCenteredNonLocalOperator.h"
 #include <memory>
@@ -301,7 +297,7 @@ namespace dftfe
       d_atomicValenceDensityVector;
     std::vector<std::map<unsigned int,
                          std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
-      d_atomicCoreDensityVector;
+         d_atomicCoreDensityVector;
     bool d_reproducible_output;
     /// FIXME: eventually it should be a map of atomic number to struct-
     /// {valence number, mesh input etc}

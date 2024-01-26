@@ -58,10 +58,10 @@ namespace dftfe
         outerMostPointCoreDen[*it] = d_oncvClassPtr->getRmaxCoreDensity(*it);
         if (outerMostPointCoreDen[*it] > maxCoreRhoTail)
           maxCoreRhoTail = outerMostPointCoreDen[*it];
-                    if (d_dftParamsPtr->verbosity >= 4)
-              pcout << " Atomic number: " << *it
-                    << " Outermost Point Core Den: "
-                    << outerMostPointCoreDen[*it] << std::endl;  
+        if (d_dftParamsPtr->verbosity >= 4)
+          pcout << " Atomic number: " << *it
+                << " Outermost Point Core Den: " << outerMostPointCoreDen[*it]
+                << std::endl;
       }
 
     const double cellCenterCutOff = maxCoreRhoTail + 5.0;
@@ -177,8 +177,8 @@ namespace dftfe
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
                         radialDensitySecondDerivative = Vec[2];
-                        //pcout<<distanceToAtom<<" "<<value<<std::endl; 
-                        isCoreRhoDataInCell           = true;
+                        // pcout<<distanceToAtom<<" "<<value<<std::endl;
+                        isCoreRhoDataInCell = true;
                       }
                     else
                       {
@@ -301,8 +301,8 @@ namespace dftfe
                         value                         = Vec[0];
                         radialDensityFirstDerivative  = Vec[1];
                         radialDensitySecondDerivative = Vec[2];
-                        //pcout<<distanceToAtom<<" "<<value<<std::endl;
-                        isCoreRhoDataInCell           = true;
+                        // pcout<<distanceToAtom<<" "<<value<<std::endl;
+                        isCoreRhoDataInCell = true;
                       }
                     else
                       {
