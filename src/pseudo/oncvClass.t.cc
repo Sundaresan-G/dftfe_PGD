@@ -50,14 +50,16 @@ namespace dftfe
   void
   oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForDensities()
   {
-    d_atomicCoreDensityMap.clear();
+    d_atomicCoreDensityVector.clear();
+    d_atomicCoreDensityVector.resize(d_nOMPThreads);
     d_atomicValenceDensityVector.clear();
-    atomicValenceDensityMap.clear();
     d_atomicValenceDensityVector.resize(d_nOMPThreads);
+    
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
          ++it)
       {
+        
         unsigned int atomicNumber = *it;
         char         valenceDataFile[256];
         strcpy(valenceDataFile,
@@ -70,29 +72,20 @@ namespace dftfe
                 "/coreDensity.inp")
                  .c_str());
 
-        // d_atomicCoreDensityMap[atomicNumber] =
-        //   std::make_shared<AtomCenteredSphericalFunctionSpline>(
-        //     coreDataFile, 0, 0, 1, 2);
-        atomicValenceDensityMap[atomicNumber] =
-          std::make_shared<AtomCenteredSphericalFunctionSpline>(
-            valenceDataFile, 0, 0, 1, 2);
-        double IntegralRho =
-          atomicValenceDensityMap[atomicNumber]->getIntegralValue();
-        double IntegralCoreRho =
-          d_atomicCoreDensityMap[atomicNumber]->getIntegralValue();
         for (unsigned int i = 0; i < d_nOMPThreads; i++)
           {
+
             d_atomicValenceDensityVector[i][*it] =
-              std::make_shared<AtomCenteredSphericalFunctionSpline>(
-                valenceDataFile, 0, 0, 1, 2);
-            // d_atomicCoreDensityVector[i][*it] =
-            //   std::make_shared<AtomCenteredSphericalFunctionSpline>(
-            //     coreDataFile, 0, 0, 1, 2);
+              std::make_shared<AtomCenteredSphericalFunctionValenceDensitySpline>(
+                valenceDataFile, 1E-10, false);
+            d_atomicCoreDensityVector[i][*it] =
+              std::make_shared<AtomCenteredSphericalFunctionCoreDensitySpline>(
+                coreDataFile, 1E-12, true);
           }
-        // if (IntegralCoreRho > 1E-8)
-        //   d_atomTypeCoreFlagMap[atomicNumber] = true;
-        // else
-        //   d_atomTypeCoreFlagMap[atomicNumber] = false;
+        if (d_atomicCoreDensityVector[0][atomicNumber]->isDataPresent())
+          d_atomTypeCoreFlagMap[atomicNumber] = true;
+        else
+          d_atomTypeCoreFlagMap[atomicNumber] = false;
       } //*it loop
   }
 
@@ -144,7 +137,7 @@ namespace dftfe
     d_excManagerPtr                 = excFunctionalPtr;
     d_numEigenValues                = numEigenValues;
 
-    // createAtomCenteredSphericalFunctionsForDensities();
+    createAtomCenteredSphericalFunctionsForDensities();
     createAtomCenteredSphericalFunctionsForProjectors();
     createAtomCenteredSphericalFunctionsForLocalPotential();
 
@@ -530,13 +523,16 @@ namespace dftfe
   double
   oncvClass<ValueType>::getRmaxValenceDensity(unsigned int Zno)
   {
-    return (d_atomicValenceDensityVector[0][Zno]->getRadialCutOff());
+    unsigned int threadId = omp_get_thread_num();
+    return (d_atomicValenceDensityVector[threadId][Zno]->getRadialCutOff());
   }
   template <typename ValueType>
   double
   oncvClass<ValueType>::getRmaxCoreDensity(unsigned int Zno)
   {
-    return (d_atomicCoreDensityMap[Zno]->getRadialCutOff());
+    unsigned int threadId = omp_get_thread_num();
+    
+    return (d_atomicCoreDensityVector[threadId][Zno]->getRadialCutOff());
   }
 
   template <typename ValueType>
@@ -544,7 +540,7 @@ namespace dftfe
   oncvClass<ValueType>::getRadialCoreDensity(unsigned int Zno, double rad)
   {
     unsigned int threadId = omp_get_thread_num();
-    double       Value    = d_atomicCoreDensityMap[Zno]->getRadialValue(rad);
+    double       Value    = d_atomicCoreDensityVector[threadId][Zno]->getRadialValue(rad);
     return (Value);
   }
   template <typename ValueType>
@@ -555,7 +551,7 @@ namespace dftfe
   {
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
-    Val = d_atomicCoreDensityMap[Zno]->getDerivativeValue(rad);
+    Val = d_atomicCoreDensityVector[threadId][Zno]->getDerivativeValue(rad);
   }
 
   template <typename ValueType>

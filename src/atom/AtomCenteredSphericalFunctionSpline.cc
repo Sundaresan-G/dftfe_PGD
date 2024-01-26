@@ -20,60 +20,53 @@
 namespace dftfe
 {
   AtomCenteredSphericalFunctionSpline::AtomCenteredSphericalFunctionSpline(
-    std::string  filename,
-    unsigned int l)
+     std::string  filename,
+     unsigned int l,
+     double trunctationTol,
+     bool         consider0thEntry)
   {
     d_lQuantumNumber = l;
-    std::ifstream pspFile(filename);
-    double        radValue = 0.0;
-    double        orbValue = 0.0;
-
-    std::vector<double> radVec;
-    radVec.reserve(5000);
-    std::vector<double> orbVec;
-    orbVec.reserve(5000);
-
-    unsigned int numMeshSize = 0;
-    if (pspFile.is_open())
+    std::vector<std::vector<double>> radialFunctionData(0);
+    unsigned int                     fileReadFlag =
+      dftUtils::readPsiFile(2, radialFunctionData, filename);
+    d_DataPresent = fileReadFlag;
+    d_cutOff  = 0.0;
+    if (fileReadFlag)
       {
-        while (pspFile.good())
+
+        unsigned int        numRows = radialFunctionData.size() - 1;
+        std::vector<double> xData(numRows), yData(numRows);
+
+        unsigned int maxRowId = 0;
+        for (unsigned int irow = 0; irow < numRows; ++irow)
           {
-            pspFile >> radValue >> orbValue;
-            radVec.push_back(radValue);
-            orbVec.push_back(orbValue / radValue);
-            numMeshSize++;
+            xData[irow] = radialFunctionData[irow][0];
+            yData[irow] = radialFunctionData[irow][1];
+
+            if (std::fabs(yData[irow]) > trunctationTol)
+              maxRowId = irow;
           }
+
+        if (!consider0thEntry)
+          yData[0] = yData[1];
+
+        alglib::real_1d_array x;
+        x.setcontent(numRows, &xData[0]);
+        alglib::real_1d_array y;
+        y.setcontent(numRows, &yData[0]);
+        alglib::ae_int_t natural_bound_type_L = 1;
+        alglib::ae_int_t natural_bound_type_R = 1;
+        spline1dbuildcubic(x,
+                           y,
+                           numRows,
+                           natural_bound_type_L,
+                           0.0,
+                           natural_bound_type_R,
+                           0.0,
+                           d_radialSplineObject);
+        d_cutOff = xData[maxRowId];
+        d_rMin = xData[0];
       }
-    else
-      {
-        std::cout << " Unable to open " << filename << " file\n";
-        AssertThrow(false,
-                    dealii::ExcMessage(
-                      "Error opening file in AtomPseudoWavefunctions"));
-      }
-
-    numMeshSize--; // this is to ensure the last data is not read twice
-
-    d_rMin    = radVec[1];
-    orbVec[0] = orbVec[1];
-
-    alglib::real_1d_array x;
-    x.setcontent(numMeshSize, &radVec[0]);
-    alglib::real_1d_array y;
-    y.setcontent(numMeshSize, &orbVec[0]);
-    alglib::ae_int_t natural_bound_typeL = 0;
-    alglib::ae_int_t natural_bound_typeR = 1;
-    alglib::spline1dbuildcubic(x,
-                               y,
-                               numMeshSize,
-                               natural_bound_typeL,
-                               0.0,
-                               natural_bound_typeR,
-                               0.0,
-                               d_radialSplineObject);
-
-    d_cutOff = radVec[numMeshSize - 1];
-    pspFile.close();
   }
 
   AtomCenteredSphericalFunctionSpline::AtomCenteredSphericalFunctionSpline(
@@ -88,7 +81,7 @@ namespace dftfe
     std::ifstream       pspFile(filename);
     double              orbValue      = 0.0;
     double              radialValue   = 0.0;
-    double              truncationTol = 1E-10;
+    double              truncationTol = 1E-12;
     std::vector<double> radVec;
     radVec.reserve(5000);
     std::vector<double> orbVec;
@@ -106,7 +99,7 @@ namespace dftfe
         if (radialPower != 0)
           orbValue *= pow(radialValue, radialPower);
         orbVec.push_back(orbValue);
-        if (orbValue > truncationTol)
+        if (std::fabs(orbValue) > truncationTol)
           maxRowId = iRow;
       }
     d_rMin = radVec[0];
@@ -127,7 +120,8 @@ namespace dftfe
                                0.0,
                                d_radialSplineObject);
     unsigned int maxIndex = std::min(maxRowId + 10, numMeshSize - 1);
-    d_cutOff = maxRowIndex == -1 ? radVec[maxIndex] : radVec[maxRowIndex];
+    d_cutOff      = maxRowIndex == -1 ? radVec[maxIndex] : radVec[maxRowIndex];
+    d_DataPresent = true;
     pspFile.close();
   }
   AtomCenteredSphericalFunctionSpline::AtomCenteredSphericalFunctionSpline(
@@ -166,7 +160,7 @@ namespace dftfe
             if (std::abs(orbValue - (-(alpha) / radialValue)) > truncationTol &&
                 tailCheck)
               maxRowId = iRow;
-            else if (orbValue > truncationTol)
+            else if (std::fabs(orbValue) > truncationTol)
               maxRowId = iRow;
           }
       }
@@ -200,6 +194,7 @@ namespace dftfe
     unsigned int maxIndex = std::min(maxRowId + 10, numMeshSize - 1);
     d_cutOff              = radVec[maxIndex];
     pspFile.close();
+    d_DataPresent = true;
   }
   double
   AtomCenteredSphericalFunctionSpline::getRadialValue(double r) const

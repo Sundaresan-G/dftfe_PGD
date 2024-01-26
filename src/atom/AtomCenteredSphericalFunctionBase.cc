@@ -45,5 +45,10 @@ namespace dftfe
       Integrate, 0, getRadialCutOff(), 15, 1e-12);
     return (TotalVal * sqrt(4 * M_PI));
   }
+  bool
+  AtomCenteredSphericalFunctionBase::isDataPresent() const
+  {
+    return (d_DataPresent);
+  }
 
 } // namespace dftfe

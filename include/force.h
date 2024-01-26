@@ -28,7 +28,8 @@
 #  include "kohnShamDFTOperatorDevice.h"
 #endif
 #include <dftd.h>
-
+#include <oncvClass.h>
+#include <AtomicCenteredNonLocalOperator.h>
 
 
 namespace dftfe
@@ -830,6 +831,9 @@ namespace dftfe
 
     /// pointer to dft class
     dftClass<FEOrder, FEOrderElectro> *dftPtr;
+
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+
 
     /// Finite element object for configurational force computation. Linear
     /// finite elements with three force field components are used.

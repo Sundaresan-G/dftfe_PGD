@@ -305,7 +305,6 @@ namespace dftfe
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     getParallelProjectorKetTimesBlockVectorDevice()
   {
-    // return d_parallelProjectorKetTimesBlockVectorDevice;
     return d_parallelSphericalFnKetTimesBlockVectorDevice;
   }
 

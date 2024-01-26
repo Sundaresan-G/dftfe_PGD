@@ -41,12 +41,16 @@ namespace dftfe
     double
     getRadialCutOff() const;
 
+    bool
+    isDataPresent() const;
+
     virtual std::vector<double>
     getDerivativeValue(double r) const = 0;
 
   protected:
     double       d_cutOff;
     unsigned int d_lQuantumNumber;
+    bool         d_DataPresent;
 
 
   }; // end of class AtomCenteredSphericalFunctionBase

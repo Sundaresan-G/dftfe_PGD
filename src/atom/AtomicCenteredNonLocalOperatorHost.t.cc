@@ -116,7 +116,7 @@ namespace dftfe
             NumTotalSphericalFunctions * numberQuadraturePoints,
           0.0);
 #else
-        std::vector<double> ZetalmDeltaVlTimesJxW(
+        std::vector<double> sphericalFunctionBasisTimesJxW(
           numberElementsInAtomCompactSupport * NumTotalSphericalFunctions *
             numberQuadraturePoints,
           0.0);
@@ -151,7 +151,7 @@ namespace dftfe
                   maxkPoints * numberQuadraturePoints *
                     (2 * lQuantumNumber + 1),
                   0.0);
-                std::vector<dataTypes::number> ZetalmDeltaVl(
+                std::vector<dataTypes::number> sphericalFunctionBasis(
                   maxkPoints * numberQuadraturePoints *
                     (2 * lQuantumNumber + 1),
                   dataTypes::number(0.0));
@@ -264,10 +264,9 @@ namespace dftfe
 
                                   } // k-Point Loop
 #else
-                                ZetalmDeltaVl[tempIndex *
-                                                numberQuadraturePoints +
-                                              iQuadPoint] +=
-                                  sphericalFunctionValue;
+                                sphericalFunctionBasis
+                                  [tempIndex * numberQuadraturePoints +
+                                   iQuadPoint] += sphericalFunctionValue;
                                 // sphericalFunctionBasis[iQuadPoint] +=
                                 // sphericalFunctionValue;
 #endif
@@ -340,16 +339,15 @@ namespace dftfe
                          iQuadPoint < numberQuadraturePoints;
                          ++iQuadPoint)
                       {
-                        ZetalmDeltaVlTimesJxW[iElemComp *
-                                                NumTotalSphericalFunctions *
-                                                numberQuadraturePoints +
-                                              beta * numberQuadraturePoints +
-                                              iQuadPoint] =
-                          ZetalmDeltaVl[(beta - startIndex) *
-                                          numberQuadraturePoints +
-                                        iQuadPoint] *
-                          JxwVector[elementIndex * numberQuadraturePoints +
-                                    iQuadPoint];
+                        sphericalFunctionBasisTimesJxW
+                          [iElemComp * NumTotalSphericalFunctions *
+                             numberQuadraturePoints +
+                           beta * numberQuadraturePoints + iQuadPoint] =
+                            sphericalFunctionBasis[(beta - startIndex) *
+                                                     numberQuadraturePoints +
+                                                   iQuadPoint] *
+                            JxwVector[elementIndex * numberQuadraturePoints +
+                                      iQuadPoint];
 
                         // sphericalFunctionBasisTimesJxW[iElemComp *
                         // NumTotalSphericalFunctions *
@@ -418,7 +416,7 @@ namespace dftfe
                    &scalarCoeffAlpha,
                    &shapeValQuads[0],
                    &m,
-                   &ZetalmDeltaVlTimesJxW[0],
+                   &sphericalFunctionBasisTimesJxW[0],
                    &k,
                    &scalarCoeffBeta,
                    &projectorMatricesReal[0],

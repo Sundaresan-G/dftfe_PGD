@@ -40,7 +40,7 @@ namespace dftfe
     : public AtomCenteredSphericalFunctionBase
   {
   public:
-    AtomCenteredSphericalFunctionSpline(std::string filename, unsigned int l);
+    AtomCenteredSphericalFunctionSpline( std::string filename,  unsigned int l, double trunctationTol = 1E-10,  bool consider0thEntry = true );
 
     AtomCenteredSphericalFunctionSpline(std::string  filename,
                                         unsigned int l,
