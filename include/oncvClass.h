@@ -308,5 +308,5 @@ namespace dftfe
   }; // end of class
 
 } // end of namespace dftfe
-#include "../src/pseudo/oncvClass.t.cc"
+#include "../src/pseudo/oncv/oncvClass.t.cc"
 #endif //  DFTFE_PSEUDOPOTENTIALBASE_H
