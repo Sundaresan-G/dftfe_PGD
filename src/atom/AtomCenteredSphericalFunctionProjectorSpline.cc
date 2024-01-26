@@ -20,14 +20,13 @@
 namespace dftfe
 {
   AtomCenteredSphericalFunctionProjectorSpline::
-    AtomCenteredSphericalFunctionProjectorSpline(
-      std::string  filename,
-      unsigned int l,
-      int          radialPower,
-      int          colIndex,
-      int          totalColSize,
-      double truncationTol,
-      bool consider0thEntry)
+    AtomCenteredSphericalFunctionProjectorSpline(std::string  filename,
+                                                 unsigned int l,
+                                                 int          radialPower,
+                                                 int          colIndex,
+                                                 int          totalColSize,
+                                                 double       truncationTol,
+                                                 bool         consider0thEntry)
   {
     d_lQuantumNumber = l;
     std::vector<std::vector<double>> radialFunctionData(0);
