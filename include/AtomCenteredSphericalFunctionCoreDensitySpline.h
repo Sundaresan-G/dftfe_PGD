@@ -40,6 +40,14 @@ namespace dftfe
     : public AtomCenteredSphericalFunctionSpline
   {
   public:
+    /**
+     * @brief Creates splines for radial-core Density from file by applying suitable BC on spline and determining the cutOff Radius
+     * @param[in] filename the location of file containing the data
+     * @param[in] truncationTol the minimum function value afterwhich the
+     * function is truncated.
+     * @param[in]  consider0thEntry whether to replace the 0th fn value with the
+     * 1st value in the data.
+     */
     AtomCenteredSphericalFunctionCoreDensitySpline(
       std::string filename,
       double      truncationTol    = 1E-10,

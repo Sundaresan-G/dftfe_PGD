@@ -33,6 +33,11 @@ namespace dftfe
     : public AtomCenteredSphericalFunctionBase
   {
   public:
+    /**
+     * @brief Creates the Bessel function based on the 2 parameters
+     * @param[in] RcParameter coefficent for the bessel function
+     * @param[in] RmaxParameter the maximum R afterwhich the function returns 0.
+     */
     AtomCenteredSphericalFunctionBessel(double       RcParameter,
                                         double       RmaxParameter,
                                         unsigned int lParameter);

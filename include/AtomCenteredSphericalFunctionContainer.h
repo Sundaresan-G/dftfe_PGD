@@ -36,51 +36,89 @@ namespace dftfe
   class AtomCenteredSphericalFunctionContainer
   {
   public:
-    // the init functions.
-    // The listOfSphericalFunctions is a map from std::pair to
-    // AtomCenteredSphericalFunctionBase the key to this map is a pair of atomic
-    // number and a composite index. The composite index maps uniquely to an
-    // orbital.
+    /**
+     * @brief Initialises the class with the atomicNumbers of various atoms and the AtomCenteredSphericalFn of various spherical functions. This function is only called once per run.
+     * @param[in] atomicNumbers vector of size Natoms storing the Znumbers of
+     * various atoms present
+     * @param[in] listOfSphericalFunctions map of std::pain (Znum, l) to the
+     * sphericalFUnction class shared pointer.
+     */
     void
     init(const std::vector<unsigned int> &atomicNumbers,
          const std::map<std::pair<unsigned int, unsigned int>,
                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>
            &listOfSphericalFunctions);
-
+    /**
+     * @brief Initialises the position of atoms, the image posisiton and image ids after every update of atom positions.
+     * @param[in] atomCoords vector of size 3*Natoms storing the X,Y,Z
+     * coordiantes of atom in cell.
+     * @param[in] periodicCoords vector of vector storing the image coordinates
+     * @param[in] imageIds the image Id of image atoms present in periodicCoords
+     * input
+     */
     void
     initaliseCoordinates(const std::vector<double> &             atomCoords,
                          const std::vector<std::vector<double>> &periodicCoords,
                          const std::vector<int> &                imageIds);
+    /**
+     * @brief Returns the number of atoms present in domain
+     * @return  Returns size of atomicNumbers vector
+     */
     unsigned int
     getNumAtomCentersSize();
 
+
+    /**
+     * @brief Returns the cooridnates of atom present in domain
+     * @return  Returns atomCoords vector
+     */
     const std::vector<double> &
     getAtomCoordinates() const;
-
+    /**
+     * @brief Returns the map of atomId vs vector of image coordinates
+     * @return  Returns d_periodicImageCoord
+     */
     const std::map<unsigned int, std::vector<double>> &
     getPeriodicImageCoordinatesList() const;
 
     // This functions returns the number of spherical functions associated with
     // an atomic number.
     // If the atomic number does not exist, it returns a zero.
+    /**
+     * @brief Returns the he number of total spherical functions indexed by {ilm} associated with  an atomic number. If the atomic number does not exist, it returns a zero.
+     * @return d_numSphericalFunctions.find(atomicNumber)->size()
+     */
     unsigned int
     getTotalNumberOfSphericalFunctionsPerAtom(unsigned int atomicNumber);
 
-    // This functions returns the number of spherical functions associated with
-    // an atomic number.
-    // If the atomic number does not exist, it returns a zero.
+    /**
+     * @brief Returns the he number of radial spherical functions indexed by {i} associated with  an atomic number. If the atomic number does not exist, it returns a zero.
+     * @return d_numRadialSphericalFunctions.find(atomicNumber)->size()
+     */
     unsigned int
     getTotalNumberOfRadialSphericalFunctionsPerAtom(unsigned int atomicNumber);
-
-    unsigned int
-    getTotalNumberOfSphericalFunctions();
-
+    /**
+     * @brief Returns the total number of total spherical functions indexed by {ilm} present in the current processor. If the atomic number does not exist, it returns a zero.
+     */
     unsigned int
     getTotalNumberOfSphericalFunctionsInCurrentProcessor();
-
+    /**
+     * @brief Returns the maximum number of total spherical functions indexed by {ilm} across all atom Types present in atomNumbers vector
+     */
     unsigned int
     getMaximumNumberOfSphericalFunctions();
-
+    /**
+     * @brief
+     * @param[out] totalAtomsInCurrentProcessor number of atoms in current
+     * processor based on compact support
+     * @param[out] totalNonLocalElements number of nonLocal elements in current
+     * processor
+     * @param[out] numberCellsForEachAtom number of cells associated which each
+     * atom in the current processor. vecot of size totalAtomsInCurrentProcessor
+     * @param[out] numberCellsAccumNonLocalAtoms number of cells accumulated
+     * till iatom in current processor. vector of size
+     * totalAtomsInCurrentProcessor
+     */
     void
     getTotalAtomsAndNonLocalElementsInCurrentProcessor(
       unsigned int &             totalAtomsInCurrentProcessor,
@@ -88,19 +126,31 @@ namespace dftfe
       std::vector<unsigned int> &numberCellsForEachAtom,
       std::vector<unsigned int> &numberCellsAccumNonLocalAtoms);
 
+    /**
+     * @brief Returns the total number of total radial-spherical functions indexed by {i} present in atomicNumbers list.
+     */
     unsigned int
     getTotalNumberOfRadialSphericalFunctions();
 
+    /**
+     * @brief Returns the shared_ptr of AtomCenteredSphericalFunctionBase associated with std::pair(atomic Number and lQuantumNo)
+     */
     const std::map<std::pair<unsigned int, unsigned int>,
                    std::shared_ptr<AtomCenteredSphericalFunctionBase>> &
     getSphericalFunctions() const;
-
+    /**
+     * @brief Returns the vector of size Natoms of all atoms in system
+     */
     const std::vector<unsigned int> &
     getAtomicNumbers() const;
-
+    /**
+     * @brief Returns the atomIds of atoms present in current processor
+     */
     const std::vector<unsigned int> &
     getAtomIdsInCurrentProcess() const;
-
+    /**
+     * @brief Returns the startIndex of spherical Function alpha associated with atomic number Zno
+     */
     const unsigned int
     getTotalSphericalFunctionIndexStart(unsigned int Zno, unsigned int alpha);
     // COmputes the sparsity Pattern for the compact support Fn

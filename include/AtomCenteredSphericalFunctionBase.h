@@ -27,22 +27,46 @@ namespace dftfe
   class AtomCenteredSphericalFunctionBase
   {
   public:
+    /**
+     * @brief Computes the Radial Value of the Function at distance r
+     * @param[in] r radial distance
+     * @return function value at distance r
+     */
     virtual double
     getRadialValue(double r) const = 0;
 
     // The following functions need not be re-defined in the
     // derived classes. So it is being defined in this class
+    /**
+     * @brief returns the l-quantum number associated with the spherical function
+     * @return Quantum number l
+     */
     unsigned int
     getQuantumNumberl() const;
 
+    /**
+     * @brief COmputes the Radial-Integral value
+     * @return Result of the radial-integration of the spherical function from d_rmin to d_cutOff
+     */
     double
     getIntegralValue() const;
-
+    /**
+     * @brief Returns the maximum radial distance
+     * @return Cutoff distance
+     */
     double
     getRadialCutOff() const;
-
+    /**
+     * @brief Checks if the data is present
+     * @return True if function is present, false if not.
+     */
     bool
     isDataPresent() const;
+    /**
+     * @brief Computes the Radial Value, Radial-deriative and Radial-second derivative of the Function at distance r
+     * @param[in] r radial distance
+     * @return vector of size 3 comprising of function value, Radial-derivative value and Radial-secon derivative at distance r.
+     */
 
     virtual std::vector<double>
     getDerivativeValue(double r) const = 0;

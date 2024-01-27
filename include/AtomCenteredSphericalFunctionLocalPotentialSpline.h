@@ -40,6 +40,15 @@ namespace dftfe
     : public AtomCenteredSphericalFunctionSpline
   {
   public:
+    /**
+     * @brief Creates splines for radial-Local Potential from file by applying suitable BC on spline and determining the cutOff Radius
+     * @param[in] filename the location of file containing the data
+     * @param[in] atomAttribute the atomic number
+     * @param[in] truncationTol the minimum function value afterwhich the
+     * function is truncated.
+     * @param[in]  maxAllowedTail Maximum distance before the function is
+     * evaluated as Z/r
+     */
     AtomCenteredSphericalFunctionLocalPotentialSpline(
       std::string filename,
       double      atomAttribute,

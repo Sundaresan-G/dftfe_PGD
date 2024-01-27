@@ -598,7 +598,7 @@ namespace dftfe
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_locallyOwnedProcBoundaryNodesVectorDevice;
 
-    bool                d_isMallocCalled = false;
+    bool d_isMallocCalled = false;
 
     /**
      * @brief implementation of matrix-vector product using cell-level stiffness matrices.

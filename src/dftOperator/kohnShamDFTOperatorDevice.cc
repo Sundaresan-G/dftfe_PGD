@@ -123,10 +123,8 @@ namespace dftfe
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     ~kohnShamDFTOperatorDeviceClass()
   {
-    if(d_isMallocCalled == true)
-    d_ONCVnonLocalOperator->freeDeviceVectors();
-
-   
+    if (d_isMallocCalled == true)
+      d_ONCVnonLocalOperator->freeDeviceVectors();
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -494,8 +492,8 @@ namespace dftfe
           d_sphericalFnTimesVectorParFlattenedDevice,
           d_parallelSphericalFnKetTimesBlockVectorDevice,
           d_cellWaveFunctionMatrix);
-          d_isMallocCalled = true;
-       }
+        d_isMallocCalled = true;
+      }
 
     dftfe::utils::deviceMemGetInfo(&free_t, &total_t);
     if (dftPtr->d_dftParamsPtr->verbosity >= 2)
