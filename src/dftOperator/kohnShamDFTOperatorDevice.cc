@@ -127,8 +127,9 @@ namespace dftfe
       {
         free(h_d_wfcPointers);
         dftfe::utils::deviceFree(d_wfcPointers);
+         d_ONCVnonLocalOperator->freeDeviceVectors();
       }
-    d_ONCVnonLocalOperator->freeDeviceVectors();
+   
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>

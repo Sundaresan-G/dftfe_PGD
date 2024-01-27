@@ -116,8 +116,6 @@ namespace dftfe
         else
           {
             outerMostPointDen[*it] = d_oncvClassPtr->getRmaxValenceDensity(*it);
-            pcout << "OuterMost Point for Zno: " << *it << " "
-                  << outerMostPointDen[*it] << std::endl;
             if (outerMostPointDen[*it] > maxRhoTail)
               maxRhoTail = outerMostPointDen[*it];
           }
