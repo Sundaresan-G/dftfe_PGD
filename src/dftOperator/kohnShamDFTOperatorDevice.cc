@@ -123,12 +123,9 @@ namespace dftfe
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     ~kohnShamDFTOperatorDeviceClass()
   {
-    if (d_isMallocCalled)
-      {
-        free(h_d_wfcPointers);
-        dftfe::utils::deviceFree(d_wfcPointers);
-         d_ONCVnonLocalOperator->freeDeviceVectors();
-      }
+    if(d_isMallocCalled == true)
+    d_ONCVnonLocalOperator->freeDeviceVectors();
+
    
   }
 
@@ -495,39 +492,10 @@ namespace dftfe
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
           BVec,
           d_sphericalFnTimesVectorParFlattenedDevice,
-          d_parallelSphericalFnKetTimesBlockVectorDevice);
-        d_totalNonlocalElems =
-          d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
-        if (d_isMallocCalled)
-          {
-            free(h_d_wfcPointers);
-            dftfe::utils::deviceFree(d_wfcPointers);
-          }
-        h_d_wfcPointers = (dataTypes::number **)malloc(
-          d_totalNonlocalElems * sizeof(dataTypes::number *));
-
-
-        const std::vector<unsigned int> nonLocalElementIdtoLocalElementIdMap =
-          d_ONCVnonLocalOperator->getNonLocalElemIdToLocalElemIdMap();
-        for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
-          {
-            h_d_wfcPointers[i] = d_cellWaveFunctionMatrix.begin() +
-                                 nonLocalElementIdtoLocalElementIdMap[i] *
-                                   numberWaveFunctions *
-                                   d_numberNodesPerElement;
-          }
-
-        dftfe::utils::deviceMalloc((void **)&d_wfcPointers,
-                                   d_totalNonlocalElems *
-                                     sizeof(dataTypes::number *));
-
-
-        dftfe::utils::deviceMemcpyH2D(d_wfcPointers,
-                                      h_d_wfcPointers,
-                                      d_totalNonlocalElems *
-                                        sizeof(dataTypes::number *));
-        d_isMallocCalled = true;
-      }
+          d_parallelSphericalFnKetTimesBlockVectorDevice,
+          d_cellWaveFunctionMatrix);
+          d_isMallocCalled = true;
+       }
 
     dftfe::utils::deviceMemGetInfo(&free_t, &total_t);
     if (dftPtr->d_dftParamsPtr->verbosity >= 2)

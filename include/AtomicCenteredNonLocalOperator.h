@@ -370,7 +370,9 @@ namespace dftfe
         &sphericalFnTimesWavefunctionMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFunctionKetTimesVectorParFlattened);
+        &sphericalFunctionKetTimesVectorParFlattened,
+      dftfe::utils::MemoryStorage<ValueType,
+                dftfe::utils::MemorySpace::DEVICE> &cellWaveFunctionMatrix);
 
     void
     initialiseDeviceVectors();
@@ -471,7 +473,6 @@ namespace dftfe
 
     void
     applyCTonX(
-      ValueType **X,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &                                   sphericalFnTimesWavefunctionMatrix,
       std::pair<unsigned int, unsigned int> cellRange);
@@ -513,8 +514,8 @@ namespace dftfe
 
   private:
     // Pointer of pointers for BatchedGEMM call in applyCTonX()
-    ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp;
-    ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp;
+    ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp, **hostWfcPointers;
+    ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp, **deviceWfcPointers;
     std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
 
     // Data structures moved from KSOperatorDevice

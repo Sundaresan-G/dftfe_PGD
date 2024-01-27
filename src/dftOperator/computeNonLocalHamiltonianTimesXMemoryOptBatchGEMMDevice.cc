@@ -40,7 +40,6 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       // dftfe::utils::deviceSynchronize();
       // std::cout<<"Starting CTX: "<<std::endl;
       d_ONCVnonLocalOperator->applyCTonX(
-        d_wfcPointers,
         d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
     }
@@ -135,7 +134,6 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         d_cellWaveFunctionMatrix.begin(),
         d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
       d_ONCVnonLocalOperator->applyCTonX(
-        d_wfcPointers,
         d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
     }

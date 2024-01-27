@@ -599,8 +599,6 @@ namespace dftfe
       d_locallyOwnedProcBoundaryNodesVectorDevice;
 
     bool                d_isMallocCalled = false;
-    dataTypes::number **d_wfcPointers;
-    dataTypes::number **h_d_wfcPointers;
 
     /**
      * @brief implementation of matrix-vector product using cell-level stiffness matrices.
