@@ -35,13 +35,13 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     const bool                               skip1,
     const bool                               skip2)
 {
-  if (d_totalNonlocalElems > 0 && !skip1)
+  if (d_totalNonlocalElemsPseudo > 0 && !skip1)
     {
       // dftfe::utils::deviceSynchronize();
       // std::cout<<"Starting CTX: "<<std::endl;
       d_ONCVnonLocalOperator->applyCTonX(
         d_sphericalFnTimesVectorParFlattenedDevice,
-        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
+        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
 
   // this routine was interfering with overlapping communication and compute. So
@@ -65,13 +65,13 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
     }
 
-  if (d_totalNonlocalElems > 0)
+  if (d_totalNonlocalElemsPseudo > 0)
     {
       d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
                                                      true);
       d_ONCVnonLocalOperator->applyConVCTX(
         d_cellHamMatrixTimesWaveMatrix,
-        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
+        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
 
   if (std::is_same<dataTypes::number, std::complex<double>>::value)
@@ -125,7 +125,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   //
 
 
-  if (d_totalNonlocalElems > 0)
+  if (d_totalNonlocalElemsPseudo > 0)
     {
       dftfe::utils::deviceKernelsGeneric::stridedCopyToBlock(
         numberWaveFunctions,
@@ -135,7 +135,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
       d_ONCVnonLocalOperator->applyCTonX(
         d_sphericalFnTimesVectorParFlattenedDevice,
-        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
+        std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
 
   projectorKetTimesVector.setValue(0);

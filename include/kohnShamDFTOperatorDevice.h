@@ -587,7 +587,7 @@ namespace dftfe
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
       d_kSquareTimesHalfVecDevice;
 
-    unsigned int d_totalNonlocalElems;
+    unsigned int d_totalNonlocalElemsPseudo;
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorParFlattenedDevice;
