@@ -587,7 +587,7 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    applyCTonX(
+    applyCconjtrans_onX(
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X,
       std::map<
@@ -646,7 +646,7 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    applyV_onCTX(
+    applyV_onCconjtransX(
       const CouplingStructure couplingtype,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &couplingMatrix,
@@ -705,7 +705,7 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    applyConVCTX(
+    applyC_VCconjtransX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
         &Xout,
       std::map<

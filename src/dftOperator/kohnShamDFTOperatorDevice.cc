@@ -492,8 +492,10 @@ namespace dftfe
           d_sphericalFnTimesVectorParFlattenedDevice,
           d_parallelSphericalFnKetTimesBlockVectorDevice,
           d_cellWaveFunctionMatrix);
-        d_totalNonlocalElemsPseudo =  d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor(); 
-        //std::cout<<"Total NonLocal Elements: "<<d_totalNonlocalElemsPseudo<<std::endl;
+        d_totalNonlocalElemsPseudo =
+          d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
+        // std::cout<<"Total NonLocal Elements:
+        // "<<d_totalNonlocalElemsPseudo<<std::endl;
         d_isMallocCalled = true;
       }
 

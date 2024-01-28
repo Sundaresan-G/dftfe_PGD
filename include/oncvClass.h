@@ -187,21 +187,12 @@ namespace dftfe
       d_nonLocalOperatorDevice;
 
 
-    void
-    applynonLocalHamiltonianMatrix(
-      const dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &shapeFnTimesWavefunctionMatrix);
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> &
+    getCouplingMatrix();
 
-    void
-    applynonLocalHamiltonianMatrix(
-      distributedDeviceVec<ValueType>
-        &        sphericalFunctionKetTimesVectorParFlattened,
-      const bool flagCopyToCellVector);
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
+      &
+      getCouplingMatrixDevice();
 
 
   private:

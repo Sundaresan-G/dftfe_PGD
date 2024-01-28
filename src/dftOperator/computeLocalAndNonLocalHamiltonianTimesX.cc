@@ -445,7 +445,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
                                  });
                 } // scaling
 
-              d_ONCVnonLocalOperator->applyCTonX(
+              d_ONCVnonLocalOperator->applyCconjtrans_onX(
                 d_cellWaveFunctionMatrix,
                 projectorKetTimesVector,
                 std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
@@ -454,9 +454,13 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
         }     // Cell Loop
       d_ONCVnonLocalOperator->applyAllReduceonCTX(
         d_SphericalFunctionKetTimesVectorParFlattened, projectorKetTimesVector);
-
-      d_oncvClassPtr->applynonLocalHamiltonianMatrix(
-        d_SphericalFunctionKetTimesVectorParFlattened, projectorKetTimesVector);
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
+      d_ONCVnonLocalOperator->applyV_onCconjtransX(
+        CouplingStructure::diagonal,
+        couplingMatrix,
+        d_SphericalFunctionKetTimesVectorParFlattened,
+        projectorKetTimesVector);
 
 
 
@@ -497,7 +501,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
 
       if (dftPtr->d_dftParamsPtr->isPseudopotential)
         {
-          d_ONCVnonLocalOperator->applyConVCTX(
+          d_ONCVnonLocalOperator->applyC_VCconjtransX(
             d_cellHamMatrixTimesWaveMatrix,
             projectorKetTimesVector,
             std::pair<unsigned int, unsigned int>(iCell, iCell + 1));

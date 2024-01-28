@@ -601,15 +601,8 @@ namespace dftfe
       }
   }
   template <typename ValueType>
-  void
-  oncvClass<ValueType>::applynonLocalHamiltonianMatrix(
-    const dftfe::linearAlgebra::MultiVector<ValueType,
-                                            dftfe::utils::MemorySpace::HOST>
-      &sphericalFunctionKetTimesVectorParFlattened,
-    std::map<
-      unsigned int,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-      &shapeFnTimesWavefunctionMatrix)
+  const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> &
+  oncvClass<ValueType>::getCouplingMatrix()
   {
     if (!d_nonlocalHamiltonianEntriesUpdated)
       {
@@ -638,22 +631,13 @@ namespace dftfe
         d_nonlocalHamiltonianEntriesUpdated = true;
       }
 
-
-
-    d_nonLocalOperatorHost->applyV_onCTX(
-      CouplingStructure::diagonal,
-      d_nonLocalHamiltonianEntriesHost,
-      sphericalFunctionKetTimesVectorParFlattened,
-      shapeFnTimesWavefunctionMatrix);
+    return (d_nonLocalHamiltonianEntriesHost);
   }
 
 
   template <typename ValueType>
-  void
-  oncvClass<ValueType>::applynonLocalHamiltonianMatrix(
-    distributedDeviceVec<ValueType>
-      &        sphericalFunctionKetTimesVectorParFlattened,
-    const bool flagCopyToCellVector)
+  const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
+  oncvClass<ValueType>::getCouplingMatrixDevice()
   {
     if (!d_nonlocalHamiltonianEntriesUpdated)
       {
@@ -696,14 +680,7 @@ namespace dftfe
           d_nonLocalHamiltonianEntriesHost);
         d_nonlocalHamiltonianEntriesUpdated = true;
       }
-
-
-
-    d_nonLocalOperatorDevice->applyV_onCTX(
-      CouplingStructure::diagonal,
-      d_nonLocalHamiltonianEntriesDevice,
-      sphericalFunctionKetTimesVectorParFlattened,
-      flagCopyToCellVector);
+    return (d_nonLocalHamiltonianEntriesDevice);
   }
 
 } // namespace dftfe

@@ -301,7 +301,7 @@ namespace dftfe
 
 
     void
-    applyV_onCTX(
+    applyV_onCconjtransX(
       const CouplingStructure couplingtype,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &couplingMatrix,
@@ -325,7 +325,7 @@ namespace dftfe
 
 
     void
-    applyCTonX(
+    applyCconjtrans_onX(
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X,
       std::map<
@@ -337,7 +337,7 @@ namespace dftfe
 
 
     void
-    applyConVCTX(
+    applyC_VCconjtransX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
         &Xout,
       std::map<
@@ -472,7 +472,7 @@ namespace dftfe
 
 
     void
-    applyCTonX(
+    applyCconjtrans_onX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &                                   sphericalFnTimesWavefunctionMatrix,
       std::pair<unsigned int, unsigned int> cellRange);
@@ -485,7 +485,7 @@ namespace dftfe
         &sphericalFnTimesWavefunctionMatrix);
 
     void
-    applyV_onCTX(
+    applyV_onCconjtransX(
       const CouplingStructure couplingtype,
       const dftfe::utils::MemoryStorage<double,
                                         dftfe::utils::MemorySpace::DEVICE>
@@ -496,7 +496,7 @@ namespace dftfe
 
 
     void
-    applyConVCTX(
+    applyC_VCconjtransX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &                                         Xout,
       const std::pair<unsigned int, unsigned int> cellRange);
@@ -513,7 +513,7 @@ namespace dftfe
     getAtomWiseNumberCellsAccumulated();
 
   private:
-    // Pointer of pointers for BatchedGEMM call in applyCTonX()
+    // Pointer of pointers for BatchedGEMM call in applyCconjtrans_onX()
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
       **hostWfcPointers;
     ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp,

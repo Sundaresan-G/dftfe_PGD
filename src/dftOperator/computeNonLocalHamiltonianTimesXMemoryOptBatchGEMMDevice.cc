@@ -39,7 +39,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     {
       // dftfe::utils::deviceSynchronize();
       // std::cout<<"Starting CTX: "<<std::endl;
-      d_ONCVnonLocalOperator->applyCTonX(
+      d_ONCVnonLocalOperator->applyCconjtrans_onX(
         d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
@@ -67,9 +67,12 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
   if (d_totalNonlocalElemsPseudo > 0)
     {
-      d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
-                                                     true);
-      d_ONCVnonLocalOperator->applyConVCTX(
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        couplingMatrix = d_oncvClassPtr->getCouplingMatrixDevice();
+  d_ONCVnonLocalOperator->applyV_onCconjtransX(CouplingStructure::diagonal,
+        couplingMatrix,projectorKetTimesVector,true);         
+      d_ONCVnonLocalOperator->applyC_VCconjtransX(
         d_cellHamMatrixTimesWaveMatrix,
         std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
@@ -133,7 +136,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         src,
         d_cellWaveFunctionMatrix.begin(),
         d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
-      d_ONCVnonLocalOperator->applyCTonX(
+      d_ONCVnonLocalOperator->applyCconjtrans_onX(
         d_sphericalFnTimesVectorParFlattenedDevice,
         std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
@@ -141,6 +144,10 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   projectorKetTimesVector.setValue(0);
   d_ONCVnonLocalOperator->applyAllReduceonCTX(
     projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
-  d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
-                                                 false);
+  // d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
+  //                                                false);
+  const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
+    couplingMatrix = d_oncvClassPtr->getCouplingMatrixDevice();
+  d_ONCVnonLocalOperator->applyV_onCconjtransX(CouplingStructure::diagonal,
+        couplingMatrix,projectorKetTimesVector,false);  
 }
