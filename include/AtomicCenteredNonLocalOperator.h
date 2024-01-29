@@ -147,7 +147,7 @@ namespace dftfe
 
     unsigned int d_sumNonTrivialSphericalFnOverAllCells;
 
-
+    std::vector<unsigned int> d_sphericalFnTimesVectorFlattenedVectorLocalIds;
 
     // The above set of variables are needed in force class
 
@@ -246,6 +246,28 @@ namespace dftfe
     const std::vector<ValueType> &
     getAtomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues();
 
+    const std::map<unsigned int, std::vector<unsigned int>> &
+    getCellIdToAtomIdsLocalCompactSupportMap();
+
+    const std::vector<unsigned int> &
+    getNonTrivialSphericalFnsPerCell();
+
+    const std::vector<unsigned int> &
+    getNonTrivialSphericalFnsCellStartIndex();
+
+    const unsigned int
+    getTotalNonTrivialSphericalFnsOverAllCells();
+
+    const std::vector<unsigned int> &
+    getNonTrivialAllCellsSphericalFnAlphaToElemIdMap();
+
+    const std::map<unsigned int, std::vector<unsigned int>> &
+    getAtomIdToNonTrivialSphericalFnCellStartIndex();
+
+    const std::vector<unsigned int> &
+    getSphericalFnTimesVectorFlattenedVectorLocalIds();
+
+
     using AtomicCenteredNonLocalOperatorBase<ValueType,
                                              dftfe::utils::MemorySpace::HOST>::
       d_atomCenteredKpointIndexedSphericalFnQuadValues;
@@ -254,7 +276,9 @@ namespace dftfe
                                              dftfe::utils::MemorySpace::HOST>::
       d_atomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues;
 
-
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_sphericalFnTimesVectorFlattenedVectorLocalIds;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_cellIdToAtomIdsLocalCompactSupportMap;
