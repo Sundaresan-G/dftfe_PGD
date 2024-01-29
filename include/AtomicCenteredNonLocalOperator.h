@@ -122,6 +122,11 @@ namespace dftfe
                               d_mpiPatternP2P;
     std::vector<unsigned int> d_numberCellsForEachAtom;
 
+    std::vector<ValueType> d_atomCenteredKpointContractedSphericalFnQuadValues;
+
+    std::vector<ValueType>
+      d_atomCenteredKpointIndexedSphericalFnTimesImageAtomDistQuadValues;
+
 #ifdef USE_COMPLEX
     std::vector<distributedCPUVec<std::complex<double>>>
       d_SphericalFunctionKetTimesVectorPar;
@@ -482,7 +487,8 @@ namespace dftfe
       distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFnTimesWavefunctionMatrix);
+        &sphericalFnTimesWavefunctionMatrix,
+        const bool skip1 = false, const bool skip2 = false);
 
     void
     applyV_onCconjtransX(

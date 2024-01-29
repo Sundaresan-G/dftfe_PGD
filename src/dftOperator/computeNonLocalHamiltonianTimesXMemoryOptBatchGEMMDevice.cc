@@ -52,18 +52,15 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       projectorKetTimesVector.setValue(0);
     }
 
-
+      d_ONCVnonLocalOperator->applyAllReduceonCTX(
+        projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice,skip1,skip2);
 
   // Operations related to skip2 (extraction and C^{T}*X) are over. So return
   // control back to chebyshevFilter
   if (skip2)
     return;
 
-  if (!skip1)
-    {
-      d_ONCVnonLocalOperator->applyAllReduceonCTX(
-        projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
-    }
+
 
   if (d_totalNonlocalElemsPseudo > 0)
     {
