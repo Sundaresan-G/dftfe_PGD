@@ -181,19 +181,20 @@ namespace dftfe
       AtomicCenteredNonLocalOperator<dataTypes::number,
                                      dftfe::utils::MemorySpace::HOST>>
       d_nonLocalOperatorHost;
+#if defined(DFTFE_WITH_DEVICE)
     std::shared_ptr<
       AtomicCenteredNonLocalOperator<dataTypes::number,
                                      dftfe::utils::MemorySpace::DEVICE>>
       d_nonLocalOperatorDevice;
-
+#endif
 
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> &
     getCouplingMatrix();
-
+#if defined(DFTFE_WITH_DEVICE)
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
       &
       getCouplingMatrixDevice();
-
+#endif
 
   private:
     /**
@@ -226,16 +227,20 @@ namespace dftfe
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperHostPtr;
+#if defined(DFTFE_WITH_DEVICE)
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
                                      d_BLASWrapperDevicePtr;
+#endif                                     
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
       d_atomicNonLocalPseudoPotentialConstants;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       d_nonLocalHamiltonianEntriesHost;
+#if defined(DFTFE_WITH_DEVICE)
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
          d_nonLocalHamiltonianEntriesDevice;
+#endif         
     bool d_nonlocalHamiltonianEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;

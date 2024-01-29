@@ -434,7 +434,7 @@ namespace dftfe
   private:
     std::map<unsigned int, std::vector<ValueType>> d_ShapeFnTimesWavefunction;
   };
-
+#if defined(DFTFE_WITH_DEVICE)
   template <typename ValueType>
   class AtomicCenteredNonLocalOperator<ValueType,
                                        dftfe::utils::MemorySpace::DEVICE>
@@ -640,7 +640,7 @@ namespace dftfe
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_cellNodeIdMapNonLocalToLocalDevice;
   };
-
+#endif
 
 
 } // namespace dftfe

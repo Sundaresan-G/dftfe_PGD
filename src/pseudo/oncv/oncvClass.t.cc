@@ -197,11 +197,15 @@ namespace dftfe
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
+#if defined(DFTFE_WITH_DEVICE)
         if (d_useDevice)
           d_nonLocalOperatorDevice->InitalisePartitioner(
             d_BasisOperatorHostPtr);
         else
           d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+#elseif
+        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+#endif
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -276,11 +280,15 @@ namespace dftfe
           elementIndexesInAtomCompactSupport,
           atomIdsInCurrentProcess,
           numberElements);
+#if defined(DFTFE_WITH_DEVICE)
         if (d_useDevice)
           d_nonLocalOperatorDevice->InitalisePartitioner(
             d_BasisOperatorHostPtr);
         else
           d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+#elseif
+        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+#endif
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -634,7 +642,7 @@ namespace dftfe
     return (d_nonLocalHamiltonianEntriesHost);
   }
 
-
+#if defined(DFTFE_WITH_DEVICE)
   template <typename ValueType>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   oncvClass<ValueType>::getCouplingMatrixDevice()
@@ -682,5 +690,5 @@ namespace dftfe
       }
     return (d_nonLocalHamiltonianEntriesDevice);
   }
-
+#endif
 } // namespace dftfe
