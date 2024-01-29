@@ -137,23 +137,25 @@ namespace dftfe
       distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFnTimesWavefunctionMatrix,
-        const bool skip1, const bool skip2)
+        &        sphericalFnTimesWavefunctionMatrix,
+      const bool skip1,
+      const bool skip2)
   {
-    if(!skip1)
-    dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
-      copyToDealiiParallelNonLocalVec(
-        d_numberWaveFunctions,
-        d_totalNonLocalEntries,
-        sphericalFnTimesWavefunctionMatrix.begin(),
-        sphericalFunctionKetTimesVectorParFlattened.begin(),
-        d_sphericalFnIdsParallelNumberingMapDevice.begin());
+    if (!skip1)
+      dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
+        copyToDealiiParallelNonLocalVec(
+          d_numberWaveFunctions,
+          d_totalNonLocalEntries,
+          sphericalFnTimesWavefunctionMatrix.begin(),
+          sphericalFunctionKetTimesVectorParFlattened.begin(),
+          d_sphericalFnIdsParallelNumberingMapDevice.begin());
 
-    if(!skip1 && !skip2)
-    {
-      sphericalFunctionKetTimesVectorParFlattened.accumulateAddLocallyOwned(1);
-      sphericalFunctionKetTimesVectorParFlattened.updateGhostValues(1);
-    }
+    if (!skip1 && !skip2)
+      {
+        sphericalFunctionKetTimesVectorParFlattened.accumulateAddLocallyOwned(
+          1);
+        sphericalFunctionKetTimesVectorParFlattened.updateGhostValues(1);
+      }
   }
 
   template <typename ValueType>

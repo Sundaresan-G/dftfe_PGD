@@ -122,10 +122,34 @@ namespace dftfe
                               d_mpiPatternP2P;
     std::vector<unsigned int> d_numberCellsForEachAtom;
 
-    std::vector<ValueType> d_atomCenteredKpointContractedSphericalFnQuadValues;
-
+    // Required by force.cc
+    std::vector<ValueType> d_atomCenteredKpointIndexedSphericalFnQuadValues;
+    // Required for stress compute
     std::vector<ValueType>
-      d_atomCenteredKpointIndexedSphericalFnTimesImageAtomDistQuadValues;
+      d_atomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues;
+
+    /// map from cell number to set of non local atom ids (local numbering)
+    std::map<unsigned int, std::vector<unsigned int>>
+      d_cellIdToAtomIdsLocalCompactSupportMap;
+
+    /// vector of size num physical cells
+    std::vector<unsigned int> d_nonTrivialSphericalFnPerCell;
+
+    /// vector of size num physical cell with starting index for each cell for
+    /// the above array
+    std::vector<unsigned int> d_nonTrivialSphericalFnsCellStartIndex;
+
+    std::vector<unsigned int> d_nonTrivialAllCellsSphericalFnAlphaToElemIdMap;
+
+    /// map from local nonlocal atomid to vector over cells
+    std::map<unsigned int, std::vector<unsigned int>>
+      d_atomIdToNonTrivialSphericalFnCellStartIndex;
+
+    unsigned int d_sumNonTrivialSphericalFnOverAllCells;
+
+
+
+    // The above set of variables are needed in force class
 
 #ifdef USE_COMPLEX
     std::vector<distributedCPUVec<std::complex<double>>>
@@ -138,8 +162,6 @@ namespace dftfe
     std::map<std::pair<unsigned int, unsigned int>, unsigned int>
       d_sphericalFunctionIdsNumberingMapCurrentProcess;
 
-    std::map<unsigned int, std::vector<unsigned int>>
-      d_cellIdToAtomIdsLocalCompactSupportMap;
 
     dealii::IndexSet d_locallyOwnedAtomCenteredFnIdsCurrentProcess;
     dealii::IndexSet d_ghostAtomCenteredFnIdsCurrentProcess;
@@ -218,13 +240,45 @@ namespace dftfe
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
         BLASWrapperPtrHost);
+    const std::vector<ValueType> &
+    getAtomCenteredKpointIndexedSphericalFnQuadValues();
 
+    const std::vector<ValueType> &
+    getAtomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues();
+
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_atomCenteredKpointIndexedSphericalFnQuadValues;
+
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_atomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues;
+
+
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_cellIdToAtomIdsLocalCompactSupportMap;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_nonTrivialSphericalFnPerCell;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_nonTrivialSphericalFnsCellStartIndex;
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_nonTrivialAllCellsSphericalFnAlphaToElemIdMap;
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::HOST>::d_sumNonTrivialSphericalFnOverAllCells;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_numberNodesPerElement;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::HOST>::d_this_mpi_process;
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::
+      d_atomIdToNonTrivialSphericalFnCellStartIndex;
 
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
@@ -487,8 +541,9 @@ namespace dftfe
       distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFnTimesWavefunctionMatrix,
-        const bool skip1 = false, const bool skip2 = false);
+        &        sphericalFnTimesWavefunctionMatrix,
+      const bool skip1 = false,
+      const bool skip2 = false);
 
     void
     applyV_onCconjtransX(
