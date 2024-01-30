@@ -203,7 +203,7 @@ namespace dftfe
             d_BasisOperatorHostPtr);
         else
           d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
-#  elseif
+#else
         d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #endif
         MPI_Barrier(d_mpiCommParent);
@@ -286,7 +286,7 @@ namespace dftfe
             d_BasisOperatorHostPtr);
         else
           d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
-#  elseif
+#else
         d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #endif
         MPI_Barrier(d_mpiCommParent);
@@ -701,7 +701,8 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
   template <typename ValueType>
   const std::shared_ptr<
-    AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>>
+    AtomicCenteredNonLocalOperator<ValueType,
+                                   dftfe::utils::MemorySpace::DEVICE>>
   oncvClass<ValueType>::getNonLocalOperatorDevice()
   {
     return d_nonLocalOperatorDevice;

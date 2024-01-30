@@ -26,6 +26,55 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    applyVCconjtransOnX(
+      const ValueType *       src,
+      const unsigned int      kPointIndex,
+      const CouplingStructure couplingtype,
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &couplingMatrix,
+      distributedDeviceVec<ValueType>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &sphericalFnTimesWavefunctionMatrix)
+  {
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE>
+      cellWaveFunctionMatrix;
+    cellWaveFunctionMatrix.resize(d_locallyOwnedCells *
+                                    d_numberNodesPerElement *
+                                    d_numberWaveFunctions,
+                                  0.0);
+    initialiseCellWaveFunctionPointers(cellWaveFunctionMatrix);
+    if (d_totalNonlocalElems > 0)
+      {
+        // dftfe::utils::deviceKernelsGeneric::stridedCopyToBlock(
+        //   d_numberWaveFunctions,
+        //   d_locallyOwnedCells * d_numberNodesPerElement,
+        //   src,
+        //   cellWaveFunctionMatrix.begin(),
+        //   d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
+        // d_BLASWrapperPtr->stridedCopyToBlock(d_numberWaveFunctions,d_locallyOwnedCells*d_numberNodesPerElement,src,cellWaveFunctionMatrix.begin(),);
+        applyCconjtrans_onX(
+          sphericalFnTimesWavefunctionMatrix,
+          std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
+      }
+
+    sphericalFunctionKetTimesVectorParFlattened.setValue(0);
+    applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened,
+                        sphericalFnTimesWavefunctionMatrix);
+
+    applyV_onCconjtransX(couplingtype,
+                         couplingMatrix,
+                         sphericalFunctionKetTimesVectorParFlattened,
+                         false);
+  }
+
+
+
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
     applyCconjtrans_onX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &                                   sphericalFnTimesWavefunctionMatrix,
@@ -204,7 +253,7 @@ namespace dftfe
         basisOperationsPtr)
   {
     d_numberNodesPerElement = basisOperationsPtr->nDofsPerCell();
-
+    d_locallyOwnedCells     = basisOperationsPtr->nCells();
     d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
     d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
       d_kPointWeights.size() * d_totalNonlocalElems * d_numberNodesPerElement *
@@ -448,9 +497,7 @@ namespace dftfe
         &sphericalFnTimesWavefunctionMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &cellWaveFunctionMatrix)
+        &sphericalFunctionKetTimesVectorParFlattened)
   {
     d_numberWaveFunctions = numberWaveFunctions;
     dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
@@ -484,10 +531,6 @@ namespace dftfe
 
     for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
       {
-        hostWfcPointers[i] = cellWaveFunctionMatrix.begin() +
-                             d_nonlocalElemIdToLocalElemIdMap[i] *
-                               d_numberWaveFunctions * d_numberNodesPerElement;
-
         hostPointerCDaggeOutTemp[i] =
           d_sphericalFnTimesVectorAllCellsDevice.begin() +
           i * d_numberWaveFunctions * d_maxSingleAtomContribution;
@@ -495,11 +538,6 @@ namespace dftfe
 
     dftfe::utils::deviceMalloc((void **)&deviceWfcPointers,
                                d_totalNonlocalElems * sizeof(ValueType *));
-
-
-    dftfe::utils::deviceMemcpyH2D(deviceWfcPointers,
-                                  hostWfcPointers,
-                                  d_totalNonlocalElems * sizeof(ValueType *));
 
 
     dftfe::utils::deviceMalloc((void **)&devicePointerCDagger,
@@ -519,6 +557,25 @@ namespace dftfe
     sphericalFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
                                               d_totalNonLocalEntries);
   }
+  template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
+    initialiseCellWaveFunctionPointers(
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &cellWaveFunctionMatrix)
+  {
+    for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
+      {
+        hostWfcPointers[i] = cellWaveFunctionMatrix.begin() +
+                             d_nonlocalElemIdToLocalElemIdMap[i] *
+                               d_numberWaveFunctions * d_numberNodesPerElement;
+      }
+    dftfe::utils::deviceMemcpyH2D(deviceWfcPointers,
+                                  hostWfcPointers,
+                                  d_totalNonlocalElems * sizeof(ValueType *));
+  }
+
+
 
   template <typename ValueType>
   void

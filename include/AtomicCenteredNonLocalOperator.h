@@ -459,7 +459,10 @@ namespace dftfe
         &sphericalFnTimesWavefunctionMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFunctionKetTimesVectorParFlattened,
+        &sphericalFunctionKetTimesVectorParFlattened);
+
+    void
+    initialiseCellWaveFunctionPointers(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &cellWaveFunctionMatrix);
 
@@ -487,7 +490,9 @@ namespace dftfe
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::AtomicCenteredNonLocalOperatorBase;
 
-
+    using AtomicCenteredNonLocalOperatorBase<
+      ValueType,
+      dftfe::utils::MemorySpace::DEVICE>::d_locallyOwnedCells;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_SphericalFunctionKetTimesVectorPar;
@@ -581,6 +586,19 @@ namespace dftfe
         &        sphericalFunctionKetTimesVectorParFlattened,
       const bool flagCopyToCellVector);
 
+
+    void
+    applyVCconjtransOnX(
+      const ValueType *       src,
+      const unsigned int      kPointIndex,
+      const CouplingStructure couplingtype,
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &couplingMatrix,
+      distributedDeviceVec<ValueType>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &sphericalFnTimesWavefunctionMatrix);
 
     void
     applyC_VCconjtransX(

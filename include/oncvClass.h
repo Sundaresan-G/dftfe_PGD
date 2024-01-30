@@ -193,7 +193,7 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     const std::shared_ptr<
       AtomicCenteredNonLocalOperator<ValueType,
-                                     dftfe::utils::MemorySpace::HOST>>
+                                     dftfe::utils::MemorySpace::DEVICE>>
     getNonLocalOperatorDevice();
 #endif
   private:
