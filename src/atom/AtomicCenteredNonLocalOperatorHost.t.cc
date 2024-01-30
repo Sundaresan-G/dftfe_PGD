@@ -1020,6 +1020,82 @@ namespace dftfe
   }
 
   template <typename ValueType>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
+    applyVCconjtransOnX(
+      const distributedCPUMultiVec<ValueType> &src,
+      const unsigned int                       kPointIndex,
+      const CouplingStructure                  couplingtype,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &couplingMatrix,
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::HOST>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &sphericalFnTimesWavefunctionMatrix,
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+        basisOperationsPtr)
+  {
+    initialiseOperatorActionOnX(kPointIndex,
+                                sphericalFnTimesWavefunctionMatrix);
+    sphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
+
+    const unsigned int                inc = 1;
+    std::vector<std::complex<double>> cellWaveFunctionMatrix(
+      d_numberNodesPerElement * d_numberWaveFunctions, 0.0);
+
+
+
+    if (d_totalNonlocalElems)
+      {
+        for (unsigned int iCell = 0; iCell < d_locallyOwnedCells; ++iCell)
+          {
+            if (AtomicCenteredNonLocalOperatorBase<
+                  ValueType,
+                  dftfe::utils::MemorySpace::HOST>::atomSupportInElement(iCell))
+              {
+                for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
+                     ++iNode)
+                  {
+                    dealii::types::global_dof_index localNodeId =
+                      (basisOperationsPtr->d_cellDofIndexToProcessDofIndexMap
+                         [iCell * d_numberNodesPerElement + iNode]) *
+                      d_numberWaveFunctions;
+                    d_BLASWrapperPtr->xcopy(
+                      &d_numberWaveFunctions,
+                      src.data() + localNodeId,
+                      &inc,
+                      &cellWaveFunctionMatrix[d_numberWaveFunctions * iNode],
+                      &inc);
+
+                  } // Cell Extraction
+
+                applyCconjtrans_onX(
+                  cellWaveFunctionMatrix,
+                  sphericalFnTimesWavefunctionMatrix,
+                  std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
+
+              } // if nonlocalAtomPResent
+          }     // Cell Loop
+        applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened,
+                            sphericalFnTimesWavefunctionMatrix);
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::HOST>
+          applyV_onCconjtransX(couplingtype,
+                               couplingMatrix,
+                               sphericalFunctionKetTimesVectorParFlattened,
+                               sphericalFnTimesWavefunctionMatrix);
+
+
+
+      } // nonlocal
+  }
+
+  template <typename ValueType>
   const std::vector<ValueType> &
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
     getAtomCenteredKpointIndexedSphericalFnQuadValues()

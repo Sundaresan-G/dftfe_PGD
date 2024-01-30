@@ -77,15 +77,6 @@ namespace dftfe
 
 
 
-    // virtual void
-    // initialiseFlattenedDataStructure(
-    //   unsigned int numberWaveFunctions,
-    //   std::map<unsigned int,
-    //            dftfe::utils::MemoryStorage<ValueType, memorySpace>>
-    //     &sphericalFnTimesWavefunctionMatri,
-    //   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
-    //     &sphericalFunctionKetTimesVectorParFlattened) = 0;
-
     unsigned int
     getTotalAtomInCurrentProcessor();
 
@@ -184,10 +175,6 @@ namespace dftfe
     const unsigned int         d_n_mpi_processes;
     dealii::IndexSet           d_locallyOwnedSphericalFunctionIdsCurrentProcess;
     dealii::IndexSet           d_ghostSphericalFunctionIdsCurrentProcess;
-
-    dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
-      d_SphericalFunctionKetTimesVectorParFlattened;
-
 
     unsigned int d_totalAtomsInCurrentProc; // number of atoms of interst with
                                             // compact in current processor
@@ -345,9 +332,6 @@ namespace dftfe
       dftfe::utils::MemorySpace::HOST>::d_SphericalFunctionKetTimesVectorPar;
     using AtomicCenteredNonLocalOperatorBase<ValueType,
                                              dftfe::utils::MemorySpace::HOST>::
-      d_SphericalFunctionKetTimesVectorParFlattened;
-    using AtomicCenteredNonLocalOperatorBase<ValueType,
-                                             dftfe::utils::MemorySpace::HOST>::
       d_totalAtomsInCurrentProc; // number of atoms of interst with
                                  // compact in current processor
     using AtomicCenteredNonLocalOperatorBase<
@@ -426,6 +410,25 @@ namespace dftfe
       const std::pair<unsigned int, unsigned int> cellRange);
 
 
+    void
+    applyVCconjtransOnX(
+      const distributedCPUMultiVec<ValueType> &src,
+      const unsigned int                       kPointIndex,
+      const CouplingStructure                  couplingtype,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &couplingMatrix,
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::HOST>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      std::map<
+        unsigned int,
+        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+        &sphericalFnTimesWavefunctionMatrix,
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+        basisOperationsPtr);
+
 
     void
     applyC_VCconjtransX(
@@ -436,11 +439,6 @@ namespace dftfe
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
         &sphericalFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange);
-
-
-
-  private:
-    std::map<unsigned int, std::vector<ValueType>> d_ShapeFnTimesWavefunction;
   };
 #if defined(DFTFE_WITH_DEVICE)
   template <typename ValueType>
@@ -489,10 +487,6 @@ namespace dftfe
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::AtomicCenteredNonLocalOperatorBase;
 
-    using AtomicCenteredNonLocalOperatorBase<
-      ValueType,
-      dftfe::utils::MemorySpace::DEVICE>::
-      d_SphericalFunctionKetTimesVectorParFlattened;
 
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
