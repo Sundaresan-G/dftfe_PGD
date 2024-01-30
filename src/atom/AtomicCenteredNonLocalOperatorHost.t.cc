@@ -847,7 +847,7 @@ namespace dftfe
       const CouplingStructure couplingtype,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &couplingMatrix,
-      const dftfe::linearAlgebra::MultiVector<ValueType,
+       dftfe::linearAlgebra::MultiVector<ValueType,
                                               dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened,
       std::map<
@@ -901,7 +901,7 @@ namespace dftfe
                     d_BLASWrapperPtr->xscal(
                       sphericalFunctionKetTimesVectorParFlattened.begin() +
                         localId * d_numberWaveFunctions,
-                      &nonlocalConstantV,
+                      nonlocalConstantV,
                       d_numberWaveFunctions);
                   }
               }
