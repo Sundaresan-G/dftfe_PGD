@@ -108,6 +108,14 @@ namespace dftfe
     unsigned int
     getLocalIdOfDistributedVec(const unsigned int globalId);
 
+    std::vector<unsigned int> &
+    getNonLocalElemIdToLocalElemIdMap();
+
+    std::vector<unsigned int> &
+    getAtomWiseNumberCellsInCompactSupport();
+
+    std::vector<unsigned int> &
+    getAtomWiseNumberCellsAccumulated();
 
   protected:
     unsigned int        d_numberOfVectors;
@@ -587,15 +595,6 @@ namespace dftfe
       const std::pair<unsigned int, unsigned int> cellRange);
 
 
-
-    std::vector<unsigned int> &
-    getNonLocalElemIdToLocalElemIdMap();
-
-    std::vector<unsigned int> &
-    getAtomWiseNumberCellsInCompactSupport();
-
-    std::vector<unsigned int> &
-    getAtomWiseNumberCellsAccumulated();
 
   private:
     // Pointer of pointers for BatchedGEMM call in applyCconjtrans_onX()

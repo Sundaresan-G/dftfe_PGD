@@ -78,7 +78,7 @@ namespace dftfe
 
     d_basisOperationsPtrHost = dftPtr->d_basisOperationsPtrHost;
     d_oncvClassPtr           = dftPtr->d_oncvClassPtr;
-    d_ONCVnonLocalOperator   = d_oncvClassPtr->d_nonLocalOperatorHost;
+    d_ONCVnonLocalOperator   = d_oncvClassPtr->getNonLocalOperatorHost();
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
     d_sqrtMassVector.reinit(d_invSqrtMassVector);
@@ -207,10 +207,6 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-          numberWaveFunctions,
-          dftPtr->d_projectorKetTimesVectorParFlattened);
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
           numberWaveFunctions,
           projectorKetTimesVector,

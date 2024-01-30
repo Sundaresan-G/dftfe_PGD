@@ -176,17 +176,7 @@ namespace dftfe
     bool
     coreNuclearDensityPresent(unsigned int Zno);
 
-    // Creating Object for Atom Centerd Nonlocal Operator
-    std::shared_ptr<
-      AtomicCenteredNonLocalOperator<dataTypes::number,
-                                     dftfe::utils::MemorySpace::HOST>>
-      d_nonLocalOperatorHost;
-#if defined(DFTFE_WITH_DEVICE)
-    std::shared_ptr<
-      AtomicCenteredNonLocalOperator<dataTypes::number,
-                                     dftfe::utils::MemorySpace::DEVICE>>
-      d_nonLocalOperatorDevice;
-#endif
+
 
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> &
     getCouplingMatrix();
@@ -196,6 +186,16 @@ namespace dftfe
       getCouplingMatrixDevice();
 #endif
 
+    const std::shared_ptr<
+      AtomicCenteredNonLocalOperator<ValueType,
+                                     dftfe::utils::MemorySpace::HOST>>
+    getNonLocalOperatorHost();
+#if defined(DFTFE_WITH_DEVICE)
+    const std::shared_ptr<
+      AtomicCenteredNonLocalOperator<ValueType,
+                                     dftfe::utils::MemorySpace::HOST>>
+    getNonLocalOperatorDevice();
+#endif
   private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
@@ -230,8 +230,8 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                                     d_BLASWrapperDevicePtr;
-#endif                                     
+      d_BLASWrapperDevicePtr;
+#endif
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
       d_atomicNonLocalPseudoPotentialConstants;
@@ -239,8 +239,8 @@ namespace dftfe
       d_nonLocalHamiltonianEntriesHost;
 #if defined(DFTFE_WITH_DEVICE)
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-         d_nonLocalHamiltonianEntriesDevice;
-#endif         
+      d_nonLocalHamiltonianEntriesDevice;
+#endif
     bool d_nonlocalHamiltonianEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;
@@ -282,6 +282,19 @@ namespace dftfe
     std::vector<std::vector<double>>                  d_imagePositions;
     unsigned int                                      d_numEigenValues;
     unsigned int                                      d_nOMPThreads;
+
+    // Creating Object for Atom Centerd Nonlocal Operator
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<ValueType,
+                                     dftfe::utils::MemorySpace::HOST>>
+      d_nonLocalOperatorHost;
+#if defined(DFTFE_WITH_DEVICE)
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<ValueType,
+                                     dftfe::utils::MemorySpace::DEVICE>>
+      d_nonLocalOperatorDevice;
+#endif
+
 
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsVector;

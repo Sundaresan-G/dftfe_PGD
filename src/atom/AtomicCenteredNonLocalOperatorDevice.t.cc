@@ -544,31 +544,4 @@ namespace dftfe
 
 
 
-  template <typename ValueType>
-  std::vector<unsigned int> &
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    getNonLocalElemIdToLocalElemIdMap()
-  {
-    return (d_nonlocalElemIdToLocalElemIdMap);
-  }
-
-
-
-  template <typename ValueType>
-  std::vector<unsigned int> &
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    getAtomWiseNumberCellsInCompactSupport()
-  {
-    return (d_numberCellsForEachAtom);
-  }
-
-  template <typename ValueType>
-  std::vector<unsigned int> &
-  AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    getAtomWiseNumberCellsAccumulated()
-  {
-    return (d_numberCellsAccumNonLocalAtoms);
-  }
-
-
 } // namespace dftfe
