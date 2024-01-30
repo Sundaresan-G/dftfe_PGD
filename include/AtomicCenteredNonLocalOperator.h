@@ -386,7 +386,8 @@ namespace dftfe
       std::map<
         unsigned int,
         dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &sphericalFnTimesWavefunctionMatrix);
+        &        sphericalFnTimesWavefunctionMatrix,
+      const bool flagCopyResultsToMatrix = true);
 
     void
     applyAllReduceonCTX(
@@ -420,10 +421,6 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &sphericalFnTimesWavefunctionMatrix,
       std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
