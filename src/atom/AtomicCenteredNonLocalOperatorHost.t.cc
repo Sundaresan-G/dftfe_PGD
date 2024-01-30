@@ -847,8 +847,8 @@ namespace dftfe
       const CouplingStructure couplingtype,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &couplingMatrix,
-       dftfe::linearAlgebra::MultiVector<ValueType,
-                                              dftfe::utils::MemorySpace::HOST>
+      dftfe::linearAlgebra::MultiVector<ValueType,
+                                        dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened,
       std::map<
         unsigned int,

@@ -35,9 +35,19 @@ namespace dftfe
         &couplingMatrix,
       distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFnTimesWavefunctionMatrix)
+      std::shared_ptr<
+        dftfe::basis::FEBasisOperations<ValueType,
+                                        double,
+                                        dftfe::utils::MemorySpace::DEVICE>>
+        basisOperationsPtr)
   {
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+      sphericalFnTimesWavefunctionMatrix;
+    sphericalFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
+                                              d_totalNonLocalEntries);
+    basisOperationsPtr->reinit(d_numberWaveFunctions, 0, 0, false);
+
+    initialiseOperatorActionOnX(kPointIndex);
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       cellWaveFunctionMatrix;
@@ -48,13 +58,13 @@ namespace dftfe
     initialiseCellWaveFunctionPointers(cellWaveFunctionMatrix);
     if (d_totalNonlocalElems > 0)
       {
-        // dftfe::utils::deviceKernelsGeneric::stridedCopyToBlock(
-        //   d_numberWaveFunctions,
-        //   d_locallyOwnedCells * d_numberNodesPerElement,
-        //   src,
-        //   cellWaveFunctionMatrix.begin(),
-        //   d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
-        // d_BLASWrapperPtr->stridedCopyToBlock(d_numberWaveFunctions,d_locallyOwnedCells*d_numberNodesPerElement,src,cellWaveFunctionMatrix.begin(),);
+        d_BLASWrapperPtr->stridedCopyToBlock(
+          d_numberWaveFunctions,
+          d_locallyOwnedCells * d_numberNodesPerElement,
+          src,
+          cellWaveFunctionMatrix.begin(),
+          basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
+            .begin());
         applyCconjtrans_onX(
           sphericalFnTimesWavefunctionMatrix,
           std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
