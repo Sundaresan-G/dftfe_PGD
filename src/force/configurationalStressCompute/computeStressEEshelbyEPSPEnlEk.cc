@@ -223,7 +223,7 @@ namespace dftfe
         std::vector<dataTypes::number>
           projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened(
             numKPoints *
-              dftPtr->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+             dftPtr->d_oncvClassPtr()->getNonLocalOperatorHost()->getTotalNonTrivialSphericalFnsOverAllCells() *
               numQuadPointsNLP * 3,
             dataTypes::number(0.0));
 
@@ -231,7 +231,7 @@ namespace dftfe
         std::vector<dataTypes::number>
           projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened(
             numKPoints *
-              dftPtr->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+              dftPtr->d_oncvClassPtr()->getNonLocalOperatorHost()->getTotalNonTrivialSphericalFnsOverAllCells() *
               numQuadPointsNLP,
             dataTypes::number(0.0));
 #endif
