@@ -26,8 +26,8 @@ namespace dftfe
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
         BLASWrapperPtr,
       std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, memorySpace>>    basisOperatorPtr,           
+        dftfe::basis::FEBasisOperations<ValueType, double, memorySpace>>
+        basisOperatorPtr,
       std::shared_ptr<AtomCenteredSphericalFunctionContainer>
                          atomCenteredSphericalFunctionContainer,
       const unsigned int numVectors,
@@ -41,7 +41,7 @@ namespace dftfe
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
     , d_isMallocCalled(false)
   {
-    d_BLASWrapperPtr = BLASWrapperPtr;
+    d_BLASWrapperPtr   = BLASWrapperPtr;
     d_basisOperatorPtr = basisOperatorPtr;
     d_atomCenteredSphericalFunctionContainer =
       atomCenteredSphericalFunctionContainer;

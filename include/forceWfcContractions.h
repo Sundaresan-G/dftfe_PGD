@@ -31,19 +31,19 @@ namespace dftfe
   {
     void
     wfcContractionsForceKernelsAllH(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr,
-      operatorDFTClass &                      operatorMatrix,
-      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,  
-      const dataTypes::number *               X,
-      const unsigned int                      spinPolarizedFlag,
-      const unsigned int                      spinIndex,
-      const std::vector<std::vector<double>> &eigenValuesH,
-      const std::vector<std::vector<double>> &partialOccupanciesH,
-      const std::vector<double> &             kPointCoordinates,
-      const unsigned int *                    nonTrivialIdToElemIdMapH,
+      std::shared_ptr<dftfe::basis::FEBasisOperations<
+        dataTypes::number,
+        double,
+        dftfe::utils::MemorySpace::HOST>>                  basisOperationsPtr,
+      operatorDFTClass &                                   operatorMatrix,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+      const dataTypes::number *                            X,
+      const unsigned int                                   spinPolarizedFlag,
+      const unsigned int                                   spinIndex,
+      const std::vector<std::vector<double>> &             eigenValuesH,
+      const std::vector<std::vector<double>> &             partialOccupanciesH,
+      const std::vector<double> &                          kPointCoordinates,
+      const unsigned int *nonTrivialIdToElemIdMapH,
       const unsigned int *projecterKetTimesFlattenedVectorLocalIdsH,
       const unsigned int  MLoc,
       const unsigned int  N,

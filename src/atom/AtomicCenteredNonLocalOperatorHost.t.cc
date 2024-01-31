@@ -24,8 +24,7 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    computeCMatrixEntries(
-      const unsigned int quadratureIndex)
+    computeCMatrixEntries(const unsigned int quadratureIndex)
   {
     d_locallyOwnedCells = d_basisOperatorPtr->nCells();
     d_basisOperatorPtr->reinit(0, 0, quadratureIndex);
@@ -764,7 +763,8 @@ namespace dftfe
             //                                  [d_numberWaveFunctions * alpha],
             //   inc,
             //   sphericalFunctionKetTimesVectorParFlattened.data() +
-            //     sphericalFunctionKetTimesVectorParFlattened.getMPIPatternP2P() ->globalToLocal(id) *d_numberWaveFunctions,
+            //     sphericalFunctionKetTimesVectorParFlattened.getMPIPatternP2P()
+            //     ->globalToLocal(id) *d_numberWaveFunctions,
             //   inc);
           }
       }
@@ -1043,10 +1043,13 @@ namespace dftfe
                                 sphericalFnTimesWavefunctionMatrix);
     sphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
 
-    const unsigned int                inc = 1;
-    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST> cellWaveFunctionMatrix;
+    const unsigned int inc = 1;
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
+      cellWaveFunctionMatrix;
 
-    cellWaveFunctionMatrix.resize(d_numberNodesPerElement * d_numberWaveFunctions, 0.0);
+    cellWaveFunctionMatrix.resize(d_numberNodesPerElement *
+                                    d_numberWaveFunctions,
+                                  0.0);
 
 
     if (d_totalNonlocalElems)
@@ -1083,10 +1086,10 @@ namespace dftfe
         applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened,
                             sphericalFnTimesWavefunctionMatrix);
         applyV_onCconjtransX(couplingtype,
-                               couplingMatrix,
-                               sphericalFunctionKetTimesVectorParFlattened,
-                               sphericalFnTimesWavefunctionMatrix,
-                               false);
+                             couplingMatrix,
+                             sphericalFunctionKetTimesVectorParFlattened,
+                             sphericalFnTimesWavefunctionMatrix,
+                             false);
 
 
 

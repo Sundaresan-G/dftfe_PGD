@@ -31,7 +31,7 @@ namespace dftfe
   {
     namespace
     {
-      //FIXME: use basisOperations instead of operatorMatrix
+      // FIXME: use basisOperations instead of operatorMatrix
       void
       interpolatePsiComputeELocWfcEshelbyTensor(
         operatorDFTClass &                         operatorMatrix,
@@ -605,13 +605,13 @@ namespace dftfe
 
       void
       computeBlockContribution(
-        std::shared_ptr<
-      dftfe::basis::
-          FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr,      
-        operatorDFTClass &                         operatorMatrix,
-      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
-        const unsigned int kPointIndex,
+        std::shared_ptr<dftfe::basis::FEBasisOperations<
+          dataTypes::number,
+          double,
+          dftfe::utils::MemorySpace::HOST>>                  basisOperationsPtr,
+        operatorDFTClass &                                   operatorMatrix,
+        std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+        const unsigned int                                   kPointIndex,
         distributedCPUMultiVec<dataTypes::number> &flattenedArrayBlock,
         distributedCPUMultiVec<dataTypes::number> &projectorKetTimesVector,
         const dataTypes::number *                  X,
@@ -664,7 +664,7 @@ namespace dftfe
               X[iNode * N + startingVecId + iWave];
         flattenedArrayBlock.updateGhostValues();
 
-        //FIMXE: use basisOperations 
+        // FIMXE: use basisOperations
         (operatorMatrix.getOverloadedConstraintMatrix())
           ->distribute(flattenedArrayBlock);
 
@@ -696,7 +696,6 @@ namespace dftfe
 
         if (isPsp)
           {
-
             oncvClassPtr->getNonLocalOperatorHost()->applyVCconjtransOnX(
               flattenedArrayBlock,
               kPointIndex,
@@ -739,18 +738,19 @@ namespace dftfe
 
     void
     wfcContractionsForceKernelsAllH(
-      std::shared_ptr<dftfe::basis::
-          FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr,  
-      operatorDFTClass &                      operatorMatrix,
-      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr, 
-      const dataTypes::number *               X,
-      const unsigned int                      spinPolarizedFlag,
-      const unsigned int                      spinIndex,
-      const std::vector<std::vector<double>> &eigenValuesH,
-      const std::vector<std::vector<double>> &partialOccupanciesH,
-      const std::vector<double> &             kPointCoordinates,
-      const unsigned int *                    nonTrivialIdToElemIdMapH,
+      std::shared_ptr<dftfe::basis::FEBasisOperations<
+        dataTypes::number,
+        double,
+        dftfe::utils::MemorySpace::HOST>>                  basisOperationsPtr,
+      operatorDFTClass &                                   operatorMatrix,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+      const dataTypes::number *                            X,
+      const unsigned int                                   spinPolarizedFlag,
+      const unsigned int                                   spinIndex,
+      const std::vector<std::vector<double>> &             eigenValuesH,
+      const std::vector<std::vector<double>> &             partialOccupanciesH,
+      const std::vector<double> &                          kPointCoordinates,
+      const unsigned int *nonTrivialIdToElemIdMapH,
       const unsigned int *projecterKetTimesFlattenedVectorLocalIdsH,
       const unsigned int  MLoc,
       const unsigned int  N,
@@ -788,8 +788,8 @@ namespace dftfe
 
       distributedCPUMultiVec<dataTypes::number> flattenedArrayBlock;
 
-      //FIXME: use getMPIPatternP2PSphericalFunKetTimesX from Atom nonlocal operator calss
-      //once implemented
+      // FIXME: use getMPIPatternP2PSphericalFunKetTimesX from Atom nonlocal
+      // operator calss once implemented
       distributedCPUMultiVec<dataTypes::number> &projectorKetTimesVector =
         operatorMatrix.getParallelProjectorKetTimesBlockVector();
 

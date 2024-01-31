@@ -249,9 +249,10 @@ namespace dftfe
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
     transferCMatrixEntriesfromHostObject(
-      std::shared_ptr<AtomicCenteredNonLocalOperator<
-        ValueType,
-        dftfe::utils::MemorySpace::HOST>> nonLocalOperatorHost)
+      std::shared_ptr<
+        AtomicCenteredNonLocalOperator<ValueType,
+                                       dftfe::utils::MemorySpace::HOST>>
+        nonLocalOperatorHost)
   {
     d_numberNodesPerElement = d_basisOperatorPtr->nDofsPerCell();
     d_locallyOwnedCells     = d_basisOperatorPtr->nCells();

@@ -1190,7 +1190,7 @@ namespace dftfe
     d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
                                d_basisOperationsPtrDevice,
-#endif    
+#endif
                                d_BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
                                d_BLASWrapperPtr,
