@@ -34,18 +34,13 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::shared_ptr<
-        dftfe::basis::FEBasisOperations<ValueType,
-                                        double,
-                                        dftfe::utils::MemorySpace::DEVICE>>
-        basisOperationsPtr)
+        &sphericalFunctionKetTimesVectorParFlattened)
   {
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       sphericalFnTimesWavefunctionMatrix;
     sphericalFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
                                               d_totalNonLocalEntries);
-    basisOperationsPtr->reinit(d_numberWaveFunctions, 0, 0, false);
+    d_basisOperatorPtr->reinit(d_numberWaveFunctions, 0, 0, false);
 
     initialiseOperatorActionOnX(kPointIndex);
     dftfe::utils::MemoryStorage<dataTypes::number,
@@ -63,7 +58,7 @@ namespace dftfe
           d_locallyOwnedCells * d_numberNodesPerElement,
           src,
           cellWaveFunctionMatrix.begin(),
-          basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
+          d_basisOperatorPtr->d_flattenedCellDofIndexToProcessDofIndexMap
             .begin());
         applyCconjtrans_onX(
           sphericalFnTimesWavefunctionMatrix,
@@ -256,14 +251,10 @@ namespace dftfe
     transferCMatrixEntriesfromHostObject(
       std::shared_ptr<AtomicCenteredNonLocalOperator<
         ValueType,
-        dftfe::utils::MemorySpace::HOST>> nonLocalOperatorHost,
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr)
+        dftfe::utils::MemorySpace::HOST>> nonLocalOperatorHost)
   {
-    d_numberNodesPerElement = basisOperationsPtr->nDofsPerCell();
-    d_locallyOwnedCells     = basisOperationsPtr->nCells();
+    d_numberNodesPerElement = d_basisOperatorPtr->nDofsPerCell();
+    d_locallyOwnedCells     = d_basisOperatorPtr->nCells();
     d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
     d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
       d_kPointWeights.size() * d_totalNonlocalElems * d_numberNodesPerElement *
@@ -358,7 +349,7 @@ namespace dftfe
                  ++iNode)
               {
                 dftfe::global_size_type localNodeId =
-                  basisOperationsPtr->d_cellDofIndexToProcessDofIndexMap
+                  d_basisOperatorPtr->d_cellDofIndexToProcessDofIndexMap
                     [elementId * d_numberNodesPerElement + iNode];
                 d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal
                   [countElemNode] = localNodeId;

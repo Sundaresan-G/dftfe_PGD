@@ -25,33 +25,26 @@ namespace dftfe
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
     computeCMatrixEntries(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-                         basisOperationsPtr,
-      const unsigned int quadratureIndex,
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        BLASWrapperPtrHost)
+      const unsigned int quadratureIndex)
   {
-    d_locallyOwnedCells = basisOperationsPtr->nCells();
-    basisOperationsPtr->reinit(0, 0, quadratureIndex);
+    d_locallyOwnedCells = d_basisOperatorPtr->nCells();
+    d_basisOperatorPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberAtomsOfInterest =
       d_atomCenteredSphericalFunctionContainer->getNumAtomCentersSize();
     const unsigned int numberQuadraturePoints =
-      basisOperationsPtr->nQuadsPerCell();
-    d_numberNodesPerElement     = basisOperationsPtr->nDofsPerCell();
+      d_basisOperatorPtr->nQuadsPerCell();
+    d_numberNodesPerElement     = d_basisOperatorPtr->nDofsPerCell();
     const unsigned int numCells = d_locallyOwnedCells;
     const dftfe::utils::MemoryStorage<double, // ValueType for complex
                                       dftfe::utils::MemorySpace::HOST>
       &shapeValQuads =
-        basisOperationsPtr
+        d_basisOperatorPtr
           ->shapeFunctionBasisData(); // shapeFunctionData() for complex
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      quadraturePointsVector = basisOperationsPtr->quadPoints();
+      quadraturePointsVector = d_basisOperatorPtr->quadPoints();
     const dftfe::utils::MemoryStorage<ValueType,
                                       dftfe::utils::MemorySpace::HOST>
-                                     JxwVector = basisOperationsPtr->JxW();
+                                     JxwVector = d_basisOperatorPtr->JxW();
     const std::vector<unsigned int> &atomicNumber =
       d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
     const std::vector<double> &atomCoordinates =
@@ -1041,11 +1034,7 @@ namespace dftfe
         &couplingMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr)
+        &sphericalFunctionKetTimesVectorParFlattened)
   {
     std::map<
       unsigned int,
@@ -1074,7 +1063,7 @@ namespace dftfe
                      ++iNode)
                   {
                     dealii::types::global_dof_index localNodeId =
-                      (basisOperationsPtr->d_cellDofIndexToProcessDofIndexMap
+                      (d_basisOperatorPtr->d_cellDofIndexToProcessDofIndexMap
                          [iCell * d_numberNodesPerElement + iNode]) *
                       d_numberWaveFunctions;
                     d_BLASWrapperPtr->xcopy(

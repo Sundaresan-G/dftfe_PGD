@@ -75,26 +75,32 @@ namespace dftfe
 
     void
     initialise(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr,
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        BLASWrapperPtrHost,
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+      basisOperationsHostPtr,
+#if defined(DFTFE_WITH_DEVICE)    
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::DEVICE>>
+      basisOperationsDevicePtr,   
+#endif         
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+      BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        BLASWrapperPtrDevice,
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+      BLASWrapperPtrDevice,
 #endif
-      unsigned int                            densityQuadratureId,
-      unsigned int                            localContributionQuadratureId,
-      unsigned int                            sparsityPatternQuadratureId,
-      unsigned int                            nlpspQuadratureId,
-      unsigned int                            densityQuadratureIdElectro,
-      excManager *                            excFunctionalPtr,
-      const std::vector<std::vector<double>> &atomLocations,
-      unsigned int                            numEigenValues);
+    unsigned int                            densityQuadratureId,
+    unsigned int                            localContributionQuadratureId,
+    unsigned int                            sparsityPatternQuadratureId,
+    unsigned int                            nlpspQuadratureId,
+    unsigned int                            densityQuadratureIdElectro,
+    excManager *                            excFunctionalPtr,
+    const std::vector<std::vector<double>> &atomLocations,
+    unsigned int                            numEigenValues);
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
@@ -268,7 +274,10 @@ namespace dftfe
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
       d_BasisOperatorHostPtr;
-
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::DEVICE>>
+      d_BasisOperatorDevicePtr;
 
 
     std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
