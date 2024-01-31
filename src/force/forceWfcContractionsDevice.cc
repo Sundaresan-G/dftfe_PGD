@@ -937,6 +937,8 @@ namespace dftfe
                                           dftfe::utils::MemorySpace::DEVICE>>
           &                                      basisOperationsPtr,
         operatorDFTDeviceClass &                 operatorMatrix,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+        const unsigned int kPointIndex,        
         distributedDeviceVec<dataTypes::number> &deviceFlattenedArrayBlock,
         distributedDeviceVec<dataTypes::number> &projectorKetTimesVectorD,
         const dataTypes::number *                X,
@@ -1076,10 +1078,18 @@ namespace dftfe
             // MPI_Barrier(d_mpiCommParent);
             // double kernel2_time = MPI_Wtime();
 
-            operatorMatrix.computeNonLocalProjectorKetTimesXTimesV(
-              deviceFlattenedArrayBlock.begin(),
-              projectorKetTimesVectorD,
-              numPsi);
+            //operatorMatrix.computeNonLocalProjectorKetTimesXTimesV(
+            //  deviceFlattenedArrayBlock.begin(),
+            //  projectorKetTimesVectorD,
+            //  numPsi);
+
+            oncvClassPtr->getNonLocalOperatorDevice()->applyVCconjtransOnX(
+              flattenedArrayBlock,
+              kPointIndex,
+              CouplingStructure::diagonal,
+              oncvClassPtr->getCouplingMatrix(),
+              projectorKetTimesVectorD, 
+              basisOperationsPtr);
 
             // dftfe::utils::deviceSynchronize();
             // MPI_Barrier(d_mpiCommParent);
@@ -1141,6 +1151,7 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>>
         &                                     basisOperationsPtr,
       operatorDFTDeviceClass &                operatorMatrix,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,      
       const dataTypes::number *               X,
       const unsigned int                      spinPolarizedFlag,
       const unsigned int                      spinIndex,
@@ -1362,6 +1373,8 @@ namespace dftfe
                   devicePortedForceKernelsAllD(
                     basisOperationsPtr,
                     operatorMatrix,
+                    oncvClassPtr,
+                    kPoint,
                     deviceFlattenedArrayBlock,
                     projectorKetTimesVectorD,
                     X +

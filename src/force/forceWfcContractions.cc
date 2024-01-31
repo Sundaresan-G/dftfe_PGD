@@ -605,11 +605,11 @@ namespace dftfe
 
       void
       computeBlockContribution(
-        operatorDFTClass &                         operatorMatrix,
         std::shared_ptr<
       dftfe::basis::
           FEBasisOperations<dataTypes::number, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr,
+        basisOperationsPtr,      
+        operatorDFTClass &                         operatorMatrix,
       std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
         const unsigned int kPointIndex,
         distributedCPUMultiVec<dataTypes::number> &flattenedArrayBlock,
@@ -911,8 +911,8 @@ namespace dftfe
 
 
                   computeBlockContribution(
-                    operatorMatrix,
                     basisOperationsPtr,
+                    operatorMatrix,
                     oncvClassPtr,
                     kPoint,
                     flattenedArrayBlock,
