@@ -49,7 +49,7 @@ namespace dftfe
     const unsigned int numQuadPoints = forceEvalNLP.n_q_points;
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      (dftPtr->d_oncvClassPtr->getTotalAtomInCurrentProcessor());
+      (dftPtr->d_oncvClassPtr->getTotalNumberOfAtomsInCurrentProcessor());
     // dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
@@ -70,8 +70,8 @@ namespace dftfe
         const int nonLocalAtomId =
           dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
 
-        // FIXME should use the appropriate map instead of assuming all atoms
-        // are nonlocal atoms
+        // FIXME should use the appropriate map from oncvClassPtr 
+        // instead of assuming all atoms are nonlocal atoms
         const int globalChargeIdNonLocalAtom = nonLocalAtomId;
         // dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
 

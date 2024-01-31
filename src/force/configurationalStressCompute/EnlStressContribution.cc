@@ -46,7 +46,7 @@ namespace dftfe
     const double spinPolarizedFactor = isSpinPolarized ? 0.5 : 1.0;
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      (dftPtr->d_oncvClassPtr->getTotalAtomInCurrentProcessor());
+      (dftPtr->d_oncvClassPtr->getTotalNumberOfAtomsInCurrentProcessor());
     // dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
