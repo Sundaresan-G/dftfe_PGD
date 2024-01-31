@@ -702,8 +702,7 @@ namespace dftfe
               kPointIndex,
               CouplingStructure::diagonal,
               oncvClassPtr->getCouplingMatrix(),
-              projectorKetTimesVector, 
-              basisOperationsPtr);
+              projectorKetTimesVector);
 
             if (totalNonTrivialPseudoWfcs > 0)
               {

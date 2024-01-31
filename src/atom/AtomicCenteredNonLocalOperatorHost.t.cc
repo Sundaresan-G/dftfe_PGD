@@ -1067,11 +1067,11 @@ namespace dftfe
                          [iCell * d_numberNodesPerElement + iNode]) *
                       d_numberWaveFunctions;
                     d_BLASWrapperPtr->xcopy(
-                      &d_numberWaveFunctions,
+                      d_numberWaveFunctions,
                       src.data() + localNodeId,
-                      &inc,
+                      inc,
                       &cellWaveFunctionMatrix[d_numberWaveFunctions * iNode],
-                      &inc);
+                      inc);
 
                   } // Cell Extraction
 
