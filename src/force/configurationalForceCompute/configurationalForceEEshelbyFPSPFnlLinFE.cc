@@ -291,7 +291,9 @@ namespace dftfe
             double host_time = MPI_Wtime();
 
             force::wfcContractionsForceKernelsAllH(
+              dftPtr->d_basisOperationsPtrHost,
               kohnShamDFTEigenOperator,
+              dftPtr->d_oncvClassPtr,
               dftPtr->d_eigenVectorsFlattenedHost.begin(),
               d_dftParams.spinPolarized,
               spinIndex,
