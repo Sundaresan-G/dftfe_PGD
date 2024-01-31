@@ -58,6 +58,9 @@ namespace dftfe
     AtomicCenteredNonLocalOperatorBase(
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
         BLASWrapperPtr,
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, memorySpace>>    basisOperatorPtr,    
       std::shared_ptr<AtomCenteredSphericalFunctionContainer>
                          atomCenteredSphericalFunctionContainer,
       const unsigned int numVectors,
@@ -120,6 +123,12 @@ namespace dftfe
     std::shared_ptr<const utils::mpi::MPIPatternP2P<memorySpace>>
                               d_mpiPatternP2P;
     std::vector<unsigned int> d_numberCellsForEachAtom;
+
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, memorySpace>>
+      d_basisOperatorPtr;    
+
 
     // Required by force.cc
     std::vector<ValueType> d_atomCenteredKpointIndexedSphericalFnQuadValues;
@@ -227,14 +236,7 @@ namespace dftfe
 
     void
     computeCMatrixEntries(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-                         basisOperationsPtr,
-      const unsigned int quadratureIndex,
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        BLASWrapperPtrHost);
+      const unsigned int quadratureIndex);
     const std::vector<ValueType> &
     getAtomCenteredKpointIndexedSphericalFnQuadValues();
 
@@ -261,7 +263,8 @@ namespace dftfe
 
     const std::vector<unsigned int> &
     getSphericalFnTimesVectorFlattenedVectorLocalIds();
-
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::HOST>::d_basisOperatorPtr;
 
     using AtomicCenteredNonLocalOperatorBase<ValueType,
                                              dftfe::utils::MemorySpace::HOST>::
@@ -420,11 +423,7 @@ namespace dftfe
         &couplingMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr);
+        &sphericalFunctionKetTimesVectorParFlattened);
 
 
     void
@@ -472,6 +471,8 @@ namespace dftfe
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_BLASWrapperPtr;
 
+    using AtomicCenteredNonLocalOperatorBase<ValueType,
+                                             dftfe::utils::MemorySpace::DEVICE>::d_basisOperatorPtr;
     using AtomicCenteredNonLocalOperatorBase<
       ValueType,
       dftfe::utils::MemorySpace::DEVICE>::d_mpi_communicator;
@@ -550,11 +551,7 @@ namespace dftfe
     transferCMatrixEntriesfromHostObject(
       std::shared_ptr<AtomicCenteredNonLocalOperator<
         ValueType,
-        dftfe::utils::MemorySpace::HOST>> nonLocalOperatorHost,
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr);
+        dftfe::utils::MemorySpace::HOST>> nonLocalOperatorHost);
 
 
 
@@ -593,12 +590,7 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>
         &couplingMatrix,
       distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::shared_ptr<
-        dftfe::basis::FEBasisOperations<ValueType,
-                                        double,
-                                        dftfe::utils::MemorySpace::DEVICE>>
-        basisOperationsPtr);
+        &sphericalFunctionKetTimesVectorParFlattened);
 
     void
     applyC_VCconjtransX(

@@ -95,7 +95,13 @@ namespace dftfe
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-      basisOperationsPtr,
+      basisOperationsHostPtr,
+#if defined(DFTFE_WITH_DEVICE)    
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::DEVICE>>
+      basisOperationsDevicePtr,   
+#endif         
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       BLASWrapperPtrHost,
@@ -114,10 +120,11 @@ namespace dftfe
     unsigned int                            numEigenValues)
   {
     MPI_Barrier(d_mpiCommParent);
-    d_BasisOperatorHostPtr = basisOperationsPtr;
+    d_BasisOperatorHostPtr = basisOperationsHostPtr;
     d_BLASWrapperHostPtr   = BLASWrapperPtrHost;
 #if defined(DFTFE_WITH_DEVICE)
     d_BLASWrapperDevicePtr = BLASWrapperPtrDevice;
+    d_BasisOperatorDevicePtr = basisOperationsDevicePtr;
 #endif
 
 
@@ -148,6 +155,7 @@ namespace dftfe
       AtomicCenteredNonLocalOperator<ValueType,
                                      dftfe::utils::MemorySpace::HOST>>(
       d_BLASWrapperHostPtr,
+      d_BasisOperatorHostPtr,
       d_atomicProjectorFnsContainer,
       d_numEigenValues,
       d_mpiCommParent);
@@ -157,6 +165,7 @@ namespace dftfe
         AtomicCenteredNonLocalOperator<ValueType,
                                        dftfe::utils::MemorySpace::DEVICE>>(
         d_BLASWrapperDevicePtr,
+        d_BasisOperatorDevicePtr,
         d_atomicProjectorFnsContainer,
         d_numEigenValues,
         d_mpiCommParent);
@@ -216,16 +225,13 @@ namespace dftfe
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
     d_nonLocalOperatorHost->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperatorHost->computeCMatrixEntries(d_BasisOperatorHostPtr,
-                                                  d_nlpspQuadratureId,
-                                                  d_BLASWrapperHostPtr);
+    d_nonLocalOperatorHost->computeCMatrixEntries(d_nlpspQuadratureId);
 #if defined(DFTFE_WITH_DEVICE)
     if (d_useDevice)
       {
         MPI_Barrier(d_mpiCommParent);
         d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
-        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
-          d_nonLocalOperatorHost, d_BasisOperatorHostPtr);
+        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(d_nonLocalOperatorHost);
       }
 #endif
     MPI_Barrier(d_mpiCommParent);
@@ -282,8 +288,7 @@ namespace dftfe
           numberElements);
 #if defined(DFTFE_WITH_DEVICE)
         if (d_useDevice)
-          d_nonLocalOperatorDevice->InitalisePartitioner(
-            d_BasisOperatorHostPtr);
+          d_nonLocalOperatorDevice->InitalisePartitioner(d_BasisOperatorHostPtr);
         else
           d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #else
@@ -299,16 +304,13 @@ namespace dftfe
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
     d_nonLocalOperatorHost->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperatorHost->computeCMatrixEntries(d_BasisOperatorHostPtr,
-                                                  d_nlpspQuadratureId,
-                                                  d_BLASWrapperHostPtr);
+    d_nonLocalOperatorHost->computeCMatrixEntries(d_nlpspQuadratureId);
 #if defined(DFTFE_WITH_DEVICE)
     if (d_useDevice)
       {
         MPI_Barrier(d_mpiCommParent);
         d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
-        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
-          d_nonLocalOperatorHost, d_BasisOperatorHostPtr);
+        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(d_nonLocalOperatorHost);
       }
 #endif
     MPI_Barrier(d_mpiCommParent);

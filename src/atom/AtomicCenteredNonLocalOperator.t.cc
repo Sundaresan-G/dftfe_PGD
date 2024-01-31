@@ -25,6 +25,9 @@ namespace dftfe
     AtomicCenteredNonLocalOperatorBase(
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
         BLASWrapperPtr,
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, memorySpace>>    basisOperatorPtr,           
       std::shared_ptr<AtomCenteredSphericalFunctionContainer>
                          atomCenteredSphericalFunctionContainer,
       const unsigned int numVectors,
@@ -39,6 +42,7 @@ namespace dftfe
     , d_isMallocCalled(false)
   {
     d_BLASWrapperPtr = BLASWrapperPtr;
+    d_basisOperatorPtr = basisOperatorPtr;
     d_atomCenteredSphericalFunctionContainer =
       atomCenteredSphericalFunctionContainer;
     d_numberOfVectors           = numVectors;
