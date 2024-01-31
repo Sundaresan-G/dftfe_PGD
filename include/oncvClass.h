@@ -182,7 +182,15 @@ namespace dftfe
 
     bool
     coreNuclearDensityPresent(unsigned int Zno);
-
+    //Returns the number of Projectors for the given atomID in cooridnates List
+    unsigned int
+    getTotalNumberOfSphericalFunctionsForAtomId(unsigned int atomId);
+    // Returns the Total Number of atoms with support in the processor
+    unsigned int
+    getTotalNumberOfAtomsInCurrentProcessor();
+    // Returns the atomID in coordinates list for the iAtom index.
+    unsigned int
+    getAtomIdInCurrentProcessor(unsigned int iAtom);
 
 
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> &
