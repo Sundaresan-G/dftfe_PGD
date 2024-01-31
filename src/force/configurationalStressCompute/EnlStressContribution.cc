@@ -46,8 +46,7 @@ namespace dftfe
     const double spinPolarizedFactor = isSpinPolarized ? 0.5 : 1.0;
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
-         ->getTotalAtomInCurrentProcessor());
+      (dftPtr->d_oncvClassPtr->getTotalAtomInCurrentProcessor());
     // dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
@@ -63,7 +62,7 @@ namespace dftfe
         // get the global charge Id of the current nonlocal atom
         //
         const int nonLocalAtomId =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+          dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
 
 
 
@@ -115,7 +114,9 @@ namespace dftfe
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
-                      dftPtr->d_numberPseudoAtomicWaveFunctions[nonLocalAtomId];
+                      dftPtr->d_oncvClassPtr
+                        ->getTotalNumberOfSphericalFunctionsForAtomId(
+                          nonLocalAtomId);
                     std::vector<dataTypes::number> temp1(3);
                     std::vector<dataTypes::number> temp2(3);
                     for (unsigned int q = 0; q < numQuadPoints; ++q)

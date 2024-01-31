@@ -182,7 +182,7 @@ namespace dftfe
 
     bool
     coreNuclearDensityPresent(unsigned int Zno);
-    //Returns the number of Projectors for the given atomID in cooridnates List
+    // Returns the number of Projectors for the given atomID in cooridnates List
     unsigned int
     getTotalNumberOfSphericalFunctionsForAtomId(unsigned int atomId);
     // Returns the Total Number of atoms with support in the processor

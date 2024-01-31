@@ -49,8 +49,7 @@ namespace dftfe
     const unsigned int numQuadPoints = forceEvalNLP.n_q_points;
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
-         ->getTotalAtomInCurrentProcessor());
+      (dftPtr->d_oncvClassPtr->getTotalAtomInCurrentProcessor());
     // dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
@@ -69,9 +68,12 @@ namespace dftfe
         // get the global charge Id of the current nonlocal atom
         //
         const int nonLocalAtomId =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-        const int globalChargeIdNonLocalAtom =
-          dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
+          dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
+
+        // FIXME should use the appropriate map instead of assuming all atoms
+        // are nonlocal atoms
+        const int globalChargeIdNonLocalAtom = nonLocalAtomId;
+        // dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
 
 
         // if map entry corresponding to current nonlocal atom id is empty,
@@ -133,7 +135,9 @@ namespace dftfe
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
-                      dftPtr->d_numberPseudoAtomicWaveFunctions[nonLocalAtomId];
+                      dftPtr->d_oncvClassPtr
+                        ->getTotalNumberOfSphericalFunctionsForAtomId(
+                          nonLocalAtomId);
                     // std::cout<<startingPseudoWfcIdFlattened <<std::endl;
                     std::vector<dataTypes::number> temp2(3);
                     for (unsigned int q = 0; q < numQuadPoints; ++q)
