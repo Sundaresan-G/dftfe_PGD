@@ -710,5 +710,26 @@ namespace dftfe
     return d_nonLocalOperatorDevice;
   }
 #endif
+  template <typename ValueType>
+  unsigned int
+  oncvClass<ValueType>::getTotalNumberOfAtomsInCurrentProcessor()
+  {
+    return d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess().size();
+  }
 
+    template <typename ValueType>
+  unsigned int
+  oncvClass<ValueType>::getAtomIdInCurrentProcessor(unsigned int iAtom)
+  {
+    std::vector<unsigned int> atomIdList = d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+    return (atomIdList[iAtom]);
+  }
+
+    template <typename ValueType>
+  unsigned int
+  oncvClass<ValueType>::getTotalNumberOfSphericalFunctionsForAtomId(unsigned int atomId)
+  {
+    std::vector<unsigned int> atomicNumbers = d_atomicProjectorFnsContainer->getAtomicNumbers();
+    return(d_atomicProjectorFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(atomicNumbers[atomId]));
+  }
 } // namespace dftfe
