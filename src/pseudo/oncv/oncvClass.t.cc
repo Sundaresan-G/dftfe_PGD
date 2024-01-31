@@ -96,12 +96,12 @@ namespace dftfe
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
       basisOperationsHostPtr,
-#if defined(DFTFE_WITH_DEVICE)    
+#if defined(DFTFE_WITH_DEVICE)
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::DEVICE>>
-      basisOperationsDevicePtr,   
-#endif         
+      basisOperationsDevicePtr,
+#endif
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       BLASWrapperPtrHost,
@@ -123,7 +123,7 @@ namespace dftfe
     d_BasisOperatorHostPtr = basisOperationsHostPtr;
     d_BLASWrapperHostPtr   = BLASWrapperPtrHost;
 #if defined(DFTFE_WITH_DEVICE)
-    d_BLASWrapperDevicePtr = BLASWrapperPtrDevice;
+    d_BLASWrapperDevicePtr   = BLASWrapperPtrDevice;
     d_BasisOperatorDevicePtr = basisOperationsDevicePtr;
 #endif
 
@@ -231,7 +231,8 @@ namespace dftfe
       {
         MPI_Barrier(d_mpiCommParent);
         d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
-        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(d_nonLocalOperatorHost);
+        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
+          d_nonLocalOperatorHost);
       }
 #endif
     MPI_Barrier(d_mpiCommParent);
@@ -288,7 +289,8 @@ namespace dftfe
           numberElements);
 #if defined(DFTFE_WITH_DEVICE)
         if (d_useDevice)
-          d_nonLocalOperatorDevice->InitalisePartitioner(d_BasisOperatorHostPtr);
+          d_nonLocalOperatorDevice->InitalisePartitioner(
+            d_BasisOperatorHostPtr);
         else
           d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #else
@@ -310,7 +312,8 @@ namespace dftfe
       {
         MPI_Barrier(d_mpiCommParent);
         d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
-        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(d_nonLocalOperatorHost);
+        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
+          d_nonLocalOperatorHost);
       }
 #endif
     MPI_Barrier(d_mpiCommParent);

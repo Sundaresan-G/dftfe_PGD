@@ -49,7 +49,9 @@ namespace dftfe
     const unsigned int numQuadPoints = forceEvalNLP.n_q_points;
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+         ->getTotalAtomInCurrentProcessor());
+    // dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;
@@ -89,15 +91,15 @@ namespace dftfe
             const unsigned int elementId =
               cellIdToCellNumberMap.find(subCellPtr->id())->second;
             for (unsigned int i = 0;
-                 i <
-                 dftPtr
-                   ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                   .size();
+                 i < (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                        ->getCellIdToAtomIdsLocalCompactSupportMap())
+                       .find(elementId)
+                       ->second.size();
                  i++)
-              if (dftPtr
-                    ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                                                                     [i] ==
-                  iAtom)
+              if ((dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                     ->getCellIdToAtomIdsLocalCompactSupportMap())
+                    .find(elementId)
+                    ->second[i] == iAtom)
                 {
                   isPseudoWfcsAtomInCell      = true;
                   isPseudoWfcsAtomInMacroCell = true;
@@ -117,16 +119,17 @@ namespace dftfe
 
                     const unsigned int startingPseudoWfcIdFlattened =
                       kPoint *
-                        dftPtr
-                          ->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+                        dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                          ->getTotalNonTrivialSphericalFnsOverAllCells() *
                         numQuadPoints +
-                      dftPtr
-                          ->d_nonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                         ->getNonTrivialSphericalFnsCellStartIndex())
+                          [elementId] *
                         numQuadPoints +
-                      dftPtr
-                          ->d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [iAtom][elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                         ->getAtomIdToNonTrivialSphericalFnCellStartIndex())
+                          .find(iAtom)
+                          ->second[elementId] *
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
@@ -236,7 +239,9 @@ namespace dftfe
       matrixFreeData.n_active_entries_per_cell_batch(cell);
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+         ->getTotalAtomInCurrentProcessor());
+    //  dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;
@@ -265,15 +270,15 @@ namespace dftfe
             const unsigned int elementId =
               cellIdToCellNumberMap.find(subCellPtr->id())->second;
             for (unsigned int i = 0;
-                 i <
-                 dftPtr
-                   ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                   .size();
+                 i < (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                        ->getCellIdToAtomIdsLocalCompactSupportMap())
+                       .find(elementId)
+                       ->second.size();
                  i++)
-              if (dftPtr
-                    ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                                                                     [i] ==
-                  iAtom)
+              if ((dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                     ->getCellIdToAtomIdsLocalCompactSupportMap())
+                    .find(elementId)
+                    ->second[i] == iAtom)
                 {
                   isPseudoWfcsAtomInCell = true;
                   break;
@@ -287,16 +292,17 @@ namespace dftfe
                   {
                     const unsigned int startingPseudoWfcIdFlattened =
                       kPoint *
-                        dftPtr
-                          ->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+                        (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                           ->getTotalNonTrivialSphericalFnsOverAllCells()) *
                         numQuadPoints +
-                      dftPtr
-                          ->d_nonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                         ->getNonTrivialSphericalFnsCellStartIndex())
+                          [elementId] *
                         numQuadPoints +
-                      dftPtr
-                          ->d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [iAtom][elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                         ->getAtomIdToNonTrivialSphericalFnCellStartIndex())
+                          .find(iAtom)
+                          ->second[elementId] *
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =

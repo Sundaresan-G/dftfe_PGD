@@ -23,8 +23,8 @@
 #    include "operatorDevice.h"
 #    include "dftParameters.h"
 #    include "FEBasisOperations.h"
-#include "oncvClass.h"
-#include <memory>
+#    include "oncvClass.h"
+#    include <memory>
 
 namespace dftfe
 {
@@ -36,16 +36,16 @@ namespace dftfe
         dftfe::basis::FEBasisOperations<dataTypes::number,
                                         double,
                                         dftfe::utils::MemorySpace::DEVICE>>
-        &                                     basisOperationsPtr,
-      operatorDFTDeviceClass &                operatorMatrix,
-      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,        
-      const dataTypes::number *               X,
-      const unsigned int                      spinPolarizedFlag,
-      const unsigned int                      spinIndex,
-      const std::vector<std::vector<double>> &eigenValuesH,
-      const std::vector<std::vector<double>> &partialOccupanciesH,
-      const std::vector<double> &             kPointCoordinates,
-      const unsigned int *                    nonTrivialIdToElemIdMapH,
+        &                                                  basisOperationsPtr,
+      operatorDFTDeviceClass &                             operatorMatrix,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+      const dataTypes::number *                            X,
+      const unsigned int                                   spinPolarizedFlag,
+      const unsigned int                                   spinIndex,
+      const std::vector<std::vector<double>> &             eigenValuesH,
+      const std::vector<std::vector<double>> &             partialOccupanciesH,
+      const std::vector<double> &                          kPointCoordinates,
+      const unsigned int *nonTrivialIdToElemIdMapH,
       const unsigned int *projecterKetTimesFlattenedVectorLocalIdsH,
       const unsigned int  MLoc,
       const unsigned int  N,
