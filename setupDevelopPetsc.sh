@@ -33,7 +33,7 @@ DCCL_PATH=""
 mdiPath=""
 
 #Toggle GPU compilation
-withGPU=OFF
+withGPU=ON
 gpuLang="cuda"     # Use "cuda"/"hip"
 gpuVendor="nvidia" # Use "nvidia/amd"
 withGPUAwareMPI=OFF #Please use this option with care

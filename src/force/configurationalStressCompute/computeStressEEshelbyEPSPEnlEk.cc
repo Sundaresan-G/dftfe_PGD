@@ -246,6 +246,7 @@ namespace dftfe
             forceDevice::wfcContractionsForceKernelsAllH(
               dftPtr->d_basisOperationsPtrDevice,
               kohnShamDFTEigenOperatorDevice,
+              dftPtr->d_oncvClassPtr,
               dftPtr->d_eigenVectorsFlattenedDevice.begin(),
               d_dftParams.spinPolarized,
               spinIndex,
@@ -289,7 +290,9 @@ namespace dftfe
             double host_time = MPI_Wtime();
 
             force::wfcContractionsForceKernelsAllH(
+              dftPtr->d_basisOperationsPtrHost,
               kohnShamDFTEigenOperator,
+              dftPtr->d_oncvClassPtr,
               dftPtr->d_eigenVectorsFlattenedHost.begin(),
               d_dftParams.spinPolarized,
               spinIndex,
