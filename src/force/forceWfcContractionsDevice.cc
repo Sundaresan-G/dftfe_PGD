@@ -1084,12 +1084,11 @@ namespace dftfe
             //  numPsi);
 
             oncvClassPtr->getNonLocalOperatorDevice()->applyVCconjtransOnX(
-              flattenedArrayBlock,
+              deviceFlattenedArrayBlock.begin(),
               kPointIndex,
               CouplingStructure::diagonal,
-              oncvClassPtr->getCouplingMatrix(),
-              projectorKetTimesVectorD,
-              basisOperationsPtr);
+              oncvClassPtr->getCouplingMatrixDevice(),
+              projectorKetTimesVectorD);
 
             // dftfe::utils::deviceSynchronize();
             // MPI_Barrier(d_mpiCommParent);
