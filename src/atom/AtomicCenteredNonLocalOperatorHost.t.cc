@@ -1057,7 +1057,7 @@ namespace dftfe
     sphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
 
     const unsigned int                inc = 1;
-    std::vector<std::complex<double>> cellWaveFunctionMatrix(
+    std::vector<ValueType> cellWaveFunctionMatrix(
       d_numberNodesPerElement * d_numberWaveFunctions, 0.0);
 
 
@@ -1095,9 +1095,7 @@ namespace dftfe
           }     // Cell Loop
         applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened,
                             sphericalFnTimesWavefunctionMatrix);
-        const dftfe::utils::MemoryStorage<double,
-                                          dftfe::utils::MemorySpace::HOST>
-          applyV_onCconjtransX(couplingtype,
+        applyV_onCconjtransX(couplingtype,
                                couplingMatrix,
                                sphericalFunctionKetTimesVectorParFlattened,
                                sphericalFnTimesWavefunctionMatrix,
