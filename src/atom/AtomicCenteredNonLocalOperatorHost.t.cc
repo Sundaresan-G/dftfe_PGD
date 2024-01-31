@@ -764,9 +764,7 @@ namespace dftfe
             //                                  [d_numberWaveFunctions * alpha],
             //   inc,
             //   sphericalFunctionKetTimesVectorParFlattened.data() +
-            //     sphericalFunctionKetTimesVectorParFlattened.getMPIPatternP2P()
-            //         ->globalToLocal(id) *
-            //       d_numberWaveFunctions,
+            //     sphericalFunctionKetTimesVectorParFlattened.getMPIPatternP2P() ->globalToLocal(id) *d_numberWaveFunctions,
             //   inc);
           }
       }
@@ -1046,9 +1044,9 @@ namespace dftfe
     sphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
 
     const unsigned int                inc = 1;
-    std::vector<ValueType> cellWaveFunctionMatrix(
-      d_numberNodesPerElement * d_numberWaveFunctions, 0.0);
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST> cellWaveFunctionMatrix;
 
+    cellWaveFunctionMatrix.resize(d_numberNodesPerElement * d_numberWaveFunctions, 0.0);
 
 
     if (d_totalNonlocalElems)
