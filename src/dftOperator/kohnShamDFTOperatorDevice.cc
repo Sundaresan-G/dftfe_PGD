@@ -488,9 +488,7 @@ namespace dftfe
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          BVec,
-          d_sphericalFnTimesVectorParFlattenedDevice,
-          d_parallelSphericalFnKetTimesBlockVectorDevice);
+          BVec, d_parallelSphericalFnKetTimesBlockVectorDevice);
         d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
           d_cellWaveFunctionMatrix);
         d_totalNonlocalElemsPseudo =

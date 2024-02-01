@@ -208,9 +208,7 @@ namespace dftfe
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,
-          projectorKetTimesVector,
-          d_SphericalFunctionKetTimesVectorParFlattened);
+          numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -256,9 +254,7 @@ namespace dftfe
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,
-          projectorKetTimesVector,
-          d_SphericalFunctionKetTimesVectorParFlattened);
+          numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -321,9 +317,7 @@ namespace dftfe
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,
-          projectorKetTimesVector,
-          d_SphericalFunctionKetTimesVectorParFlattened);
+          numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
   }
 

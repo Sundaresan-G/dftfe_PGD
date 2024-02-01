@@ -96,7 +96,7 @@ namespace dftfe
     atomSupportInElement(unsigned int iElem);
 
     unsigned int
-    getGlobalIdofAtomIdSphericalFnPair(const unsigned int atomId,
+    getGlobalDofAtomIdSphericalFnPair(const unsigned int atomId,
                                        const unsigned int alpha);
 
     unsigned int
@@ -120,7 +120,8 @@ namespace dftfe
       d_BLASWrapperPtr;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
       d_atomCenteredSphericalFunctionContainer;
-    std::shared_ptr<const utils::mpi::MPIPatternP2P<memorySpace>>
+    std::shared_ptr<
+      const utils::mpi::MPIPatternP2P<dftfe::utils::MemorySpace::HOST>>
                               d_mpiPatternP2P;
     std::vector<unsigned int> d_numberCellsForEachAtom;
 
@@ -215,20 +216,11 @@ namespace dftfe
   {
   public:
     void
-    initialiseOperatorActionOnX(
-      unsigned int kPointIndex,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &sphericalFnTimesWavefunctionMatrix);
+    initialiseOperatorActionOnX(unsigned int kPointIndex);
 
     void
     initialiseFlattenedDataStructure(
       unsigned int numberWaveFunctions,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &sphericalFnTimesWavefunctionMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened);
@@ -384,32 +376,20 @@ namespace dftfe
         &couplingMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &        sphericalFnTimesWavefunctionMatrix,
+        &        sphericalFunctionKetTimesVectorParFlattened,
       const bool flagCopyResultsToMatrix = true);
 
     void
     applyAllReduceonCTX(
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &sphericalFnTimesWavefunctionMatrix);
+        &sphericalFunctionKetTimesVectorParFlattened);
 
 
     void
     applyCconjtrans_onX(
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &sphericalFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange);
 
 
@@ -428,12 +408,14 @@ namespace dftfe
     void
     applyC_VCconjtransX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
-        &Xout,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &sphericalFnTimesWavefunctionMatrix,
+        &                                         Xout,
       const std::pair<unsigned int, unsigned int> cellRange);
+
+  private:
+    std::map<
+      unsigned int,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
+      d_sphericalFnTimesWavefunMatrix;
   };
 #if defined(DFTFE_WITH_DEVICE)
   template <typename ValueType>
@@ -450,8 +432,6 @@ namespace dftfe
     void
     initialiseFlattenedDataStructure(
       unsigned int numberWaveFunctions,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFnTimesWavefunctionMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
         &sphericalFunctionKetTimesVectorParFlattened);
@@ -558,18 +538,15 @@ namespace dftfe
 
     void
     applyCconjtrans_onX(
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &                                   sphericalFnTimesWavefunctionMatrix,
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::DEVICE> &X,
       std::pair<unsigned int, unsigned int> cellRange);
 
     void
-    applyAllReduceonCTX(
-      distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &        sphericalFnTimesWavefunctionMatrix,
-      const bool skip1 = false,
-      const bool skip2 = false);
+    applyAllReduceonCTX(distributedDeviceVec<ValueType>
+                          &        sphericalFunctionKetTimesVectorParFlattened,
+                        const bool skip1 = false,
+                        const bool skip2 = false);
 
     void
     applyV_onCconjtransX(
@@ -643,6 +620,8 @@ namespace dftfe
     std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_cellNodeIdMapNonLocalToLocalDevice;
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+      d_sphericalFnTimesWavefunctionMatrix;
   };
 #endif
 

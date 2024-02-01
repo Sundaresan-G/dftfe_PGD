@@ -92,7 +92,9 @@ namespace dftfe
     const std::vector<unsigned int> &atomicNumber =
       d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
 
-
+    std::cout << "Partitioner is initialise on task: " << d_this_mpi_process
+              << std::endl;
+    MPI_Barrier(d_mpi_communicator);
     // //
     // // data structures for memory optimization of projectorKetTimesVector
     // //
@@ -393,7 +395,16 @@ namespace dftfe
           }
       }
 
-
+      // d_mpiPatternP2P =
+      //   std::make_shared<const
+      //   utils::mpi::MPIPatternP2P<dftfe::utils::MemorySpace::HOST>>(
+      //     d_locallyOwnedSphericalFunctionIdsCurrentProcess,
+      //     d_ghostSphericalFunctionIdsCurrentProcess,
+      //     d_mpi_communicator);
+      // ValueType zero = 0.0;
+      // d_SphericalFunctionKetTimesVectorFlattened =
+      //   dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>(
+      //     d_mpiPatternP2P, d_numberOfVectors, zero);
 #ifdef USE_COMPLEX
     distributedCPUVec<std::complex<double>> vec(
       d_locallyOwnedSphericalFunctionIdsCurrentProcess,
@@ -458,7 +469,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
   AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
-    getGlobalIdofAtomIdSphericalFnPair(const unsigned int atomId,
+    getGlobalDofAtomIdSphericalFnPair(const unsigned int atomId,
                                        const unsigned int alpha)
   {
     return d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(

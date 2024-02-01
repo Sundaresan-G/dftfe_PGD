@@ -190,13 +190,19 @@ namespace dftfe
               [nonLocalGlobalAtomId][elementId] = accumTemp[elementId];
             accumTemp[elementId] += numberPseudoWaveFunctions;
             // std::cout
-            //   << "DEBUGRef: accumTemp outputs-> atomId elementId  d_nonTrivialPseudoWfcsPerCellZetaDeltaVQuads d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads globalNonLocalAtomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads accumTemp: "
+            //   << "DEBUGRef: accumTemp outputs-> atomId elementId
+            //   d_nonTrivialPseudoWfcsPerCellZetaDeltaVQuads
+            //   d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
+            //   globalNonLocalAtomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
+            //   accumTemp: "
             //   << nonLocalGlobalAtomId << " " << elementId << " "
-            //   << d_nonTrivialPseudoWfcsPerCellZetaDeltaVQuads[elementId] << " "
+            //   << d_nonTrivialPseudoWfcsPerCellZetaDeltaVQuads[elementId] << "
+            //   "
             //   << d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
             //        [iAtom][elementId]
             //   << " "
-            //   << globalNonLocalAtomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
+            //   <<
+            //   globalNonLocalAtomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
             //        [nonLocalGlobalAtomId][elementId]
             //   << " " << accumTemp[elementId] << std::endl;
           }
@@ -240,10 +246,27 @@ namespace dftfe
         for (unsigned int ipsp = 0;
              ipsp < d_numberPseudoAtomicWaveFunctions[atomId];
              ++ipsp)
-          d_projectorKetTimesVectorLocalIds[iAtom].push_back(
-            d_projectorKetTimesVectorPar[0].get_partitioner()->global_to_local(
-              d_projectorIdsNumberingMapCurrentProcess[std::make_pair(atomId,
-                                                                      ipsp)]));
+          {
+            d_projectorKetTimesVectorLocalIds[iAtom].push_back(
+              d_projectorKetTimesVectorPar[0]
+                .get_partitioner()
+                ->global_to_local(
+                  d_projectorIdsNumberingMapCurrentProcess[std::make_pair(
+                    atomId, ipsp)]));
+
+            std::cout
+              << "DEBUGRef: mpi globalId and localId: " << this_mpi_process
+              << " "
+              << d_projectorIdsNumberingMapCurrentProcess[std::make_pair(atomId,
+                                                                         ipsp)]
+              << " "
+              << d_projectorKetTimesVectorPar[0]
+                   .get_partitioner()
+                   ->global_to_local(
+                     d_projectorIdsNumberingMapCurrentProcess[std::make_pair(
+                       atomId, ipsp)])
+              << " " << iAtom << std::endl;
+          }
       }
 
     d_projecterKetTimesFlattenedVectorLocalIds.clear();
@@ -350,7 +373,11 @@ namespace dftfe
           0.0);
 #endif
 
-        //std::cout<<"RefDEBUG: mpiRank iAtom atomIndex numberElements NumTotalSphericalFunctions: "<<this_mpi_process<<" "<<iAtom<<" "<<globalChargeIdNonLocalAtom<<" "<<numberElementsInAtomCompactSupport<<" "<<numberPseudoWaveFunctions<<std::endl;
+        // std::cout<<"RefDEBUG: mpiRank iAtom atomIndex numberElements
+        // NumTotalSphericalFunctions: "<<this_mpi_process<<" "<<iAtom<<"
+        // "<<globalChargeIdNonLocalAtom<<"
+        // "<<numberElementsInAtomCompactSupport<<"
+        // "<<numberPseudoWaveFunctions<<std::endl;
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              ++iElemComp)
           {
@@ -372,7 +399,7 @@ namespace dftfe
             int iPsp  = -1;
             int lTemp = 1e5;
 
-          
+
             for (int iPseudoWave = 0; iPseudoWave < numberPseudoWaveFunctions;
                  ++iPseudoWave)
               {
@@ -566,7 +593,12 @@ namespace dftfe
                     [iAtom][elementId];
                 for (int kPoint = 0; kPoint < maxkPoints; ++kPoint)
                   {
-                    //std::cout<<"DEBUGRef: mpiRank iAtom atomID ElementID startIndex+TempIndex startIndex1 startIndex2: "<<this_mpi_process<<" "<<iAtom<<" "<<globalChargeIdNonLocalAtom<<" "<<elementId<<" "<<iPseudoWave<<" "<<startIndex1<<" "<<startIndex2<<std::endl;
+                    // std::cout<<"DEBUGRef: mpiRank iAtom atomID ElementID
+                    // startIndex+TempIndex startIndex1 startIndex2:
+                    // "<<this_mpi_process<<" "<<iAtom<<"
+                    // "<<globalChargeIdNonLocalAtom<<" "<<elementId<<"
+                    // "<<iPseudoWave<<" "<<startIndex1<<"
+                    // "<<startIndex2<<std::endl;
                     for (int iQuadPoint = 0;
                          iQuadPoint < numberQuadraturePoints;
                          ++iQuadPoint)

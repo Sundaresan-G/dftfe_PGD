@@ -112,7 +112,10 @@ namespace dftfe
               [atomId][elementId] = accumTemp[elementId];
             accumTemp[elementId] += numSphericalFunctions;
             // std::cout
-            //   << "DEBUGNew: accumTemp outputs-> atomId elementId  d_nonTrivialSphericalFnPerCell d_atomIdToNonTrivialSphericalFnCellStartIndex globalAtomIdToNonTrivialSphericalFnsCellStartIndex accumTemp: "
+            //   << "DEBUGNew: accumTemp outputs-> atomId elementId
+            //   d_nonTrivialSphericalFnPerCell
+            //   d_atomIdToNonTrivialSphericalFnCellStartIndex
+            //   globalAtomIdToNonTrivialSphericalFnsCellStartIndex accumTemp: "
             //   << atomId << " " << elementId << " "
             //   << d_nonTrivialSphericalFnPerCell[elementId] << " "
             //   << d_atomIdToNonTrivialSphericalFnCellStartIndex
@@ -164,12 +167,20 @@ namespace dftfe
             unsigned int globalId = AtomicCenteredNonLocalOperatorBase<
               ValueType,
               dftfe::utils::MemorySpace::HOST>::
-              getGlobalIdofAtomIdSphericalFnPair(atomId, alpha);
+              getGlobalDofAtomIdSphericalFnPair(atomId, alpha);
+            std::cout<<"DEBUG: "  
             sphericalFnKetTimesVectorLocalIds[iAtom].push_back(
               AtomicCenteredNonLocalOperatorBase<
                 ValueType,
                 dftfe::utils::MemorySpace::HOST>::
                 getLocalIdOfDistributedVec(globalId));
+            std::cout << "DEBUGNew: mpi globalId and localId: "
+                      << d_this_mpi_process << " " << globalId << " "
+                      << AtomicCenteredNonLocalOperatorBase<
+                           ValueType,
+                           dftfe::utils::MemorySpace::HOST>::
+                           getLocalIdOfDistributedVec(globalId)
+                      << " " << iAtom << std::endl;
           }
       }
 
@@ -259,7 +270,10 @@ namespace dftfe
         //     NumTotalSphericalFunctions * numberQuadraturePoints,
         //   0.0);
 
-        //std::cout<<"NewDEBUG: mpiRank iAtom atomIndex numberElements NumTotalSphericalFunctions: "<<d_this_mpi_process<<" "<<iAtom<<" "<<atomId<<" "<<numberElementsInAtomCompactSupport<<" "<<NumTotalSphericalFunctions<<std::endl;
+        // std::cout<<"NewDEBUG: mpiRank iAtom atomIndex numberElements
+        // NumTotalSphericalFunctions: "<<d_this_mpi_process<<" "<<iAtom<<"
+        // "<<atomId<<" "<<numberElementsInAtomCompactSupport<<"
+        // "<<NumTotalSphericalFunctions<<std::endl;
 
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              ++iElemComp)
@@ -445,8 +459,12 @@ namespace dftfe
                          tempIndex < endIndex;
                          tempIndex++)
                       {
-                        //std::cout<<"DEBUGNew: mpiRank iAtom atomID ElementID startIndex+TempIndex startIndex1 startIndex2: "<<d_this_mpi_process<<" "<<iAtom<<" "<<ChargeId<<" "<<elementIndex<<" "<<tempIndex<<" "<<startIndex1<<" "<<startIndex2<<std::endl;
-                        
+                        // std::cout<<"DEBUGNew: mpiRank iAtom atomID ElementID
+                        // startIndex+TempIndex startIndex1 startIndex2:
+                        // "<<d_this_mpi_process<<" "<<iAtom<<" "<<ChargeId<<"
+                        // "<<elementIndex<<" "<<tempIndex<<" "<<startIndex1<<"
+                        // "<<startIndex2<<std::endl;
+
                         for (int iQuadPoint = 0;
                              iQuadPoint < numberQuadraturePoints;
                              ++iQuadPoint)
@@ -459,7 +477,9 @@ namespace dftfe
                              iQuadPoint] = sphericalFunctionBasis
                               [kPoint * numberQuadraturePoints *
                                  (2 * lQuantumNumber + 1) +
-                               (tempIndex-startIndex) * numberQuadraturePoints + iQuadPoint];
+                               (tempIndex - startIndex) *
+                                 numberQuadraturePoints +
+                               iQuadPoint];
 
                         for (int iQuadPoint = 0;
                              iQuadPoint < numberQuadraturePoints;
@@ -475,7 +495,8 @@ namespace dftfe
                                 sphericalFunctionBasisTimesImageDist
                                   [kPoint * numberQuadraturePoints *
                                      (2 * lQuantumNumber + 1) * 3 +
-                                   (tempIndex-startIndex) * numberQuadraturePoints * 3 +
+                                   (tempIndex - startIndex) *
+                                     numberQuadraturePoints * 3 +
                                    iQuadPoint * 3 + iDim];
                       } // tempIndex
                   }
@@ -737,11 +758,7 @@ namespace dftfe
     applyAllReduceonCTX(
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &shapeFnTimesWavefunctionMatrix)
+        &sphericalFunctionKetTimesVectorParFlattened)
   {
     const std::vector<unsigned int> atomIdsInProc =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
@@ -764,14 +781,14 @@ namespace dftfe
                               .getMPIPatternP2P()
                               ->globalToLocal(id) *
                             d_numberWaveFunctions,
-                        shapeFnTimesWavefunctionMatrix[atomId].begin() +
+                        d_sphericalFnTimesWavefunMatrix[atomId].begin() +
                           d_numberWaveFunctions * alpha,
                         d_numberWaveFunctions * sizeof(ValueType));
 
 
             // d_BLASWrapperPtr->xcopy(
             //   d_numberWaveFunctions,
-            //   &shapeFnTimesWavefunctionMatrix[atomId]
+            //   &d_sphericalFnTimesWavefunMatrix[atomId]
             //                                  [d_numberWaveFunctions * alpha],
             //   inc,
             //   sphericalFunctionKetTimesVectorParFlattened.data() +
@@ -790,10 +807,6 @@ namespace dftfe
     applyCconjtrans_onX(
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::HOST> &X,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &shapeFnTimesWavefunctionMatrix,
       const std::pair<unsigned int, unsigned int> cellRange)
   {
     const ValueType    zero(0.0), one(1.0);
@@ -834,7 +847,7 @@ namespace dftfe
                                          numberSphericalFunctions],
               d_numberNodesPerElement,
               &one,
-              &shapeFnTimesWavefunctionMatrix[atomId][0],
+              &d_sphericalFnTimesWavefunMatrix[atomId][0],
               d_numberWaveFunctions);
 
           } // iAtom
@@ -852,11 +865,7 @@ namespace dftfe
         &couplingMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &        shapeFnTimesWavefunctionMatrix,
+        &        sphericalFunctionKetTimesVectorParFlattened,
       const bool flagCopyResultsToMatrix)
   {
     const std::vector<unsigned int> &atomicNumber =
@@ -893,7 +902,7 @@ namespace dftfe
                         localId * d_numberWaveFunctions,
                       sphericalFunctionKetTimesVectorParFlattened.begin() +
                         localId * d_numberWaveFunctions + d_numberWaveFunctions,
-                      shapeFnTimesWavefunctionMatrix[atomId].begin() +
+                      d_sphericalFnTimesWavefunMatrix[atomId].begin() +
                         d_numberWaveFunctions * alpha,
                       [&nonlocalConstantV](auto &a) {
                         return nonlocalConstantV * a;
@@ -918,11 +927,7 @@ namespace dftfe
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
     applyC_VCconjtransX(
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>
-        &Xout,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &shapeFnTimesWavefunctionMatrix,
+        &                                         Xout,
       const std::pair<unsigned int, unsigned int> cellRange)
   {
     const ValueType                                zero(0.0), one(1.0);
@@ -955,7 +960,7 @@ namespace dftfe
               d_numberNodesPerElement,
               numberSphericalFunctions,
               &one,
-              &shapeFnTimesWavefunctionMatrix[atomId][0],
+              &d_sphericalFnTimesWavefunMatrix[atomId][0],
               d_numberWaveFunctions,
               &d_CMatrixEntriesTranspose[atomId][nonZeroElementMatrixId]
                                         [d_kPointIndex *
@@ -975,12 +980,7 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
-    initialiseOperatorActionOnX(
-      unsigned int kPointIndex,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &shapeFnTimesWavefunctionMatrix)
+    initialiseOperatorActionOnX(unsigned int kPointIndex)
   {
     d_kPointIndex = kPointIndex;
 
@@ -992,7 +992,7 @@ namespace dftfe
       {
         unsigned int atomId = atomIdsInProcessor[iAtom];
 
-        shapeFnTimesWavefunctionMatrix[atomId].setValue(0.0);
+        d_sphericalFnTimesWavefunMatrix[atomId].setValue(0.0);
       }
   }
 
@@ -1001,10 +1001,6 @@ namespace dftfe
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>::
     initialiseFlattenedDataStructure(
       unsigned int numberWaveFunctions,
-      std::map<
-        unsigned int,
-        dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-        &shapeFnTimesWavefunctionMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened)
@@ -1015,7 +1011,7 @@ namespace dftfe
       d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
       numberWaveFunctions,
       sphericalFunctionKetTimesVectorParFlattened);
-    shapeFnTimesWavefunctionMatrix.clear();
+    d_sphericalFnTimesWavefunMatrix.clear();
     const std::vector<unsigned int> atomIdsInProcessor =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     const std::vector<unsigned int> &atomicNumber =
@@ -1027,9 +1023,8 @@ namespace dftfe
         unsigned int numberSphericalFunctions =
           d_atomCenteredSphericalFunctionContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-        shapeFnTimesWavefunctionMatrix[atomId].resize(numberSphericalFunctions *
-                                                        d_numberWaveFunctions,
-                                                      ValueType(0.0));
+        d_sphericalFnTimesWavefunMatrix[atomId].resize(
+          numberSphericalFunctions * d_numberWaveFunctions, ValueType(0.0));
       }
   }
 
@@ -1046,13 +1041,7 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::HOST>
         &sphericalFunctionKetTimesVectorParFlattened)
   {
-    std::map<
-      unsigned int,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
-      sphericalFnTimesWavefunctionMatrix;
-
-    initialiseOperatorActionOnX(kPointIndex,
-                                sphericalFnTimesWavefunctionMatrix);
+    initialiseOperatorActionOnX(kPointIndex);
     sphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
 
     const unsigned int inc = 1;
@@ -1090,17 +1079,14 @@ namespace dftfe
 
                 applyCconjtrans_onX(
                   cellWaveFunctionMatrix,
-                  sphericalFnTimesWavefunctionMatrix,
                   std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
 
               } // if nonlocalAtomPResent
           }     // Cell Loop
-        applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened,
-                            sphericalFnTimesWavefunctionMatrix);
+        applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened);
         applyV_onCconjtransX(couplingtype,
                              couplingMatrix,
                              sphericalFunctionKetTimesVectorParFlattened,
-                             sphericalFnTimesWavefunctionMatrix,
                              false);
 
 

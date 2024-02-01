@@ -40,7 +40,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       // dftfe::utils::deviceSynchronize();
       // std::cout<<"Starting CTX: "<<std::endl;
       d_ONCVnonLocalOperator->applyCconjtrans_onX(
-        d_sphericalFnTimesVectorParFlattenedDevice,
+        d_cellWaveFunctionMatrix,
         std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
 
@@ -52,11 +52,9 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
       projectorKetTimesVector.setValue(0);
     }
 
-  d_ONCVnonLocalOperator->applyAllReduceonCTX(
-    projectorKetTimesVector,
-    d_sphericalFnTimesVectorParFlattenedDevice,
-    skip1,
-    skip2);
+  d_ONCVnonLocalOperator->applyAllReduceonCTX(projectorKetTimesVector,
+                                              skip1,
+                                              skip2);
 
   // Operations related to skip2 (extraction and C^{T}*X) are over. So return
   // control back to chebyshevFilter
@@ -139,13 +137,12 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
         d_cellWaveFunctionMatrix.begin(),
         d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
       d_ONCVnonLocalOperator->applyCconjtrans_onX(
-        d_sphericalFnTimesVectorParFlattenedDevice,
+        d_cellWaveFunctionMatrix,
         std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElemsPseudo));
     }
 
   projectorKetTimesVector.setValue(0);
-  d_ONCVnonLocalOperator->applyAllReduceonCTX(
-    projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
+  d_ONCVnonLocalOperator->applyAllReduceonCTX(projectorKetTimesVector);
   // d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
   //                                                false);
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>

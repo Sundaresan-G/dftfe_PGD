@@ -936,7 +936,7 @@ namespace dftfe
           dummy,
           d_elementIdsInAtomCompactSupport,
           d_nonLocalAtomIdsInCurrentProcess,
-         d_basisOperationsPtrHost->nCells());
+          d_basisOperationsPtrHost->nCells());
       }
   }
 

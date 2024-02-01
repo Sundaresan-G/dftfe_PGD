@@ -406,8 +406,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
   // element level matrix-vector multiplications
   //
 
-  d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex,
-                                                      projectorKetTimesVector);
+  d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
   d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
 
   const unsigned int inc = 1;
@@ -447,20 +446,18 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
 
               d_ONCVnonLocalOperator->applyCconjtrans_onX(
                 d_cellWaveFunctionMatrix,
-                projectorKetTimesVector,
                 std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
 
             } // if nonlocalAtomPResent
         }     // Cell Loop
       d_ONCVnonLocalOperator->applyAllReduceonCTX(
-        d_SphericalFunctionKetTimesVectorParFlattened, projectorKetTimesVector);
+        d_SphericalFunctionKetTimesVectorParFlattened);
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
       d_ONCVnonLocalOperator->applyV_onCconjtransX(
         CouplingStructure::diagonal,
         couplingMatrix,
-        d_SphericalFunctionKetTimesVectorParFlattened,
-        projectorKetTimesVector);
+        d_SphericalFunctionKetTimesVectorParFlattened);
 
 
 
@@ -503,7 +500,6 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
         {
           d_ONCVnonLocalOperator->applyC_VCconjtransX(
             d_cellHamMatrixTimesWaveMatrix,
-            projectorKetTimesVector,
             std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
         }
 

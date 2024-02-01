@@ -36,10 +36,6 @@ namespace dftfe
       distributedDeviceVec<ValueType>
         &sphericalFunctionKetTimesVectorParFlattened)
   {
-    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-      sphericalFnTimesWavefunctionMatrix;
-    sphericalFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
-                                              d_totalNonLocalEntries);
     d_basisOperatorPtr->reinit(d_numberWaveFunctions, 0, 0, false);
 
     initialiseOperatorActionOnX(kPointIndex);
@@ -61,13 +57,12 @@ namespace dftfe
           d_basisOperatorPtr->d_flattenedCellDofIndexToProcessDofIndexMap
             .begin());
         applyCconjtrans_onX(
-          sphericalFnTimesWavefunctionMatrix,
+          cellWaveFunctionMatrix,
           std::pair<unsigned int, unsigned int>(0, d_totalNonlocalElems));
       }
 
     sphericalFunctionKetTimesVectorParFlattened.setValue(0);
-    applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened,
-                        sphericalFnTimesWavefunctionMatrix);
+    applyAllReduceonCTX(sphericalFunctionKetTimesVectorParFlattened);
 
     applyV_onCconjtransX(couplingtype,
                          couplingMatrix,
@@ -81,8 +76,8 @@ namespace dftfe
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
     applyCconjtrans_onX(
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &                                   sphericalFnTimesWavefunctionMatrix,
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::DEVICE> &X,
       std::pair<unsigned int, unsigned int> cellRange)
   {
     const ValueType scalarCoeffAlpha = ValueType(1.0),
@@ -121,7 +116,7 @@ namespace dftfe
         d_sphericalFnTimesVectorAllCellsReductionDevice.begin(),
         d_totalNonlocalElems * d_maxSingleAtomContribution,
         &scalarCoeffBeta,
-        sphericalFnTimesWavefunctionMatrix.begin(),
+        d_sphericalFnTimesWavefunctionMatrix.begin(),
         d_numberWaveFunctions);
   }
 
@@ -187,20 +182,17 @@ namespace dftfe
   template <typename ValueType>
   void
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
-    applyAllReduceonCTX(
-      distributedDeviceVec<ValueType>
-        &sphericalFunctionKetTimesVectorParFlattened,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &        sphericalFnTimesWavefunctionMatrix,
-      const bool skip1,
-      const bool skip2)
+    applyAllReduceonCTX(distributedDeviceVec<ValueType>
+                          &        sphericalFunctionKetTimesVectorParFlattened,
+                        const bool skip1,
+                        const bool skip2)
   {
     if (!skip1)
       dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
         copyToDealiiParallelNonLocalVec(
           d_numberWaveFunctions,
           d_totalNonLocalEntries,
-          sphericalFnTimesWavefunctionMatrix.begin(),
+          d_sphericalFnTimesWavefunctionMatrix.begin(),
           sphericalFunctionKetTimesVectorParFlattened.begin(),
           d_sphericalFnIdsParallelNumberingMapDevice.begin());
 
@@ -495,8 +487,6 @@ namespace dftfe
   AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::DEVICE>::
     initialiseFlattenedDataStructure(
       unsigned int numberWaveFunctions,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &sphericalFnTimesWavefunctionMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
         &sphericalFunctionKetTimesVectorParFlattened)
@@ -555,9 +545,9 @@ namespace dftfe
     d_isMallocCalled = true;
 
 
-    sphericalFnTimesWavefunctionMatrix.clear();
-    sphericalFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
-                                              d_totalNonLocalEntries);
+    d_sphericalFnTimesWavefunctionMatrix.clear();
+    d_sphericalFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
+                                                d_totalNonLocalEntries);
   }
   template <typename ValueType>
   void
