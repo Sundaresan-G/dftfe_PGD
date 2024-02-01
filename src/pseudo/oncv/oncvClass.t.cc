@@ -210,8 +210,7 @@ namespace dftfe
         if (d_useDevice)
           d_nonLocalOperatorDevice->InitalisePartitioner(
             d_BasisOperatorHostPtr);
-        else
-          d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #else
         d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #endif
@@ -291,8 +290,7 @@ namespace dftfe
         if (d_useDevice)
           d_nonLocalOperatorDevice->InitalisePartitioner(
             d_BasisOperatorHostPtr);
-        else
-          d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
+        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #else
         d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
 #endif
@@ -674,7 +672,7 @@ namespace dftfe
                  alpha++)
               {
                 unsigned int globalId =
-                  d_nonLocalOperatorDevice->getGlobalIdofAtomIdSphericalFnPair(
+                  d_nonLocalOperatorDevice->getGlobalDofAtomIdSphericalFnPair(
                     atomId, alpha);
                 const unsigned int id =
                   d_nonLocalOperatorDevice->getLocalIdOfDistributedVec(

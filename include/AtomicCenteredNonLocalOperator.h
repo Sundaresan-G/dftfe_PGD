@@ -97,7 +97,7 @@ namespace dftfe
 
     unsigned int
     getGlobalDofAtomIdSphericalFnPair(const unsigned int atomId,
-                                       const unsigned int alpha);
+                                      const unsigned int alpha);
 
     unsigned int
     getLocalIdOfDistributedVec(const unsigned int globalId);

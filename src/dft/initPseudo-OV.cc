@@ -253,19 +253,6 @@ namespace dftfe
                 ->global_to_local(
                   d_projectorIdsNumberingMapCurrentProcess[std::make_pair(
                     atomId, ipsp)]));
-
-            std::cout
-              << "DEBUGRef: mpi globalId and localId: " << this_mpi_process
-              << " "
-              << d_projectorIdsNumberingMapCurrentProcess[std::make_pair(atomId,
-                                                                         ipsp)]
-              << " "
-              << d_projectorKetTimesVectorPar[0]
-                   .get_partitioner()
-                   ->global_to_local(
-                     d_projectorIdsNumberingMapCurrentProcess[std::make_pair(
-                       atomId, ipsp)])
-              << " " << iAtom << std::endl;
           }
       }
 
@@ -373,11 +360,7 @@ namespace dftfe
           0.0);
 #endif
 
-        // std::cout<<"RefDEBUG: mpiRank iAtom atomIndex numberElements
-        // NumTotalSphericalFunctions: "<<this_mpi_process<<" "<<iAtom<<"
-        // "<<globalChargeIdNonLocalAtom<<"
-        // "<<numberElementsInAtomCompactSupport<<"
-        // "<<numberPseudoWaveFunctions<<std::endl;
+
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              ++iElemComp)
           {
@@ -511,18 +494,7 @@ namespace dftfe
                             projectorFunctionValue =
                               radialProjVal * sphericalHarmonicVal;
 
-                            /*if(iElemComp == 0 && iQuadPoint == 0 &&
-                              iPseudoWave
-                              == 0)
-                              {
-                              std::cout<<"ChargeId : "<<chargeId<<std::endl;
-                              std::cout<<"Coordinates: "<<chargePoint[0]<<"
-                              "<<chargePoint[1]<<" "<<chargePoint[2]<<std::endl;
-                              std::cout<<"Distance : "<<r<<std::endl;
-                              std::cout<<"DeltaVl: "<<deltaVlValue<<std::endl;
-                              std::cout<<"JacTimesWeight:
-                              "<<fe_values.JxW(iQuadPoint)<<std::endl;
-                              }*/
+
 
                             //
                             // kpoint loop
@@ -593,12 +565,6 @@ namespace dftfe
                     [iAtom][elementId];
                 for (int kPoint = 0; kPoint < maxkPoints; ++kPoint)
                   {
-                    // std::cout<<"DEBUGRef: mpiRank iAtom atomID ElementID
-                    // startIndex+TempIndex startIndex1 startIndex2:
-                    // "<<this_mpi_process<<" "<<iAtom<<"
-                    // "<<globalChargeIdNonLocalAtom<<" "<<elementId<<"
-                    // "<<iPseudoWave<<" "<<startIndex1<<"
-                    // "<<startIndex2<<std::endl;
                     for (int iQuadPoint = 0;
                          iQuadPoint < numberQuadraturePoints;
                          ++iQuadPoint)
@@ -1066,8 +1032,6 @@ namespace dftfe
 
             int numRows = radialFunctionData.size();
 
-            // std::cout << "Number of Rows: " << numRows << std::endl;
-
             for (int iProj = 0; iProj < numProj; ++iProj)
               {
                 double xData[numRows];
@@ -1208,41 +1172,7 @@ namespace dftfe
           d_numberPseudoAtomicWaveFunctions[iAtom];
         d_nonLocalPseudoPotentialConstants[iAtom].resize(
           numberPseudoWaveFunctions, 0.0);
-        /*
-        //
-        char pseudoAtomDataFile[256];
-        sprintf(pseudoAtomDataFile,
-        "%s/data/electronicStructure/pseudoPotential/z%u/oncv/pseudoAtomData/PseudoAtomData",
-        DFTFE_PATH.c_str(), atomLocations[iAtom][0]);
-        //
-        std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
-        if(readPseudoDataFileNames.is_open()){
-        while (!readPseudoDataFileNames.eof()) {
-        std::getline(readPseudoDataFileNames, readLine);
-        std::istringstream lineString(readLine);
-        while(lineString >> tempDenominatorDataFileName)
-        pcout << tempDenominatorDataFileName.c_str() << std::endl ;
-        }
-        }
-        //std::cout << c;
-        //while (!readPseudoDataFileNames.eof())
-        //        readPseudoDataFileNames >> tempDenominatorDataFileName;
-        pcout << tempDenominatorDataFileName.c_str() << std::endl ;
-        char denominatorDataFileName[256];
-        sprintf(denominatorDataFileName,
-        "%s/data/electronicStructure/pseudoPotential/z%u/oncv/pseudoAtomData/%s",
-        DFTFE_PATH.c_str(),atomLocations[iAtom][0],
-        tempDenominatorDataFileName.c_str());
 
-        //
-        // 2D vector to store the radial coordinate and its corresponding
-        // function value
-        std::vector< std::vector<double> > denominatorData(0);
-
-        //
-        //read the radial function file
-        //
-        readFile(numberPseudoWaveFunctions,denominatorData,denominatorDataFileName);*/
 
         for (int iPseudoWave = 0; iPseudoWave < numberPseudoWaveFunctions;
              ++iPseudoWave)

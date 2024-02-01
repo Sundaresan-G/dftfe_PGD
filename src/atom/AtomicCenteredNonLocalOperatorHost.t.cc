@@ -111,19 +111,6 @@ namespace dftfe
             globalAtomIdToNonTrivialSphericalFnsCellStartIndex
               [atomId][elementId] = accumTemp[elementId];
             accumTemp[elementId] += numSphericalFunctions;
-            // std::cout
-            //   << "DEBUGNew: accumTemp outputs-> atomId elementId
-            //   d_nonTrivialSphericalFnPerCell
-            //   d_atomIdToNonTrivialSphericalFnCellStartIndex
-            //   globalAtomIdToNonTrivialSphericalFnsCellStartIndex accumTemp: "
-            //   << atomId << " " << elementId << " "
-            //   << d_nonTrivialSphericalFnPerCell[elementId] << " "
-            //   << d_atomIdToNonTrivialSphericalFnCellStartIndex
-            //        [iAtom][elementId]
-            //   << " "
-            //   << globalAtomIdToNonTrivialSphericalFnsCellStartIndex
-            //        [atomId][elementId]
-            //   << " " << accumTemp[elementId] << std::endl;
           }
       }
 
@@ -152,35 +139,26 @@ namespace dftfe
     std::vector<std::vector<unsigned int>> sphericalFnKetTimesVectorLocalIds;
     sphericalFnKetTimesVectorLocalIds.clear();
     sphericalFnKetTimesVectorLocalIds.resize(d_totalAtomsInCurrentProc);
-
-
     for (unsigned int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; ++iAtom)
       {
-        unsigned int       atomId = atomIdsInProc[iAtom];
+        const unsigned int atomId = atomIdsInProc[iAtom];
         const unsigned int Znum   = atomicNumber[atomId];
         const unsigned int numSphericalFunctions =
           d_atomCenteredSphericalFunctionContainer
             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
 
+
         for (unsigned int alpha = 0; alpha < numSphericalFunctions; ++alpha)
           {
-            unsigned int globalId = AtomicCenteredNonLocalOperatorBase<
-              ValueType,
-              dftfe::utils::MemorySpace::HOST>::
-              getGlobalDofAtomIdSphericalFnPair(atomId, alpha);
-            std::cout<<"DEBUG: "  
-            sphericalFnKetTimesVectorLocalIds[iAtom].push_back(
-              AtomicCenteredNonLocalOperatorBase<
-                ValueType,
-                dftfe::utils::MemorySpace::HOST>::
-                getLocalIdOfDistributedVec(globalId));
-            std::cout << "DEBUGNew: mpi globalId and localId: "
-                      << d_this_mpi_process << " " << globalId << " "
-                      << AtomicCenteredNonLocalOperatorBase<
-                           ValueType,
-                           dftfe::utils::MemorySpace::HOST>::
-                           getLocalIdOfDistributedVec(globalId)
-                      << " " << iAtom << std::endl;
+            unsigned int globalId =
+              d_sphericalFunctionIdsNumberingMapCurrentProcess
+                .find(std::make_pair(atomId, alpha))
+                ->second;
+
+            unsigned int localId = d_SphericalFunctionKetTimesVectorPar[0]
+                                     .get_partitioner()
+                                     ->global_to_local(globalId);
+            sphericalFnKetTimesVectorLocalIds[iAtom].push_back(localId);
           }
       }
 
@@ -265,16 +243,6 @@ namespace dftfe
             numberQuadraturePoints,
           0.0);
 #endif
-        // std::vector<ValueType> sphericalFunctionBasisTimesJxW(
-        //   numberElementsInAtomCompactSupport * maxkPoints *
-        //     NumTotalSphericalFunctions * numberQuadraturePoints,
-        //   0.0);
-
-        // std::cout<<"NewDEBUG: mpiRank iAtom atomIndex numberElements
-        // NumTotalSphericalFunctions: "<<d_this_mpi_process<<" "<<iAtom<<"
-        // "<<atomId<<" "<<numberElementsInAtomCompactSupport<<"
-        // "<<NumTotalSphericalFunctions<<std::endl;
-
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              ++iElemComp)
           {
@@ -459,12 +427,6 @@ namespace dftfe
                          tempIndex < endIndex;
                          tempIndex++)
                       {
-                        // std::cout<<"DEBUGNew: mpiRank iAtom atomID ElementID
-                        // startIndex+TempIndex startIndex1 startIndex2:
-                        // "<<d_this_mpi_process<<" "<<iAtom<<" "<<ChargeId<<"
-                        // "<<elementIndex<<" "<<tempIndex<<" "<<startIndex1<<"
-                        // "<<startIndex2<<std::endl;
-
                         for (int iQuadPoint = 0;
                              iQuadPoint < numberQuadraturePoints;
                              ++iQuadPoint)
@@ -774,8 +736,9 @@ namespace dftfe
         for (unsigned int alpha = 0; alpha < numberSphericalFunctions; alpha++)
           {
             const unsigned int id =
-              d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
-                atomId, alpha)];
+              d_sphericalFunctionIdsNumberingMapCurrentProcess
+                .find(std::make_pair(atomId, alpha))
+                ->second;
             std::memcpy(sphericalFunctionKetTimesVectorParFlattened.data() +
                           sphericalFunctionKetTimesVectorParFlattened
                               .getMPIPatternP2P()
@@ -894,7 +857,8 @@ namespace dftfe
                     .getMPIPatternP2P()
                     ->globalToLocal(
                       d_sphericalFunctionIdsNumberingMapCurrentProcess
-                        [std::make_pair(atomId, alpha)]);
+                        .find(std::make_pair(atomId, alpha))
+                        ->second);
                 if (flagCopyResultsToMatrix)
                   {
                     std::transform(

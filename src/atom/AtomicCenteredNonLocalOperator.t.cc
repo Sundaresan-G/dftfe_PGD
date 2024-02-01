@@ -91,10 +91,6 @@ namespace dftfe
       d_atomCenteredSphericalFunctionContainer->getNumAtomCentersSize();
     const std::vector<unsigned int> &atomicNumber =
       d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
-
-    std::cout << "Partitioner is initialise on task: " << d_this_mpi_process
-              << std::endl;
-    MPI_Barrier(d_mpi_communicator);
     // //
     // // data structures for memory optimization of projectorKetTimesVector
     // //
@@ -394,7 +390,6 @@ namespace dftfe
                       << it->second << std::endl;
           }
       }
-
       // d_mpiPatternP2P =
       //   std::make_shared<const
       //   utils::mpi::MPIPatternP2P<dftfe::utils::MemorySpace::HOST>>(
@@ -470,10 +465,11 @@ namespace dftfe
   unsigned int
   AtomicCenteredNonLocalOperatorBase<ValueType, memorySpace>::
     getGlobalDofAtomIdSphericalFnPair(const unsigned int atomId,
-                                       const unsigned int alpha)
+                                      const unsigned int alpha)
   {
-    return d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
-      atomId, alpha)];
+    return d_sphericalFunctionIdsNumberingMapCurrentProcess
+      .find(std::make_pair(atomId, alpha))
+      ->second;
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
