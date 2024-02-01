@@ -111,6 +111,16 @@ namespace dftfe
             globalAtomIdToNonTrivialSphericalFnsCellStartIndex
               [atomId][elementId] = accumTemp[elementId];
             accumTemp[elementId] += numSphericalFunctions;
+            // std::cout
+            //   << "DEBUGNew: accumTemp outputs-> atomId elementId  d_nonTrivialSphericalFnPerCell d_atomIdToNonTrivialSphericalFnCellStartIndex globalAtomIdToNonTrivialSphericalFnsCellStartIndex accumTemp: "
+            //   << atomId << " " << elementId << " "
+            //   << d_nonTrivialSphericalFnPerCell[elementId] << " "
+            //   << d_atomIdToNonTrivialSphericalFnCellStartIndex
+            //        [iAtom][elementId]
+            //   << " "
+            //   << globalAtomIdToNonTrivialSphericalFnsCellStartIndex
+            //        [atomId][elementId]
+            //   << " " << accumTemp[elementId] << std::endl;
           }
       }
 
@@ -249,7 +259,7 @@ namespace dftfe
         //     NumTotalSphericalFunctions * numberQuadraturePoints,
         //   0.0);
 
-
+        //std::cout<<"NewDEBUG: mpiRank iAtom atomIndex numberElements NumTotalSphericalFunctions: "<<d_this_mpi_process<<" "<<iAtom<<" "<<atomId<<" "<<numberElementsInAtomCompactSupport<<" "<<NumTotalSphericalFunctions<<std::endl;
 
         for (int iElemComp = 0; iElemComp < numberElementsInAtomCompactSupport;
              ++iElemComp)
@@ -431,10 +441,12 @@ namespace dftfe
                     [ChargeId][elementIndex];
                 for (int kPoint = 0; kPoint < maxkPoints; ++kPoint)
                   {
-                    for (int tempIndex = 0;
-                         tempIndex < 2 * int(lQuantumNumber + 1);
+                    for (unsigned int tempIndex = startIndex;
+                         tempIndex < endIndex;
                          tempIndex++)
                       {
+                        //std::cout<<"DEBUGNew: mpiRank iAtom atomID ElementID startIndex+TempIndex startIndex1 startIndex2: "<<d_this_mpi_process<<" "<<iAtom<<" "<<ChargeId<<" "<<elementIndex<<" "<<tempIndex<<" "<<startIndex1<<" "<<startIndex2<<std::endl;
+                        
                         for (int iQuadPoint = 0;
                              iQuadPoint < numberQuadraturePoints;
                              ++iQuadPoint)
@@ -442,12 +454,12 @@ namespace dftfe
                             [kPoint * d_sumNonTrivialSphericalFnOverAllCells *
                                numberQuadraturePoints +
                              startIndex1 * numberQuadraturePoints +
-                             (startIndex2 + startIndex + tempIndex) *
+                             (startIndex2 + tempIndex) *
                                numberQuadraturePoints +
                              iQuadPoint] = sphericalFunctionBasis
                               [kPoint * numberQuadraturePoints *
                                  (2 * lQuantumNumber + 1) +
-                               tempIndex * numberQuadraturePoints + iQuadPoint];
+                               (tempIndex-startIndex) * numberQuadraturePoints + iQuadPoint];
 
                         for (int iQuadPoint = 0;
                              iQuadPoint < numberQuadraturePoints;
@@ -457,13 +469,13 @@ namespace dftfe
                               [kPoint * d_sumNonTrivialSphericalFnOverAllCells *
                                  numberQuadraturePoints * 3 +
                                startIndex1 * numberQuadraturePoints * 3 +
-                               (startIndex2 + startIndex + tempIndex) *
+                               (startIndex2 + tempIndex) *
                                  numberQuadraturePoints * 3 +
                                iQuadPoint * 3 + iDim] =
                                 sphericalFunctionBasisTimesImageDist
                                   [kPoint * numberQuadraturePoints *
                                      (2 * lQuantumNumber + 1) * 3 +
-                                   tempIndex * numberQuadraturePoints * 3 +
+                                   (tempIndex-startIndex) * numberQuadraturePoints * 3 +
                                    iQuadPoint * 3 + iDim];
                       } // tempIndex
                   }

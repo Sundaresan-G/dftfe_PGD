@@ -70,7 +70,7 @@ namespace dftfe
         const int nonLocalAtomId =
           dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
 
-        // FIXME should use the appropriate map from oncvClassPtr 
+        // FIXME should use the appropriate map from oncvClassPtr
         // instead of assuming all atoms are nonlocal atoms
         const int globalChargeIdNonLocalAtom = nonLocalAtomId;
         // dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];

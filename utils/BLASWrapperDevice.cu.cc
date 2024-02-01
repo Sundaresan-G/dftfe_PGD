@@ -1193,22 +1193,22 @@ namespace dftfe
       const std::complex<float> a,
       const dftfe::size_type    n) const;
 
-    template  void
+    template void
     BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedCopyToBlock(
       const dftfe::size_type         contiguousBlockSize,
       const dftfe::size_type         numContiguousBlocks,
-      const double *             copyFromVec,
-      double *                   copyToVecBlock,
-      const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds) ;
+      const double *                 copyFromVec,
+      double *                       copyToVecBlock,
+      const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
 
-    template  void
+    template void
     BLASWrapper<dftfe::utils::MemorySpace::DEVICE>::stridedCopyToBlock(
       const dftfe::size_type         contiguousBlockSize,
       const dftfe::size_type         numContiguousBlocks,
-      const std::complex<double> *             copyFromVec,
-      std::complex<double> *                   copyToVecBlock,
-      const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds) ;
+      const std::complex<double> *   copyFromVec,
+      std::complex<double> *         copyToVecBlock,
+      const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
   } // End of namespace linearAlgebra
 } // End of namespace dftfe
