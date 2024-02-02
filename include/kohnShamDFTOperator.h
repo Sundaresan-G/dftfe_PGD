@@ -30,8 +30,8 @@
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  // template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
-  // class dftClass;
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
+  class dftClass;
 #endif
 
   /**
@@ -597,7 +597,7 @@ node is stored
 
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro, dftfe::utils::MemorySpace::HOST> *dftPtr;
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *dftPtr;
 
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>

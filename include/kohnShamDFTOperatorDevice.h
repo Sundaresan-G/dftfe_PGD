@@ -29,8 +29,8 @@
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  // template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
-  // class dftClass;
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
+  class dftClass;
 #endif
 
   /**
