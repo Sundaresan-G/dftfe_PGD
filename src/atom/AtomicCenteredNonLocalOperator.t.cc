@@ -1872,7 +1872,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::applyVCconjtransOnX(
-    const distributedCPUMultiVec<ValueType> &                  src,
+    const dftfe::linearAlgebra::MultiVector<ValueType, memorySpace> &                  src,
     const unsigned int                                         kPointIndex,
     const CouplingStructure                                    couplingtype,
     const dftfe::utils::MemoryStorage<ValueType, memorySpace> &couplingMatrix,
@@ -1953,7 +1953,7 @@ namespace dftfe
             d_BLASWrapperPtr->stridedCopyToBlock(
               d_numberWaveFunctions,
               d_locallyOwnedCells * d_numberNodesPerElement,
-              src,
+              src.data(),
               cellWaveFunctionMatrix.begin(),
               d_basisOperatorPtr->d_flattenedCellDofIndexToProcessDofIndexMap
                 .begin());

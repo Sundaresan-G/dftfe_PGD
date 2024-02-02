@@ -192,7 +192,7 @@ namespace dftfe
 
     void
     applyVCconjtransOnX(
-      const distributedCPUMultiVec<ValueType> &                  src,
+      const dftfe::linearAlgebra::MultiVector<ValueType, memorySpace> &                  src,
       const unsigned int                                         kPointIndex,
       const CouplingStructure                                    couplingtype,
       const dftfe::utils::MemoryStorage<ValueType, memorySpace> &couplingMatrix,

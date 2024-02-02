@@ -1084,13 +1084,12 @@ namespace dftfe
             //  deviceFlattenedArrayBlock.begin(),
             //  projectorKetTimesVectorD,
             //  numPsi);
-            // FIX ME
-            // oncvClassPtr->getNonLocalOperator()->applyVCconjtransOnX(
-            //   deviceFlattenedArrayBlock.begin(),
-            //   kPointIndex,
-            //   CouplingStructure::diagonal,
-            //   oncvClassPtr->getCouplingMatrix(),
-            //   projectorKetTimesVectorD);
+            oncvClassPtr->getNonLocalOperator()->applyVCconjtransOnX(
+              deviceFlattenedArrayBlock,
+              kPointIndex,
+              CouplingStructure::diagonal,
+              oncvClassPtr->getCouplingMatrix(),
+              projectorKetTimesVectorD);
 
             // dftfe::utils::deviceSynchronize();
             // MPI_Barrier(d_mpiCommParent);
