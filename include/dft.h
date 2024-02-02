@@ -90,9 +90,9 @@ namespace dftfe
 
   /* code that must be skipped by Doxygen */
   // forward declarations
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class symmetryClass;
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2,dftfe::utils::MemorySpace memory>
   class forceClass;
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
@@ -115,9 +115,9 @@ namespace dftfe
     friend class kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>;
 #endif
 
-    friend class forceClass<FEOrder, FEOrderElectro>;
+    friend class forceClass<FEOrder, FEOrderElectro, memorySpace>;
 
-    friend class symmetryClass<FEOrder, FEOrderElectro>;
+    friend class symmetryClass<FEOrder, FEOrderElectro, memorySpace>;
 
   public:
     /**
@@ -1266,7 +1266,7 @@ namespace dftfe
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperPtrHost;
 
-    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>> d_oncvClassPtr;
 
 
     std::shared_ptr<
@@ -1304,8 +1304,8 @@ namespace dftfe
       localProc_dof_indicesImag;
     std::vector<bool> selectedDofsHanging;
 
-    forceClass<FEOrder, FEOrderElectro> *   forcePtr;
-    symmetryClass<FEOrder, FEOrderElectro> *symmetryPtr;
+    forceClass<FEOrder, FEOrderElectro, memorySpace> *   forcePtr;
+    symmetryClass<FEOrder, FEOrderElectro, memorySpace> *symmetryPtr;
 
     elpaScalaManager *d_elpaScala;
 

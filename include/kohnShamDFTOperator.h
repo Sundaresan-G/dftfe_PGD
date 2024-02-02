@@ -49,7 +49,7 @@ namespace dftfe
     // template <unsigned int T1, unsigned int T2>
     friend class dftClass<FEOrder,
                           FEOrderElectro,
-                          dftfe::utils::MemorySpace::HOST>;
+                           dftfe::utils::MemorySpace::HOST>;
 
     // template <unsigned int T>
     //	friend class symmetryClass;
@@ -598,7 +598,7 @@ node is stored
 
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro> *dftPtr;
+    dftClass<FEOrder, FEOrderElectro, dftfe::utils::MemorySpace::HOST> *dftPtr;
 
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>

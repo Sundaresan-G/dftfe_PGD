@@ -41,7 +41,7 @@ namespace dftfe
     , d_restartFilesPath(restartFilesPath)
     , d_verbosity(verbosity)
   {
-    init(parameter_file);
+    init(parameter_file, useDevice);
     if (d_restartFilesPath != "." &&
         dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {
@@ -50,7 +50,7 @@ namespace dftfe
   }
 
   void
-  geometryOptimizationClass::init(const std::string parameter_file)
+  geometryOptimizationClass::init(const std::string parameter_file, const bool useDevice)
   {
     if (d_isRestart)
       {

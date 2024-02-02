@@ -937,7 +937,7 @@ namespace dftfe
                                           dftfe::utils::MemorySpace::DEVICE>>
           &                                                  basisOperationsPtr,
         operatorDFTDeviceClass &                             operatorMatrix,
-        std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+        std::shared_ptr<dftfe::oncvClass<dataTypes::number,dftfe::utils::MemorySpace::DEVICE>> oncvClassPtr,
         const unsigned int                                   kPointIndex,
         distributedDeviceVec<dataTypes::number> &deviceFlattenedArrayBlock,
         distributedDeviceVec<dataTypes::number> &projectorKetTimesVectorD,
@@ -1087,7 +1087,7 @@ namespace dftfe
               deviceFlattenedArrayBlock.begin(),
               kPointIndex,
               CouplingStructure::diagonal,
-              oncvClassPtr->getCouplingMatrixvice(),
+              oncvClassPtr->getCouplingMatrix(),
               projectorKetTimesVectorD);
 
             // dftfe::utils::deviceSynchronize();

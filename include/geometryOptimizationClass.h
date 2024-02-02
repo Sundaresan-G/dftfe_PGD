@@ -47,7 +47,7 @@ namespace dftfe
 
 
     void
-    init(const std::string parameter_file);
+    init(const std::string parameter_file, const bool useDevice);
 
     /**
      * @brief runOpt:

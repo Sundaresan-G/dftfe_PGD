@@ -610,7 +610,7 @@ namespace dftfe
           double,
           dftfe::utils::MemorySpace::HOST>>                  basisOperationsPtr,
         operatorDFTClass &                                   operatorMatrix,
-        std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+        std::shared_ptr<dftfe::oncvClass<dataTypes::number,dftfe::utils::MemorySpace::HOST>> oncvClassPtr,
         const unsigned int                                   kPointIndex,
         distributedCPUMultiVec<dataTypes::number> &flattenedArrayBlock,
         distributedCPUMultiVec<dataTypes::number> &projectorKetTimesVector,
@@ -696,7 +696,7 @@ namespace dftfe
 
         if (isPsp)
           {
-            oncvClassPtr->getNonLocalOperatorHost()->applyVCconjtransOnX(
+            oncvClassPtr->getNonLocalOperator()->applyVCconjtransOnX(
               flattenedArrayBlock,
               kPointIndex,
               CouplingStructure::diagonal,
@@ -743,7 +743,7 @@ namespace dftfe
         double,
         dftfe::utils::MemorySpace::HOST>>                  basisOperationsPtr,
       operatorDFTClass &                                   operatorMatrix,
-      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number,dftfe::utils::MemorySpace::HOST>> oncvClassPtr,
       const dataTypes::number *                            X,
       const unsigned int                                   spinPolarizedFlag,
       const unsigned int                                   spinIndex,

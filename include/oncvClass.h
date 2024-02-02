@@ -193,24 +193,15 @@ namespace dftfe
     getAtomIdInCurrentProcessor(unsigned int iAtom);
 
 
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> &
+    const dftfe::utils::MemoryStorage<double, memorySpace> &
     getCouplingMatrix();
-#if defined(DFTFE_WITH_DEVICE)
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-      &
-      getCouplingMatrixDevice();
-#endif
+
 
     const std::shared_ptr<
       AtomicCenteredNonLocalOperator<ValueType,
-                                     dftfe::utils::MemorySpace::HOST>>
-    getNonLocalOperatorHost();
-#if defined(DFTFE_WITH_DEVICE)
-    const std::shared_ptr<
-      AtomicCenteredNonLocalOperator<ValueType,
-                                     dftfe::utils::MemorySpace::DEVICE>>
-    getNonLocalOperatorDevice();
-#endif
+                                     memorySpace>>
+    getNonLocalOperator();
+
   private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class

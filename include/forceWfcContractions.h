@@ -36,7 +36,7 @@ namespace dftfe
         double,
         dftfe::utils::MemorySpace::HOST>>                  basisOperationsPtr,
       operatorDFTClass &                                   operatorMatrix,
-      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number,dftfe::utils::MemorySpace::HOST>> oncvClassPtr,
       const dataTypes::number *                            X,
       const unsigned int                                   spinPolarizedFlag,
       const unsigned int                                   spinIndex,

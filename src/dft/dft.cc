@@ -833,7 +833,7 @@ namespace dftfe
       {
         // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
         // "<<basisOperationsPtrHost->nCells()<<std::endl;
-        d_oncvClassPtr = std::make_shared<dftfe::oncvClass<dataTypes::number>>(
+        d_oncvClassPtr = std::make_shared<dftfe::oncvClass<dataTypes::number, memorySpace>>(
           mpi_communicator, // domain decomposition communicator
           d_dftfeScratchFolderName,
           atomTypes,
@@ -1201,15 +1201,27 @@ namespace dftfe
     //
     // initialize pseudopotential data for both local and nonlocal part
     //
-
+if()
+{
     d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
-#if defined(DFTFE_WITH_DEVICE)
-                               d_basisOperationsPtrDevice,
-#endif
                                d_BLASWrapperPtrHost,
+                               d_densityQuadratureId,
+                               d_lpspQuadratureId,
+                               d_sparsityPatternQuadratureId,
+                               d_nlpspQuadratureId,
+                               d_densityQuadratureIdElectro,
+                               d_excManagerPtr,
+                               atomLocations,
+                               d_numEigenValues);  
+}
+
+
 #if defined(DFTFE_WITH_DEVICE)
+else
+{
+    d_oncvClassPtr->initialise(
+                               d_basisOperationsPtrDevice,
                                d_BLASWrapperPtr,
-#endif
                                d_densityQuadratureId,
                                d_lpspQuadratureId,
                                d_sparsityPatternQuadratureId,
@@ -1218,9 +1230,9 @@ namespace dftfe
                                d_excManagerPtr,
                                atomLocations,
                                d_numEigenValues);
+}
 
-
-
+#endif
     //
     // initialize guesses for electron-density and wavefunctions
     //

@@ -156,7 +156,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  forceClass<FEOrder, FEOrderElectro>::forceClass(
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::forceClass(
     dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
     const MPI_Comm &                                mpi_comm_parent,
     const MPI_Comm &                                mpi_comm_domain,
@@ -180,7 +180,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::initUnmoved(
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::initUnmoved(
     const dealii::Triangulation<3, 3> &     triangulation,
     const dealii::Triangulation<3, 3> &     serialTriangulation,
     const std::vector<std::vector<double>> &domainBoundingVectors,
@@ -219,7 +219,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::initMoved(
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::initMoved(
     std::vector<const dealii::DoFHandler<3> *> &dofHandlerVectorMatrixFree,
     std::vector<const dealii::AffineConstraints<double> *>
       &        constraintsVectorMatrixFree,
@@ -271,7 +271,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::initPseudoData()
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::initPseudoData()
   {
     // if(d_dftParams.isPseudopotential)
     //	computeElementalNonLocalPseudoOVDataForce();
@@ -282,7 +282,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeAtomsForces(
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::computeAtomsForces(
     const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
@@ -390,7 +390,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::configForceLinFEInit(
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::configForceLinFEInit(
     const dealii::MatrixFree<3, double> &matrixFreeData,
     const dealii::MatrixFree<3, double> &matrixFreeDataElectro)
   {
@@ -424,7 +424,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::configForceLinFEFinalize()
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::configForceLinFEFinalize()
   {
     d_configForceVectorLinFE.compress(
       dealii::VectorOperation::add); // copies the ghost element cache to the
@@ -468,7 +468,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeConfigurationalForceTotalLinFE(
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::computeConfigurationalForceTotalLinFE(
     const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
@@ -587,7 +587,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   std::vector<double>
-  forceClass<FEOrder, FEOrderElectro>::getAtomsForces()
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::getAtomsForces()
   {
     return d_globalAtomsForces;
   }
@@ -596,7 +596,7 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   dealii::Tensor<2, 3, double>
-  forceClass<FEOrder, FEOrderElectro>::getStress()
+  forceClass<FEOrder, FEOrderElectro,memorySpace>::getStress()
   {
     return d_stress;
   }

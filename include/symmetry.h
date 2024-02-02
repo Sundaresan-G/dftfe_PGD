@@ -46,7 +46,7 @@ namespace dftfe
     /**
      * symmetryClass constructor
      */
-    symmetryClass(dftClass<FEOrder, FEOrderElectro, memorSpace> *_dftPtr,
+    symmetryClass(dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
                   const MPI_Comm &mpi_comm_parent,
                   const MPI_Comm &mpi_comm_domain,
                   const MPI_Comm &_interpoolcomm);

@@ -79,7 +79,7 @@ namespace dftfe
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
     initialiseOperatorActionOnX(unsigned int kPointIndex)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         d_kPointIndex = kPointIndex;
 
@@ -96,8 +96,7 @@ namespace dftfe
           }
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else 
       {
         d_kPointIndex = kPointIndex;
 
@@ -813,7 +812,7 @@ namespace dftfe
 
       } // ChargeId loop
 #if defined(DFTFE_WITH_DEVICE)
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::DEVICE>::value)
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       {
         d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
         d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
@@ -1031,7 +1030,7 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &sphericalFunctionKetTimesVectorParFlattened)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         d_numberWaveFunctions = numberWaveFunctions;
 
@@ -1057,8 +1056,7 @@ namespace dftfe
           }
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else 
       {
         d_numberWaveFunctions = numberWaveFunctions;
         dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
@@ -1614,7 +1612,7 @@ namespace dftfe
       &        sphericalFunctionKetTimesVectorParFlattened,
     const bool flagCopyResultsToMatrix)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         const std::vector<unsigned int> &atomicNumber =
           d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
@@ -1672,8 +1670,7 @@ namespace dftfe
           }
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else 
       {
         if (couplingtype == CouplingStructure::diagonal)
           {
@@ -1707,7 +1704,7 @@ namespace dftfe
     const bool skip1,
     const bool skip2)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         const std::vector<unsigned int> atomIdsInProc =
           d_atomCenteredSphericalFunctionContainer
@@ -1754,8 +1751,7 @@ namespace dftfe
         sphericalFunctionKetTimesVectorParFlattened.updateGhostValues();
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else 
       {
         if (!skip1)
           dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
@@ -1781,7 +1777,7 @@ namespace dftfe
     const dftfe::utils::MemoryStorage<ValueType, memorySpace> &X,
     const std::pair<unsigned int, unsigned int>                cellRange)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         const ValueType    zero(0.0), one(1.0);
         const unsigned int inc                            = 1;
@@ -1830,8 +1826,7 @@ namespace dftfe
           } // iElem
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else 
       {
         const ValueType scalarCoeffAlpha = ValueType(1.0),
                         scalarCoeffBeta  = ValueType(0.0);
@@ -1884,7 +1879,7 @@ namespace dftfe
     dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
       &sphericalFunctionKetTimesVectorParFlattened)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if constexpr(dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         initialiseOperatorActionOnX(kPointIndex);
         sphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
@@ -1902,10 +1897,7 @@ namespace dftfe
           {
             for (unsigned int iCell = 0; iCell < d_locallyOwnedCells; ++iCell)
               {
-                if (AtomicCenteredNonLocalOperatorBase<
-                      ValueType,
-                      dftfe::utils::MemorySpace::HOST>::
-                      atomSupportInElement(iCell))
+                if (atomSupportInElement(iCell))
                   {
                     for (unsigned int iNode = 0;
                          iNode < d_numberNodesPerElement;
@@ -1943,8 +1935,7 @@ namespace dftfe
           } // nonlocal
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else 
       {
         d_basisOperatorPtr->reinit(d_numberWaveFunctions, 0, 0, false);
 
@@ -1987,7 +1978,7 @@ namespace dftfe
     dftfe::utils::MemoryStorage<ValueType, memorySpace> &Xout,
     const std::pair<unsigned int, unsigned int>          cellRange)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         const ValueType                                zero(0.0), one(1.0);
         const unsigned int                             inc = 1;
@@ -2038,8 +2029,7 @@ namespace dftfe
           } // iElem
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else 
       {
         long long int strideA =
           d_numberWaveFunctions * d_maxSingleAtomContribution;
@@ -2105,7 +2095,7 @@ namespace dftfe
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
         &cellWaveFunctionMatrix)
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::DEVICE>::value)
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       {
         for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
@@ -2123,9 +2113,9 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void AtomicCenteredNonLocalOperator<ValueType,
-                                      memorySpace>:: ::freeDeviceVectors()
+                                      memorySpace>::freeDeviceVectors()
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::DEVICE>::value)
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       {
         if (d_isMallocCalled)
           {

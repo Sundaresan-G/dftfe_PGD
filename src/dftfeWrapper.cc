@@ -47,6 +47,7 @@
 #include "dftfeWrapper.h"
 #include "fileReaders.h"
 #include "PeriodicTable.h"
+#include "MemorySpaceType.h"
 
 namespace dftfe
 {
@@ -65,7 +66,7 @@ namespace dftfe
     }
 
 
-    template <int n1, int n2>
+    template <int n1, int n2, dftfe::utils::MemorySpace memory>
     void
     create_dftfe(const MPI_Comm &      mpi_comm_parent,
                  const MPI_Comm &      mpi_comm_domain,
@@ -75,7 +76,7 @@ namespace dftfe
                  dftfe::dftParameters &dftParams,
                  dftBase **            dftfeBaseDoublePtr)
     {
-      *dftfeBaseDoublePtr = new dftfe::dftClass<n1, n2>(mpi_comm_parent,
+      *dftfeBaseDoublePtr = new dftfe::dftClass<n1, n2, memory>(mpi_comm_parent,
                                                         mpi_comm_domain,
                                                         interpoolcomm,
                                                         interBandGroupComm,
@@ -349,7 +350,6 @@ namespace dftfe
     const double                           meshSize,
     const double                           scfMixingParameter,
     const int                              verbosity,
-    const bool                             useDevice,
     const bool                             setDeviceToMPITaskBindingInternally)
     : d_dftfeBasePtr(nullptr)
     , d_dftfeParamsPtr(nullptr)
@@ -371,7 +371,6 @@ namespace dftfe
            meshSize,
            scfMixingParameter,
            verbosity,
-           useDevice,
            setDeviceToMPITaskBindingInternally);
   }
 
@@ -466,7 +465,6 @@ namespace dftfe
     const double                           meshSize,
     const double                           scfMixingParameter,
     const int                              verbosity,
-    const bool                             useDevice,
     const bool                             setDeviceToMPITaskBindingInternally)
   {
     clear();

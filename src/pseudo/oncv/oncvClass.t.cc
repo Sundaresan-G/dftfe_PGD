@@ -284,7 +284,7 @@ namespace dftfe
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
     d_nonLocalOperator->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperator->computeCMatrixEntries(d_nlpspQuadratureId);
+    d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,d_nlpspQuadratureId);
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
     if (d_verbosity >= 2)
@@ -593,7 +593,7 @@ namespace dftfe
   const dftfe::utils::MemoryStorage<double, memorySpace> &
   oncvClass<ValueType, memorySpace>::getCouplingMatrix()
   {
-    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
+    if (memorySpace == dftfe::utils::MemorySpace::HOST)
       {
         if (!d_nonlocalHamiltonianEntriesUpdated)
           {
@@ -626,8 +626,7 @@ namespace dftfe
         return (d_nonLocalHamiltonianEntries);
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (std::is_same<memorySpace,
-                          dftfe::utils::MemorySpace::DEVICE>::value)
+    else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       {
         if (!d_nonlocalHamiltonianEntriesUpdated)
           {

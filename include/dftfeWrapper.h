@@ -156,7 +156,6 @@ namespace dftfe
                  const double            meshSize               = 0.8,
                  const double            scfMixingParameter     = 0.2,
                  const int               verbosity              = -1,
-                 const bool              useDevice              = false,
                  const bool setDeviceToMPITaskBindingInternally = false);
 
 
@@ -211,7 +210,6 @@ namespace dftfe
            const double            meshSize                            = 0.8,
            const double            scfMixingParameter                  = 0.2,
            const int               verbosity                           = -1,
-           const bool              useDevice                           = false,
            const bool              setDeviceToMPITaskBindingInternally = false);
 
     void
