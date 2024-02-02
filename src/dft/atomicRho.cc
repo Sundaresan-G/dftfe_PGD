@@ -25,9 +25,11 @@ namespace dftfe
   // Initialize rho by reading in single-atom electron-density and fit a spline
   //
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initAtomicRho()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initAtomicRho()
   {
     // clear existing data
     d_rhoAtomsValues.clear();
@@ -430,9 +432,11 @@ namespace dftfe
   //
   // Normalize rho
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::normalizeAtomicRhoQuadValues()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::normalizeAtomicRhoQuadValues()
   {
     const double charge  = totalCharge(dofHandler, &d_rhoAtomsValues);
     const double scaling = ((double)numElectrons) / charge;
@@ -494,14 +498,17 @@ namespace dftfe
   //
   //
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::addAtomicRhoQuadValuesGradients(
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &quadratureValueData,
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &        quadratureGradValueData,
-    const bool isConsiderGradData)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    addAtomicRhoQuadValuesGradients(
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &quadratureValueData,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &        quadratureGradValueData,
+      const bool isConsiderGradData)
   {
     d_basisOperationsPtrHost->reinit(0, 0, d_densityQuadratureId, false);
     const unsigned int nQuadsPerCell =
@@ -541,12 +548,15 @@ namespace dftfe
 
   //
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::subtractAtomicRhoQuadValuesGradients(
-    std::map<dealii::CellId, std::vector<double>> &quadratureValueData,
-    std::map<dealii::CellId, std::vector<double>> &quadratureGradValueData,
-    const bool                                     isConsiderGradData)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    subtractAtomicRhoQuadValuesGradients(
+      std::map<dealii::CellId, std::vector<double>> &quadratureValueData,
+      std::map<dealii::CellId, std::vector<double>> &quadratureGradValueData,
+      const bool                                     isConsiderGradData)
   {
     const dealii::Quadrature<3> &quadrature_formula =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
@@ -587,19 +597,22 @@ namespace dftfe
   //
   // compute l2 projection of quad data to nodal data
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::l2ProjectionQuadDensityMinusAtomicDensity(
-    const std::shared_ptr<
-      dftfe::basis::
-        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-      &                                      basisOperationsPtr,
-    const dealii::AffineConstraints<double> &constraintMatrix,
-    const unsigned int                       dofHandlerId,
-    const unsigned int                       quadratureId,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                        quadratureValueData,
-    distributedCPUVec<double> &nodalField)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    l2ProjectionQuadDensityMinusAtomicDensity(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                                      basisOperationsPtr,
+      const dealii::AffineConstraints<double> &constraintMatrix,
+      const unsigned int                       dofHandlerId,
+      const unsigned int                       quadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                        quadratureValueData,
+      distributedCPUVec<double> &nodalField)
   {
     basisOperationsPtr->reinit(0, 0, quadratureId, false);
     const unsigned int nQuadsPerCell = basisOperationsPtr->nQuadsPerCell();

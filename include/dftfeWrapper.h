@@ -172,7 +172,8 @@ namespace dftfe
            const bool        setDeviceToMPITaskBindingInternally = false,
            const std::string solverMode                          = "GS",
            const std::string restartFilesPath                    = ".",
-           const int         _verbosity                          = 1);
+           const int         _verbosity                          = 1,
+           const bool        useDevice                           = false);
 
     /**
      * @brief clear and reinitialize based on input parameter_file and restart
@@ -188,6 +189,7 @@ namespace dftfe
            const std::string solverMode                          = "GS",
            const std::string restartFilesPath                    = ".",
            const int         _verbosity                          = 1,
+           const bool        useDevice                           = false,
            const bool        isScfRestart                        = true);
 
     void
@@ -209,6 +211,7 @@ namespace dftfe
            const double            meshSize                            = 0.8,
            const double            scfMixingParameter                  = 0.2,
            const int               verbosity                           = -1,
+           const bool              useDevice                           = false,
            const bool              setDeviceToMPITaskBindingInternally = false);
 
     void
@@ -376,7 +379,8 @@ namespace dftfe
     createScratchFolder();
 
     void
-    initialize(const bool setDeviceToMPITaskBindingInternally);
+    initialize(const bool setDeviceToMPITaskBindingInternally,
+               const bool useDevice);
 
     MPI_Comm       d_mpi_comm_parent;
     dftBase *      d_dftfeBasePtr;

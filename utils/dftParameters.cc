@@ -1324,7 +1324,8 @@ namespace dftfe
                                   const bool         printParams,
                                   const std::string  mode,
                                   const std::string  restartFilesPath,
-                                  const int          _verbosity)
+                                  const int          _verbosity,
+                                  const bool         _useDevice)
   {
     dealii::ParameterHandler prm;
     internalDftParameters::declare_parameters(prm);
@@ -1332,6 +1333,7 @@ namespace dftfe
     prm.parse_input(parameter_file, "", true);
     solverMode          = mode;
     verbosity           = _verbosity;
+    useDevice           = _useDevice;
     reproducible_output = prm.get_bool("REPRODUCIBLE OUTPUT");
     keepScratchFolder   = prm.get_bool("KEEP SCRATCH FOLDER");
     restartFolder       = restartFilesPath;

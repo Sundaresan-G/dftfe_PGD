@@ -90,15 +90,15 @@ namespace dftfe
     //
     //  Also note element 0 is order 1.
     //
-    typedef void (*create_fn)(const MPI_Comm &      mpi_comm_parent,
-                              const MPI_Comm &      mpi_comm_domain,
-                              const MPI_Comm &      interpoolcomm,
-                              const MPI_Comm &      interBandGroupComm,
-                              const std::string &   scratchFolderName,
-                              dftfe::dftParameters &dftParams,
-                              dftBase **            dftBaseDoublePtr);
+    typedef void (*create_fnHost)(const MPI_Comm &      mpi_comm_parent,
+                                  const MPI_Comm &      mpi_comm_domain,
+                                  const MPI_Comm &      interpoolcomm,
+                                  const MPI_Comm &      interBandGroupComm,
+                                  const std::string &   scratchFolderName,
+                                  dftfe::dftParameters &dftParams,
+                                  dftBase **            dftBaseDoublePtr);
 
-    static create_fn order_list[] = {
+    static create_fnHost order_listHost[] = {
 #ifdef DFTFE_MINIMAL_COMPILE
       create_dftfe<2, 2, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<3, 3, dftfe::utils::MemorySpace::HOST>,
@@ -108,16 +108,7 @@ namespace dftfe
       create_dftfe<6, 7, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 8, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<6, 9, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 7, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<2, 2, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<3, 3, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<4, 4, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 5, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 6, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 7, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 8, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 9, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 7, dftfe::utils::MemorySpace::DEVICE>
+      create_dftfe<7, 7, dftfe::utils::MemorySpace::HOST>
 #else
       create_dftfe<1, 1, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<1, 2, dftfe::utils::MemorySpace::HOST>,
@@ -162,7 +153,29 @@ namespace dftfe
       create_dftfe<8, 13, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<8, 14, dftfe::utils::MemorySpace::HOST>,
       create_dftfe<8, 15, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 16, dftfe::utils::MemorySpace::HOST>,
+      create_dftfe<8, 16, dftfe::utils::MemorySpace::HOST>
+#endif
+    };
+    typedef void (*create_fnDevice)(const MPI_Comm &      mpi_comm_parent,
+                                    const MPI_Comm &      mpi_comm_domain,
+                                    const MPI_Comm &      interpoolcomm,
+                                    const MPI_Comm &      interBandGroupComm,
+                                    const std::string &   scratchFolderName,
+                                    dftfe::dftParameters &dftParams,
+                                    dftBase **            dftBaseDoublePtr);
+
+    static create_fnDevice order_listDevice[] = {
+#ifdef DFTFE_MINIMAL_COMPILE
+      create_dftfe<2, 2, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<3, 3, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<4, 4, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<5, 5, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<6, 6, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<6, 7, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<6, 8, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<6, 9, dftfe::utils::MemorySpace::DEVICE>,
+      create_dftfe<7, 7, dftfe::utils::MemorySpace::DEVICE>
+#else
       create_dftfe<1, 1, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<1, 2, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<2, 2, dftfe::utils::MemorySpace::DEVICE>,
@@ -278,7 +291,8 @@ namespace dftfe
            setDeviceToMPITaskBindingInternally,
            mode,
            restartFilesPath,
-           _verbosity);
+           _verbosity,
+           useDevice);
   }
 
 
@@ -310,6 +324,7 @@ namespace dftfe
            mode,
            restartFilesPath,
            _verbosity,
+           useDevice,
            isScfRestart);
   }
 
@@ -356,6 +371,7 @@ namespace dftfe
            meshSize,
            scfMixingParameter,
            verbosity,
+           useDevice,
            setDeviceToMPITaskBindingInternally);
   }
 
@@ -372,7 +388,8 @@ namespace dftfe
                        const bool        setDeviceToMPITaskBindingInternally,
                        const std::string mode,
                        const std::string restartFilesPath,
-                       const int         _verbosity)
+                       const int         _verbosity,
+                       const bool        useDevice)
   {
     clear();
     if (mpi_comm_parent != MPI_COMM_NULL)
@@ -387,9 +404,10 @@ namespace dftfe
                                            printParams,
                                            mode,
                                            restartFilesPath,
-                                           _verbosity);
+                                           _verbosity,
+                                           useDevice);
       }
-    initialize(setDeviceToMPITaskBindingInternally);
+    initialize(setDeviceToMPITaskBindingInternally, useDevice);
   }
 
 
@@ -403,6 +421,7 @@ namespace dftfe
                        const std::string mode,
                        const std::string restartFilesPath,
                        const int         _verbosity,
+                       const bool        useDevice,
                        const bool        isScfRestart)
   {
     clear();
@@ -419,13 +438,14 @@ namespace dftfe
                                            printParams,
                                            mode,
                                            restartFilesPath,
-                                           _verbosity);
+                                           _verbosity,
+                                           useDevice);
         d_dftfeParamsPtr->coordinatesFile           = restartCoordsFile;
         d_dftfeParamsPtr->domainBoundingVectorsFile = restartDomainVectorsFile;
         d_dftfeParamsPtr->loadRhoData =
           d_dftfeParamsPtr->loadRhoData && isScfRestart;
       }
-    initialize(setDeviceToMPITaskBindingInternally);
+    initialize(setDeviceToMPITaskBindingInternally, useDevice);
   }
 
 
@@ -446,6 +466,7 @@ namespace dftfe
     const double                           meshSize,
     const double                           scfMixingParameter,
     const int                              verbosity,
+    const bool                             useDevice,
     const bool                             setDeviceToMPITaskBindingInternally)
   {
     clear();
@@ -768,7 +789,7 @@ namespace dftfe
         d_dftfeParamsPtr->useDevice = useDevice;
 #endif
       }
-    initialize(setDeviceToMPITaskBindingInternally);
+    initialize(setDeviceToMPITaskBindingInternally, useDevice);
   }
 
 
@@ -808,7 +829,8 @@ namespace dftfe
   }
 
   void
-  dftfeWrapper::initialize(const bool setDeviceToMPITaskBindingInternally)
+  dftfeWrapper::initialize(const bool setDeviceToMPITaskBindingInternally,
+                           const bool useDevice)
   {
     if (d_mpi_comm_parent != MPI_COMM_NULL)
       {
@@ -928,15 +950,30 @@ namespace dftfe
               listIndex++;
           }
 #endif
-        internalWrapper::create_fn create =
-          internalWrapper::order_list[listIndex - 1];
-        create(d_mpi_comm_parent,
-               bandGroupsPool.get_intrapool_comm(),
-               kPointPool.get_interpool_comm(),
-               bandGroupsPool.get_interpool_comm(),
-               d_scratchFolderName,
-               *d_dftfeParamsPtr,
-               &d_dftfeBasePtr);
+        if (!useDevice)
+          {
+            internalWrapper::create_fnHost create =
+              internalWrapper::order_listHost[listIndex - 1];
+            create(d_mpi_comm_parent,
+                   bandGroupsPool.get_intrapool_comm(),
+                   kPointPool.get_interpool_comm(),
+                   bandGroupsPool.get_interpool_comm(),
+                   d_scratchFolderName,
+                   *d_dftfeParamsPtr,
+                   &d_dftfeBasePtr);
+          }
+        else if (useDevice)
+          {
+            internalWrapper::create_fnDevice create =
+              internalWrapper::order_listDevice[listIndex - 1];
+            create(d_mpi_comm_parent,
+                   bandGroupsPool.get_intrapool_comm(),
+                   kPointPool.get_interpool_comm(),
+                   bandGroupsPool.get_interpool_comm(),
+                   d_scratchFolderName,
+                   *d_dftfeParamsPtr,
+                   &d_dftfeBasePtr);
+          }
         d_dftfeBasePtr->set();
         d_dftfeBasePtr->init();
       }

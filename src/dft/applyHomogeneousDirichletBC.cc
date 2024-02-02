@@ -20,9 +20,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::applyHomogeneousDirichletBC(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::applyHomogeneousDirichletBC(
     const dealii::DoFHandler<3> &            _dofHandler,
     const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
     dealii::AffineConstraints<double> &      constraintMatrix)

@@ -26,9 +26,11 @@ namespace dftfe
   //
   // Initialize rho by reading in single-atom electron-density and fit a spline
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initLocalPseudoPotential(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initLocalPseudoPotential(
     const dealii::DoFHandler<3> &            _dofHandler,
     const unsigned int                       lpspQuadratureId,
     const dealii::MatrixFree<3, double> &    _matrix_free_data,

@@ -22,15 +22,18 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeOutputDensityDirectionalDerivative(
-    const distributedCPUVec<double> &v,
-    const distributedCPUVec<double> &vSpin0,
-    const distributedCPUVec<double> &vSpin1,
-    distributedCPUVec<double> &      fv,
-    distributedCPUVec<double> &      fvSpin0,
-    distributedCPUVec<double> &      fvSpin1)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeOutputDensityDirectionalDerivative(
+      const distributedCPUVec<double> &v,
+      const distributedCPUVec<double> &vSpin0,
+      const distributedCPUVec<double> &vSpin1,
+      distributedCPUVec<double> &      fv,
+      distributedCPUVec<double> &      fvSpin0,
+      distributedCPUVec<double> &      fvSpin1)
   {
     computing_timer.enter_subsection("Output density direction derivative");
 
@@ -396,9 +399,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
 #ifdef DFTFE_WITH_DEVICE
       kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>

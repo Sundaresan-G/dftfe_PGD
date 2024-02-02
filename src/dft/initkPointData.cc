@@ -164,9 +164,11 @@ namespace dftfe
   // generate the k-grid
   //============================================================================================================================================
   //============================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::readkPointData()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::readkPointData()
   {
     const int                        numberColumnskPointDataFile = 4;
     std::vector<std::vector<double>> kPointData;
@@ -330,9 +332,11 @@ namespace dftfe
   // successive relaxation steps
   //============================================================================================================================================
   //============================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::recomputeKPointCoordinates()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::recomputeKPointCoordinates()
   {
     if (d_dftParamsPtr->verbosity >= 4)
       {
@@ -375,9 +379,11 @@ namespace dftfe
   // k-points across pools
   //============================================================================================================================================
   //============================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::generateMPGrid()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::generateMPGrid()
   {
     unsigned int nkx = d_dftParamsPtr->nkx;
     unsigned int nky = d_dftParamsPtr->nky;

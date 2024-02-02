@@ -28,9 +28,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::clearRhoData()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::clearRhoData()
   {
     d_mixingScheme.clearHistory();
 
@@ -43,9 +45,11 @@ namespace dftfe
     d_fvSpin1containerVals.clear();
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initRho()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initRho()
   {
     computingTimerStandard.enter_subsection("initialize density");
 
@@ -673,9 +677,11 @@ namespace dftfe
   //
   //
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeRhoInitialGuessFromPSI(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeRhoInitialGuessFromPSI(
     std::vector<std::vector<distributedCPUVec<double>>> eigenVectors)
 
   {
@@ -1154,9 +1160,11 @@ namespace dftfe
   //
   // Normalize rho
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::normalizeRhoInQuadValues()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::normalizeRhoInQuadValues()
   {
     const dealii::Quadrature<3> &quadrature_formula =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
@@ -1199,9 +1207,11 @@ namespace dftfe
   //
   // Normalize rho
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::normalizeRhoOutQuadValues()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::normalizeRhoOutQuadValues()
   {
     const dealii::Quadrature<3> &quadrature_formula =
       matrix_free_data.get_quadrature(d_densityQuadratureId);

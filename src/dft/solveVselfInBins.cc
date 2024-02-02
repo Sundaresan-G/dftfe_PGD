@@ -315,7 +315,9 @@ namespace dftfe
     }
   } // namespace
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   vselfBinsManager<FEOrder, FEOrderElectro>::solveVselfInBins(
     const std::shared_ptr<
@@ -816,7 +818,9 @@ namespace dftfe
   }
 
 #ifdef DFTFE_WITH_DEVICE
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   vselfBinsManager<FEOrder, FEOrderElectro>::solveVselfInBinsDevice(
     const std::shared_ptr<
@@ -1627,7 +1631,9 @@ namespace dftfe
   }
 #endif
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   vselfBinsManager<FEOrder, FEOrderElectro>::solveVselfInBinsPerturbedDomain(
     const std::shared_ptr<

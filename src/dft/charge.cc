@@ -26,9 +26,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::totalCharge(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::totalCharge(
     const dealii::DoFHandler<3> &                        dofHandlerOfField,
     const std::map<dealii::CellId, std::vector<double>> *rhoQuadValues)
   {
@@ -60,9 +62,11 @@ namespace dftfe
     return dealii::Utilities::MPI::sum(normValue, mpi_communicator);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::totalCharge(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::totalCharge(
     const dealii::DoFHandler<3> &dofHandlerOfField,
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       &rhoQuadValues)
@@ -100,9 +104,11 @@ namespace dftfe
   //
   // compute total charge using nodal point values
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::totalCharge(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::totalCharge(
     const dealii::DoFHandler<3> &    dofHandlerOfField,
     const distributedCPUVec<double> &rhoNodalField)
   {
@@ -139,9 +145,11 @@ namespace dftfe
   // compute total charge using nodal point values by filling the quadrature
   // point values of the nodal field
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::totalCharge(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::totalCharge(
     const dealii::DoFHandler<3> &                  dofHandlerOfField,
     const distributedCPUVec<double> &              rhoNodalField,
     std::map<dealii::CellId, std::vector<double>> &rhoQuadValues)
@@ -181,9 +189,11 @@ namespace dftfe
   //
   // compute total charge using nodal point values by using FEEvaluation object
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::totalCharge(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::totalCharge(
     const dealii::MatrixFree<3, double> &matrixFreeDataObject,
     const distributedCPUVec<double> &    nodalField)
   {
@@ -241,9 +251,11 @@ namespace dftfe
   //
   // compute total charge
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::totalMagnetization(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::totalMagnetization(
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       &magQuadValues)
   {
@@ -279,9 +291,11 @@ namespace dftfe
   //
   // compute field l2 norm
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::rhofieldl2Norm(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::rhofieldl2Norm(
     const dealii::MatrixFree<3, double> &matrixFreeDataObject,
     const distributedCPUVec<double> &    nodalField,
     const unsigned int                   dofHandlerId,
@@ -333,9 +347,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::rhofieldInnerProduct(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::rhofieldInnerProduct(
     const dealii::MatrixFree<3, double> &matrixFreeDataObject,
     const distributedCPUVec<double> &    nodalField1,
     const distributedCPUVec<double> &    nodalField2,
@@ -404,12 +420,11 @@ namespace dftfe
   }
 
 
-/*template <unsigned int FEOrder, unsigned int FEOrderElectro>
-void
-dftClass<FEOrder, FEOrderElectro>::dipole(
-  const dealii::DoFHandler<3> &                        dofHandlerOfField,
-  const std::map<dealii::CellId, std::vector<double>> *rhoQuadValues,
-  bool                                                 centerofCharge)
+/*template <unsigned int FEOrder, unsigned int FEOrderElectro,
+dftfe::utils::MemorySpace memorySpace > void dftClass<FEOrder, FEOrderElectro,
+memorySpace>::dipole( const dealii::DoFHandler<3> & dofHandlerOfField, const
+std::map<dealii::CellId, std::vector<double>> *rhoQuadValues, bool
+centerofCharge)
 {
   std::vector<double> dipolevector(3, 0.0);
   pcout << " Here!! " << dipolevector.size() << std::endl;

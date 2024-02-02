@@ -75,8 +75,10 @@ namespace dftfe
   //
   // dft constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dftClass<FEOrder, FEOrderElectro>::dftClass(
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::dftClass(
     const MPI_Comm &   mpi_comm_parent,
     const MPI_Comm &   mpi_comm_domain,
     const MPI_Comm &   _interpoolcomm,
@@ -208,8 +210,10 @@ namespace dftfe
         (std::max(d_dftParamsPtr->pspCutoffImageCharges, d_pspCutOffTrunc));
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dftClass<FEOrder, FEOrderElectro>::~dftClass()
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::~dftClass()
   {
     finalizeKohnShamDFTOperator();
     delete symmetryPtr;
@@ -274,9 +278,11 @@ namespace dftfe
     }
   } // namespace internaldft
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeVolume(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeVolume(
     const dealii::DoFHandler<3> &_dofHandler)
   {
     double                       domainVolume = 0;
@@ -303,9 +309,11 @@ namespace dftfe
     return domainVolume;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::set()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::set()
   {
     computingTimerStandard.enter_subsection("Atomic system initialization");
     if (d_dftParamsPtr->verbosity >= 4)
@@ -860,9 +868,11 @@ namespace dftfe
   }
 
   // dft pseudopotential init
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initPseudoPotentialAll(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initPseudoPotentialAll(
     const bool updateNonlocalSparsity)
   {
     if (d_dftParamsPtr->isPseudopotential)
@@ -943,9 +953,12 @@ namespace dftfe
 
   // generate image charges and update k point cartesian coordinates based on
   // current lattice vectors
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initImageChargesUpdateKPoints(bool flag)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initImageChargesUpdateKPoints(
+    bool flag)
   {
     dealii::TimerOutput::Scope scope(computing_timer,
                                      "image charges and k point generation");
@@ -1079,9 +1092,11 @@ namespace dftfe
   }
 
   // dft init
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::init()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::init()
   {
     computingTimerStandard.enter_subsection("KSDFT problem initialization");
 
@@ -1314,9 +1329,11 @@ namespace dftfe
     computingTimerStandard.leave_subsection("KSDFT problem initialization");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initNoRemesh(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initNoRemesh(
     const bool updateImagesAndKPointsAndVselfBins,
     const bool checkSmearedChargeWidthsForOverlap,
     const bool useSingleAtomSolutionOverride,
@@ -1532,9 +1549,11 @@ namespace dftfe
   //
   // deform domain and call appropriate reinits
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::deformDomain(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::deformDomain(
     const dealii::Tensor<2, 3, double> &deformationGradient,
     const bool                          vselfPerturbationUpdateForStress,
     const bool                          useSingleAtomSolutionsOverride,
@@ -1699,9 +1718,11 @@ namespace dftfe
   //
   // generate a-posteriori mesh
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::aposterioriMeshGenerate()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::aposterioriMeshGenerate()
   {
     //
     // get access to triangulation objects from meshGenerator class
@@ -1797,9 +1818,11 @@ namespace dftfe
   //
   // dft run
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::run()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::run()
   {
     if (d_dftParamsPtr->meshAdaption)
       aposterioriMeshGenerate();
@@ -1860,9 +1883,11 @@ namespace dftfe
         << std::endl;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::trivialSolveForStress()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::trivialSolveForStress()
   {
     initBoundaryConditions();
     noRemeshRhoDataInit();
@@ -1873,9 +1898,11 @@ namespace dftfe
   //
   // initialize
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initializeKohnShamDFTOperator(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initializeKohnShamDFTOperator(
     const bool initializeCublas)
   {
     dealii::TimerOutput::Scope scope(computing_timer,
@@ -2006,9 +2033,12 @@ namespace dftfe
   //
   // re-initialize (significantly cheaper than initialize)
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::reInitializeKohnShamDFTOperator()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    reInitializeKohnShamDFTOperator()
   {
     if (!d_dftParamsPtr->useDevice)
       d_kohnShamDFTOperatorPtr->resetExtPotHamFlag();
@@ -2030,9 +2060,11 @@ namespace dftfe
   //
   // finalize
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::finalizeKohnShamDFTOperator()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::finalizeKohnShamDFTOperator()
   {
     if (d_kohnShamDFTOperatorsInitialized)
       {
@@ -2051,9 +2083,11 @@ namespace dftfe
   //
   // dft solve
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::tuple<bool, double>
-  dftClass<FEOrder, FEOrderElectro>::solve(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::solve(
     const bool computeForces,
     const bool computestress,
     const bool isRestartGroundStateCalcFromChk)
@@ -3866,9 +3900,11 @@ namespace dftfe
   } // namespace dftfe
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeStress()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeStress()
   {
     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
       &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
@@ -3921,9 +3957,11 @@ namespace dftfe
       forcePtr->printStress();
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeVselfFieldGateauxDerFD(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeVselfFieldGateauxDerFD(
 #ifdef DFTFE_WITH_DEVICE
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
       &kohnShamDFTEigenOperatorDevice
@@ -4090,9 +4128,11 @@ namespace dftfe
   }
 
   // Output wfc
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::outputWfc()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::outputWfc()
   {
     //
     // identify the index which is close to Fermi Energy
@@ -4226,9 +4266,11 @@ namespace dftfe
 
 
   // Output density
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::outputDensity()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::outputDensity()
   {
     //
     // compute nodal electron-density from quad data
@@ -4282,9 +4324,11 @@ namespace dftfe
                                                "densityOutput");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeBands()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::writeBands()
   {
     int numkPoints =
       (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
@@ -4500,101 +4544,129 @@ namespace dftfe
     //
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<std::vector<double>>
-  dftClass<FEOrder, FEOrderElectro>::getAtomLocationsCart() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomLocationsCart() const
   {
     return atomLocations;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<std::vector<double>>
-  dftClass<FEOrder, FEOrderElectro>::getAtomLocationsFrac() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomLocationsFrac() const
   {
     return atomLocationsFractional;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<std::vector<double>>
-  dftClass<FEOrder, FEOrderElectro>::getCell() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getCell() const
   {
     return d_domainBoundingVectors;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getCellVolume() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getCellVolume() const
   {
     return d_domainVolume;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::set<unsigned int>
-  dftClass<FEOrder, FEOrderElectro>::getAtomTypes() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomTypes() const
   {
     return atomTypes;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<double>
-  dftClass<FEOrder, FEOrderElectro>::getForceonAtoms() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getForceonAtoms() const
   {
     return (forcePtr->getAtomsForces());
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dealii::Tensor<2, 3, double>
-  dftClass<FEOrder, FEOrderElectro>::getCellStress() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getCellStress() const
   {
     return (forcePtr->getStress());
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftParameters &
-  dftClass<FEOrder, FEOrderElectro>::getParametersObject() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getParametersObject() const
   {
     return (*d_dftParamsPtr);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getInternalEnergy() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getInternalEnergy() const
   {
     return d_groundStateEnergy;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getEntropicEnergy() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getEntropicEnergy() const
   {
     return d_entropicEnergy;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getFreeEnergy() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getFreeEnergy() const
   {
     return d_freeEnergy;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<double>
-  dftClass<FEOrder, FEOrderElectro>::getRhoNodalOut() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getRhoNodalOut() const
   {
     return d_densityOutNodalValues[0];
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<double>
-  dftClass<FEOrder, FEOrderElectro>::getRhoNodalSplitOut() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getRhoNodalSplitOut() const
   {
     return d_rhoOutNodalValuesSplit;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getTotalChargeforRhoSplit()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getTotalChargeforRhoSplit()
   {
     double temp =
       (-totalCharge(d_matrixFreeDataPRefined, d_rhoOutNodalValuesSplit) /
@@ -4604,26 +4676,32 @@ namespace dftfe
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::resetRhoNodalIn(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::resetRhoNodalIn(
     distributedCPUVec<double> &OutDensity)
   {
     d_densityOutNodalValues[0] = OutDensity;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::resetRhoNodalSplitIn(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::resetRhoNodalSplitIn(
     distributedCPUVec<double> &OutDensity)
   {
     d_rhoOutNodalValuesSplit = OutDensity;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeGSElectronDensity(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::writeGSElectronDensity(
     const std::string Path) const
   {
     const unsigned int poolId =
@@ -4701,9 +4779,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeMesh()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::writeMesh()
   {
     //
     // compute nodal electron-density from quad data
@@ -4750,9 +4830,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeResidualQuadData(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeResidualQuadData(
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       &outValues,
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
@@ -4780,9 +4862,11 @@ namespace dftfe
     return std::sqrt(normValue);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeResidualNodalData(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeResidualNodalData(
     const distributedCPUVec<double> &outValues,
     const distributedCPUVec<double> &inValues,
     distributedCPUVec<double> &      residualValues)

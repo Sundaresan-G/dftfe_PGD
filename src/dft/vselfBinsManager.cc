@@ -472,7 +472,9 @@ namespace dftfe
   } // namespace internal
 
   // constructor
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   vselfBinsManager<FEOrder, FEOrderElectro>::vselfBinsManager(
     const MPI_Comm &     mpi_comm_parent,
     const MPI_Comm &     mpi_comm_domain,
@@ -490,7 +492,9 @@ namespace dftfe
     , d_storedAdaptiveBallRadius(0)
   {}
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   vselfBinsManager<FEOrder, FEOrderElectro>::createAtomBins(
     std::vector<const dealii::AffineConstraints<double> *> &constraintsVector,
@@ -1371,7 +1375,9 @@ namespace dftfe
 
   } //
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   vselfBinsManager<FEOrder, FEOrderElectro>::updateBinsBc(
     std::vector<const dealii::AffineConstraints<double> *> &constraintsVector,
@@ -1664,7 +1670,9 @@ namespace dftfe
       } // bin loop
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   vselfBinsManager<FEOrder, FEOrderElectro>::locateAtomsInBins(
     const dealii::DoFHandler<3> &dofHandler)
@@ -1775,28 +1783,36 @@ namespace dftfe
       } // iBin loop
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::map<int, std::set<int>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getAtomIdsBins() const
   {
     return d_bins;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::map<int, std::set<int>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getAtomImageIdsBins() const
   {
     return d_binsImages;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<std::map<dealii::types::global_dof_index, int>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getBoundaryFlagsBins() const
   {
     return d_boundaryFlag;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<std::map<dealii::types::global_dof_index, int>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getBoundaryFlagsBinsOnlyChargeId()
     const
@@ -1804,14 +1820,18 @@ namespace dftfe
     return d_boundaryFlagOnlyChargeId;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<std::map<dealii::types::global_dof_index, int>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getClosestAtomIdsBins() const
   {
     return d_closestAtomBin;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<
     std::map<dealii::types::global_dof_index, dealii::Point<3>>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getClosestAtomLocationsBins() const
@@ -1819,28 +1839,36 @@ namespace dftfe
     return d_dofClosestChargeLocationMap;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<distributedCPUVec<double>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getVselfFieldBins() const
   {
     return d_vselfFieldBins;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<distributedCPUVec<double>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getVselfFieldDerRBins() const
   {
     return d_vselfFieldDerRBins;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<distributedCPUVec<double>> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getPerturbedVselfFieldBins() const
   {
     return d_vselfFieldPerturbedBins;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::map<unsigned int, unsigned int> &
   vselfBinsManager<FEOrder, FEOrderElectro>::getAtomIdBinIdMapLocalAllImages()
     const
@@ -1848,7 +1876,9 @@ namespace dftfe
     return d_atomIdBinIdMapLocalAllImages;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
   vselfBinsManager<FEOrder, FEOrderElectro>::getStoredAdaptiveBallRadius() const
   {

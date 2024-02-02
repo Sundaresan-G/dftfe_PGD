@@ -53,9 +53,11 @@ namespace dftfe
   } // namespace internal
 
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dataTypes::number
-  dftClass<FEOrder, FEOrderElectro>::computeTraceXtHX(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeTraceXtHX(
     unsigned int numberWaveFunctionsEstimate)
   {
     //
@@ -209,9 +211,11 @@ namespace dftfe
     return trXtHX;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeTraceXtKX(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeTraceXtKX(
     unsigned int numberWaveFunctionsEstimate)
   {
     //
@@ -291,9 +295,11 @@ namespace dftfe
 
 
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::kohnShamEigenSpaceCompute(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceCompute(
     const unsigned int                                 spinType,
     const unsigned int                                 kPointIndex,
     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
@@ -502,9 +508,11 @@ namespace dftfe
 
 #ifdef DFTFE_WITH_DEVICE
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::kohnShamEigenSpaceCompute(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceCompute(
     const unsigned int spinType,
     const unsigned int kPointIndex,
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
@@ -654,9 +662,11 @@ namespace dftfe
 #endif
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int spinType,
       const unsigned int kPointIndex,
@@ -728,9 +738,11 @@ namespace dftfe
 
 #ifdef DFTFE_WITH_DEVICE
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int spinType,
       const unsigned int kPointIndex,
@@ -775,9 +787,11 @@ namespace dftfe
 #endif
 
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::kohnShamEigenSpaceComputeNSCF(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceComputeNSCF(
     const unsigned int                                 spinType,
     const unsigned int                                 kPointIndex,
     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
@@ -927,9 +941,11 @@ namespace dftfe
 
   // compute the maximum of the residual norm of the highest state of interest
   // across all K points
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeMaximumHighestOccupiedStateResidualNorm(
       const std::vector<std::vector<double>>
         &residualNormWaveFunctionsAllkPoints,
@@ -953,9 +969,11 @@ namespace dftfe
   }
   // compute the maximum of the residual norm of the highest occupied state
   // among all k points
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeMaximumHighestOccupiedStateResidualNorm(
       const std::vector<std::vector<double>>
         &residualNormWaveFunctionsAllkPoints,

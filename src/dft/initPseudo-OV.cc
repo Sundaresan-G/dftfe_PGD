@@ -26,9 +26,12 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeElementalOVProjectorKets()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeElementalOVProjectorKets()
   {
     //
     // get the number of non-local atoms
@@ -793,9 +796,12 @@ namespace dftfe
     // Add mpi accumulation
     //
   }
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initNonLocalPseudoPotential_OV()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    initNonLocalPseudoPotential_OV()
   {
     d_pseudoWaveFunctionIdToFunctionIdDetails.clear();
     d_numberPseudoAtomicWaveFunctions.clear();
@@ -1197,7 +1203,9 @@ namespace dftfe
 
     return;
   }
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   dftClass<FEOrder,
            FEOrderElectro>::computeSparseStructureNonLocalProjectors_OV()

@@ -24,9 +24,11 @@
 namespace dftfe
 {
   // calculate electron density
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::compute_rhoOut(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_rhoOut(
 #ifdef DFTFE_WITH_DEVICE
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
       &kohnShamDFTEigenOperator,
@@ -226,9 +228,11 @@ namespace dftfe
 
   // rho data reinitilization without remeshing. The rho out of last ground
   // state solve is made the rho in of the new solve
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::noRemeshRhoDataInit()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::noRemeshRhoDataInit()
   {
     // cleanup of existing rho Out and rho In data
     clearRhoData();
@@ -288,9 +292,11 @@ namespace dftfe
     normalizeRhoInQuadValues();
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeRhoNodalFromPSI(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeRhoNodalFromPSI(
 #ifdef DFTFE_WITH_DEVICE
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
       &kohnShamDFTEigenOperator,

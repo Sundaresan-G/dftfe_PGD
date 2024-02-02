@@ -19,7 +19,9 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   vselfBinsManager<FEOrder, FEOrderElectro>::createAtomBinsSanityCheck(
     const dealii::DoFHandler<3> &            dofHandler,
