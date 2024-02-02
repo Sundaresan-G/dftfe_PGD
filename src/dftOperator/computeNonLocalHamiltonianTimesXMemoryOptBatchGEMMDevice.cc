@@ -24,7 +24,9 @@
 // skip1 is set to true extraction and C^{T}*X computation are skipped and
 // computations directly start from V*C^{T}*X. When skip2 is set to true only
 // extraction and C^{T}*X computations are performed.
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalHamiltonianTimesX(
@@ -110,7 +112,9 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
 }
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalProjectorKetTimesXTimesV(

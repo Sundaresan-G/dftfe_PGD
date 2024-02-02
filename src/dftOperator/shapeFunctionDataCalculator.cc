@@ -18,7 +18,9 @@
 //
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   preComputeShapeFunctionGradientIntegrals(const unsigned int lpspQuadratureId)

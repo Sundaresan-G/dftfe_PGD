@@ -130,8 +130,8 @@ namespace dftfe
     //
     // create kohnShamDFTOperatorClass object
     //
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace> kohnShamDFTEigenOperator(
-      this, d_mpiCommParent, mpi_communicator);
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      kohnShamDFTEigenOperator(this, d_mpiCommParent, mpi_communicator);
     kohnShamDFTEigenOperator.init();
 
     //
@@ -221,8 +221,8 @@ namespace dftfe
     //
     // create kohnShamDFTOperatorClass object
     //
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace> kohnShamDFTEigenOperator(
-      this, d_mpiCommParent, mpi_communicator);
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      kohnShamDFTEigenOperator(this, d_mpiCommParent, mpi_communicator);
     kohnShamDFTEigenOperator.init();
 
     //
@@ -300,16 +300,17 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceCompute(
-    const unsigned int                                 spinType,
-    const unsigned int                                 kPointIndex,
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace> &kohnShamDFTEigenOperator,
-    elpaScalaManager &                                 elpaScala,
-    chebyshevOrthogonalizedSubspaceIterationSolver &   subspaceIterationSolver,
-    std::vector<double> &residualNormWaveFunctions,
-    const bool           computeResidual,
-    const bool           isSpectrumSplit,
-    const bool           useMixedPrec,
-    const bool           isFirstScf)
+    const unsigned int spinType,
+    const unsigned int kPointIndex,
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      &                                             kohnShamDFTEigenOperator,
+    elpaScalaManager &                              elpaScala,
+    chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
+    std::vector<double> &                           residualNormWaveFunctions,
+    const bool                                      computeResidual,
+    const bool                                      isSpectrumSplit,
+    const bool                                      useMixedPrec,
+    const bool                                      isFirstScf)
   {
     computing_timer.enter_subsection("Chebyshev solve");
 
@@ -792,12 +793,13 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceComputeNSCF(
-    const unsigned int                                 spinType,
-    const unsigned int                                 kPointIndex,
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace> &kohnShamDFTEigenOperator,
-    chebyshevOrthogonalizedSubspaceIterationSolver &   subspaceIterationSolver,
-    std::vector<double> &residualNormWaveFunctions,
-    unsigned int         ipass)
+    const unsigned int spinType,
+    const unsigned int kPointIndex,
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      &                                             kohnShamDFTEigenOperator,
+    chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
+    std::vector<double> &                           residualNormWaveFunctions,
+    unsigned int                                    ipass)
   {
     computing_timer.enter_subsection("Chebyshev solve");
 

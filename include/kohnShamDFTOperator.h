@@ -30,8 +30,8 @@
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
-  class dftClass;
+  // template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
+  // class dftClass;
 #endif
 
   /**
@@ -43,23 +43,22 @@ namespace dftfe
   //
   // Define kohnShamDFTOperatorClass class
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   class kohnShamDFTOperatorClass : public operatorDFTClass
   {
     // template <unsigned int T1, unsigned int T2>
-    friend class dftClass<FEOrder,
-                          FEOrderElectro,
-                           memorySpace>;
+    friend class dftClass<FEOrder, FEOrderElectro, memorySpace>;
 
     // template <unsigned int T>
     //	friend class symmetryClass;
 
   public:
     kohnShamDFTOperatorClass(
-      dftClass<FEOrder, FEOrderElectro, memorySpace>
-        *             _dftPtr,
-      const MPI_Comm &mpi_comm_parent,
-      const MPI_Comm &mpi_comm_domain);
+      dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+      const MPI_Comm &                                mpi_comm_parent,
+      const MPI_Comm &                                mpi_comm_domain);
 
     /**
      * @brief Compute discretized operator matrix times multi-vectors and add it to the existing dst vector

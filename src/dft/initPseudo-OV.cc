@@ -1207,7 +1207,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder,FEOrderElectro, memorySpace>::computeSparseStructureNonLocalProjectors_OV()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeSparseStructureNonLocalProjectors_OV()
   {
     //
     // get the number of non-local atoms

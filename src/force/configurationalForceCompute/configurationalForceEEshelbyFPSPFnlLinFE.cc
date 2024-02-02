@@ -39,7 +39,7 @@ namespace dftfe
     computeConfigurationalForceEEshelbyTensorFPSPFnlLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
       kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
@@ -247,7 +247,7 @@ namespace dftfe
           {
             MPI_Barrier(d_mpiCommParent);
             double device_time = MPI_Wtime();
-
+          if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
             forceDevice::wfcContractionsForceKernelsAllH(
               dftPtr->d_basisOperationsPtrDevice,
               kohnShamDFTEigenOperatorDevice,
@@ -297,7 +297,7 @@ namespace dftfe
           {
             MPI_Barrier(d_mpiCommParent);
             double host_time = MPI_Wtime();
-
+          if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
             force::wfcContractionsForceKernelsAllH(
               dftPtr->d_basisOperationsPtrHost,
               kohnShamDFTEigenOperator,

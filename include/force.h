@@ -135,10 +135,10 @@ namespace dftfe
     computeAtomsForces(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const dispersionCorrection &         dispersionCorr,
       const unsigned int                   eigenDofHandlerIndex,

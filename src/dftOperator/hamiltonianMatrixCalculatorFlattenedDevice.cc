@@ -1070,7 +1070,9 @@ namespace
 } // namespace
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeHamiltonianMatricesAllkpt(

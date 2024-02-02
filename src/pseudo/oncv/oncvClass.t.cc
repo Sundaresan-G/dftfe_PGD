@@ -153,22 +153,28 @@ namespace dftfe
     d_atomicProjectorFnsContainer->init(atomicNumbers, d_atomicProjectorFnsMap);
 
     if (!d_useDevice)
-      d_nonLocalOperator = std::make_shared<
+      {
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+        d_nonLocalOperator = std::make_shared<
         AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
         d_BLASWrapperHostPtr,
         d_BasisOperatorHostPtr,
         d_atomicProjectorFnsContainer,
         d_numEigenValues,
         d_mpiCommParent);
+      }
 #if defined(DFTFE_WITH_DEVICE)
     else
-      d_nonLocalOperator = std::make_shared<
+      {
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+        d_nonLocalOperator = std::make_shared<
         AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
         d_BLASWrapperDevicePtr,
         d_BasisOperatorDevicePtr,
         d_atomicProjectorFnsContainer,
         d_numEigenValues,
         d_mpiCommParent);
+      }
 #endif
 
     computeNonlocalPseudoPotentialConstants();
@@ -284,7 +290,8 @@ namespace dftfe
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
     d_nonLocalOperator->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,d_nlpspQuadratureId);
+    d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,
+                                              d_nlpspQuadratureId);
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
     if (d_verbosity >= 2)

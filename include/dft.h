@@ -92,9 +92,11 @@ namespace dftfe
   // forward declarations
   template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class symmetryClass;
-  template <unsigned int T1, unsigned int T2,dftfe::utils::MemorySpace memory>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class forceClass;
 
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
+  class kohnShamDFTOperatorClass;
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   /**
@@ -112,7 +114,9 @@ namespace dftfe
     friend class kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>;
 
 #ifdef DFTFE_WITH_DEVICE
-    friend class kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>;
+    friend class kohnShamDFTOperatorDeviceClass<FEOrder,
+                                                FEOrderElectro,
+                                                memorySpace>;
 #endif
 
     friend class forceClass<FEOrder, FEOrderElectro, memorySpace>;
@@ -915,7 +919,7 @@ namespace dftfe
       kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperator,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &        kohnShamDFTEigenOperatorCPU,
       const bool isConsiderSpectrumSplitting,
       const bool isGroundState = false);
@@ -1266,7 +1270,8 @@ namespace dftfe
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperPtrHost;
 
-    std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>> d_oncvClassPtr;
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
+      d_oncvClassPtr;
 
 
     std::shared_ptr<
@@ -1317,7 +1322,8 @@ namespace dftfe
 
     bool d_kohnShamDFTOperatorsInitialized;
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace> *d_kohnShamDFTOperatorPtr;
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       *d_kohnShamDFTOperatorDevicePtr;

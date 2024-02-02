@@ -24,7 +24,9 @@
  */
 
 #ifdef USE_COMPLEX
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeLocalHamiltonianTimesX(
@@ -94,7 +96,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     } // cell loop
 }
 #else
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeLocalHamiltonianTimesX(const distributedCPUMultiVec<double> &src,
@@ -168,11 +172,10 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     } // cell loop
 }
 
-/*template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
-void
-kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
-  computeLocalHamiltonianTimesX(const distributedCPUVec<double> &src,
-                                std::vector<double> &cellSrcWaveFunctionMatrix,
+/*template <unsigned int FEOrder, unsigned int FEOrderElectro,
+dftfe::utils::MemorySpace memorySpace > void kohnShamDFTOperatorClass<FEOrder,
+FEOrderElectro, memorySpace>:: computeLocalHamiltonianTimesX(const
+distributedCPUVec<double> &src, std::vector<double> &cellSrcWaveFunctionMatrix,
                                 const unsigned int   numberWaveFunctions,
                                 distributedCPUVec<double> &dst,
                                 std::vector<double> &cellDstWaveFunctionMatrix,

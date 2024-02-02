@@ -19,7 +19,9 @@
 
 
 #ifdef USE_COMPLEX
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalHamiltonianTimesX(
@@ -263,7 +265,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     }
 }
 #else
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalHamiltonianTimesX(const distributedCPUMultiVec<double> &src,

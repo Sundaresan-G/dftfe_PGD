@@ -38,7 +38,7 @@ namespace dftfe
     computeStressEEshelbyEPSPEnlEk(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
       kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
@@ -247,8 +247,11 @@ namespace dftfe
 
 
 #if defined(DFTFE_WITH_DEVICE)
+
         if (d_dftParams.useDevice)
           {
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+        {
             MPI_Barrier(d_mpiCommParent);
             double device_time = MPI_Wtime();
 
@@ -294,13 +297,15 @@ namespace dftfe
             if (this_process == 0 && d_dftParams.verbosity >= 4)
               std::cout << "Time for wfc contractions in stress: "
                         << device_time << std::endl;
+        }
           }
         else
 #endif
           {
             MPI_Barrier(d_mpiCommParent);
             double host_time = MPI_Wtime();
-
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+        {
             force::wfcContractionsForceKernelsAllH(
               dftPtr->d_basisOperationsPtrHost,
               kohnShamDFTEigenOperator,
@@ -343,6 +348,7 @@ namespace dftfe
             if (this_process == 0 && d_dftParams.verbosity >= 4)
               std::cout << "Time for wfc contractions in stress: " << host_time
                         << std::endl;
+        }
           }
 
         // dataTypes::number check1 =

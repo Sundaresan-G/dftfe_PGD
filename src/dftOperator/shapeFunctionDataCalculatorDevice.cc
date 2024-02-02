@@ -238,7 +238,9 @@ namespace shapeFuncDevice
   }
 } // namespace shapeFuncDevice
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   preComputeShapeFunctionGradientIntegrals(

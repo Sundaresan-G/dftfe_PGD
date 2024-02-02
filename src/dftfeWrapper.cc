@@ -76,12 +76,13 @@ namespace dftfe
                  dftfe::dftParameters &dftParams,
                  dftBase **            dftfeBaseDoublePtr)
     {
-      *dftfeBaseDoublePtr = new dftfe::dftClass<n1, n2, memory>(mpi_comm_parent,
-                                                        mpi_comm_domain,
-                                                        interpoolcomm,
-                                                        interBandGroupComm,
-                                                        scratchFolderName,
-                                                        dftParams);
+      *dftfeBaseDoublePtr =
+        new dftfe::dftClass<n1, n2, memory>(mpi_comm_parent,
+                                            mpi_comm_domain,
+                                            interpoolcomm,
+                                            interBandGroupComm,
+                                            scratchFolderName,
+                                            dftParams);
     }
 
     // Dynamically create dftClass<n> objects by order.

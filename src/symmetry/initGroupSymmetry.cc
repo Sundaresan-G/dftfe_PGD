@@ -39,9 +39,9 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   symmetryClass<FEOrder, FEOrderElectro, memorySpace>::symmetryClass(
     dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
-    const MPI_Comm &                   mpi_comm_parent,
-    const MPI_Comm &                   mpi_comm_domain,
-    const MPI_Comm &                   _interpoolcomm)
+    const MPI_Comm &                                mpi_comm_parent,
+    const MPI_Comm &                                mpi_comm_domain,
+    const MPI_Comm &                                _interpoolcomm)
     : dftPtr(_dftPtr)
     , FE(dealii::QGaussLobatto<1>(FEOrder + 1))
     , d_mpiCommParent(mpi_comm_parent)

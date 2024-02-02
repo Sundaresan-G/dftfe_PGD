@@ -50,7 +50,8 @@ namespace dftfe
   }
 
   void
-  geometryOptimizationClass::init(const std::string parameter_file, const bool useDevice)
+  geometryOptimizationClass::init(const std::string parameter_file,
+                                  const bool        useDevice)
   {
     if (d_isRestart)
       {

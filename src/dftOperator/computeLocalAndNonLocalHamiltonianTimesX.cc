@@ -24,7 +24,9 @@
  */
 
 #ifdef USE_COMPLEX
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeHamiltonianTimesXInternal(
@@ -41,7 +43,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   AssertThrow(false, dftUtils::ExcNotImplementedYet());
 }
 #else
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeHamiltonianTimesXInternal(
@@ -389,7 +393,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     } // cell loop
 }
 #endif
-template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
 kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeHamiltonianTimesXInternal(

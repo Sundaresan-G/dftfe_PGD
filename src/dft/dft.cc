@@ -187,11 +187,11 @@ namespace dftfe
       pcout << "Threads per MPI task: " << d_nOMPThreads << std::endl;
     d_elpaScala = new dftfe::elpaScalaManager(mpi_comm_domain);
 
-    forcePtr    = new forceClass<FEOrder, FEOrderElectro>(this,
+    forcePtr    = new forceClass<FEOrder, FEOrderElectro, memorySpace>(this,
                                                        mpi_comm_parent,
                                                        mpi_comm_domain,
                                                        dftParams);
-    symmetryPtr = new symmetryClass<FEOrder, FEOrderElectro>(this,
+    symmetryPtr = new symmetryClass<FEOrder, FEOrderElectro, memorySpace>(this,
                                                              mpi_comm_parent,
                                                              mpi_comm_domain,
                                                              _interpoolcomm);
@@ -833,16 +833,17 @@ namespace dftfe
       {
         // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
         // "<<basisOperationsPtrHost->nCells()<<std::endl;
-        d_oncvClassPtr = std::make_shared<dftfe::oncvClass<dataTypes::number, memorySpace>>(
-          mpi_communicator, // domain decomposition communicator
-          d_dftfeScratchFolderName,
-          atomTypes,
-          d_dftParamsPtr->floatingNuclearCharges,
-          d_nOMPThreads,
-          d_atomTypeAtributes,
-          d_dftParamsPtr->reproducible_output,
-          d_dftParamsPtr->verbosity,
-          d_dftParamsPtr->useDevice);
+        d_oncvClassPtr =
+          std::make_shared<dftfe::oncvClass<dataTypes::number, memorySpace>>(
+            mpi_communicator, // domain decomposition communicator
+            d_dftfeScratchFolderName,
+            atomTypes,
+            d_dftParamsPtr->floatingNuclearCharges,
+            d_nOMPThreads,
+            d_atomTypeAtributes,
+            d_dftParamsPtr->reproducible_output,
+            d_dftParamsPtr->verbosity,
+            d_dftParamsPtr->useDevice);
       }
     else if (d_dftParamsPtr->isPseudopotential == true &&
              d_dftParamsPtr->pawPseudoPotential == true)
@@ -1201,27 +1202,14 @@ namespace dftfe
     //
     // initialize pseudopotential data for both local and nonlocal part
     //
-if()
-{
     d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
-                               d_BLASWrapperPtrHost,
-                               d_densityQuadratureId,
-                               d_lpspQuadratureId,
-                               d_sparsityPatternQuadratureId,
-                               d_nlpspQuadratureId,
-                               d_densityQuadratureIdElectro,
-                               d_excManagerPtr,
-                               atomLocations,
-                               d_numEigenValues);  
-}
-
-
 #if defined(DFTFE_WITH_DEVICE)
-else
-{
-    d_oncvClassPtr->initialise(
                                d_basisOperationsPtrDevice,
+#endif    
+                               d_BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
                                d_BLASWrapperPtr,
+#endif
                                d_densityQuadratureId,
                                d_lpspQuadratureId,
                                d_sparsityPatternQuadratureId,
@@ -1230,9 +1218,8 @@ else
                                d_excManagerPtr,
                                atomLocations,
                                d_numEigenValues);
-}
 
-#endif
+
     //
     // initialize guesses for electron-density and wavefunctions
     //
@@ -1927,20 +1914,19 @@ else
       finalizeKohnShamDFTOperator();
 
     d_kohnShamDFTOperatorPtr =
-      new kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>(this,
-                                                            d_mpiCommParent,
-                                                            mpi_communicator);
+      new kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>(
+        this, d_mpiCommParent, mpi_communicator);
 
 #ifdef DFTFE_WITH_DEVICE
     d_kohnShamDFTOperatorDevicePtr =
-      new kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>(
+      new kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>(
         this, d_mpiCommParent, mpi_communicator);
 #endif
 
     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
 #endif
 
@@ -2107,7 +2093,7 @@ else
     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
 #endif
 
@@ -3921,7 +3907,7 @@ else
     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
 #endif
 
@@ -3975,7 +3961,7 @@ else
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::computeVselfFieldGateauxDerFD(
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice
 #endif
   )

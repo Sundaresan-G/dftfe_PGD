@@ -28,12 +28,13 @@ namespace dftfe
   forceClass<FEOrder, FEOrderElectro, memorySpace>::computeStress(
     const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice,
 #endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace> &kohnShamDFTEigenOperator,
-    const dispersionCorrection &                       dispersionCorr,
-    const unsigned int                                 eigenDofHandlerIndex,
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      &                                  kohnShamDFTEigenOperator,
+    const dispersionCorrection &         dispersionCorr,
+    const unsigned int                   eigenDofHandlerIndex,
     const unsigned int                   smearedChargeQuadratureId,
     const unsigned int                   lpspQuadratureIdElectro,
     const dealii::MatrixFree<3, double> &matrixFreeDataElectro,

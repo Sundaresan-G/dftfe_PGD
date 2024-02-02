@@ -84,11 +84,14 @@ namespace dftfe
   //
   // constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
-    kohnShamDFTOperatorDeviceClass(dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
-                                   const MPI_Comm &mpi_comm_parent,
-                                   const MPI_Comm &mpi_comm_domain)
+    kohnShamDFTOperatorDeviceClass(
+      dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+      const MPI_Comm &                                mpi_comm_parent,
+      const MPI_Comm &                                mpi_comm_domain)
     : dftPtr(_dftPtr)
     , d_kPointIndex(0)
     , d_numberNodesPerElement(_dftPtr->matrix_free_data.get_dofs_per_cell())
@@ -119,7 +122,9 @@ namespace dftfe
   //
   // destructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     ~kohnShamDFTOperatorDeviceClass()
   {
@@ -127,7 +132,9 @@ namespace dftfe
       d_ONCVnonLocalOperator->freeDeviceVectors();
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder,
                                  FEOrderElectro>::createDeviceBlasHandle()
@@ -140,7 +147,9 @@ namespace dftfe
 #endif
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder,
                                  FEOrderElectro>::destroyDeviceBlasHandle()
@@ -148,30 +157,41 @@ namespace dftfe
     dftfe::utils::deviceBlasWrapper::destroy(d_deviceBlasHandle);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::deviceBlasHandle_t &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::getDeviceBlasHandle()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getDeviceBlasHandle()
   {
     return d_deviceBlasHandle;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const double *
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::getSqrtMassVec()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getSqrtMassVec()
   {
     return d_sqrtMassVectorDevice.begin();
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const double *
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::getInvSqrtMassVec()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getInvSqrtMassVec()
   {
     return d_invSqrtMassVectorDevice.begin();
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<dataTypes::number> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getProjectorKetTimesVectorSingle()
@@ -180,7 +200,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionGradientIntegral()
@@ -189,7 +211,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionGradientIntegralElectro()
@@ -198,7 +222,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder,
                                  FEOrderElectro>::getShapeFunctionValues()
@@ -208,7 +234,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValuesTransposed(const bool use2pPlusOneGLQuad)
@@ -221,7 +249,9 @@ namespace dftfe
     return d_basisOperationsPtrDevice->shapeFunctionBasisData(false);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValuesNLPTransposed()
@@ -231,7 +261,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionGradientValuesNLPTransposed()
@@ -239,7 +271,9 @@ namespace dftfe
     return d_shapeFunctionGradientValueNLPTransposedDevice;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder,
                                  FEOrderElectro>::getInverseJacobiansNLP()
@@ -248,7 +282,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<dealii::types::global_dof_index,
                               dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
@@ -257,7 +293,9 @@ namespace dftfe
     return d_flattenedArrayCellLocalProcIndexIdMapDevice;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<dataTypes::number,
                               dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder,
@@ -266,7 +304,9 @@ namespace dftfe
     return d_cellWaveFunctionMatrix;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<dataTypes::number> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelVecSingleComponent()
@@ -274,7 +314,9 @@ namespace dftfe
     return d_parallelVecSingleComponent;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedDeviceVec<dataTypes::number> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelChebyBlockVectorDevice()
@@ -285,7 +327,9 @@ namespace dftfe
     return d_basisOperationsPtrDevice->getMultiVector(BVec);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedDeviceVec<dataTypes::number> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelChebyBlockVector2Device()
@@ -296,7 +340,9 @@ namespace dftfe
     return d_basisOperationsPtrDevice->getMultiVector(BVec, 1);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedDeviceVec<dataTypes::number> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelProjectorKetTimesBlockVectorDevice()
@@ -304,7 +350,9 @@ namespace dftfe
     return d_parallelSphericalFnKetTimesBlockVectorDevice;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getLocallyOwnedProcBoundaryNodesVectorDevice()
@@ -316,7 +364,9 @@ namespace dftfe
   //
   // initialize kohnShamDFTOperatorDeviceClass object
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::init()
   {
@@ -343,15 +393,20 @@ namespace dftfe
     computing_timer.leave_subsection("kohnShamDFTOperatorDeviceClass setup");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::resetExtPotHamFlag()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    resetExtPotHamFlag()
   {
     d_isStiffnessMatrixExternalPotCorrComputed = false;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::reinit(
     const unsigned int numberWaveFunctions,
@@ -507,13 +562,15 @@ namespace dftfe
   //
   // compute mass Vector
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::computeMassVector(
-    const dealii::DoFHandler<3> &            dofHandler,
-    const dealii::AffineConstraints<double> &constraintMatrix,
-    distributedCPUVec<double> &              sqrtMassVec,
-    distributedCPUVec<double> &              invSqrtMassVec)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeMassVector(const dealii::DoFHandler<3> &            dofHandler,
+                      const dealii::AffineConstraints<double> &constraintMatrix,
+                      distributedCPUVec<double> &              sqrtMassVec,
+                      distributedCPUVec<double> &              invSqrtMassVec)
   {
     computing_timer.enter_subsection(
       "kohnShamDFTOperatorDeviceClass Mass assembly");
@@ -603,7 +660,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     reinitkPointSpinIndex(const unsigned int kPointIndex,
@@ -621,17 +680,21 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::computeVEff(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiValues,
-    const std::map<dealii::CellId, std::vector<double>> &externalPotCorrValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const unsigned int externalPotCorrQuadratureId)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEff(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &phiValues,
+      const std::map<dealii::CellId, std::vector<double>>
+        &externalPotCorrValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const unsigned int externalPotCorrQuadratureId)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -717,21 +780,25 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::computeVEff(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiValues,
-    const std::map<dealii::CellId, std::vector<double>> &externalPotCorrValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-    const unsigned int externalPotCorrQuadratureId)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEff(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &phiValues,
+      const std::map<dealii::CellId, std::vector<double>>
+        &externalPotCorrValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
+      const unsigned int externalPotCorrQuadratureId)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -884,7 +951,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffSpinPolarized(
@@ -995,7 +1064,9 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffSpinPolarized(
@@ -1210,7 +1281,9 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffExternalPotCorr(
@@ -1255,18 +1328,21 @@ namespace dftfe
     d_vEffExternalPotCorrJxWDevice.copyFrom(d_vEffExternalPotCorrJxW);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::computeVEffPrime(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoPrimeValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiPrimeValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffPrime(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -1374,7 +1450,9 @@ namespace dftfe
 
 
   // Fourth order stencil finite difference stencil used
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffPrimeSpinPolarized(
@@ -1857,25 +1935,28 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::computeVEffPrime(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoPrimeValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoPrimeValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiPrimeValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffPrime(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -2140,7 +2221,9 @@ namespace dftfe
 
 
   // Fourth order stencil finite difference stencil used
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffPrimeSpinPolarized(
@@ -3170,7 +3253,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::HX(
     distributedDeviceVec<dataTypes::number> &    src,
@@ -3325,7 +3410,9 @@ namespace dftfe
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::HX(
     distributedDeviceVec<dataTypes::number> &src,
@@ -3433,7 +3520,9 @@ namespace dftfe
   // computePart1 are skipped and only computations performed are: second
   // compute part of nonlocalHX, assembly (only local processor), and
   // distribute_slave_to_master.
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::HXCheby(
     distributedDeviceVec<dataTypes::number> &    src,
@@ -3559,7 +3648,9 @@ namespace dftfe
 
 
   // X^{T}*HConj*XConj
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::XtHX(
     const dataTypes::number *                        X,
@@ -3719,7 +3810,9 @@ namespace dftfe
 
   // X^{T}*HConj*XConj  with overlap of computation and
   // communication
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     XtHXOverlapComputeCommun(
@@ -4108,7 +4201,9 @@ namespace dftfe
   // 7) [COM] Perform blocking MPI_Allreduce on curent block and copy to
   // scalapack matrix
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     XtHXMixedPrecOverlapComputeCommun(
@@ -4638,7 +4733,9 @@ namespace dftfe
 
   // X^{T}*HConj*XConj  with overlap of computation and
   // communication
-  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     XtHXMixedPrecCommunOverlapComputeCommun(

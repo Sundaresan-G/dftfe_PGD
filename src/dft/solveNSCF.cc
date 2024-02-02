@@ -37,7 +37,7 @@ namespace dftfe
     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
 #endif
 

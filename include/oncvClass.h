@@ -198,8 +198,7 @@ namespace dftfe
 
 
     const std::shared_ptr<
-      AtomicCenteredNonLocalOperator<ValueType,
-                                     memorySpace>>
+      AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
     getNonLocalOperator();
 
   private:
