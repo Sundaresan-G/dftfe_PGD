@@ -42,12 +42,12 @@ namespace dftfe
   //
   // Define kohnShamDFTOperatorDeviceClass class
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace>
   class kohnShamDFTOperatorDeviceClass : public operatorDFTDeviceClass
   {
   public:
     kohnShamDFTOperatorDeviceClass(
-      dftClass<FEOrder, FEOrderElectro, dftfe::utils::MemorySpace::DEVICE>
+      dftClass<FEOrder, FEOrderElectro, memorySpace>
         *             _dftPtr,
       const MPI_Comm &mpi_comm_parent,
       const MPI_Comm &mpi_comm_domain);
@@ -640,7 +640,7 @@ namespace dftfe
 
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro, dftfe::utils::MemorySpace::DEVICE>
+    dftClass<FEOrder, FEOrderElectro, memorySpace>
       *dftPtr;
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,

@@ -135,10 +135,10 @@ namespace dftfe
     computeAtomsForces(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const dispersionCorrection &         dispersionCorr,
       const unsigned int                   eigenDofHandlerIndex,
@@ -209,10 +209,10 @@ namespace dftfe
     computeStress(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const dispersionCorrection &         dispersionCorr,
       const unsigned int                   eigenDofHandlerIndex,
@@ -313,10 +313,10 @@ namespace dftfe
     computeConfigurationalForceEEshelbyTensorFPSPFnlLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,
@@ -387,10 +387,10 @@ namespace dftfe
     computeConfigurationalForceTotalLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,
@@ -625,10 +625,10 @@ namespace dftfe
     computeStressEEshelbyEPSPEnlEk(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,

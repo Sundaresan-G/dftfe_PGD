@@ -39,10 +39,10 @@ namespace dftfe
     computeConfigurationalForceEEshelbyTensorFPSPFnlLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro,memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,

@@ -37,10 +37,10 @@ namespace dftfe
   {
     computing_timer.enter_subsection("Output density direction derivative");
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
 #endif
 
@@ -406,10 +406,10 @@ namespace dftfe
   dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                        kohnShamDFTEigenOperatorCPU,
       distributedCPUVec<double> &fv,
       distributedCPUVec<double> &fvSpin0,

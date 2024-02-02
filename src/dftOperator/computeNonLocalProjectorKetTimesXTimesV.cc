@@ -19,9 +19,9 @@
 
 
 #ifdef USE_COMPLEX
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
 void
-kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalProjectorKetTimesXTimesV(
     distributedCPUMultiVec<std::complex<double>> &src,
     distributedCPUMultiVec<std::complex<double>>
@@ -187,9 +187,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
     }
 }
 #else
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
 void
-kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalProjectorKetTimesXTimesV(
     distributedCPUMultiVec<double> &src,
     distributedCPUMultiVec<double> &projectorKetTimesVectorFlattened,

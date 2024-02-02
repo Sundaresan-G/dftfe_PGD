@@ -238,9 +238,9 @@ namespace shapeFuncDevice
   }
 } // namespace shapeFuncDevice
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
 void
-kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   preComputeShapeFunctionGradientIntegrals(
     const unsigned int lpspQuadratureId,
     const bool         onlyUpdateGradNiNjIntegral)

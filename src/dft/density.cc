@@ -30,10 +30,10 @@ namespace dftfe
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_rhoOut(
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator,
 #endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &        kohnShamDFTEigenOperatorCPU,
     const bool isConsiderSpectrumSplitting,
     const bool isGroundState)
@@ -298,10 +298,10 @@ namespace dftfe
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::computeRhoNodalFromPSI(
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator,
 #endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &  kohnShamDFTEigenOperatorCPU,
     bool isConsiderSpectrumSplitting)
   {

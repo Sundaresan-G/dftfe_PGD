@@ -24,9 +24,9 @@
  */
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
 void
-kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeLocalHamiltonianTimesX(
     const dataTypes::number *src,
     const unsigned int       numberWaveFunctions,

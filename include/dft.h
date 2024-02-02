@@ -109,10 +109,10 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   class dftClass : public dftBase
   {
-    friend class kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>;
+    friend class kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>;
 
 #ifdef DFTFE_WITH_DEVICE
-    friend class kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>;
+    friend class kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>;
 #endif
 
     friend class forceClass<FEOrder, FEOrderElectro, memorySpace>;
@@ -713,10 +713,10 @@ namespace dftfe
     void
     computeRhoNodalFromPSI(
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperator,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &  kohnShamDFTEigenOperatorCPU,
       bool isConsiderSpectrumSplitting);
 
@@ -724,10 +724,10 @@ namespace dftfe
     void
     computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                        kohnShamDFTEigenOperatorCPU,
       distributedCPUVec<double> &fv,
       distributedCPUVec<double> &fvSpin0,
@@ -912,10 +912,10 @@ namespace dftfe
     void
     compute_rhoOut(
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperator,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace>
         &        kohnShamDFTEigenOperatorCPU,
       const bool isConsiderSpectrumSplitting,
       const bool isGroundState = false);
@@ -1317,9 +1317,9 @@ namespace dftfe
 
     bool d_kohnShamDFTOperatorsInitialized;
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> *d_kohnShamDFTOperatorPtr;
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace> *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       *d_kohnShamDFTOperatorDevicePtr;
 #endif
 
@@ -1676,7 +1676,7 @@ namespace dftfe
     void
     computeVselfFieldGateauxDerFD(
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice
 #endif
     );
@@ -1739,12 +1739,12 @@ namespace dftfe
     bool scfConverged;
     void
     nscf(
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                             kohnShamDFTEigenOperator,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver);
     void
     initnscf(
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                            kohnShamDFTEigenOperator,
       poissonSolverProblem<FEOrder, FEOrderElectro> &phiTotalSolverProblem,
       dealiiLinearSolver &                           CGSolver);
@@ -1775,7 +1775,7 @@ namespace dftfe
     kohnShamEigenSpaceCompute(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                             kohnShamDFTEigenOperator,
       elpaScalaManager &                              elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
@@ -1791,7 +1791,7 @@ namespace dftfe
     kohnShamEigenSpaceCompute(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -1810,7 +1810,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -1822,7 +1822,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala);
 
@@ -1830,7 +1830,7 @@ namespace dftfe
     kohnShamEigenSpaceComputeNSCF(
       const unsigned int spinType,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                             kohnShamDFTEigenOperator,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
       std::vector<double> &                           residualNormWaveFunctions,

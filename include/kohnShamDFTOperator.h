@@ -43,20 +43,20 @@ namespace dftfe
   //
   // Define kohnShamDFTOperatorClass class
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace>
   class kohnShamDFTOperatorClass : public operatorDFTClass
   {
     // template <unsigned int T1, unsigned int T2>
     friend class dftClass<FEOrder,
                           FEOrderElectro,
-                           dftfe::utils::MemorySpace::HOST>;
+                           memorySpace>;
 
     // template <unsigned int T>
     //	friend class symmetryClass;
 
   public:
     kohnShamDFTOperatorClass(
-      dftClass<FEOrder, FEOrderElectro, dftfe::utils::MemorySpace::HOST>
+      dftClass<FEOrder, FEOrderElectro, memorySpace>
         *             _dftPtr,
       const MPI_Comm &mpi_comm_parent,
       const MPI_Comm &mpi_comm_domain);

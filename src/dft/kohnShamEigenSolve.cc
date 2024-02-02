@@ -130,7 +130,7 @@ namespace dftfe
     //
     // create kohnShamDFTOperatorClass object
     //
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> kohnShamDFTEigenOperator(
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace> kohnShamDFTEigenOperator(
       this, d_mpiCommParent, mpi_communicator);
     kohnShamDFTEigenOperator.init();
 
@@ -221,7 +221,7 @@ namespace dftfe
     //
     // create kohnShamDFTOperatorClass object
     //
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> kohnShamDFTEigenOperator(
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro,memorySpace> kohnShamDFTEigenOperator(
       this, d_mpiCommParent, mpi_communicator);
     kohnShamDFTEigenOperator.init();
 
@@ -302,7 +302,7 @@ namespace dftfe
   dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceCompute(
     const unsigned int                                 spinType,
     const unsigned int                                 kPointIndex,
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace> &kohnShamDFTEigenOperator,
     elpaScalaManager &                                 elpaScala,
     chebyshevOrthogonalizedSubspaceIterationSolver &   subspaceIterationSolver,
     std::vector<double> &residualNormWaveFunctions,
@@ -515,7 +515,7 @@ namespace dftfe
   dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceCompute(
     const unsigned int spinType,
     const unsigned int kPointIndex,
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &               kohnShamDFTEigenOperator,
     elpaScalaManager &elpaScala,
     chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -670,7 +670,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int spinType,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala)
   {
@@ -746,7 +746,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int spinType,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -794,7 +794,7 @@ namespace dftfe
   dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceComputeNSCF(
     const unsigned int                                 spinType,
     const unsigned int                                 kPointIndex,
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace> &kohnShamDFTEigenOperator,
     chebyshevOrthogonalizedSubspaceIterationSolver &   subspaceIterationSolver,
     std::vector<double> &residualNormWaveFunctions,
     unsigned int         ipass)
