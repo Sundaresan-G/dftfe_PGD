@@ -155,25 +155,25 @@ namespace dftfe
     if (!d_useDevice)
       {
         if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
-        d_nonLocalOperator = std::make_shared<
-        AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
-        d_BLASWrapperHostPtr,
-        d_BasisOperatorHostPtr,
-        d_atomicProjectorFnsContainer,
-        d_numEigenValues,
-        d_mpiCommParent);
+          d_nonLocalOperator = std::make_shared<
+            AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
+            d_BLASWrapperHostPtr,
+            d_BasisOperatorHostPtr,
+            d_atomicProjectorFnsContainer,
+            d_numEigenValues,
+            d_mpiCommParent);
       }
 #if defined(DFTFE_WITH_DEVICE)
     else
       {
         if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-        d_nonLocalOperator = std::make_shared<
-        AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
-        d_BLASWrapperDevicePtr,
-        d_BasisOperatorDevicePtr,
-        d_atomicProjectorFnsContainer,
-        d_numEigenValues,
-        d_mpiCommParent);
+          d_nonLocalOperator = std::make_shared<
+            AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
+            d_BLASWrapperDevicePtr,
+            d_BasisOperatorDevicePtr,
+            d_atomicProjectorFnsContainer,
+            d_numEigenValues,
+            d_mpiCommParent);
       }
 #endif
 
@@ -597,10 +597,10 @@ namespace dftfe
       }
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  const dftfe::utils::MemoryStorage<double, memorySpace> &
+  const dftfe::utils::MemoryStorage<ValueType, memorySpace> &
   oncvClass<ValueType, memorySpace>::getCouplingMatrix()
   {
-    if (memorySpace == dftfe::utils::MemorySpace::HOST)
+    if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
       {
         if (!d_nonlocalHamiltonianEntriesUpdated)
           {
@@ -609,7 +609,7 @@ namespace dftfe
             std::vector<unsigned int> atomicNumber =
               d_atomicProjectorFnsContainer->getAtomicNumbers();
             d_nonLocalHamiltonianEntries.clear();
-            std::vector<double> Entries;
+            std::vector<ValueType> Entries;
             for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
               {
                 unsigned int atomId = atomIdsInProcessor[iAtom];
@@ -622,7 +622,7 @@ namespace dftfe
                   {
                     double V =
                       d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
-                    Entries.push_back(V);
+                    Entries.push_back(ValueType(V));
                   }
               }
             d_nonLocalHamiltonianEntries.resize(Entries.size());
@@ -633,7 +633,7 @@ namespace dftfe
         return (d_nonLocalHamiltonianEntries);
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
+    else
       {
         if (!d_nonlocalHamiltonianEntriesUpdated)
           {
@@ -642,7 +642,7 @@ namespace dftfe
             std::vector<unsigned int> atomicNumber =
               d_atomicProjectorFnsContainer->getAtomicNumbers();
             d_nonLocalHamiltonianEntries.clear();
-            std::vector<double> Entries;
+            std::vector<ValueType> Entries;
             Entries.resize(
               d_nonLocalOperator->getTotalNonLocalEntriesCurrentProcessor(),
               0.0);
@@ -661,8 +661,8 @@ namespace dftfe
                         atomId, alpha);
                     const unsigned int id =
                       d_nonLocalOperator->getLocalIdOfDistributedVec(globalId);
-                    Entries[id] =
-                      d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                    Entries[id] = ValueType(
+                      d_atomicNonLocalPseudoPotentialConstants[Zno][alpha]);
                   }
               }
             d_nonLocalHamiltonianEntries.resize(Entries.size());

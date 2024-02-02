@@ -96,7 +96,7 @@ namespace dftfe
           }
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else 
+    else
       {
         d_kPointIndex = kPointIndex;
 
@@ -1056,7 +1056,7 @@ namespace dftfe
           }
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else 
+    else
       {
         d_numberWaveFunctions = numberWaveFunctions;
         dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
@@ -1606,8 +1606,8 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::applyV_onCconjtransX(
-    const CouplingStructure                                 couplingtype,
-    const dftfe::utils::MemoryStorage<double, memorySpace> &couplingMatrix,
+    const CouplingStructure                                    couplingtype,
+    const dftfe::utils::MemoryStorage<ValueType, memorySpace> &couplingMatrix,
     dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
       &        sphericalFunctionKetTimesVectorParFlattened,
     const bool flagCopyResultsToMatrix)
@@ -1635,7 +1635,7 @@ namespace dftfe
                 for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                      alpha++)
                   {
-                    double nonlocalConstantV = couplingMatrix[startIndex++];
+                    ValueType nonlocalConstantV = couplingMatrix[startIndex++];
                     const unsigned int localId =
                       sphericalFunctionKetTimesVectorParFlattened
                         .getMPIPatternP2P()
@@ -1670,14 +1670,14 @@ namespace dftfe
           }
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else 
+    else
       {
         if (couplingtype == CouplingStructure::diagonal)
           {
             d_BLASWrapperPtr->stridedBlockScale(
               d_numberWaveFunctions,
               d_totalNonLocalEntries,
-              1.0,
+              ValueType(1.0),
               couplingMatrix.begin(),
               sphericalFunctionKetTimesVectorParFlattened.begin());
           }
@@ -1751,7 +1751,7 @@ namespace dftfe
         sphericalFunctionKetTimesVectorParFlattened.updateGhostValues();
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else 
+    else
       {
         if (!skip1)
           dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
@@ -1826,7 +1826,7 @@ namespace dftfe
           } // iElem
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else 
+    else
       {
         const ValueType scalarCoeffAlpha = ValueType(1.0),
                         scalarCoeffBeta  = ValueType(0.0);
@@ -1879,7 +1879,7 @@ namespace dftfe
     dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
       &sphericalFunctionKetTimesVectorParFlattened)
   {
-    if constexpr(dftfe::utils::MemorySpace::HOST == memorySpace)
+    if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         initialiseOperatorActionOnX(kPointIndex);
         sphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
@@ -1935,7 +1935,7 @@ namespace dftfe
           } // nonlocal
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else 
+    else
       {
         d_basisOperatorPtr->reinit(d_numberWaveFunctions, 0, 0, false);
 
@@ -2029,7 +2029,7 @@ namespace dftfe
           } // iElem
       }
 #if defined(DFTFE_WITH_DEVICE)
-    else 
+    else
       {
         long long int strideA =
           d_numberWaveFunctions * d_maxSingleAtomContribution;
@@ -2112,8 +2112,8 @@ namespace dftfe
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  void AtomicCenteredNonLocalOperator<ValueType,
-                                      memorySpace>::freeDeviceVectors()
+  void
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::freeDeviceVectors()
   {
     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       {

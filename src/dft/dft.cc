@@ -187,14 +187,10 @@ namespace dftfe
       pcout << "Threads per MPI task: " << d_nOMPThreads << std::endl;
     d_elpaScala = new dftfe::elpaScalaManager(mpi_comm_domain);
 
-    forcePtr    = new forceClass<FEOrder, FEOrderElectro, memorySpace>(this,
-                                                       mpi_comm_parent,
-                                                       mpi_comm_domain,
-                                                       dftParams);
-    symmetryPtr = new symmetryClass<FEOrder, FEOrderElectro, memorySpace>(this,
-                                                             mpi_comm_parent,
-                                                             mpi_comm_domain,
-                                                             _interpoolcomm);
+    forcePtr = new forceClass<FEOrder, FEOrderElectro, memorySpace>(
+      this, mpi_comm_parent, mpi_comm_domain, dftParams);
+    symmetryPtr = new symmetryClass<FEOrder, FEOrderElectro, memorySpace>(
+      this, mpi_comm_parent, mpi_comm_domain, _interpoolcomm);
 
     d_excManagerPtr                   = new excManager;
     d_isRestartGroundStateCalcFromChk = false;
@@ -1205,7 +1201,7 @@ namespace dftfe
     d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
                                d_basisOperationsPtrDevice,
-#endif    
+#endif
                                d_BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
                                d_BLASWrapperPtr,

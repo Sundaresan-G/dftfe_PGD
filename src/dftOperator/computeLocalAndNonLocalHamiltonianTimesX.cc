@@ -405,151 +405,156 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     const double                                     scalarY,
     const double                                     scalarX)
 {
-  const unsigned int kpointSpinIndex =
-    (1 + dftPtr->d_dftParamsPtr->spinPolarized) * d_kPointIndex + d_spinIndex;
-  const dataTypes::number zero(0.0), one(1.0);
-  //
-  // element level matrix-vector multiplications
-  //
-
-  d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
-  d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
-
-  const unsigned int inc = 1;
-
-  const unsigned int nRelaventDofs       = src.localSize();
-  const unsigned int nLocalDofs          = src.locallyOwnedSize();
-  const unsigned int numberWaveFunctions = src.numVectors();
-
-  const unsigned int totalLocallyOwnedCells =
-    dftPtr->matrix_free_data.n_physical_cells();
-  std::vector<bool> dofEncountered(nRelaventDofs, false);
-  if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-      dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
+  if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
     {
+      const unsigned int kpointSpinIndex =
+        (1 + dftPtr->d_dftParamsPtr->spinPolarized) * d_kPointIndex +
+        d_spinIndex;
+      const dataTypes::number zero(0.0), one(1.0);
+      //
+      // element level matrix-vector multiplications
+      //
+
+      d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+      d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
+
+      const unsigned int inc = 1;
+
+      const unsigned int nRelaventDofs       = src.localSize();
+      const unsigned int nLocalDofs          = src.locallyOwnedSize();
+      const unsigned int numberWaveFunctions = src.numVectors();
+
+      const unsigned int totalLocallyOwnedCells =
+        dftPtr->matrix_free_data.n_physical_cells();
+      std::vector<bool> dofEncountered(nRelaventDofs, false);
+      if (dftPtr->d_dftParamsPtr->isPseudopotential &&
+          dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
+        {
+          for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
+            {
+              if (d_ONCVnonLocalOperator->atomSupportInElement(iCell))
+                {
+                  for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
+                       ++iNode)
+                    {
+                      dealii::types::global_dof_index localNodeId =
+                        d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
+                      const double scalarCoeffAlpha =
+                        d_invSqrtElementalMassVector[iCell *
+                                                       d_numberNodesPerElement +
+                                                     iNode];
+                      std::transform(src.begin() + localNodeId,
+                                     src.begin() + localNodeId +
+                                       numberWaveFunctions,
+                                     d_cellWaveFunctionMatrix.begin() +
+                                       numberWaveFunctions * iNode,
+                                     [&scalarCoeffAlpha](auto &a) {
+                                       return scalarCoeffAlpha * a;
+                                     });
+                    } // scaling
+
+                  d_ONCVnonLocalOperator->applyCconjtrans_onX(
+                    d_cellWaveFunctionMatrix,
+                    std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
+
+                } // if nonlocalAtomPResent
+            }     // Cell Loop
+          d_ONCVnonLocalOperator->applyAllReduceonCTX(
+            d_SphericalFunctionKetTimesVectorParFlattened);
+          const dftfe::utils::MemoryStorage<dataTypes::number,
+                                            dftfe::utils::MemorySpace::HOST>
+            couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
+          d_ONCVnonLocalOperator->applyV_onCconjtransX(
+            CouplingStructure::diagonal,
+            couplingMatrix,
+            d_SphericalFunctionKetTimesVectorParFlattened);
+
+
+
+        } // nonlocal
+
       for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
         {
-          if (d_ONCVnonLocalOperator->atomSupportInElement(iCell))
+          for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
             {
-              for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                   ++iNode)
-                {
-                  dealii::types::global_dof_index localNodeId =
-                    d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
-                  const double scalarCoeffAlpha =
-                    d_invSqrtElementalMassVector[iCell *
-                                                   d_numberNodesPerElement +
-                                                 iNode];
-                  std::transform(src.begin() + localNodeId,
-                                 src.begin() + localNodeId +
-                                   numberWaveFunctions,
-                                 d_cellWaveFunctionMatrix.begin() +
-                                   numberWaveFunctions * iNode,
-                                 [&scalarCoeffAlpha](auto &a) {
-                                   return scalarCoeffAlpha * a;
-                                 });
-                } // scaling
+              dealii::types::global_dof_index localNodeId =
+                d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
+              const double scalarCoeffAlpha =
+                d_invSqrtElementalMassVector[iCell * d_numberNodesPerElement +
+                                             iNode];
+              std::transform(src.begin() + localNodeId,
+                             src.begin() + localNodeId + numberWaveFunctions,
+                             d_cellWaveFunctionMatrix.begin() +
+                               numberWaveFunctions * iNode,
+                             [&scalarCoeffAlpha](auto &a) {
+                               return scalarCoeffAlpha * a;
+                             });
+            }
+          d_BLASWrapperPtrHost->xgemm(
+            'N',
+            std::is_same<dataTypes::number, std::complex<double>>::value ? 'T' :
+                                                                           'N',
+            numberWaveFunctions,
+            d_numberNodesPerElement,
+            d_numberNodesPerElement,
+            &one,
+            &d_cellWaveFunctionMatrix[0],
+            numberWaveFunctions,
+            &d_cellHamiltonianMatrix[kpointSpinIndex][iCell][0],
+            d_numberNodesPerElement,
+            &zero,
+            &d_cellHamMatrixTimesWaveMatrix[0],
+            numberWaveFunctions);
 
-              d_ONCVnonLocalOperator->applyCconjtrans_onX(
-                d_cellWaveFunctionMatrix,
+          if (dftPtr->d_dftParamsPtr->isPseudopotential)
+            {
+              d_ONCVnonLocalOperator->applyC_VCconjtransX(
+                d_cellHamMatrixTimesWaveMatrix,
                 std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
-
-            } // if nonlocalAtomPResent
-        }     // Cell Loop
-      d_ONCVnonLocalOperator->applyAllReduceonCTX(
-        d_SphericalFunctionKetTimesVectorParFlattened);
-      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
-      d_ONCVnonLocalOperator->applyV_onCconjtransX(
-        CouplingStructure::diagonal,
-        couplingMatrix,
-        d_SphericalFunctionKetTimesVectorParFlattened);
+            }
 
 
-
-    } // nonlocal
-
-  for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
-    {
-      for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
-        {
-          dealii::types::global_dof_index localNodeId =
-            d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
-          const double scalarCoeffAlpha =
-            d_invSqrtElementalMassVector[iCell * d_numberNodesPerElement +
-                                         iNode];
-          std::transform(src.begin() + localNodeId,
-                         src.begin() + localNodeId + numberWaveFunctions,
-                         d_cellWaveFunctionMatrix.begin() +
-                           numberWaveFunctions * iNode,
-                         [&scalarCoeffAlpha](auto &a) {
-                           return scalarCoeffAlpha * a;
-                         });
-        }
-      d_BLASWrapperPtrHost->xgemm(
-        'N',
-        std::is_same<dataTypes::number, std::complex<double>>::value ? 'T' :
-                                                                       'N',
-        numberWaveFunctions,
-        d_numberNodesPerElement,
-        d_numberNodesPerElement,
-        &one,
-        &d_cellWaveFunctionMatrix[0],
-        numberWaveFunctions,
-        &d_cellHamiltonianMatrix[kpointSpinIndex][iCell][0],
-        d_numberNodesPerElement,
-        &zero,
-        &d_cellHamMatrixTimesWaveMatrix[0],
-        numberWaveFunctions);
-
-      if (dftPtr->d_dftParamsPtr->isPseudopotential)
-        {
-          d_ONCVnonLocalOperator->applyC_VCconjtransX(
-            d_cellHamMatrixTimesWaveMatrix,
-            std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
-        }
-
-
-      for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
-        {
-          dealii::types::global_dof_index localNodeId =
-            d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
-          const double scalarCoeffAlpha =
-            scalarHX *
-            d_invSqrtElementalMassVector[iCell * d_numberNodesPerElement +
-                                         iNode];
-          if (dofEncountered[localNodeId / numberWaveFunctions])
-            std::transform(dst.begin() + localNodeId,
-                           dst.begin() + localNodeId + numberWaveFunctions,
-                           d_cellHamMatrixTimesWaveMatrix.begin() +
-                             numberWaveFunctions * iNode,
-                           dst.begin() + localNodeId,
-                           [&scalarCoeffAlpha](auto &a, auto &b) {
-                             return a + scalarCoeffAlpha * b;
-                           });
-          else
+          for (unsigned int iNode = 0; iNode < d_numberNodesPerElement; ++iNode)
             {
-              dofEncountered[localNodeId / numberWaveFunctions] = true;
-              if (d_isConstrained[localNodeId / numberWaveFunctions] ||
-                  localNodeId / numberWaveFunctions >= nLocalDofs)
-                std::transform(d_cellHamMatrixTimesWaveMatrix.begin() +
-                                 numberWaveFunctions * iNode,
+              dealii::types::global_dof_index localNodeId =
+                d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
+              const double scalarCoeffAlpha =
+                scalarHX *
+                d_invSqrtElementalMassVector[iCell * d_numberNodesPerElement +
+                                             iNode];
+              if (dofEncountered[localNodeId / numberWaveFunctions])
+                std::transform(dst.begin() + localNodeId,
+                               dst.begin() + localNodeId + numberWaveFunctions,
                                d_cellHamMatrixTimesWaveMatrix.begin() +
-                                 numberWaveFunctions * iNode +
-                                 numberWaveFunctions,
+                                 numberWaveFunctions * iNode,
                                dst.begin() + localNodeId,
-                               [&scalarCoeffAlpha](auto &a) {
-                                 return scalarCoeffAlpha * a;
+                               [&scalarCoeffAlpha](auto &a, auto &b) {
+                                 return a + scalarCoeffAlpha * b;
                                });
               else
-                for (auto i = 0; i < numberWaveFunctions; ++i)
-                  dst.data()[localNodeId + i] =
-                    scalarCoeffAlpha * d_cellHamMatrixTimesWaveMatrix
-                                         [numberWaveFunctions * iNode + i] +
-                    scalarY * dst.data()[localNodeId + i] +
-                    scalarX * src.data()[localNodeId + i];
+                {
+                  dofEncountered[localNodeId / numberWaveFunctions] = true;
+                  if (d_isConstrained[localNodeId / numberWaveFunctions] ||
+                      localNodeId / numberWaveFunctions >= nLocalDofs)
+                    std::transform(d_cellHamMatrixTimesWaveMatrix.begin() +
+                                     numberWaveFunctions * iNode,
+                                   d_cellHamMatrixTimesWaveMatrix.begin() +
+                                     numberWaveFunctions * iNode +
+                                     numberWaveFunctions,
+                                   dst.begin() + localNodeId,
+                                   [&scalarCoeffAlpha](auto &a) {
+                                     return scalarCoeffAlpha * a;
+                                   });
+                  else
+                    for (auto i = 0; i < numberWaveFunctions; ++i)
+                      dst.data()[localNodeId + i] =
+                        scalarCoeffAlpha * d_cellHamMatrixTimesWaveMatrix
+                                             [numberWaveFunctions * iNode + i] +
+                        scalarY * dst.data()[localNodeId + i] +
+                        scalarX * src.data()[localNodeId + i];
+                }
             }
-        }
 
-    } // cell loop
+        } // cell loop
+    }
 }

@@ -170,8 +170,8 @@ namespace dftfe
     // Calls for both device and host
     void
     applyV_onCconjtransX(
-      const CouplingStructure                                 couplingtype,
-      const dftfe::utils::MemoryStorage<double, memorySpace> &couplingMatrix,
+      const CouplingStructure                                    couplingtype,
+      const dftfe::utils::MemoryStorage<ValueType, memorySpace> &couplingMatrix,
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &        sphericalFunctionKetTimesVectorParFlattened,
       const bool flagCopyResultsToMatrix = true);

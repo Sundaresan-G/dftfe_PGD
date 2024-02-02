@@ -193,7 +193,7 @@ namespace dftfe
     getAtomIdInCurrentProcessor(unsigned int iAtom);
 
 
-    const dftfe::utils::MemoryStorage<double, memorySpace> &
+    const dftfe::utils::MemoryStorage<ValueType, memorySpace> &
     getCouplingMatrix();
 
 
@@ -240,7 +240,7 @@ namespace dftfe
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
       d_atomicNonLocalPseudoPotentialConstants;
-    dftfe::utils::MemoryStorage<double, memorySpace>
+    dftfe::utils::MemoryStorage<ValueType, memorySpace>
       d_nonLocalHamiltonianEntries;
 
     bool d_nonlocalHamiltonianEntriesUpdated;

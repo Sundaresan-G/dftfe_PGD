@@ -247,43 +247,43 @@ namespace dftfe
           {
             MPI_Barrier(d_mpiCommParent);
             double device_time = MPI_Wtime();
-          if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-            forceDevice::wfcContractionsForceKernelsAllH(
-              dftPtr->d_basisOperationsPtrDevice,
-              kohnShamDFTEigenOperatorDevice,
-              dftPtr->d_oncvClassPtr,
-              dftPtr->d_eigenVectorsFlattenedDevice.begin(),
-              d_dftParams.spinPolarized,
-              spinIndex,
-              dftPtr->eigenValues,
-              partialOccupancies,
-              dftPtr->d_kPointCoordinates,
-              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                 ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                 ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
-              localVectorSize,
-              numEigenVectors,
-              numPhysicalCells,
-              numQuadPoints,
-              numQuadPointsNLP,
-              dftPtr->matrix_free_data.get_dofs_per_cell(
-                dftPtr->d_densityDofHandlerIndex),
-              dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                ->getTotalNonTrivialSphericalFnsOverAllCells(),
-              &elocWfcEshelbyTensorQuadValuesH[0],
-              &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
-                [0],
+            if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+              forceDevice::wfcContractionsForceKernelsAllH(
+                dftPtr->d_basisOperationsPtrDevice,
+                kohnShamDFTEigenOperatorDevice,
+                dftPtr->d_oncvClassPtr,
+                dftPtr->d_eigenVectorsFlattenedDevice.begin(),
+                d_dftParams.spinPolarized,
+                spinIndex,
+                dftPtr->eigenValues,
+                partialOccupancies,
+                dftPtr->d_kPointCoordinates,
+                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                   ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
+                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                   ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
+                localVectorSize,
+                numEigenVectors,
+                numPhysicalCells,
+                numQuadPoints,
+                numQuadPointsNLP,
+                dftPtr->matrix_free_data.get_dofs_per_cell(
+                  dftPtr->d_densityDofHandlerIndex),
+                dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                  ->getTotalNonTrivialSphericalFnsOverAllCells(),
+                &elocWfcEshelbyTensorQuadValuesH[0],
+                &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                  [0],
 #  ifdef USE_COMPLEX
-              &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
-                [0],
+                &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                  [0],
 #  endif
-              d_mpiCommParent,
-              dftPtr->interBandGroupComm,
-              isPseudopotential,
-              d_dftParams.floatingNuclearCharges,
-              false,
-              d_dftParams);
+                d_mpiCommParent,
+                dftPtr->interBandGroupComm,
+                isPseudopotential,
+                d_dftParams.floatingNuclearCharges,
+                false,
+                d_dftParams);
 
             MPI_Barrier(d_mpiCommParent);
             device_time = MPI_Wtime() - device_time;
@@ -297,43 +297,43 @@ namespace dftfe
           {
             MPI_Barrier(d_mpiCommParent);
             double host_time = MPI_Wtime();
-          if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
-            force::wfcContractionsForceKernelsAllH(
-              dftPtr->d_basisOperationsPtrHost,
-              kohnShamDFTEigenOperator,
-              dftPtr->d_oncvClassPtr,
-              dftPtr->d_eigenVectorsFlattenedHost.begin(),
-              d_dftParams.spinPolarized,
-              spinIndex,
-              dftPtr->eigenValues,
-              partialOccupancies,
-              dftPtr->d_kPointCoordinates,
-              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                 ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                 ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
-              localVectorSize,
-              numEigenVectors,
-              numPhysicalCells,
-              numQuadPoints,
-              numQuadPointsNLP,
-              dftPtr->matrix_free_data.get_dofs_per_cell(
-                dftPtr->d_densityDofHandlerIndex),
-              dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                ->getTotalNonTrivialSphericalFnsOverAllCells(),
-              &elocWfcEshelbyTensorQuadValuesH[0],
-              &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
-                [0],
+            if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+              force::wfcContractionsForceKernelsAllH(
+                dftPtr->d_basisOperationsPtrHost,
+                kohnShamDFTEigenOperator,
+                dftPtr->d_oncvClassPtr,
+                dftPtr->d_eigenVectorsFlattenedHost.begin(),
+                d_dftParams.spinPolarized,
+                spinIndex,
+                dftPtr->eigenValues,
+                partialOccupancies,
+                dftPtr->d_kPointCoordinates,
+                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                   ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
+                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                   ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
+                localVectorSize,
+                numEigenVectors,
+                numPhysicalCells,
+                numQuadPoints,
+                numQuadPointsNLP,
+                dftPtr->matrix_free_data.get_dofs_per_cell(
+                  dftPtr->d_densityDofHandlerIndex),
+                dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                  ->getTotalNonTrivialSphericalFnsOverAllCells(),
+                &elocWfcEshelbyTensorQuadValuesH[0],
+                &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                  [0],
 #ifdef USE_COMPLEX
-              &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
-                [0],
+                &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                  [0],
 #endif
-              d_mpiCommParent,
-              dftPtr->interBandGroupComm,
-              isPseudopotential,
-              d_dftParams.floatingNuclearCharges,
-              false,
-              d_dftParams);
+                d_mpiCommParent,
+                dftPtr->interBandGroupComm,
+                isPseudopotential,
+                d_dftParams.floatingNuclearCharges,
+                false,
+                d_dftParams);
 
             MPI_Barrier(d_mpiCommParent);
             host_time = MPI_Wtime() - host_time;

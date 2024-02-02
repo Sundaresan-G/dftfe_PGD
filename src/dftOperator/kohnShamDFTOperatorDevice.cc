@@ -136,8 +136,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::createDeviceBlasHandle()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    createDeviceBlasHandle()
   {
     dftfe::utils::deviceBlasWrapper::create(&d_deviceBlasHandle);
 #ifdef DFTFE_WTIH_DEVICE_CUDA
@@ -151,8 +151,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::destroyDeviceBlasHandle()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    destroyDeviceBlasHandle()
   {
     dftfe::utils::deviceBlasWrapper::destroy(d_deviceBlasHandle);
   }
@@ -226,8 +226,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::getShapeFunctionValues()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getShapeFunctionValues()
   {
     d_basisOperationsPtrDevice->reinit(0, 0, dftPtr->d_densityQuadratureId);
     return d_basisOperationsPtrDevice->shapeFunctionBasisData(true);
@@ -275,8 +275,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::getInverseJacobiansNLP()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getInverseJacobiansNLP()
   {
     return d_inverseJacobiansNLPDevice;
   }
@@ -298,8 +298,8 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<dataTypes::number,
                               dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::getCellWaveFunctionMatrix()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getCellWaveFunctionMatrix()
   {
     return d_cellWaveFunctionMatrix;
   }
@@ -542,15 +542,17 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          BVec, d_parallelSphericalFnKetTimesBlockVectorDevice);
-        d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
-          d_cellWaveFunctionMatrix);
-        d_totalNonlocalElemsPseudo =
-          d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
-        // std::cout<<"Total NonLocal Elements:
-        // "<<d_totalNonlocalElemsPseudo<<std::endl;
-        d_isMallocCalled = true;
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+          {
+            d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+              BVec, d_parallelSphericalFnKetTimesBlockVectorDevice);
+            d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
+              d_cellWaveFunctionMatrix);
+            d_totalNonlocalElemsPseudo =
+              d_ONCVnonLocalOperator
+                ->getTotalNonLocalElementsInCurrentProcessor();
+            d_isMallocCalled = true;
+          }
       }
 
     dftfe::utils::deviceMemGetInfo(&free_t, &total_t);
@@ -675,7 +677,8 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+          d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
       }
   }
 

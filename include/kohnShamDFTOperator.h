@@ -694,13 +694,11 @@ node is stored
                                       dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtrHost;
 
-    std::shared_ptr<
-      dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>>
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
       d_oncvClassPtr;
 
     std::shared_ptr<
-      AtomicCenteredNonLocalOperator<dataTypes::number,
-                                     dftfe::utils::MemorySpace::HOST>>
+      AtomicCenteredNonLocalOperator<dataTypes::number, memorySpace>>
       d_ONCVnonLocalOperator;
 
     /// flag for precomputing stiffness matrix contribution from

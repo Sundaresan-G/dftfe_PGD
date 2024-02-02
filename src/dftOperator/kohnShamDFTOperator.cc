@@ -217,8 +217,9 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+            numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -265,8 +266,9 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+            numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -330,8 +332,9 @@ namespace dftfe
           dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
           numberWaveFunctions,
           dftPtr->d_projectorKetTimesVectorParFlattened);
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+            numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
   }
 
