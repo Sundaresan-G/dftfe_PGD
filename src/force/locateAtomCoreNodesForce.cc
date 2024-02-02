@@ -22,9 +22,11 @@
 namespace dftfe
 {
   // source file for locating core atom nodes
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::locateAtomCoreNodesForce(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::locateAtomCoreNodesForce(
     const dealii::DoFHandler<3> &dofHandlerForce,
     const dealii::IndexSet &     locally_owned_dofsForce,
     std::map<std::pair<unsigned int, unsigned int>, unsigned int>

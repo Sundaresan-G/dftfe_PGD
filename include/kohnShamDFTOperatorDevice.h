@@ -29,7 +29,7 @@
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class dftClass;
 #endif
 
@@ -46,9 +46,11 @@ namespace dftfe
   class kohnShamDFTOperatorDeviceClass : public operatorDFTDeviceClass
   {
   public:
-    kohnShamDFTOperatorDeviceClass(dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-                                   const MPI_Comm &mpi_comm_parent,
-                                   const MPI_Comm &mpi_comm_domain);
+    kohnShamDFTOperatorDeviceClass(
+      dftClass<FEOrder, FEOrderElectro, dftfe::utils::MemorySpace::DEVICE>
+        *             _dftPtr,
+      const MPI_Comm &mpi_comm_parent,
+      const MPI_Comm &mpi_comm_domain);
 
     /**
      * @brief destructor
@@ -638,7 +640,8 @@ namespace dftfe
 
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro> *dftPtr;
+    dftClass<FEOrder, FEOrderElectro, dftfe::utils::MemorySpace::DEVICE>
+      *dftPtr;
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,

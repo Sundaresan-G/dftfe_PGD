@@ -31,9 +31,11 @@ namespace dftfe
   //
   // compute configurational force contribution from all terms except the
   // nuclear self energy
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeConfigurationalForceEEshelbyTensorFPSPFnlLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
@@ -1534,9 +1536,11 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeConfigurationalForceEEshelbyEElectroPhiTot(
       const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
       const unsigned int                   phiTotDofHandlerIndexElectro,

@@ -24,24 +24,29 @@ namespace dftfe
   //(locally used function) compute Fnl contibution due to Gamma(Rj) for given
   // set
   // of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::FnlGammaAtomsElementalContribution(
-    std::map<unsigned int, std::vector<double>> &forceContributionFnlGammaAtoms,
-    const dealii::MatrixFree<3, double> &        matrixFreeData,
-    dealii::FEEvaluation<3,
-                         1,
-                         C_num1DQuadNLPSP<FEOrder>() * C_numCopies1DQuadNLPSP(),
-                         3> &                    forceEvalNLP,
-    const unsigned int                           cell,
-    const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    FnlGammaAtomsElementalContribution(
+      std::map<unsigned int, std::vector<double>>
+        &                                  forceContributionFnlGammaAtoms,
+      const dealii::MatrixFree<3, double> &matrixFreeData,
+      dealii::FEEvaluation<3,
+                           1,
+                           C_num1DQuadNLPSP<FEOrder>() *
+                             C_numCopies1DQuadNLPSP(),
+                           3> &            forceEvalNLP,
+      const unsigned int                   cell,
+      const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
 #ifdef USE_COMPLEX
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
 #endif
-    const std::vector<dataTypes::number> &zetaDeltaVQuadsFlattened,
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
+      const std::vector<dataTypes::number> &zetaDeltaVQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
   {
     const unsigned int numberGlobalAtoms = dftPtr->atomLocations.size();
     const unsigned int numSubCells =
@@ -226,17 +231,20 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::FnlGammaxElementalContribution(
-    dealii::AlignedVector<dealii::Tensor<1, 3, dealii::VectorizedArray<double>>>
-      &                                           FVectQuads,
-    const dealii::MatrixFree<3, double> &         matrixFreeData,
-    const unsigned int                            numQuadPoints,
-    const unsigned int                            cell,
-    const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
-    const std::vector<dataTypes::number> &        zetaDeltaVQuadsFlattened,
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    FnlGammaxElementalContribution(
+      dealii::AlignedVector<
+        dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &FVectQuads,
+      const dealii::MatrixFree<3, double> &                     matrixFreeData,
+      const unsigned int                                        numQuadPoints,
+      const unsigned int                                        cell,
+      const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
+      const std::vector<dataTypes::number> &        zetaDeltaVQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
   {
     const unsigned int numberGlobalAtoms = dftPtr->atomLocations.size();
     const unsigned int numSubCells =
@@ -360,11 +368,14 @@ namespace dftfe
 
   //(locally used function) accumulate and distribute Fnl contibution due to
   // Gamma(Rj)
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::distributeForceContributionFnlGammaAtoms(
-    const std::map<unsigned int, std::vector<double>>
-      &forceContributionFnlGammaAtoms)
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    distributeForceContributionFnlGammaAtoms(
+      const std::map<unsigned int, std::vector<double>>
+        &forceContributionFnlGammaAtoms)
   {
     for (unsigned int iAtom = 0; iAtom < dftPtr->atomLocations.size(); iAtom++)
       {

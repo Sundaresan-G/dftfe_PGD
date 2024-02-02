@@ -35,7 +35,7 @@
 namespace dftfe
 {
   // forward declaration
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class dftClass;
 
   /**
@@ -49,10 +49,12 @@ namespace dftfe
    *
    * @author Sambit Das
    */
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   class forceClass
   {
-    friend class dftClass<FEOrder, FEOrderElectro>;
+    friend class dftClass<FEOrder, FEOrderElectro, memorySpace>;
 
   public:
     /** @brief Constructor.
@@ -61,10 +63,10 @@ namespace dftfe
      *  @param mpi_comm_parent parent mpi_communicator
      *  @param mpi_comm_domain domain decomposition mpi_communicator
      */
-    forceClass(dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-               const MPI_Comm &                   mpi_comm_parent,
-               const MPI_Comm &                   mpi_comm_domain,
-               const dftParameters &              dftParams);
+    forceClass(dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+               const MPI_Comm &                                mpi_comm_parent,
+               const MPI_Comm &                                mpi_comm_domain,
+               const dftParameters &                           dftParams);
 
     /** @brief initializes data structures inside forceClass assuming unmoved triangulation.
      *
@@ -830,7 +832,7 @@ namespace dftfe
     const bool d_allowGaussianOverlapOnAtoms = false;
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro> *dftPtr;
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *dftPtr;
 
     /// Finite element object for configurational force computation. Linear
     /// finite elements with three force field components are used.

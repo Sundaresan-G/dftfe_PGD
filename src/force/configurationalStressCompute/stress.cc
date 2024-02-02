@@ -21,9 +21,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeStress(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::computeStress(
     const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
     kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
@@ -151,9 +153,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::printStress()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::printStress()
   {
     if (!d_dftParams.reproducible_output)
       {

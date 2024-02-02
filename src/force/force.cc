@@ -153,12 +153,14 @@ namespace dftfe
   //
   // constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   forceClass<FEOrder, FEOrderElectro>::forceClass(
-    dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-    const MPI_Comm &                   mpi_comm_parent,
-    const MPI_Comm &                   mpi_comm_domain,
-    const dftParameters &              dftParams)
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+    const MPI_Comm &                                mpi_comm_parent,
+    const MPI_Comm &                                mpi_comm_domain,
+    const dftParameters &                           dftParams)
     : dftPtr(_dftPtr)
     , FEForce(dealii::FE_Q<3>(dealii::QGaussLobatto<1>(2)), 3)
     , d_mpiCommParent(mpi_comm_parent)
@@ -174,7 +176,9 @@ namespace dftfe
   //
   // initialize forceClass object
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder, FEOrderElectro>::initUnmoved(
     const dealii::Triangulation<3, 3> &     triangulation,
@@ -211,7 +215,9 @@ namespace dftfe
 
 
   // reinitialize force class object after mesh update
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder, FEOrderElectro>::initMoved(
     std::vector<const dealii::DoFHandler<3> *> &dofHandlerVectorMatrixFree,
@@ -261,7 +267,9 @@ namespace dftfe
   //
   // initialize pseudopotential data for force computation
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder, FEOrderElectro>::initPseudoData()
   {
@@ -270,7 +278,9 @@ namespace dftfe
   }
 
   // compute forces on atoms corresponding to a Gaussian generator
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder, FEOrderElectro>::computeAtomsForces(
     const dealii::MatrixFree<3, double> &matrixFreeData,
@@ -376,7 +386,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder, FEOrderElectro>::configForceLinFEInit(
     const dealii::MatrixFree<3, double> &matrixFreeData,
@@ -408,7 +420,9 @@ namespace dftfe
 #endif
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder, FEOrderElectro>::configForceLinFEFinalize()
   {
@@ -450,7 +464,9 @@ namespace dftfe
   // cases. Also both LDA and GGA exchange correlation are handled. For details
   // of the configurational force expressions refer to the Configurational force
   // paper by Motamarri et.al. (https://arxiv.org/abs/1712.05535)
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder, FEOrderElectro>::computeConfigurationalForceTotalLinFE(
     const dealii::MatrixFree<3, double> &matrixFreeData,
@@ -567,14 +583,18 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<double>
   forceClass<FEOrder, FEOrderElectro>::getAtomsForces()
   {
     return d_globalAtomsForces;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dealii::Tensor<2, 3, double>
   forceClass<FEOrder, FEOrderElectro>::getStress()
   {

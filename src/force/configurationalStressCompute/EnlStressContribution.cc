@@ -22,22 +22,25 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::stressEnlElementalContribution(
-    dealii::Tensor<2, 3, double> &                stressContribution,
-    const dealii::MatrixFree<3, double> &         matrixFreeData,
-    const unsigned int                            numQuadPoints,
-    const std::vector<double> &                   jxwQuadsSubCells,
-    const unsigned int                            cell,
-    const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
-    const std::vector<dataTypes::number> &zetalmDeltaVlProductDistImageAtoms,
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    stressEnlElementalContribution(
+      dealii::Tensor<2, 3, double> &                stressContribution,
+      const dealii::MatrixFree<3, double> &         matrixFreeData,
+      const unsigned int                            numQuadPoints,
+      const std::vector<double> &                   jxwQuadsSubCells,
+      const unsigned int                            cell,
+      const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
+      const std::vector<dataTypes::number> &zetalmDeltaVlProductDistImageAtoms,
 #ifdef USE_COMPLEX
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
 #endif
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened,
-    const bool isSpinPolarized)
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened,
+      const bool isSpinPolarized)
   {
     const unsigned int numberGlobalAtoms = dftPtr->atomLocations.size();
     const unsigned int numSubCells =
