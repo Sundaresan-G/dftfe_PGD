@@ -1082,13 +1082,13 @@ namespace dftfe
             //  deviceFlattenedArrayBlock.begin(),
             //  projectorKetTimesVectorD,
             //  numPsi);
-
-            oncvClassPtr->getNonLocalOperatorDevice()->applyVCconjtransOnX(
-              deviceFlattenedArrayBlock.begin(),
-              kPointIndex,
-              CouplingStructure::diagonal,
-              oncvClassPtr->getCouplingMatrix(),
-              projectorKetTimesVectorD);
+            //FIX ME
+            // oncvClassPtr->getNonLocalOperator()->applyVCconjtransOnX(
+            //   deviceFlattenedArrayBlock.begin(),
+            //   kPointIndex,
+            //   CouplingStructure::diagonal,
+            //   oncvClassPtr->getCouplingMatrix(),
+            //   projectorKetTimesVectorD);
 
             // dftfe::utils::deviceSynchronize();
             // MPI_Barrier(d_mpiCommParent);
@@ -1150,7 +1150,7 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE>>
         &                                                  basisOperationsPtr,
       operatorDFTDeviceClass &                             operatorMatrix,
-      std::shared_ptr<dftfe::oncvClass<dataTypes::number>> oncvClassPtr,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number,dftfe::utils::MemorySpace::DEVICE>> oncvClassPtr,
       const dataTypes::number *                            X,
       const unsigned int                                   spinPolarizedFlag,
       const unsigned int                                   spinIndex,

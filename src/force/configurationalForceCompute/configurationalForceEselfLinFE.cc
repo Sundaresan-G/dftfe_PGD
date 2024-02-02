@@ -540,7 +540,7 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   void
   forceClass<FEOrder,
-             FEOrderElectro>::computeConfigurationalForceEselfNoSurfaceLinFE()
+             FEOrderElectro, memorySpace>::computeConfigurationalForceEselfNoSurfaceLinFE()
   {
     dealii::FEEvaluation<
       3,
