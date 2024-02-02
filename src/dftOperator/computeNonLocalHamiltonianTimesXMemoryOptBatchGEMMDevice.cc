@@ -67,7 +67,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     {
       const dftfe::utils::MemoryStorage<double,
                                         dftfe::utils::MemorySpace::DEVICE>
-        couplingMatrix = d_oncvClassPtr->getCouplingMatrixDevice();
+        couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
       d_ONCVnonLocalOperator->applyV_onCconjtransX(CouplingStructure::diagonal,
                                                    couplingMatrix,
                                                    projectorKetTimesVector,
@@ -146,7 +146,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   // d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
   //                                                false);
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-    couplingMatrix = d_oncvClassPtr->getCouplingMatrixDevice();
+    couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
   d_ONCVnonLocalOperator->applyV_onCconjtransX(CouplingStructure::diagonal,
                                                couplingMatrix,
                                                projectorKetTimesVector,

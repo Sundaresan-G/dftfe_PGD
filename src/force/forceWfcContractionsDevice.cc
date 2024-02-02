@@ -1087,7 +1087,7 @@ namespace dftfe
               deviceFlattenedArrayBlock.begin(),
               kPointIndex,
               CouplingStructure::diagonal,
-              oncvClassPtr->getCouplingMatrixDevice(),
+              oncvClassPtr->getCouplingMatrixvice(),
               projectorKetTimesVectorD);
 
             // dftfe::utils::deviceSynchronize();

@@ -650,7 +650,9 @@ namespace dftfe
                                       dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtrHost;
 
-    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+    std::shared_ptr<
+      dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>>
+      d_oncvClassPtr;
 
     std::shared_ptr<
       AtomicCenteredNonLocalOperator<dataTypes::number,

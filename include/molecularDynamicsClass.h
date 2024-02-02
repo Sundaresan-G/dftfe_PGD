@@ -43,7 +43,8 @@ namespace dftfe
                            const std::string restartFilesPath,
                            const MPI_Comm &  mpi_comm_parent,
                            const bool        restart,
-                           const int         verbosity);
+                           const int         verbosity,
+                           const bool        useDevice);
 
 
     const double haPerBohrToeVPerAng = 27.211386245988 / 0.529177210903;

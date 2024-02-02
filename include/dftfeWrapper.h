@@ -63,7 +63,8 @@ namespace dftfe
                  const bool        setDeviceToMPITaskBindingInternally = false,
                  const std::string solverMode                          = "GS",
                  const std::string restartFilesPath                    = ".",
-                 const int         _verbosity                          = 1);
+                 const int         _verbosity                          = 1,
+                 const bool        useDevice                           = false);
 
     /**
      * @brief constructor based on input parameter_file and restart
@@ -78,6 +79,7 @@ namespace dftfe
                  const std::string solverMode                          = "GS",
                  const std::string restartFilesPath                    = ".",
                  const int         _verbosity                          = 1,
+                 const bool        useDevice                           = false,
                  const bool        isScfRestart                        = true);
 
 
@@ -154,6 +156,7 @@ namespace dftfe
                  const double            meshSize               = 0.8,
                  const double            scfMixingParameter     = 0.2,
                  const int               verbosity              = -1,
+                 const bool              useDevice              = false,
                  const bool setDeviceToMPITaskBindingInternally = false);
 
 

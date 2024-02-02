@@ -44,6 +44,7 @@ namespace dftfe
     double      Kmin;
     double      pathThreshold;
     int         maximumNEBiteration;
+    bool        useDevice;
 
     unsigned int maxLineSearchIterCGPRP;
     std::string  bfgsStepMethod;

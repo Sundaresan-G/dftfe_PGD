@@ -52,11 +52,6 @@ namespace dftfe
 
       prm.enter_subsection("GPU");
       {
-        prm.declare_entry("USE GPU",
-                          "false",
-                          dealii::Patterns::Bool(),
-                          "[Standard] Use GPU for compute.");
-
         prm.declare_entry(
           "USE TF32 OP",
           "false",
@@ -1345,7 +1340,6 @@ namespace dftfe
 
     prm.enter_subsection("GPU");
     {
-      useDevice                  = prm.get_bool("USE GPU");
       useTF32Device              = prm.get_bool("USE TF32 OP");
       deviceFineGrainedTimings   = prm.get_bool("FINE GRAINED GPU TIMINGS");
       allowFullCPUMemSubspaceRot = prm.get_bool("SUBSPACE ROT FULL CPU MEM");

@@ -44,7 +44,7 @@
 #endif
 namespace dftfe
 {
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   class oncvClass
   {
   public:
@@ -250,12 +250,9 @@ namespace dftfe
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
       d_atomicNonLocalPseudoPotentialConstants;
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      d_nonLocalHamiltonianEntriesHost;
-#if defined(DFTFE_WITH_DEVICE)
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-      d_nonLocalHamiltonianEntriesDevice;
-#endif
+    dftfe::utils::MemoryStorage<double, memorySpace>
+      d_nonLocalHamiltonianEntries;
+
     bool d_nonlocalHamiltonianEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;
@@ -302,16 +299,8 @@ namespace dftfe
     unsigned int                                      d_nOMPThreads;
 
     // Creating Object for Atom Centerd Nonlocal Operator
-    std::shared_ptr<
-      AtomicCenteredNonLocalOperator<ValueType,
-                                     dftfe::utils::MemorySpace::HOST>>
-      d_nonLocalOperatorHost;
-#if defined(DFTFE_WITH_DEVICE)
-    std::shared_ptr<
-      AtomicCenteredNonLocalOperator<ValueType,
-                                     dftfe::utils::MemorySpace::DEVICE>>
-      d_nonLocalOperatorDevice;
-#endif
+    std::shared_ptr<AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
+      d_nonLocalOperator;
 
 
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>

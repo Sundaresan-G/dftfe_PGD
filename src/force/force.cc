@@ -169,7 +169,6 @@ namespace dftfe
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_domain))
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
-    , d_oncvClassPtr(dftPtr->d_oncvClassPtr)
   {}
 
   //

@@ -20,7 +20,7 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int FEOrder, unsigned int FEOrderElectro, dftfe::utils::MemorySpace memorySpace >
   void
   dftClass<FEOrder, FEOrderElectro>::applyHomogeneousDirichletBC(
     const dealii::DoFHandler<3> &            _dofHandler,

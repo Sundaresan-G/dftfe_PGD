@@ -223,7 +223,7 @@ namespace dftfe
         std::vector<dataTypes::number>
           projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened(
             numKPoints *
-              dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              dftPtr->d_oncvClassPtr->getNonLocalOperator()
                 ->getTotalNonTrivialSphericalFnsOverAllCells() *
               numQuadPointsNLP * 3,
             dataTypes::number(0.0));
@@ -232,7 +232,7 @@ namespace dftfe
         std::vector<dataTypes::number>
           projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened(
             numKPoints *
-              dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              dftPtr->d_oncvClassPtr->getNonLocalOperator()
                 ->getTotalNonTrivialSphericalFnsOverAllCells() *
               numQuadPointsNLP,
             dataTypes::number(0.0));
@@ -256,9 +256,9 @@ namespace dftfe
               dftPtr->eigenValues,
               partialOccupancies,
               dftPtr->d_kPointCoordinates,
-              &dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
                  ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-              &dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
                  ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
               localVectorSize,
               numEigenVectors,
@@ -267,7 +267,7 @@ namespace dftfe
               numQuadPointsNLP,
               dftPtr->matrix_free_data.get_dofs_per_cell(
                 dftPtr->d_densityDofHandlerIndex),
-              dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              dftPtr->d_oncvClassPtr->getNonLocalOperator()
                 ->getTotalNonTrivialSphericalFnsOverAllCells(),
               &elocWfcEshelbyTensorQuadValuesH[0],
               &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
@@ -306,9 +306,9 @@ namespace dftfe
               dftPtr->eigenValues,
               partialOccupancies,
               dftPtr->d_kPointCoordinates,
-              &dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
                  ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-              &dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              &dftPtr->d_oncvClassPtr->getNonLocalOperator()
                  ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
               localVectorSize,
               numEigenVectors,
@@ -317,7 +317,7 @@ namespace dftfe
               numQuadPointsNLP,
               dftPtr->matrix_free_data.get_dofs_per_cell(
                 dftPtr->d_densityDofHandlerIndex),
-              dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+              dftPtr->d_oncvClassPtr->getNonLocalOperator()
                 ->getTotalNonTrivialSphericalFnsOverAllCells(),
               &elocWfcEshelbyTensorQuadValuesH[0],
               &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
@@ -437,7 +437,7 @@ namespace dftfe
 #ifdef USE_COMPLEX
                   projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
 #endif
-                  dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                  dftPtr->d_oncvClassPtr->getNonLocalOperator()
                     ->getAtomCenteredKpointIndexedSphericalFnQuadValues(),
                   projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened);
 
@@ -450,7 +450,7 @@ namespace dftfe
                       numQuadPointsNLP,
                       cell,
                       cellIdToCellNumberMap,
-                      dftPtr->d_oncvClassPtr->getNonLocalOperatorHost()
+                      dftPtr->d_oncvClassPtr->getNonLocalOperator()
                         ->getAtomCenteredKpointIndexedSphericalFnQuadValues(),
                       projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened);
 

@@ -32,7 +32,8 @@ namespace dftfe
     const std::string restartFilesPath,
     const MPI_Comm &  mpi_comm_parent,
     const bool        restart,
-    const int         verbosity)
+    const int         verbosity,
+    const bool        useDevice)
     : d_mpiCommParent(mpi_comm_parent)
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
@@ -170,6 +171,7 @@ namespace dftfe
                                                         "GEOOPT",
                                                         d_restartFilesPath,
                                                         d_verbosity,
+                                                        useDevice,
                                                         scfRestart);
         d_dftPtr       = d_dftfeWrapper->getDftfeBasePtr();
 
@@ -197,7 +199,8 @@ namespace dftfe
                                                         true,
                                                         "GEOOPT",
                                                         d_restartFilesPath,
-                                                        d_verbosity);
+                                                        d_verbosity,
+                                                        useDevice);
         d_dftPtr       = d_dftfeWrapper->getDftfeBasePtr();
         if (d_dftPtr->getParametersObject().optimizationMode == "ION")
           d_optMode = 0;

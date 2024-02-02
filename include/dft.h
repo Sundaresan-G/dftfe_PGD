@@ -104,7 +104,9 @@ namespace dftfe
    *
    * @author Shiva Rudraraju, Phani Motamarri, Sambit Das
    */
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   class dftClass : public dftBase
   {
     friend class kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>;

@@ -19,8 +19,8 @@
 
 namespace dftfe
 {
-  template <typename ValueType>
-  oncvClass<ValueType>::oncvClass(
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  oncvClass<ValueType, memorySpace>::oncvClass(
     const MPI_Comm &                            mpi_comm_parent,
     const std::string &                         scratchFolderName,
     const std::set<unsigned int> &              atomTypes,
@@ -46,9 +46,10 @@ namespace dftfe
     d_useDevice              = useDevice;
   }
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForDensities()
+  oncvClass<ValueType,
+            memorySpace>::createAtomCenteredSphericalFunctionsForDensities()
   {
     d_atomicCoreDensityVector.clear();
     d_atomicCoreDensityVector.resize(d_nOMPThreads);
@@ -89,9 +90,9 @@ namespace dftfe
 
 
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::initialise(
+  oncvClass<ValueType, memorySpace>::initialise(
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
@@ -151,30 +152,30 @@ namespace dftfe
 
     d_atomicProjectorFnsContainer->init(atomicNumbers, d_atomicProjectorFnsMap);
 
-    d_nonLocalOperatorHost = std::make_shared<
-      AtomicCenteredNonLocalOperator<ValueType,
-                                     dftfe::utils::MemorySpace::HOST>>(
-      d_BLASWrapperHostPtr,
-      d_BasisOperatorHostPtr,
-      d_atomicProjectorFnsContainer,
-      d_numEigenValues,
-      d_mpiCommParent);
+    if (!d_useDevice)
+      d_nonLocalOperator = std::make_shared<
+        AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
+        d_BLASWrapperHostPtr,
+        d_BasisOperatorHostPtr,
+        d_atomicProjectorFnsContainer,
+        d_numEigenValues,
+        d_mpiCommParent);
 #if defined(DFTFE_WITH_DEVICE)
-    if (d_useDevice)
-      d_nonLocalOperatorDevice = std::make_shared<
-        AtomicCenteredNonLocalOperator<ValueType,
-                                       dftfe::utils::MemorySpace::DEVICE>>(
+    else
+      d_nonLocalOperator = std::make_shared<
+        AtomicCenteredNonLocalOperator<ValueType, memorySpace>>(
         d_BLASWrapperDevicePtr,
         d_BasisOperatorDevicePtr,
         d_atomicProjectorFnsContainer,
         d_numEigenValues,
         d_mpiCommParent);
 #endif
+
     computeNonlocalPseudoPotentialConstants();
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::initialiseNonLocalContribution(
+  oncvClass<ValueType, memorySpace>::initialiseNonLocalContribution(
     const std::vector<std::vector<double>> &atomLocations,
     const std::vector<int> &                imageIds,
     const std::vector<std::vector<double>> &periodicCoords,
@@ -206,14 +207,7 @@ namespace dftfe
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
-#if defined(DFTFE_WITH_DEVICE)
-        if (d_useDevice)
-          d_nonLocalOperatorDevice->InitalisePartitioner(
-            d_BasisOperatorHostPtr);
-        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
-#else
-        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
-#endif
+        d_nonLocalOperator->InitalisePartitioner(d_BasisOperatorHostPtr);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -223,17 +217,10 @@ namespace dftfe
       }
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
-    d_nonLocalOperatorHost->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperatorHost->computeCMatrixEntries(d_nlpspQuadratureId);
-#if defined(DFTFE_WITH_DEVICE)
-    if (d_useDevice)
-      {
-        MPI_Barrier(d_mpiCommParent);
-        d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
-        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
-          d_nonLocalOperatorHost);
-      }
-#endif
+    d_nonLocalOperator->initKpoints(kPointWeights, kPointCoordinates);
+    d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,
+                                              d_nlpspQuadratureId);
+
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
     if (d_verbosity >= 2)
@@ -241,9 +228,9 @@ namespace dftfe
             << std::endl;
   }
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::initialiseNonLocalContribution(
+  oncvClass<ValueType, memorySpace>::initialiseNonLocalContribution(
     const std::vector<std::vector<double>> &        atomLocations,
     const std::vector<int> &                        imageIds,
     const std::vector<std::vector<double>> &        periodicCoords,
@@ -286,14 +273,7 @@ namespace dftfe
           elementIndexesInAtomCompactSupport,
           atomIdsInCurrentProcess,
           numberElements);
-#if defined(DFTFE_WITH_DEVICE)
-        if (d_useDevice)
-          d_nonLocalOperatorDevice->InitalisePartitioner(
-            d_BasisOperatorHostPtr);
-        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
-#else
-        d_nonLocalOperatorHost->InitalisePartitioner(d_BasisOperatorHostPtr);
-#endif
+        d_nonLocalOperator->InitalisePartitioner(d_BasisOperatorHostPtr);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -303,17 +283,8 @@ namespace dftfe
       }
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
-    d_nonLocalOperatorHost->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperatorHost->computeCMatrixEntries(d_nlpspQuadratureId);
-#if defined(DFTFE_WITH_DEVICE)
-    if (d_useDevice)
-      {
-        MPI_Barrier(d_mpiCommParent);
-        d_nonLocalOperatorDevice->initKpoints(kPointWeights, kPointCoordinates);
-        d_nonLocalOperatorDevice->transferCMatrixEntriesfromHostObject(
-          d_nonLocalOperatorHost);
-      }
-#endif
+    d_nonLocalOperator->initKpoints(kPointWeights, kPointCoordinates);
+    d_nonLocalOperator->computeCMatrixEntries(d_nlpspQuadratureId);
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
     if (d_verbosity >= 2)
@@ -323,9 +294,9 @@ namespace dftfe
 
 
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::computeNonlocalPseudoPotentialConstants()
+  oncvClass<ValueType, memorySpace>::computeNonlocalPseudoPotentialConstants()
   {
     for (std::set<unsigned int>::iterator it = d_atomTypes.begin();
          it != d_atomTypes.end();
@@ -372,9 +343,10 @@ namespace dftfe
 
 
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForProjectors()
+  oncvClass<ValueType,
+            memorySpace>::createAtomCenteredSphericalFunctionsForProjectors()
   {
     d_atomicProjectorFnsVector.clear();
     std::vector<std::vector<int>> projectorIdDetails;
@@ -480,9 +452,10 @@ namespace dftfe
 
 
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::createAtomCenteredSphericalFunctionsForLocalPotential()
+  oncvClass<ValueType, memorySpace>::
+    createAtomCenteredSphericalFunctionsForLocalPotential()
   {
     d_atomicLocalPotVector.clear();
     d_atomicLocalPotVector.resize(d_nOMPThreads);
@@ -507,9 +480,10 @@ namespace dftfe
 
       } //*it loop
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType>::getRadialValenceDensity(unsigned int Zno, double rad)
+  oncvClass<ValueType, memorySpace>::getRadialValenceDensity(unsigned int Zno,
+                                                             double       rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double       Value =
@@ -517,76 +491,80 @@ namespace dftfe
 
     return (Value);
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::getRadialValenceDensity(unsigned int         Zno,
-                                                double               rad,
-                                                std::vector<double> &Val)
+  oncvClass<ValueType, memorySpace>::getRadialValenceDensity(
+    unsigned int         Zno,
+    double               rad,
+    std::vector<double> &Val)
   {
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
     Val = d_atomicValenceDensityVector[threadId][Zno]->getDerivativeValue(rad);
   }
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType>::getRmaxValenceDensity(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::getRmaxValenceDensity(unsigned int Zno)
   {
     unsigned int threadId = omp_get_thread_num();
     return (d_atomicValenceDensityVector[threadId][Zno]->getRadialCutOff());
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType>::getRmaxCoreDensity(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::getRmaxCoreDensity(unsigned int Zno)
   {
     unsigned int threadId = omp_get_thread_num();
 
     return (d_atomicCoreDensityVector[threadId][Zno]->getRadialCutOff());
   }
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType>::getRadialCoreDensity(unsigned int Zno, double rad)
+  oncvClass<ValueType, memorySpace>::getRadialCoreDensity(unsigned int Zno,
+                                                          double       rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double       Value =
       d_atomicCoreDensityVector[threadId][Zno]->getRadialValue(rad);
     return (Value);
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::getRadialCoreDensity(unsigned int         Zno,
-                                             double               rad,
-                                             std::vector<double> &Val)
+  oncvClass<ValueType, memorySpace>::getRadialCoreDensity(
+    unsigned int         Zno,
+    double               rad,
+    std::vector<double> &Val)
   {
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
     Val = d_atomicCoreDensityVector[threadId][Zno]->getDerivativeValue(rad);
   }
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType>::getRadialLocalPseudo(unsigned int Zno, double rad)
+  oncvClass<ValueType, memorySpace>::getRadialLocalPseudo(unsigned int Zno,
+                                                          double       rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double Value = d_atomicLocalPotVector[threadId][Zno]->getRadialValue(rad);
     return (Value);
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType>::getRmaxLocalPot(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::getRmaxLocalPot(unsigned int Zno)
   {
     return (d_atomicLocalPotVector[0][Zno]->getRadialCutOff());
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   bool
-  oncvClass<ValueType>::coreNuclearDensityPresent(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::coreNuclearDensityPresent(unsigned int Zno)
   {
     return (d_atomTypeCoreFlagMap[Zno]);
   }
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  oncvClass<ValueType>::setImageCoordinates(
+  oncvClass<ValueType, memorySpace>::setImageCoordinates(
     const std::vector<std::vector<double>> &atomLocations,
     const std::vector<int> &                imageIds,
     const std::vector<std::vector<double>> &periodicCoords,
@@ -611,126 +589,116 @@ namespace dftfe
         imageLoc[atomId] += 1;
       }
   }
-  template <typename ValueType>
-  const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> &
-  oncvClass<ValueType>::getCouplingMatrix()
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  const dftfe::utils::MemoryStorage<double, memorySpace> &
+  oncvClass<ValueType, memorySpace>::getCouplingMatrix()
   {
-    if (!d_nonlocalHamiltonianEntriesUpdated)
+    if (std::is_same<memorySpace, dftfe::utils::MemorySpace::HOST>::value)
       {
-        const std::vector<unsigned int> atomIdsInProcessor =
-          d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
-        std::vector<unsigned int> atomicNumber =
-          d_atomicProjectorFnsContainer->getAtomicNumbers();
-        d_nonLocalHamiltonianEntriesHost.clear();
-        std::vector<double> Entries;
-        for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+        if (!d_nonlocalHamiltonianEntriesUpdated)
           {
-            unsigned int atomId = atomIdsInProcessor[iAtom];
-            unsigned int Zno    = atomicNumber[atomId];
-            unsigned int numberSphericalFunctions =
-              d_atomicProjectorFnsContainer
-                ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-            for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
-                 alpha++)
+            const std::vector<unsigned int> atomIdsInProcessor =
+              d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+            std::vector<unsigned int> atomicNumber =
+              d_atomicProjectorFnsContainer->getAtomicNumbers();
+            d_nonLocalHamiltonianEntries.clear();
+            std::vector<double> Entries;
+            for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
               {
-                double V = d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
-                Entries.push_back(V);
+                unsigned int atomId = atomIdsInProcessor[iAtom];
+                unsigned int Zno    = atomicNumber[atomId];
+                unsigned int numberSphericalFunctions =
+                  d_atomicProjectorFnsContainer
+                    ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
+                     alpha++)
+                  {
+                    double V =
+                      d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                    Entries.push_back(V);
+                  }
               }
+            d_nonLocalHamiltonianEntries.resize(Entries.size());
+            d_nonLocalHamiltonianEntries.copyFrom(Entries);
+            d_nonlocalHamiltonianEntriesUpdated = true;
           }
-        d_nonLocalHamiltonianEntriesHost.resize(Entries.size());
-        d_nonLocalHamiltonianEntriesHost.copyFrom(Entries);
-        d_nonlocalHamiltonianEntriesUpdated = true;
+
+        return (d_nonLocalHamiltonianEntries);
       }
-
-    return (d_nonLocalHamiltonianEntriesHost);
-  }
-
 #if defined(DFTFE_WITH_DEVICE)
-  template <typename ValueType>
-  const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  oncvClass<ValueType>::getCouplingMatrixDevice()
-  {
-    if (!d_nonlocalHamiltonianEntriesUpdated)
+    else if (std::is_same<memorySpace,
+                          dftfe::utils::MemorySpace::DEVICE>::value)
       {
-        const std::vector<unsigned int> atomIdsInProcessor =
-          d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
-        std::vector<unsigned int> atomicNumber =
-          d_atomicProjectorFnsContainer->getAtomicNumbers();
-        d_nonLocalHamiltonianEntriesHost.clear();
-        std::vector<double> Entries;
-        Entries.resize(
-          d_nonLocalOperatorDevice->getTotalNonLocalEntriesCurrentProcessor(),
-          0.0);
-        for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+        if (!d_nonlocalHamiltonianEntriesUpdated)
           {
-            unsigned int atomId = atomIdsInProcessor[iAtom];
-            unsigned int Zno    = atomicNumber[atomId];
-            unsigned int numberSphericalFunctions =
-              d_atomicProjectorFnsContainer
-                ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
-            for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
-                 alpha++)
+            const std::vector<unsigned int> atomIdsInProcessor =
+              d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
+            std::vector<unsigned int> atomicNumber =
+              d_atomicProjectorFnsContainer->getAtomicNumbers();
+            d_nonLocalHamiltonianEntries.clear();
+            std::vector<double> Entries;
+            Entries.resize(
+              d_nonLocalOperator->getTotalNonLocalEntriesCurrentProcessor(),
+              0.0);
+            for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
               {
-                unsigned int globalId =
-                  d_nonLocalOperatorDevice->getGlobalDofAtomIdSphericalFnPair(
-                    atomId, alpha);
-                const unsigned int id =
-                  d_nonLocalOperatorDevice->getLocalIdOfDistributedVec(
-                    globalId);
-                Entries[id] =
-                  d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                unsigned int atomId = atomIdsInProcessor[iAtom];
+                unsigned int Zno    = atomicNumber[atomId];
+                unsigned int numberSphericalFunctions =
+                  d_atomicProjectorFnsContainer
+                    ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
+                     alpha++)
+                  {
+                    unsigned int globalId =
+                      d_nonLocalOperator->getGlobalDofAtomIdSphericalFnPair(
+                        atomId, alpha);
+                    const unsigned int id =
+                      d_nonLocalOperator->getLocalIdOfDistributedVec(globalId);
+                    Entries[id] =
+                      d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                  }
               }
+            d_nonLocalHamiltonianEntries.resize(Entries.size());
+            d_nonLocalHamiltonianEntries.copyFrom(Entries);
+            d_nonlocalHamiltonianEntriesUpdated = true;
           }
-        d_nonLocalHamiltonianEntriesHost.resize(Entries.size());
-        d_nonLocalHamiltonianEntriesHost.copyFrom(Entries);
-
-        d_nonLocalHamiltonianEntriesDevice.clear();
-        d_nonLocalHamiltonianEntriesDevice.resize(
-          d_nonLocalHamiltonianEntriesHost.size());
-        d_nonLocalHamiltonianEntriesDevice.copyFrom(
-          d_nonLocalHamiltonianEntriesHost);
-        d_nonlocalHamiltonianEntriesUpdated = true;
+        return (d_nonLocalHamiltonianEntries);
       }
-    return (d_nonLocalHamiltonianEntriesDevice);
-  }
 #endif
-  template <typename ValueType>
-  const std::shared_ptr<
-    AtomicCenteredNonLocalOperator<ValueType, dftfe::utils::MemorySpace::HOST>>
-  oncvClass<ValueType>::getNonLocalOperatorHost()
-  {
-    return d_nonLocalOperatorHost;
   }
-#if defined(DFTFE_WITH_DEVICE)
-  template <typename ValueType>
-  const std::shared_ptr<
-    AtomicCenteredNonLocalOperator<ValueType,
-                                   dftfe::utils::MemorySpace::DEVICE>>
-  oncvClass<ValueType>::getNonLocalOperatorDevice()
+
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  const std::shared_ptr<AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
+  oncvClass<ValueType, memorySpace>::getNonLocalOperator()
   {
-    return d_nonLocalOperatorDevice;
+    return d_nonLocalOperator;
   }
-#endif
-  template <typename ValueType>
+
+
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
-  oncvClass<ValueType>::getTotalNumberOfAtomsInCurrentProcessor()
+  oncvClass<ValueType, memorySpace>::getTotalNumberOfAtomsInCurrentProcessor()
   {
     return d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess().size();
   }
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
-  oncvClass<ValueType>::getAtomIdInCurrentProcessor(unsigned int iAtom)
+  oncvClass<ValueType, memorySpace>::getAtomIdInCurrentProcessor(
+    unsigned int iAtom)
   {
     std::vector<unsigned int> atomIdList =
       d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
     return (atomIdList[iAtom]);
   }
 
-  template <typename ValueType>
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
-  oncvClass<ValueType>::getTotalNumberOfSphericalFunctionsForAtomId(
-    unsigned int atomId)
+  oncvClass<ValueType, memorySpace>::
+    getTotalNumberOfSphericalFunctionsForAtomId(unsigned int atomId)
   {
     std::vector<unsigned int> atomicNumbers =
       d_atomicProjectorFnsContainer->getAtomicNumbers();
