@@ -160,7 +160,6 @@ namespace dftfe
             d_BLASWrapperHostPtr,
             d_BasisOperatorHostPtr,
             d_atomicProjectorFnsContainer,
-            d_numEigenValues,
             d_mpiCommParent);
       }
 #if defined(DFTFE_WITH_DEVICE)
@@ -172,7 +171,6 @@ namespace dftfe
             d_BLASWrapperDevicePtr,
             d_BasisOperatorDevicePtr,
             d_atomicProjectorFnsContainer,
-            d_numEigenValues,
             d_mpiCommParent);
       }
 #endif
@@ -213,7 +211,6 @@ namespace dftfe
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
-        d_nonLocalOperator->InitalisePartitioner(d_BasisOperatorHostPtr);
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -223,9 +220,12 @@ namespace dftfe
       }
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
-    d_nonLocalOperator->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,
-                                              d_nlpspQuadratureId);
+    d_nonLocalOperator->intitialisePartitionerKPointsAndComputeCMatrixEntries(
+      updateNonlocalSparsity,
+      kPointWeights,
+      kPointCoordinates,
+      d_BasisOperatorHostPtr,
+      d_nlpspQuadratureId);
 
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
@@ -279,7 +279,7 @@ namespace dftfe
           elementIndexesInAtomCompactSupport,
           atomIdsInCurrentProcess,
           numberElements);
-        d_nonLocalOperator->InitalisePartitioner(d_BasisOperatorHostPtr);
+
         MPI_Barrier(d_mpiCommParent);
         double TotalTime = MPI_Wtime() - InitTime;
         if (d_verbosity >= 2)
@@ -289,9 +289,12 @@ namespace dftfe
       }
     MPI_Barrier(d_mpiCommParent);
     double InitTimeTotal = MPI_Wtime();
-    d_nonLocalOperator->initKpoints(kPointWeights, kPointCoordinates);
-    d_nonLocalOperator->computeCMatrixEntries(d_BasisOperatorHostPtr,
-                                              d_nlpspQuadratureId);
+    d_nonLocalOperator->intitialisePartitionerKPointsAndComputeCMatrixEntries(
+      updateNonlocalSparsity,
+      kPointWeights,
+      kPointCoordinates,
+      d_BasisOperatorHostPtr,
+      d_nlpspQuadratureId);
     MPI_Barrier(d_mpiCommParent);
     double TotalTime = MPI_Wtime() - InitTimeTotal;
     if (d_verbosity >= 2)

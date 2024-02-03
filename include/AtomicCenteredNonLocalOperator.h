@@ -63,21 +63,9 @@ namespace dftfe
         dftfe::basis::FEBasisOperations<ValueType, double, memorySpace>>
         basisOperatorPtr,
       std::shared_ptr<AtomCenteredSphericalFunctionContainer>
-                         atomCenteredSphericalFunctionContainer,
-      const unsigned int numVectors,
-      const MPI_Comm &   mpi_comm_parent);
+                      atomCenteredSphericalFunctionContainer,
+      const MPI_Comm &mpi_comm_parent);
 
-    void
-    initKpoints(const std::vector<double> &kPointWeights,
-                const std::vector<double> &kPointCoordinates);
-
-
-    void
-    InitalisePartitioner(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr);
 
 
     void
@@ -85,12 +73,15 @@ namespace dftfe
 
     void
     initialiseFlattenedDataStructure(
-      unsigned int numberWaveFunctions,
+      unsigned int waveFunctionBlockSize,
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &sphericalFunctionKetTimesVectorParFlattened);
 
     void
-    computeCMatrixEntries(
+    intitialisePartitionerKPointsAndComputeCMatrixEntries(
+      const bool                 updateSparsity,
+      const std::vector<double> &kPointWeights,
+      const std::vector<double> &kPointCoordinates,
       std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
@@ -207,7 +198,6 @@ namespace dftfe
 
 
   protected:
-    unsigned int        d_numberOfVectors;
     bool                d_AllReduceCompleted;
     std::vector<double> d_kPointWeights;
     std::vector<double> d_kPointCoordinates;
@@ -301,6 +291,24 @@ namespace dftfe
       d_CMatrixEntriesTranspose;
 
   private:
+    void
+    initKpoints(const std::vector<double> &kPointWeights,
+                const std::vector<double> &kPointCoordinates);
+    void
+    initalisePartitioner(
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+        basisOperationsPtr);
+
+    void
+    computeCMatrixEntries(
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+                         basisOperationsPtr,
+      const unsigned int quadratureIndex);
+
     std::map<
       unsigned int,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>

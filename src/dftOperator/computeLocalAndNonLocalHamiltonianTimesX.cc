@@ -461,12 +461,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
             }     // Cell Loop
           d_ONCVnonLocalOperator->applyAllReduceonCTX(
             d_SphericalFunctionKetTimesVectorParFlattened);
-          const dftfe::utils::MemoryStorage<dataTypes::number,
-                                            dftfe::utils::MemorySpace::HOST>
-            couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
           d_ONCVnonLocalOperator->applyV_onCconjtransX(
             CouplingStructure::diagonal,
-            couplingMatrix,
+            d_oncvClassPtr->getCouplingMatrix(),
             d_SphericalFunctionKetTimesVectorParFlattened);
 
 

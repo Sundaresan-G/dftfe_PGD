@@ -70,12 +70,9 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
 
       if (d_totalNonlocalElemsPseudo > 0)
         {
-          const dftfe::utils::MemoryStorage<dataTypes::number,
-                                            dftfe::utils::MemorySpace::DEVICE>
-            couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
           d_ONCVnonLocalOperator->applyV_onCconjtransX(
             CouplingStructure::diagonal,
-            couplingMatrix,
+            d_oncvClassPtr->getCouplingMatrix(),
             projectorKetTimesVector,
             true);
           d_ONCVnonLocalOperator->applyC_VCconjtransX(
@@ -155,14 +152,10 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
 
       projectorKetTimesVector.setValue(0);
       d_ONCVnonLocalOperator->applyAllReduceonCTX(projectorKetTimesVector);
-      // d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
-      //                                                false);
-      const dftfe::utils::MemoryStorage<dataTypes::number,
-                                        dftfe::utils::MemorySpace::DEVICE>
-        couplingMatrix = d_oncvClassPtr->getCouplingMatrix();
-      d_ONCVnonLocalOperator->applyV_onCconjtransX(CouplingStructure::diagonal,
-                                                   couplingMatrix,
-                                                   projectorKetTimesVector,
-                                                   false);
+      d_ONCVnonLocalOperator->applyV_onCconjtransX(
+        CouplingStructure::diagonal,
+        d_oncvClassPtr->getCouplingMatrix(),
+        projectorKetTimesVector,
+        false);
     }
 }

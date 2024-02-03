@@ -35,9 +35,8 @@ namespace dftfe
         dftfe::basis::FEBasisOperations<ValueType, double, memorySpace>>
         basisOperatorPtr,
       std::shared_ptr<AtomCenteredSphericalFunctionContainer>
-                         atomCenteredSphericalFunctionContainer,
-      const unsigned int numVectors,
-      const MPI_Comm &   mpi_comm_parent)
+                      atomCenteredSphericalFunctionContainer,
+      const MPI_Comm &mpi_comm_parent)
     : d_mpi_communicator(mpi_comm_parent)
     , d_this_mpi_process(
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
@@ -51,7 +50,6 @@ namespace dftfe
     d_basisOperatorPtr = basisOperatorPtr;
     d_atomCenteredSphericalFunctionContainer =
       atomCenteredSphericalFunctionContainer;
-    d_numberOfVectors           = numVectors;
     d_maxSingleAtomContribution = d_atomCenteredSphericalFunctionContainer
                                     ->getMaximumNumberOfSphericalFunctions();
   }
@@ -1026,17 +1024,17 @@ namespace dftfe
   void
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
     initialiseFlattenedDataStructure(
-      unsigned int numberWaveFunctions,
+      unsigned int waveFunctionBlockSize,
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &sphericalFunctionKetTimesVectorParFlattened)
   {
     if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
-        d_numberWaveFunctions = numberWaveFunctions;
+        d_numberWaveFunctions = waveFunctionBlockSize;
 
         dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
           d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
-          numberWaveFunctions,
+          waveFunctionBlockSize,
           sphericalFunctionKetTimesVectorParFlattened);
         d_sphericalFnTimesWavefunMatrix.clear();
         const std::vector<unsigned int> atomIdsInProcessor =
@@ -1058,10 +1056,10 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     else
       {
-        d_numberWaveFunctions = numberWaveFunctions;
+        d_numberWaveFunctions = waveFunctionBlockSize;
         dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
           d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
-          numberWaveFunctions,
+          waveFunctionBlockSize,
           sphericalFunctionKetTimesVectorParFlattened);
         d_sphericalFnTimesVectorAllCellsDevice.resize(
           d_totalNonlocalElems * d_numberWaveFunctions *
@@ -1123,7 +1121,7 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::InitalisePartitioner(
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::initalisePartitioner(
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
@@ -2130,5 +2128,25 @@ namespace dftfe
   }
 
 #endif
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
+    intitialisePartitionerKPointsAndComputeCMatrixEntries(
+      const bool                 updateSparsity,
+      const std::vector<double> &kPointWeights,
+      const std::vector<double> &kPointCoordinates,
+      std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
+                         basisOperationsPtr,
+      const unsigned int quadratureIndex)
+  {
+    if (updateSparsity)
+      initalisePartitioner(basisOperationsPtr);
+    initKpoints(kPointWeights, kPointCoordinates);
+    computeCMatrixEntries(basisOperationsPtr, quadratureIndex);
+  }
+
 
 } // namespace dftfe
