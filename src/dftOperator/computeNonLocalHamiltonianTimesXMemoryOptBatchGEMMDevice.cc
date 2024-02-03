@@ -43,7 +43,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
         {
           // dftfe::utils::deviceSynchronize();
           // std::cout<<"Starting CTX: "<<std::endl;
-          d_ONCVnonLocalOperator->applyCconjtrans_onX(
+          d_ONCVnonLocalOperator->applyCconjtransOnX(
             d_cellWaveFunctionMatrix,
             std::pair<unsigned int, unsigned int>(0,
                                                   d_totalNonlocalElemsPseudo));
@@ -57,9 +57,8 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
           projectorKetTimesVector.setValue(0);
         }
 
-      d_ONCVnonLocalOperator->applyAllReduceonCTX(projectorKetTimesVector,
-                                                  skip1,
-                                                  skip2);
+      d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
+        projectorKetTimesVector, skip1, skip2);
 
       // Operations related to skip2 (extraction and C^{T}*X) are over. So
       // return control back to chebyshevFilter
@@ -70,12 +69,12 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
 
       if (d_totalNonlocalElemsPseudo > 0)
         {
-          d_ONCVnonLocalOperator->applyV_onCconjtransX(
+          d_ONCVnonLocalOperator->applyVOnCconjtransX(
             CouplingStructure::diagonal,
             d_oncvClassPtr->getCouplingMatrix(),
             projectorKetTimesVector,
             true);
-          d_ONCVnonLocalOperator->applyC_VCconjtransX(
+          d_ONCVnonLocalOperator->applyCOnVCconjtransX(
             d_cellHamMatrixTimesWaveMatrix,
             std::pair<unsigned int, unsigned int>(0,
                                                   d_totalNonlocalElemsPseudo));
@@ -144,15 +143,16 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
             src,
             d_cellWaveFunctionMatrix.begin(),
             d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
-          d_ONCVnonLocalOperator->applyCconjtrans_onX(
+          d_ONCVnonLocalOperator->applyCconjtransOnX(
             d_cellWaveFunctionMatrix,
             std::pair<unsigned int, unsigned int>(0,
                                                   d_totalNonlocalElemsPseudo));
         }
 
       projectorKetTimesVector.setValue(0);
-      d_ONCVnonLocalOperator->applyAllReduceonCTX(projectorKetTimesVector);
-      d_ONCVnonLocalOperator->applyV_onCconjtransX(
+      d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
+        projectorKetTimesVector);
+      d_ONCVnonLocalOperator->applyVOnCconjtransX(
         CouplingStructure::diagonal,
         d_oncvClassPtr->getCouplingMatrix(),
         projectorKetTimesVector,

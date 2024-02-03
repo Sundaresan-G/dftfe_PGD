@@ -175,8 +175,8 @@ namespace dftfe
     for (int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
       {
         unsigned int atomId = d_AtomIdsInCurrentProcess[iAtom];
-        unsigned int Zno    = d_atomicNumbers[atomId];
-        totalShapeFns += d_numSphericalFunctions.find(Zno)->second;
+        unsigned int Znum   = d_atomicNumbers[atomId];
+        totalShapeFns += d_numSphericalFunctions.find(Znum)->second;
       }
 
     return (totalShapeFns);
@@ -226,11 +226,11 @@ namespace dftfe
 
   const unsigned int
   AtomCenteredSphericalFunctionContainer::getTotalSphericalFunctionIndexStart(
-    unsigned int Zno,
+    unsigned int Znum,
     unsigned int alpha)
   {
-    std::vector<unsigned int> beta = d_totalSphericalFunctionIndexStart[Zno];
-    if (alpha < getTotalNumberOfRadialSphericalFunctionsPerAtom(Zno))
+    std::vector<unsigned int> beta = d_totalSphericalFunctionIndexStart[Znum];
+    if (alpha < getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum))
       return beta[alpha];
     else
       {
@@ -354,10 +354,10 @@ namespace dftfe
         //
         int          matCount            = 0;
         bool         isAtomIdInProcessor = false;
-        unsigned int Zno                 = d_atomicNumbers[iAtom];
+        unsigned int Znum                = d_atomicNumbers[iAtom];
         //
         //
-        int numberSphericalFunctions = d_numRadialSphericalFunctions[Zno];
+        int numberSphericalFunctions = d_numRadialSphericalFunctions[Znum];
 
         //
         // get the global charge Id of the current nonlocal atom
@@ -422,7 +422,7 @@ namespace dftfe
                   {
                     std::shared_ptr<AtomCenteredSphericalFunctionBase>
                       SphericalFunction =
-                        d_sphericalFunctionsContainer[std::make_pair(Zno,
+                        d_sphericalFunctionsContainer[std::make_pair(Znum,
                                                                      iPsp)];
                     double radialProjVal;
                     for (int iQuadPoint = 0;

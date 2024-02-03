@@ -153,35 +153,35 @@ namespace dftfe
     initLocalPotential();
 
     void
-    getRadialValenceDensity(unsigned int         Zno,
+    getRadialValenceDensity(unsigned int         Znum,
                             double               rad,
                             std::vector<double> &Val);
 
     double
-    getRadialValenceDensity(unsigned int Zno, double rad);
+    getRadialValenceDensity(unsigned int Znum, double rad);
 
     double
-    getRmaxValenceDensity(unsigned int Zno);
+    getRmaxValenceDensity(unsigned int Znum);
 
     void
-    getRadialCoreDensity(unsigned int         Zno,
+    getRadialCoreDensity(unsigned int         Znum,
                          double               rad,
                          std::vector<double> &Val);
 
     double
-    getRadialCoreDensity(unsigned int Zno, double rad);
+    getRadialCoreDensity(unsigned int Znum, double rad);
 
     double
-    getRmaxCoreDensity(unsigned int Zno);
+    getRmaxCoreDensity(unsigned int Znum);
 
     double
-    getRadialLocalPseudo(unsigned int Zno, double rad);
+    getRadialLocalPseudo(unsigned int Znum, double rad);
 
     double
-    getRmaxLocalPot(unsigned int Zno);
+    getRmaxLocalPot(unsigned int Znum);
 
     bool
-    coreNuclearDensityPresent(unsigned int Zno);
+    coreNuclearDensityPresent(unsigned int Znum);
     // Returns the number of Projectors for the given atomID in cooridnates List
     unsigned int
     getTotalNumberOfSphericalFunctionsForAtomId(unsigned int atomId);

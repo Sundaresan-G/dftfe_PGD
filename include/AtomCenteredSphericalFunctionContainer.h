@@ -149,10 +149,10 @@ namespace dftfe
     const std::vector<unsigned int> &
     getAtomIdsInCurrentProcess() const;
     /**
-     * @brief Returns the startIndex of spherical Function alpha associated with atomic number Zno
+     * @brief Returns the startIndex of spherical Function alpha associated with atomic number Znum
      */
     const unsigned int
-    getTotalSphericalFunctionIndexStart(unsigned int Zno, unsigned int alpha);
+    getTotalSphericalFunctionIndexStart(unsigned int Znum, unsigned int alpha);
     // COmputes the sparsity Pattern for the compact support Fn
     // cutOffVal the max/min value to consider to be part of copact support
     // cutOffType = 0 based on Fn Value, cutOffType = 1 based on Distance from

@@ -312,20 +312,20 @@ namespace dftfe
          it != d_atomTypes.end();
          ++it)
       {
-        const unsigned int Zno = *it;
+        const unsigned int Znum = *it;
         const std::map<std::pair<unsigned int, unsigned int>,
                        std::shared_ptr<AtomCenteredSphericalFunctionBase>>
           sphericalFunction =
             d_atomicProjectorFnsContainer->getSphericalFunctions();
         unsigned int numRadProjectors =
           d_atomicProjectorFnsContainer
-            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Zno);
+            ->getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum);
         unsigned int numTotalProjectors =
           d_atomicProjectorFnsContainer
-            ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
         char denominatorDataFileName[256];
         strcpy(denominatorDataFileName,
-               (d_dftfeScratchFolderName + "/z" + std::to_string(Zno) + "/" +
+               (d_dftfeScratchFolderName + "/z" + std::to_string(Znum) + "/" +
                 "denom.dat")
                  .c_str());
         std::vector<std::vector<double>> denominator(0);
@@ -337,7 +337,7 @@ namespace dftfe
         for (unsigned int iProj = 0; iProj < numRadProjectors; iProj++)
           {
             std::shared_ptr<AtomCenteredSphericalFunctionBase> sphFn =
-              sphericalFunction.find(std::make_pair(Zno, iProj))->second;
+              sphericalFunction.find(std::make_pair(Znum, iProj))->second;
             unsigned int lQuantumNumber = sphFn->getQuantumNumberl();
             for (int l = 0; l < 2 * lQuantumNumber + 1; l++)
               {
@@ -345,7 +345,7 @@ namespace dftfe
                 ProjId++;
               }
           }
-        d_atomicNonLocalPseudoPotentialConstants[Zno] =
+        d_atomicNonLocalPseudoPotentialConstants[Znum] =
           pseudoPotentialConstants;
 
       } //*it
@@ -372,7 +372,7 @@ namespace dftfe
                 "/PseudoAtomDat")
                  .c_str());
 
-        unsigned int  Zno = *it;
+        unsigned int  Znum = *it;
         std::ifstream readPseudoDataFileNames(pseudoAtomDataFile);
         unsigned int  numberOfProjectors;
         readPseudoDataFileNames >> numberOfProjectors;
@@ -444,7 +444,7 @@ namespace dftfe
 
             for (int j = 1; j < numProj + 1; j++)
               {
-                d_atomicProjectorFnsMap[std::make_pair(Zno, alpha)] =
+                d_atomicProjectorFnsMap[std::make_pair(Znum, alpha)] =
                   std::make_shared<
                     AtomCenteredSphericalFunctionProjectorSpline>(
                     projRadialFunctionFileName,
@@ -492,85 +492,86 @@ namespace dftfe
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType, memorySpace>::getRadialValenceDensity(unsigned int Zno,
+  oncvClass<ValueType, memorySpace>::getRadialValenceDensity(unsigned int Znum,
                                                              double       rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double       Value =
-      d_atomicValenceDensityVector[threadId][Zno]->getRadialValue(rad);
+      d_atomicValenceDensityVector[threadId][Znum]->getRadialValue(rad);
 
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   oncvClass<ValueType, memorySpace>::getRadialValenceDensity(
-    unsigned int         Zno,
+    unsigned int         Znum,
     double               rad,
     std::vector<double> &Val)
   {
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
-    Val = d_atomicValenceDensityVector[threadId][Zno]->getDerivativeValue(rad);
+    Val = d_atomicValenceDensityVector[threadId][Znum]->getDerivativeValue(rad);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType, memorySpace>::getRmaxValenceDensity(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::getRmaxValenceDensity(unsigned int Znum)
   {
     unsigned int threadId = omp_get_thread_num();
-    return (d_atomicValenceDensityVector[threadId][Zno]->getRadialCutOff());
+    return (d_atomicValenceDensityVector[threadId][Znum]->getRadialCutOff());
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType, memorySpace>::getRmaxCoreDensity(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::getRmaxCoreDensity(unsigned int Znum)
   {
     unsigned int threadId = omp_get_thread_num();
 
-    return (d_atomicCoreDensityVector[threadId][Zno]->getRadialCutOff());
+    return (d_atomicCoreDensityVector[threadId][Znum]->getRadialCutOff());
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType, memorySpace>::getRadialCoreDensity(unsigned int Zno,
+  oncvClass<ValueType, memorySpace>::getRadialCoreDensity(unsigned int Znum,
                                                           double       rad)
   {
     unsigned int threadId = omp_get_thread_num();
     double       Value =
-      d_atomicCoreDensityVector[threadId][Zno]->getRadialValue(rad);
+      d_atomicCoreDensityVector[threadId][Znum]->getRadialValue(rad);
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   oncvClass<ValueType, memorySpace>::getRadialCoreDensity(
-    unsigned int         Zno,
+    unsigned int         Znum,
     double               rad,
     std::vector<double> &Val)
   {
     unsigned int threadId = omp_get_thread_num();
     Val.clear();
-    Val = d_atomicCoreDensityVector[threadId][Zno]->getDerivativeValue(rad);
+    Val = d_atomicCoreDensityVector[threadId][Znum]->getDerivativeValue(rad);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType, memorySpace>::getRadialLocalPseudo(unsigned int Zno,
+  oncvClass<ValueType, memorySpace>::getRadialLocalPseudo(unsigned int Znum,
                                                           double       rad)
   {
     unsigned int threadId = omp_get_thread_num();
-    double Value = d_atomicLocalPotVector[threadId][Zno]->getRadialValue(rad);
+    double Value = d_atomicLocalPotVector[threadId][Znum]->getRadialValue(rad);
     return (Value);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   double
-  oncvClass<ValueType, memorySpace>::getRmaxLocalPot(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::getRmaxLocalPot(unsigned int Znum)
   {
-    return (d_atomicLocalPotVector[0][Zno]->getRadialCutOff());
+    return (d_atomicLocalPotVector[0][Znum]->getRadialCutOff());
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   bool
-  oncvClass<ValueType, memorySpace>::coreNuclearDensityPresent(unsigned int Zno)
+  oncvClass<ValueType, memorySpace>::coreNuclearDensityPresent(
+    unsigned int Znum)
   {
-    return (d_atomTypeCoreFlagMap[Zno]);
+    return (d_atomTypeCoreFlagMap[Znum]);
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
@@ -616,15 +617,15 @@ namespace dftfe
             for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
               {
                 unsigned int atomId = atomIdsInProcessor[iAtom];
-                unsigned int Zno    = atomicNumber[atomId];
+                unsigned int Znum   = atomicNumber[atomId];
                 unsigned int numberSphericalFunctions =
                   d_atomicProjectorFnsContainer
-                    ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                    ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                 for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                      alpha++)
                   {
                     double V =
-                      d_atomicNonLocalPseudoPotentialConstants[Zno][alpha];
+                      d_atomicNonLocalPseudoPotentialConstants[Znum][alpha];
                     Entries.push_back(ValueType(V));
                   }
               }
@@ -652,10 +653,10 @@ namespace dftfe
             for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
               {
                 unsigned int atomId = atomIdsInProcessor[iAtom];
-                unsigned int Zno    = atomicNumber[atomId];
+                unsigned int Znum   = atomicNumber[atomId];
                 unsigned int numberSphericalFunctions =
                   d_atomicProjectorFnsContainer
-                    ->getTotalNumberOfSphericalFunctionsPerAtom(Zno);
+                    ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                 for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                      alpha++)
                   {
@@ -665,7 +666,7 @@ namespace dftfe
                     const unsigned int id =
                       d_nonLocalOperator->getLocalIdOfDistributedVec(globalId);
                     Entries[id] = ValueType(
-                      d_atomicNonLocalPseudoPotentialConstants[Zno][alpha]);
+                      d_atomicNonLocalPseudoPotentialConstants[Znum][alpha]);
                   }
               }
             d_nonLocalHamiltonianEntries.resize(Entries.size());
