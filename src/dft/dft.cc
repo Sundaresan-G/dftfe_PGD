@@ -924,26 +924,26 @@ namespace dftfe
                 << init_nonlocal2 << std::endl;
         // Will replace the above lines,
 
-        // d_oncvClassPtr->initialiseNonLocalContribution(
-        //   atomLocations,
-        //   d_imageIdsTrunc,
-        //   d_imagePositionsTrunc,
-        //   d_kPointWeights,     // accounts for interpool
-        //   d_kPointCoordinates, // accounts for interpool
-        //   updateNonlocalSparsity);
-        std::vector<std::vector<dealii::CellId>> dummy;
         d_oncvClassPtr->initialiseNonLocalContribution(
           atomLocations,
           d_imageIdsTrunc,
           d_imagePositionsTrunc,
           d_kPointWeights,     // accounts for interpool
           d_kPointCoordinates, // accounts for interpool
-          updateNonlocalSparsity,
-          d_sparsityPattern,
-          dummy,
-          d_elementIdsInAtomCompactSupport,
-          d_nonLocalAtomIdsInCurrentProcess,
-          d_basisOperationsPtrHost->nCells());
+          updateNonlocalSparsity);
+        // std::vector<std::vector<dealii::CellId>> dummy;
+        // d_oncvClassPtr->initialiseNonLocalContribution(
+        //   atomLocations,
+        //   d_imageIdsTrunc,
+        //   d_imagePositionsTrunc,
+        //   d_kPointWeights,     // accounts for interpool
+        //   d_kPointCoordinates, // accounts for interpool
+        //   updateNonlocalSparsity,
+        //   d_sparsityPattern,
+        //   dummy,
+        //   d_elementIdsInAtomCompactSupport,
+        //   d_nonLocalAtomIdsInCurrentProcess,
+        //   d_basisOperationsPtrHost->nCells());
       }
   }
 

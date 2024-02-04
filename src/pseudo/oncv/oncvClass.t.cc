@@ -612,7 +612,7 @@ namespace dftfe
               d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
             std::vector<unsigned int> atomicNumber =
               d_atomicProjectorFnsContainer->getAtomicNumbers();
-            d_nonLocalHamiltonianEntries.clear();
+            d_couplingMatrixEntries.clear();
             std::vector<ValueType> Entries;
             for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
               {
@@ -629,12 +629,12 @@ namespace dftfe
                     Entries.push_back(ValueType(V));
                   }
               }
-            d_nonLocalHamiltonianEntries.resize(Entries.size());
-            d_nonLocalHamiltonianEntries.copyFrom(Entries);
+            d_couplingMatrixEntries.resize(Entries.size());
+            d_couplingMatrixEntries.copyFrom(Entries);
             d_nonlocalHamiltonianEntriesUpdated = true;
           }
 
-        return (d_nonLocalHamiltonianEntries);
+        return (d_couplingMatrixEntries);
       }
 #if defined(DFTFE_WITH_DEVICE)
     else
@@ -645,7 +645,7 @@ namespace dftfe
               d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
             std::vector<unsigned int> atomicNumber =
               d_atomicProjectorFnsContainer->getAtomicNumbers();
-            d_nonLocalHamiltonianEntries.clear();
+            d_couplingMatrixEntries.clear();
             std::vector<ValueType> Entries;
             Entries.resize(
               d_nonLocalOperator->getTotalNonLocalEntriesCurrentProcessor(),
@@ -669,11 +669,11 @@ namespace dftfe
                       d_atomicNonLocalPseudoPotentialConstants[Znum][alpha]);
                   }
               }
-            d_nonLocalHamiltonianEntries.resize(Entries.size());
-            d_nonLocalHamiltonianEntries.copyFrom(Entries);
+            d_couplingMatrixEntries.resize(Entries.size());
+            d_couplingMatrixEntries.copyFrom(Entries);
             d_nonlocalHamiltonianEntriesUpdated = true;
           }
-        return (d_nonLocalHamiltonianEntries);
+        return (d_couplingMatrixEntries);
       }
 #endif
   }
