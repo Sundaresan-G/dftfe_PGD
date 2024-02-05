@@ -762,10 +762,7 @@ namespace dftfe
       std::map<dealii::CellId, std::vector<double>> &  _pseudoValues,
       std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
         &_pseudoValuesAtoms);
-    void
-    initNonLocalPseudoPotential_OV();
-    void
-    computeSparseStructureNonLocalProjectors_OV();
+
 
 
     /**
@@ -782,8 +779,7 @@ namespace dftfe
       const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
       dealii::AffineConstraints<double> &      constraintMatrix);
 
-    void
-    computeElementalOVProjectorKets();
+
 
     /**
      *@brief Computes total charge by integrating the electron-density

@@ -890,39 +890,6 @@ namespace dftfe
           pcout
             << "initPseudoPotentialAll: Time taken for initializing core density for non-linear core correction: "
             << init_core << std::endl;
-        // The Lines from 889 to 921 will be replaced
-
-        if (updateNonlocalSparsity)
-          {
-            double init_nonlocal1;
-            MPI_Barrier(d_mpiCommParent);
-            init_nonlocal1 = MPI_Wtime();
-
-            computeSparseStructureNonLocalProjectors_OV();
-
-            MPI_Barrier(d_mpiCommParent);
-            init_nonlocal1 = MPI_Wtime() - init_nonlocal1;
-            if (d_dftParamsPtr->verbosity >= 2)
-              pcout
-                << "initPseudoPotentialAll: Time taken for computeSparseStructureNonLocalProjectors_OV: "
-                << init_nonlocal1 << std::endl;
-          }
-
-        double init_nonlocal2;
-        MPI_Barrier(d_mpiCommParent);
-        init_nonlocal2 = MPI_Wtime();
-
-
-        computeElementalOVProjectorKets();
-
-        // forcePtr->initPseudoData();
-
-        MPI_Barrier(d_mpiCommParent);
-        init_nonlocal2 = MPI_Wtime() - init_nonlocal2;
-        if (d_dftParamsPtr->verbosity >= 2)
-          pcout << "initPseudoPotentialAll: Time taken for non local psp init: "
-                << init_nonlocal2 << std::endl;
-        // Will replace the above lines,
 
         d_oncvClassPtr->initialiseNonLocalContribution(
           atomLocations,

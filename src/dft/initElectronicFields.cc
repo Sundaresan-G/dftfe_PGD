@@ -30,15 +30,6 @@ namespace dftfe
   {
     dealii::TimerOutput::Scope scope(computing_timer, "init electronic fields");
 
-    // reading data from pseudopotential files and fitting splines
-    if (d_dftParamsPtr->isPseudopotential)
-      initNonLocalPseudoPotential_OV();
-    // else
-    // initNonLocalPseudoPotential();
-
-    if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator,
-                                        "Call to initNonLocalPseudoPotential");
 
     // initialize electrostatics fields
     d_matrixFreeDataPRefined.initialize_dof_vector(
