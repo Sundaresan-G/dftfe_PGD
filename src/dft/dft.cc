@@ -890,9 +890,10 @@ namespace dftfe
           pcout
             << "initPseudoPotentialAll: Time taken for initializing core density for non-linear core correction: "
             << init_core << std::endl;
-
+        determineAtomsOfInterstPseudopotential(atomLocations);
+        MPI_Barrier(d_mpiCommParent);
         d_oncvClassPtr->initialiseNonLocalContribution(
-          d_atomLocaltionsInterestPseudopotential,
+          d_atomLocationsInterestPseudopotential,
           d_imageIdsTrunc,
           d_imagePositionsTrunc,
           d_kPointWeights,     // accounts for interpool
@@ -4838,18 +4839,25 @@ namespace dftfe
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::
     determineAtomsOfInterstPseudopotential(
-      std::vector<std::vector<double>> &atomCoordinates)
+      const std::vector<std::vector<double>> &atomCoordinates)
   {
-    d_atomLocaltionsInterestPseudopotential.clear();
+    d_atomLocationsInterestPseudopotential.clear();
     d_atomIdPseudopotentialInterestToGlobalId.clear();
     unsigned atomIdPseudo = 0;
-    for (unsigned int iAtom = 0; atomCoordinates.size(); iAtom++)
+    // pcout<<"Atoms of interest: "<<std::endl;
+    for (unsigned int iAtom = 0; iAtom < atomCoordinates.size(); iAtom++)
       {
         if (true)
           {
-            d_atomLocaltionsInterestPseudopotential.push_back(
+            d_atomLocationsInterestPseudopotential.push_back(
               atomCoordinates[iAtom]);
             d_atomIdPseudopotentialInterestToGlobalId[atomIdPseudo] = iAtom;
+            // pcout<<iAtom<<" "<<atomIdPseudo<<" ";
+            // for(int i = 0; i <
+            // d_atomLocationsInterestPseudopotential[atomIdPseudo].size(); i++)
+            //   pcout<<d_atomLocationsInterestPseudopotential[atomIdPseudo][i]<<"
+            //   ";
+            // pcout<<std::endl;
             atomIdPseudo++;
           }
       }

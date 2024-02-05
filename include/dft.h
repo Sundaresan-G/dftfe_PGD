@@ -463,7 +463,7 @@ namespace dftfe
 
     void
     determineAtomsOfInterstPseudopotential(
-      std::vector<std::vector<double>> &atomCoordinates);
+      const std::vector<std::vector<double>> &atomCoordinates);
 
 
     /**
@@ -1060,7 +1060,7 @@ namespace dftfe
     /// FIXME: remove atom type atributes from atomLocations
     std::vector<std::vector<double>> atomLocations, atomLocationsFractional,
       d_reciprocalLatticeVectors, d_domainBoundingVectors;
-    std::vector<std::vector<double>> d_atomLocaltionsInterestPseudopotential;
+    std::vector<std::vector<double>> d_atomLocationsInterestPseudopotential;
     std::map<unsigned int, unsigned int>
                                      d_atomIdPseudopotentialInterestToGlobalId;
     std::vector<std::vector<double>> d_atomLocationsAutoMesh;
