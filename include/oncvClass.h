@@ -239,9 +239,8 @@ namespace dftfe
 #endif
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
     std::map<unsigned int, std::vector<double>>
-      d_atomicNonLocalPseudoPotentialConstants;
-    dftfe::utils::MemoryStorage<ValueType, memorySpace>
-      d_couplingMatrixEntries;
+                                                        d_atomicNonLocalPseudoPotentialConstants;
+    dftfe::utils::MemoryStorage<ValueType, memorySpace> d_couplingMatrixEntries;
 
     bool d_nonlocalHamiltonianEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>

@@ -123,9 +123,6 @@ namespace dftfe
                        basisOperationsPtr,
     const unsigned int quadratureIndex)
   {
-
-
-
     d_locallyOwnedCells = basisOperationsPtr->nCells();
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberAtomsOfInterest =
@@ -1124,9 +1121,9 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::initialisePartitioner()
+  AtomicCenteredNonLocalOperator<ValueType,
+                                 memorySpace>::initialisePartitioner()
   {
-
     std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     const unsigned int numberAtoms =
