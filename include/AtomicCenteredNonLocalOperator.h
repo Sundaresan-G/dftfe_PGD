@@ -400,11 +400,7 @@ namespace dftfe
      * to indetify the element ids and quad points.
      */
     void
-    initialisePartitioner(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-        basisOperationsPtr);
+    initialisePartitioner();
     /**
      * @brief computes the entries in C matrix for CPUs and GPUs. On GPUs the entries are copied to a flattened vector on device memory.
      * Further on GPUs, various maps are created crucial for accessing and

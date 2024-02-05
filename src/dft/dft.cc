@@ -1510,8 +1510,7 @@ namespace dftfe
     MPI_Barrier(d_mpiCommParent);
     init_pseudo = MPI_Wtime();
 
-    initPseudoPotentialAll(d_dftParamsPtr->floatingNuclearCharges ? true :
-                                                                    false);
+    initPseudoPotentialAll();
 
     MPI_Barrier(d_mpiCommParent);
     init_pseudo = MPI_Wtime() - init_pseudo;

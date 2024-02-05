@@ -123,6 +123,9 @@ namespace dftfe
                        basisOperationsPtr,
     const unsigned int quadratureIndex)
   {
+
+
+
     d_locallyOwnedCells = basisOperationsPtr->nCells();
     basisOperationsPtr->reinit(0, 0, quadratureIndex);
     const unsigned int numberAtomsOfInterest =
@@ -1121,18 +1124,9 @@ namespace dftfe
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
-  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::initialisePartitioner(
-    std::shared_ptr<
-      dftfe::basis::
-        FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
-      basisOperationsPtr)
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::initialisePartitioner()
   {
-    const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
-    const unsigned int numberNodesPerElement =
-      basisOperationsPtr->nDofsPerCell();
-    const unsigned int numCells = totalLocallyOwnedCells;
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-                              quadraturePointsVector = basisOperationsPtr->quadPoints();
+
     std::vector<unsigned int> atomIdsInCurrentProcess =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
     const unsigned int numberAtoms =
@@ -2208,7 +2202,7 @@ namespace dftfe
       const unsigned int quadratureIndex)
   {
     if (updateSparsity)
-      initialisePartitioner(basisOperationsPtr);
+      initialisePartitioner();
     initKpoints(kPointWeights, kPointCoordinates);
     computeCMatrixEntries(basisOperationsPtr, quadratureIndex);
   }
