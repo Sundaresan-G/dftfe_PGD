@@ -461,6 +461,10 @@ namespace dftfe
     void
     initImageChargesUpdateKPoints(bool flag = true);
 
+    void
+    determineAtomsOfInterstPseudopotential(
+      std::vector<std::vector<double>> &atomCoordinates);
+
 
     /**
      *@brief project ground state electron density from previous mesh into
@@ -1056,6 +1060,9 @@ namespace dftfe
     /// FIXME: remove atom type atributes from atomLocations
     std::vector<std::vector<double>> atomLocations, atomLocationsFractional,
       d_reciprocalLatticeVectors, d_domainBoundingVectors;
+    std::vector<std::vector<double>> d_atomLocaltionsInterestPseudopotential;
+    std::map<unsigned int, unsigned int>
+                                     d_atomIdPseudopotentialInterestToGlobalId;
     std::vector<std::vector<double>> d_atomLocationsAutoMesh;
     std::vector<std::vector<double>> d_imagePositionsAutoMesh;
 
@@ -1520,11 +1527,6 @@ namespace dftfe
 
     std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
       d_hessianRhoCoreAtoms;
-
-
-
-
-
 
 
 

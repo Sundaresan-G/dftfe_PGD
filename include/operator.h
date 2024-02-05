@@ -126,48 +126,15 @@ namespace dftfe
                       distributedCPUVec<double> &invSqrtMassVec) = 0;
 
 
-    /**
-     * @brief Compute operator times multi-field vectors
-     *
-     * @param X Vector containing multi-wavefunction fields (though X does not
-     * change inside the function it is scaled and rescaled back to
-     * avoid duplication of memory and hence is not const)
-     * @param numberComponents number of wavefunctions associated with a given node
-     * @param Y Vector containing multi-component fields after operator times vectors product
-     */
-    virtual void
-    HX(distributedCPUMultiVec<dataTypes::number> &X,
-       const unsigned int                         numberComponents,
-       const bool                                 scaleFlag,
-       const double                               scalar,
-       distributedCPUMultiVec<dataTypes::number> &Y,
-       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
 
     virtual void
     HX(std::vector<distributedCPUMultiVec<dataTypes::number> *> &src,
        const double                                              scalarHX,
        const double                                              scalarY,
        const double                                              scalarX,
-       std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst) = 0;
+       std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst,
+       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
 
-
-    virtual void
-    HX(distributedCPUMultiVec<dataTypes::number> &src,
-       std::vector<dataTypes::number> &           cellSrcWaveFunctionMatrix,
-       const unsigned int                         numberWaveFunctions,
-       const bool                                 scaleFlag,
-       const double                               scalar,
-       const double                               scalarA,
-       const double                               scalarB,
-       distributedCPUMultiVec<dataTypes::number> &dst,
-       std::vector<dataTypes::number> &cellDstWaveFunctionMatrix) = 0;
-
-    virtual void
-    computeNonLocalProjectorKetTimesXTimesV(
-      distributedCPUMultiVec<dataTypes::number> &src,
-      distributedCPUMultiVec<dataTypes::number>
-        &                projectorKetTimesVectorFlattened,
-      const unsigned int numberWaveFunctions) = 0;
 
 
     /**

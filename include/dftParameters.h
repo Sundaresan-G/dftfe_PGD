@@ -156,7 +156,6 @@ namespace dftfe
     bool         useDensityMatrixPerturbationRankUpdates;
     double       xlbomdKernelRankUpdateFDParameter;
     bool         smearedNuclearCharges;
-    bool         HXOptimFlag;
     bool         floatingNuclearCharges;
     bool         nonLinearCoreCorrection;
     unsigned int maxLineSearchIterCGPRP;

@@ -892,13 +892,12 @@ namespace dftfe
             << init_core << std::endl;
 
         d_oncvClassPtr->initialiseNonLocalContribution(
-          atomLocations,
+          d_atomLocaltionsInterestPseudopotential,
           d_imageIdsTrunc,
           d_imagePositionsTrunc,
           d_kPointWeights,     // accounts for interpool
           d_kPointCoordinates, // accounts for interpool
           updateNonlocalSparsity);
-
       }
   }
 
@@ -4833,6 +4832,29 @@ namespace dftfe
                                       d_densityQuadratureIdElectro);
     return normValue;
   }
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    determineAtomsOfInterstPseudopotential(
+      std::vector<std::vector<double>> &atomCoordinates)
+  {
+    d_atomLocaltionsInterestPseudopotential.clear();
+    d_atomIdPseudopotentialInterestToGlobalId.clear();
+    unsigned atomIdPseudo = 0;
+    for (unsigned int iAtom = 0; atomCoordinates.size(); iAtom++)
+      {
+        if (true)
+          {
+            d_atomLocaltionsInterestPseudopotential.push_back(
+              atomCoordinates[iAtom]);
+            d_atomIdPseudopotentialInterestToGlobalId[atomIdPseudo] = iAtom;
+            atomIdPseudo++;
+          }
+      }
+  }
+
 
 
 #include "dft.inst.cc"

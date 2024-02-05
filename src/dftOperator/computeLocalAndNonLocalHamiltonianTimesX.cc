@@ -34,7 +34,8 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     distributedCPUMultiVec<dataTypes::number> &      dst,
     const double                                     scalarHX,
     const double                                     scalarY,
-    const double                                     scalarX)
+    const double                                     scalarX,
+    const bool onlyHPrimePartForFirstOrderDensityMatResponse)
 {
   if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
     {
@@ -59,8 +60,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
         dftPtr->matrix_free_data.n_physical_cells();
       std::vector<bool> dofEncountered(nRelaventDofs, false);
       if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-          d_ONCVnonLocalOperator
-                ->getTotalNonLocalElementsInCurrentProcessor() > 0)
+          d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor() >
+            0 &&
+          !onlyHPrimePartForFirstOrderDensityMatResponse)
         {
           for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
             {
@@ -135,7 +137,8 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
             &d_cellHamMatrixTimesWaveMatrix[0],
             numberWaveFunctions);
 
-          if (dftPtr->d_dftParamsPtr->isPseudopotential)
+          if (dftPtr->d_dftParamsPtr->isPseudopotential &&
+              !onlyHPrimePartForFirstOrderDensityMatResponse)
             {
               d_ONCVnonLocalOperator->applyCOnVCconjtransX(
                 d_cellHamMatrixTimesWaveMatrix,

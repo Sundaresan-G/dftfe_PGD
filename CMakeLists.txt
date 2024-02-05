@@ -122,7 +122,6 @@ SET(TARGET_SRC
   ./src/dft/initBoundaryConditions.cc
   ./src/dft/initCoreRho.cc
   ./src/dft/initElectronicFields.cc
-  ./src/dft/initPseudo-OV.cc
   ./src/dft/initPseudoLocal.cc
   ./src/dft/initRho.cc
   ./src/dft/initUnmovedTriangulation.cc

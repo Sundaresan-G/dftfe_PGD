@@ -1202,17 +1202,15 @@ namespace dftfe
     toleranceKinetic       = 1e-03;
     cellConstraintType     = 12; // all cell components to be relaxed
 
-    verbosity             = 0;
-    keepScratchFolder     = false;
-    restartFolder         = ".";
-    saveRhoData           = false;
-    loadRhoData           = false;
-    restartSpinFromNoSpin = false;
-    reproducible_output   = false;
-    meshAdaption          = false;
-    pinnedNodeForPBC      = true;
-    HXOptimFlag           = false;
-
+    verbosity                                      = 0;
+    keepScratchFolder                              = false;
+    restartFolder                                  = ".";
+    saveRhoData                                    = false;
+    loadRhoData                                    = false;
+    restartSpinFromNoSpin                          = false;
+    reproducible_output                            = false;
+    meshAdaption                                   = false;
+    pinnedNodeForPBC                               = true;
     startingWFCType                                = "";
     restrictToOnePass                              = false;
     writeWfcSolutionFields                         = false;
@@ -1560,10 +1558,9 @@ namespace dftfe
         numCoreWfcXtHX = prm.get_integer("XTHX CORE EIGENSTATES");
         spectrumSplitStartingScfIter =
           prm.get_integer("SPECTRUM SPLIT STARTING SCF ITER");
-        chebyshevOrder = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
-        useELPA        = prm.get_bool("USE ELPA");
-        HXOptimFlag    = prm.get_bool("ENABLE HAMILTONIAN TIMES VECTOR OPTIM");
-        orthogType     = prm.get("ORTHOGONALIZATION TYPE");
+        chebyshevOrder     = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
+        useELPA            = prm.get_bool("USE ELPA");
+        orthogType         = prm.get("ORTHOGONALIZATION TYPE");
         chebyshevTolerance = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
         wfcBlockSize       = prm.get_integer("WFC BLOCK SIZE");
         chebyWfcBlockSize  = prm.get_integer("CHEBY WFC BLOCK SIZE");
@@ -1904,10 +1901,6 @@ namespace dftfe
         useMixedPrecCheby                   = true;
         reuseLanczosUpperBoundFromFirstCall = true;
       }
-#ifdef USE_COMPLEX
-    HXOptimFlag = false;
-#endif
-
 
 #ifdef DFTFE_WITH_DEVICE
     if (!isPseudopotential && useDevice)

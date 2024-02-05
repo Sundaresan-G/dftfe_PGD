@@ -251,17 +251,6 @@ namespace dftfe
             computing_timer.leave_subsection(
               "Copy from full to block flattened array");
 
-            if (d_dftParams.HXOptimFlag)
-              {
-                computing_timer.enter_subsection(
-                  "Copy from global-vectors to cellwavefunction array");
-                operatorMatrix.initCellWaveFunctionMatrix(
-                  BVec,
-                  eigenVectorsFlattenedArrayBlock,
-                  cellWaveFunctionMatrix);
-                computing_timer.leave_subsection(
-                  "Copy from global-vectors to cellwavefunction array");
-              }
 
 
             //
@@ -269,43 +258,20 @@ namespace dftfe
             // be filtered and does in-place filtering
             computing_timer.enter_subsection("Chebyshev filtering");
 
-            if (d_dftParams.HXOptimFlag)
-              {
-                linearAlgebraOperations::chebyshevFilterOpt(
-                  operatorMatrix,
-                  eigenVectorsFlattenedArrayBlock,
-                  cellWaveFunctionMatrix,
-                  BVec,
-                  chebyshevOrder,
-                  d_lowerBoundUnWantedSpectrum,
-                  d_upperBoundUnWantedSpectrum,
-                  d_lowerBoundWantedSpectrum);
-              }
-            else
-              {
-                linearAlgebraOperations::chebyshevFilter(
-                  operatorMatrix,
-                  eigenVectorsFlattenedArrayBlock,
-                  BVec,
-                  chebyshevOrder,
-                  d_lowerBoundUnWantedSpectrum,
-                  d_upperBoundUnWantedSpectrum,
-                  d_lowerBoundWantedSpectrum);
-              }
+
+
+            linearAlgebraOperations::chebyshevFilter(
+              operatorMatrix,
+              eigenVectorsFlattenedArrayBlock,
+              BVec,
+              chebyshevOrder,
+              d_lowerBoundUnWantedSpectrum,
+              d_upperBoundUnWantedSpectrum,
+              d_lowerBoundWantedSpectrum);
+
             computing_timer.leave_subsection("Chebyshev filtering");
 
 
-            if (d_dftParams.HXOptimFlag)
-              {
-                computing_timer.enter_subsection(
-                  "Copy from cellwavefunction array to global array");
-                operatorMatrix.fillGlobalArrayFromCellWaveFunctionMatrix(
-                  BVec,
-                  cellWaveFunctionMatrix,
-                  eigenVectorsFlattenedArrayBlock);
-                computing_timer.leave_subsection(
-                  "Copy from cellwavefunction array to global array");
-              }
 
             if (d_dftParams.verbosity >= 4)
               dftUtils::printCurrentMemoryUsage(

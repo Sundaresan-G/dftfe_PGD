@@ -1080,10 +1080,6 @@ namespace dftfe
             // MPI_Barrier(d_mpiCommParent);
             // double kernel2_time = MPI_Wtime();
 
-            // operatorMatrix.computeNonLocalProjectorKetTimesXTimesV(
-            //  deviceFlattenedArrayBlock.begin(),
-            //  projectorKetTimesVectorD,
-            //  numPsi);
             oncvClassPtr->getNonLocalOperator()->applyVCconjtransOnX(
               deviceFlattenedArrayBlock,
               kPointIndex,
@@ -1095,9 +1091,6 @@ namespace dftfe
             // MPI_Barrier(d_mpiCommParent);
             // kernel2_time = MPI_Wtime() - kernel2_time;
 
-            // if (this_process==0 && dftParameters::verbosity>=5)
-            //  std::cout<<"Time for computeNonLocalProjectorKetTimesXTimesV
-            //  inside blocked loop: "<<kernel2_time<<std::endl;
 
             // dftfe::utils::deviceSynchronize();
             // MPI_Barrier(d_mpiCommParent);

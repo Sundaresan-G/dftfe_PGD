@@ -196,8 +196,8 @@ namespace dftfe
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getProjectorKetTimesVectorSingle()
   {
-    //FIX ME with correct call from ONCV
-    //return dftPtr->d_projectorKetTimesVectorPar[0];
+    // FIX ME with correct call from ONCV
+    // return dftPtr->d_projectorKetTimesVectorPar[0];
   }
 
 

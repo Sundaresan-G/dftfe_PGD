@@ -76,7 +76,10 @@ namespace dftfe
 
         // FIXME should use the appropriate map from oncvClassPtr
         // instead of assuming all atoms are nonlocal atoms
-        const int globalChargeIdNonLocalAtom = nonLocalAtomId;
+        const int globalChargeIdNonLocalAtom =
+          dftPtr->d_atomIdPseudopotentialInterestToGlobalId
+            .find(nonLocalAtomId)
+            ->second;
 
         // if map entry corresponding to current nonlocal atom id is empty,
         // initialize it to zero
@@ -265,11 +268,13 @@ namespace dftfe
         //
         // get the global charge Id of the current nonlocal atom
         //
-        //FIX ME with correct call from ONCV
+        // FIX ME with correct call from ONCV
         const int nonLocalAtomId =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+          dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
         const int globalChargeIdNonLocalAtom =
-          dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
+          dftPtr->d_atomIdPseudopotentialInterestToGlobalId
+            .find(nonLocalAtomId)
+            ->second;
 
 
 
@@ -316,7 +321,9 @@ namespace dftfe
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
-                    dftPtr->d_oncvClassPtr->getTotalNumberOfSphericalFunctionsForAtomId(nonLocalAtomId);
+                      dftPtr->d_oncvClassPtr
+                        ->getTotalNumberOfSphericalFunctionsForAtomId(
+                          nonLocalAtomId);
                     std::vector<dataTypes::number> temp2(3);
                     for (unsigned int q = 0; q < numQuadPoints; ++q)
                       {

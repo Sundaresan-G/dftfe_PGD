@@ -29,10 +29,7 @@
 namespace dftfe
 {
 #include "computeLocalAndNonLocalHamiltonianTimesX.cc"
-#include "computeNonLocalProjectorKetTimesXTimesV.cc"
-#include "computeNonLocalHamiltonianTimesXMemoryOpt.cc"
 #include "hamiltonianMatrixCalculator.cc"
-#include "matrixVectorProductImplementations.cc"
 #include "shapeFunctionDataCalculator.cc"
 
 
@@ -262,7 +259,6 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-
         if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
           d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
             numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
@@ -298,8 +294,6 @@ namespace dftfe
     d_cellHamMatrixTimesWaveMatrix.resize(d_numberNodesPerElement *
                                             numberWaveFunctions,
                                           0.0);
-
-
   }
 
   template <unsigned int              FEOrder,
@@ -311,7 +305,6 @@ namespace dftfe
   {
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-
         if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
           d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
             numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
@@ -494,8 +487,8 @@ namespace dftfe
   kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelProjectorKetTimesBlockVector()
   {
-    //FIX ME with correct call from ONCV
-   // return dftPtr->d_projectorKetTimesVectorParFlattened;
+    // FIX ME with correct call from ONCV
+    // return dftPtr->d_projectorKetTimesVectorParFlattened;
   }
 
   template <unsigned int              FEOrder,
@@ -973,7 +966,8 @@ namespace dftfe
     const double                                              scalarHX,
     const double                                              scalarY,
     const double                                              scalarX,
-    std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst)
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst,
+    const bool onlyHPrimePartForFirstOrderDensityMatResponse)
   {
     src[0]->updateGhostValues();
     scaledConstraintsNoneDataInfoPtr->distribute(*(src[0]));
@@ -1031,7 +1025,10 @@ namespace dftfe
     //
     bool   scaleFlag = false;
     double scalar    = 1.0;
-    HX(XTemp, numberWaveFunctions, scaleFlag, scalar, Y);
+    // HX(XTemp, numberWaveFunctions, scaleFlag, scalar, Y);
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> XArrayPtrs{&XTemp};
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> YArrayPtrs{&Y};
+    HX(XArrayPtrs, scalar, 0.0, 0.0, YArrayPtrs);
 
 #ifdef USE_COMPLEX
     for (unsigned int i = 0; i < Y.locallyOwnedSize(); ++i)
@@ -1173,13 +1170,22 @@ namespace dftfe
             HXBlock.setValue(dataTypes::number(0));
             const bool   scaleFlag = false;
             const double scalar    = 1.0;
-
-            HX(XBlock,
-               B,
-               scaleFlag,
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> XArrayPtrs{
+              &XBlock};
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> YArrayPtrs{
+              &HXBlock};
+            HX(XArrayPtrs,
                scalar,
-               HXBlock,
+               0.0,
+               0.0,
+               YArrayPtrs,
                onlyHPrimePartForFirstOrderDensityMatResponse);
+            // HX(XBlock,
+            //    B,
+            //    scaleFlag,
+            //    scalar,
+            //    HXBlock,
+            //    onlyHPrimePartForFirstOrderDensityMatResponse);
 
             MPI_Barrier(getMPICommunicator());
 
@@ -1351,13 +1357,17 @@ namespace dftfe
             HXBlock.setValue(dataTypes::number(0));
             const bool   scaleFlag = false;
             const double scalar    = 1.0;
-
-            HX(XBlock,
-               B,
-               scaleFlag,
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> XArrayPtrs{
+              &XBlock};
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> YArrayPtrs{
+              &HXBlock};
+            HX(XArrayPtrs,
                scalar,
-               HXBlock,
+               0.0,
+               0.0,
+               YArrayPtrs,
                onlyHPrimePartForFirstOrderDensityMatResponse);
+
 
             MPI_Barrier(getMPICommunicator());
 
