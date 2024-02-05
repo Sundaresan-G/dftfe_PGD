@@ -55,7 +55,6 @@ namespace dftfe
 
     const unsigned int numNonLocalAtomsCurrentProcess =
       (dftPtr->d_oncvClassPtr->getTotalNumberOfAtomsInCurrentProcessor());
-    // dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;
@@ -78,8 +77,6 @@ namespace dftfe
         // FIXME should use the appropriate map from oncvClassPtr
         // instead of assuming all atoms are nonlocal atoms
         const int globalChargeIdNonLocalAtom = nonLocalAtomId;
-        // dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
-
 
         // if map entry corresponding to current nonlocal atom id is empty,
         // initialize it to zero
@@ -253,7 +250,7 @@ namespace dftfe
     const unsigned int numNonLocalAtomsCurrentProcess =
       (dftPtr->d_oncvClassPtr->getNonLocalOperator()
          ->getTotalAtomInCurrentProcessor());
-    //  dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;
@@ -268,6 +265,7 @@ namespace dftfe
         //
         // get the global charge Id of the current nonlocal atom
         //
+        //FIX ME with correct call from ONCV
         const int nonLocalAtomId =
           dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
         const int globalChargeIdNonLocalAtom =
@@ -318,7 +316,7 @@ namespace dftfe
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
-                      dftPtr->d_numberPseudoAtomicWaveFunctions[nonLocalAtomId];
+                    dftPtr->d_oncvClassPtr->getTotalNumberOfSphericalFunctionsForAtomId(nonLocalAtomId);
                     std::vector<dataTypes::number> temp2(3);
                     for (unsigned int q = 0; q < numQuadPoints; ++q)
                       {

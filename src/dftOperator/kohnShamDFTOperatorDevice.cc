@@ -196,7 +196,8 @@ namespace dftfe
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getProjectorKetTimesVectorSingle()
   {
-    return dftPtr->d_projectorKetTimesVectorPar[0];
+    //FIX ME with correct call from ONCV
+    //return dftPtr->d_projectorKetTimesVectorPar[0];
   }
 
 
@@ -3330,7 +3331,7 @@ namespace dftfe
 
     // H^{nloc}*M^{-1/2}*X
     if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        (dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0) &&
+        (d_totalNonlocalElemsPseudo > 0) &&
         !onlyHPrimePartForFirstOrderDensityMatResponse)
       {
         computeNonLocalHamiltonianTimesX(src.begin(),
@@ -3470,7 +3471,7 @@ namespace dftfe
 
     // H^{nloc}*M^{-1/2}*X
     if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        (dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0) &&
+        (d_totalNonlocalElemsPseudo > 0) &&
         !onlyHPrimePartForFirstOrderDensityMatResponse)
       {
         computeNonLocalHamiltonianTimesX(src.begin(),
@@ -3584,7 +3585,7 @@ namespace dftfe
 
     // H^{nloc}*M^{-1/2}*X
     if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
+        d_totalNonlocalElemsPseudo > 0)
       {
         computeNonLocalHamiltonianTimesX(src.begin(),
                                          projectorKetTimesVector,

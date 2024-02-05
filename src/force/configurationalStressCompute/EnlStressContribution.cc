@@ -50,7 +50,6 @@ namespace dftfe
 
     const unsigned int numNonLocalAtomsCurrentProcess =
       (dftPtr->d_oncvClassPtr->getTotalNumberOfAtomsInCurrentProcessor());
-    // dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;

@@ -982,9 +982,7 @@ namespace dftfe
 
     std::vector<distributedCPUVec<double>> d_gaussianWeightsVecAtoms;
 
-    /// map from cell id to set of non local atom ids (local numbering)
-    // std::map<dealii::CellId,std::set<unsigned int>>
-    // d_cellIdToNonlocalAtomIdsLocalCompactSupportMap;
+
 
     /// domain decomposition mpi_communicator
     const MPI_Comm d_mpiCommParent;

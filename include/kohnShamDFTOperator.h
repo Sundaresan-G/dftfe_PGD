@@ -588,13 +588,6 @@ node is stored
       distributedCPUMultiVec<dataTypes::number> &      dst,
       const double                                     scalar = 1.0) const;
 
-    void
-    computeNonLocalProjectorKetTimesXTimesV(
-      distributedCPUMultiVec<dataTypes::number> &src,
-      distributedCPUMultiVec<dataTypes::number>
-        &                projectorKetTimesVectorFlattened,
-      const unsigned int numberWaveFunctions);
-
 
     /// pointer to dft class
     dftClass<FEOrder, FEOrderElectro, memorySpace> *dftPtr;
