@@ -242,7 +242,7 @@ namespace dftfe
                                                         d_atomicNonLocalPseudoPotentialConstants;
     dftfe::utils::MemoryStorage<ValueType, memorySpace> d_couplingMatrixEntries;
 
-    bool d_nonlocalHamiltonianEntriesUpdated;
+    bool d_HamiltonianCouplingMatrixEntriesUpdated;
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicWaveFnsVector;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>

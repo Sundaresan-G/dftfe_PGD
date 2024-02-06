@@ -129,62 +129,62 @@ namespace dftfe
 #endif
     // Getter functions
     unsigned int
-    getTotalAtomInCurrentProcessor();
+    getTotalAtomInCurrentProcessor() const;
 
     unsigned int
-    getTotalNonLocalElementsInCurrentProcessor();
+    getTotalNonLocalElementsInCurrentProcessor() const;
 
     unsigned int
-    getTotalNonLocalEntriesCurrentProcessor();
+    getTotalNonLocalEntriesCurrentProcessor() const;
 
     unsigned int
-    getMaxSingleAtomEntries();
+    getMaxSingleAtomEntries() const;
 
     bool
-    atomSupportInElement(unsigned int iElem);
+    atomSupportInElement(unsigned int iElem) const;
 
     unsigned int
     getGlobalDofAtomIdSphericalFnPair(const unsigned int atomId,
-                                      const unsigned int alpha);
+                                      const unsigned int alpha) const;
 
     unsigned int
-    getLocalIdOfDistributedVec(const unsigned int globalId);
+    getLocalIdOfDistributedVec(const unsigned int globalId) const;
 
     std::vector<unsigned int> &
-    getNonLocalElemIdToLocalElemIdMap();
+    getNonLocalElemIdToLocalElemIdMap() const;
 
     std::vector<unsigned int> &
-    getAtomWiseNumberCellsInCompactSupport();
+    getAtomWiseNumberCellsInCompactSupport() const;
 
     std::vector<unsigned int> &
-    getAtomWiseNumberCellsAccumulated();
+    getAtomWiseNumberCellsAccumulated() const;
 
     const std::vector<ValueType> &
-    getAtomCenteredKpointIndexedSphericalFnQuadValues();
+    getAtomCenteredKpointIndexedSphericalFnQuadValues() const;
 
     const std::vector<ValueType> &
-    getAtomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues();
+    getAtomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues() const;
 
     const std::map<unsigned int, std::vector<unsigned int>> &
-    getCellIdToAtomIdsLocalCompactSupportMap();
+    getCellIdToAtomIdsLocalCompactSupportMap() const;
 
     const std::vector<unsigned int> &
-    getNonTrivialSphericalFnsPerCell();
+    getNonTrivialSphericalFnsPerCell() const;
 
     const std::vector<unsigned int> &
-    getNonTrivialSphericalFnsCellStartIndex();
+    getNonTrivialSphericalFnsCellStartIndex() const;
 
     const unsigned int
-    getTotalNonTrivialSphericalFnsOverAllCells();
+    getTotalNonTrivialSphericalFnsOverAllCells() const;
 
     const std::vector<unsigned int> &
-    getNonTrivialAllCellsSphericalFnAlphaToElemIdMap();
+    getNonTrivialAllCellsSphericalFnAlphaToElemIdMap() const;
 
     const std::map<unsigned int, std::vector<unsigned int>> &
-    getAtomIdToNonTrivialSphericalFnCellStartIndex();
+    getAtomIdToNonTrivialSphericalFnCellStartIndex() const;
 
     const std::vector<unsigned int> &
-    getSphericalFnTimesVectorFlattenedVectorLocalIds();
+    getSphericalFnTimesVectorFlattenedVectorLocalIds() const;
 
 
     // Calls for both device and host

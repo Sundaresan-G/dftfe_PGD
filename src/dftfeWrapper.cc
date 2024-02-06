@@ -834,8 +834,7 @@ namespace dftfe
     if (d_mpi_comm_parent != MPI_COMM_NULL)
       {
 #ifdef DFTFE_WITH_DEVICE
-        if (d_dftfeParamsPtr->useDevice &&
-            setDeviceToMPITaskBindingInternally &&
+        if (useDevice && setDeviceToMPITaskBindingInternally &&
             !d_isDeviceToMPITaskBindingSetInternally)
           {
             dftfe::utils::deviceKernelsGeneric::setupDevice();

@@ -1071,15 +1071,7 @@ namespace dftfe
           d_numberWaveFunctions * d_totalNonlocalElems *
             d_numberNodesPerElement,
           ValueType(0.0));
-        if (d_isMallocCalled)
-          {
-            free(hostWfcPointers);
-            dftfe::utils::deviceFree(deviceWfcPointers);
-            free(hostPointerCDagger);
-            free(hostPointerCDaggeOutTemp);
-            dftfe::utils::deviceFree(devicePointerCDagger);
-            dftfe::utils::deviceFree(devicePointerCDaggerOutTemp);
-          }
+        freeDeviceVectors();
         hostWfcPointers =
           (ValueType **)malloc(d_totalNonlocalElems * sizeof(ValueType *));
         hostPointerCDagger =
@@ -1461,6 +1453,7 @@ namespace dftfe
   unsigned int
   AtomicCenteredNonLocalOperator<ValueType,
                                  memorySpace>::getTotalAtomInCurrentProcessor()
+    const
   {
     return (d_totalAtomsInCurrentProc);
   }
@@ -1468,7 +1461,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getTotalNonLocalElementsInCurrentProcessor()
+    getTotalNonLocalElementsInCurrentProcessor() const
   {
     return (d_totalNonlocalElems);
   }
@@ -1476,7 +1469,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getTotalNonLocalEntriesCurrentProcessor()
+    getTotalNonLocalEntriesCurrentProcessor() const
   {
     return (d_totalNonLocalEntries);
   }
@@ -1484,7 +1477,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
   AtomicCenteredNonLocalOperator<ValueType,
-                                 memorySpace>::getMaxSingleAtomEntries()
+                                 memorySpace>::getMaxSingleAtomEntries() const
   {
     return (d_maxSingleAtomContribution);
   }
@@ -1492,7 +1485,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   bool
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::atomSupportInElement(
-    unsigned int iElem)
+    unsigned int iElem) const
   {
     return (
       d_atomCenteredSphericalFunctionContainer->atomSupportInElement(iElem));
@@ -1502,7 +1495,7 @@ namespace dftfe
   unsigned int
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
     getGlobalDofAtomIdSphericalFnPair(const unsigned int atomId,
-                                      const unsigned int alpha)
+                                      const unsigned int alpha) const
   {
     return d_sphericalFunctionIdsNumberingMapCurrentProcess
       .find(std::make_pair(atomId, alpha))
@@ -1512,7 +1505,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   unsigned int
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getLocalIdOfDistributedVec(const unsigned int globalId)
+    getLocalIdOfDistributedVec(const unsigned int globalId) const
   {
     return (d_SphericalFunctionKetTimesVectorPar[0]
               .get_partitioner()
@@ -1523,14 +1516,14 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::vector<ValueType> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getAtomCenteredKpointIndexedSphericalFnQuadValues()
+    getAtomCenteredKpointIndexedSphericalFnQuadValues() const
   {
     return d_atomCenteredKpointIndexedSphericalFnQuadValues;
   }
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::vector<ValueType> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getAtomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues()
+    getAtomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues() const
   {
     return d_atomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues;
   }
@@ -1538,7 +1531,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::vector<unsigned int> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getSphericalFnTimesVectorFlattenedVectorLocalIds()
+    getSphericalFnTimesVectorFlattenedVectorLocalIds() const
 
   {
     return d_sphericalFnTimesVectorFlattenedVectorLocalIds;
@@ -1547,7 +1540,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::map<unsigned int, std::vector<unsigned int>> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getAtomIdToNonTrivialSphericalFnCellStartIndex()
+    getAtomIdToNonTrivialSphericalFnCellStartIndex() const
   {
     return d_atomIdToNonTrivialSphericalFnCellStartIndex;
   }
@@ -1555,7 +1548,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const unsigned int
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getTotalNonTrivialSphericalFnsOverAllCells()
+    getTotalNonTrivialSphericalFnsOverAllCells() const
   {
     return d_sumNonTrivialSphericalFnOverAllCells;
   }
@@ -1563,7 +1556,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::map<unsigned int, std::vector<unsigned int>> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getCellIdToAtomIdsLocalCompactSupportMap()
+    getCellIdToAtomIdsLocalCompactSupportMap() const
   {
     return d_cellIdToAtomIdsLocalCompactSupportMap;
   }
@@ -1571,7 +1564,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::vector<unsigned int> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getNonTrivialSphericalFnsPerCell()
+    getNonTrivialSphericalFnsPerCell() const
   {
     return d_nonTrivialSphericalFnPerCell;
   }
@@ -1579,7 +1572,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::vector<unsigned int> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getNonTrivialSphericalFnsCellStartIndex()
+    getNonTrivialSphericalFnsCellStartIndex() const
   {
     return d_nonTrivialSphericalFnsCellStartIndex;
   }
@@ -1587,7 +1580,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   const std::vector<unsigned int> &
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
-    getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()
+    getNonTrivialAllCellsSphericalFnAlphaToElemIdMap() const
   {
     return d_nonTrivialAllCellsSphericalFnAlphaToElemIdMap;
   }

@@ -206,7 +206,7 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
-        d_nonlocalHamiltonianEntriesUpdated = false;
+        d_HamiltonianCouplingMatrixEntriesUpdated = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->computeSparseStructure(
@@ -270,7 +270,7 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
-        d_nonlocalHamiltonianEntriesUpdated = false;
+        d_HamiltonianCouplingMatrixEntriesUpdated = false;
         MPI_Barrier(d_mpiCommParent);
         double InitTime = MPI_Wtime();
         d_atomicProjectorFnsContainer->getDataForSparseStructure(
@@ -606,7 +606,7 @@ namespace dftfe
   {
     if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
       {
-        if (!d_nonlocalHamiltonianEntriesUpdated)
+        if (!d_HamiltonianCouplingMatrixEntriesUpdated)
           {
             const std::vector<unsigned int> atomIdsInProcessor =
               d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
@@ -631,7 +631,7 @@ namespace dftfe
               }
             d_couplingMatrixEntries.resize(Entries.size());
             d_couplingMatrixEntries.copyFrom(Entries);
-            d_nonlocalHamiltonianEntriesUpdated = true;
+            d_HamiltonianCouplingMatrixEntriesUpdated = true;
           }
 
         return (d_couplingMatrixEntries);
@@ -639,7 +639,7 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     else
       {
-        if (!d_nonlocalHamiltonianEntriesUpdated)
+        if (!d_HamiltonianCouplingMatrixEntriesUpdated)
           {
             const std::vector<unsigned int> atomIdsInProcessor =
               d_atomicProjectorFnsContainer->getAtomIdsInCurrentProcess();
@@ -671,7 +671,7 @@ namespace dftfe
               }
             d_couplingMatrixEntries.resize(Entries.size());
             d_couplingMatrixEntries.copyFrom(Entries);
-            d_nonlocalHamiltonianEntriesUpdated = true;
+            d_HamiltonianCouplingMatrixEntriesUpdated = true;
           }
         return (d_couplingMatrixEntries);
       }
