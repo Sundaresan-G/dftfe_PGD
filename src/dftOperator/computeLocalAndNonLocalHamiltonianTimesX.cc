@@ -46,9 +46,11 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
       //
       // element level matrix-vector multiplications
       //
-
-      d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
-      d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
+      if (dftPtr->d_dftParamsPtr->isPseudopotential)
+        {
+          d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+          d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
+        }
 
       const unsigned int inc = 1;
 
