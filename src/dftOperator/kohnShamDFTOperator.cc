@@ -973,7 +973,7 @@ namespace dftfe
     src[0]->updateGhostValues();
     scaledConstraintsNoneDataInfoPtr->distribute(*(src[0]));
     computeHamiltonianTimesXInternal(
-      (*src[0]), (*dst[0]), scalarHX, scalarY, scalarX);
+      (*src[0]), (*dst[0]), scalarHX, scalarY, scalarX, onlyHPrimePartForFirstOrderDensityMatResponse);
 
     scaledConstraintsNoneDataInfoPtr->distribute_slave_to_master(*(dst[0]));
 
