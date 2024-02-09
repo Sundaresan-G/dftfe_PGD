@@ -489,6 +489,7 @@ namespace dftfe
   {
     // FIX ME with correct call from ONCV
     // return dftPtr->d_projectorKetTimesVectorParFlattened;
+    return d_SphericalFunctionKetTimesVectorParFlattened;
   }
 
   template <unsigned int              FEOrder,
