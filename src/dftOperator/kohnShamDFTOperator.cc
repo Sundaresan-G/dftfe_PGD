@@ -977,6 +977,7 @@ namespace dftfe
     scaledConstraintsNoneDataInfoPtr->distribute_slave_to_master(*(dst[0]));
 
     src[0]->zeroOutGhosts();
+    scaledConstraintsNoneDataInfoPtr->set_zero(*src[0]);
     dst[0]->accumulateAddLocallyOwned();
     dst[0]->zeroOutGhosts();
   }
