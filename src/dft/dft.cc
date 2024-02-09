@@ -1057,11 +1057,30 @@ namespace dftfe
 
     d_BLASWrapperPtrHost = std::make_shared<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>();
+    d_basisOperationsPtrHost = std::make_shared<
+      dftfe::basis::FEBasisOperations<dataTypes::number,
+                                      double,
+                                      dftfe::utils::MemorySpace::HOST>>(
+      d_BLASWrapperPtrHost);
+    d_basisOperationsPtrElectroHost = std::make_shared<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>(
+      d_BLASWrapperPtrHost);
 #if defined(DFTFE_WITH_DEVICE)
     if (d_dftParamsPtr->useDevice)
       {
         d_BLASWrapperPtr = std::make_shared<dftfe::linearAlgebra::BLASWrapper<
           dftfe::utils::MemorySpace::DEVICE>>();
+        d_basisOperationsPtrDevice = std::make_shared<
+          dftfe::basis::FEBasisOperations<dataTypes::number,
+                                          double,
+                                          dftfe::utils::MemorySpace::DEVICE>>(
+          d_BLASWrapperPtr);
+        d_basisOperationsPtrElectroDevice = std::make_shared<
+          dftfe::basis::FEBasisOperations<double,
+                                          double,
+                                          dftfe::utils::MemorySpace::DEVICE>>(
+          d_BLASWrapperPtr);
       }
 #endif
     initImageChargesUpdateKPoints();
@@ -1819,12 +1838,6 @@ namespace dftfe
     if (d_dftParamsPtr->writeLocalizationLengths)
       compute_localizationLength("localizationLengths.out");
 
-    /*if (d_dftParamsPtr->computeDipoleMoment)
-      {
-        dipole(d_dofHandlerPRefined, rhoOutValues, false);
-        dipole(d_dofHandlerPRefined, rhoOutValues, true);
-      } */
-
     if (d_dftParamsPtr->verbosity >= 1)
       pcout
         << std::endl
@@ -1893,8 +1906,6 @@ namespace dftfe
         if (initializeCublas)
           {
             kohnShamDFTEigenOperatorDevice.createDeviceBlasHandle();
-            d_basisOperationsPtrDevice->setDeviceBLASHandle(
-              &(kohnShamDFTEigenOperatorDevice.getDeviceBlasHandle()));
           }
 
         AssertThrow(
@@ -1998,9 +2009,6 @@ namespace dftfe
 
         d_kohnShamDFTOperatorDevicePtr->reinit(
           std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues), true);
-
-        d_basisOperationsPtrDevice->setDeviceBLASHandle(
-          &(d_kohnShamDFTOperatorDevicePtr->getDeviceBlasHandle()));
       }
 #endif
   }
@@ -2131,7 +2139,10 @@ namespace dftfe
         d_baseDofHandlerIndexElectro,
         d_phiTotAXQuadratureIdElectro,
         d_binsStartDofHandlerIndexElectro,
-        kohnShamDFTEigenOperatorDevice,
+        FEOrder == FEOrderElectro ?
+          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
+          d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
+        d_BLASWrapperPtr,
         d_constraintsPRefined,
         d_imagePositionsTrunc,
         d_imageIdsTrunc,
@@ -3870,11 +3881,6 @@ namespace dftfe
 #endif
         );
       }
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      d_basisOperationsPtrDevice->setDeviceBLASHandle(
-        &(d_kohnShamDFTOperatorDevicePtr->getDeviceBlasHandle()));
-#endif
 
     forcePtr->computeStress(matrix_free_data,
 #ifdef DFTFE_WITH_DEVICE
@@ -3964,13 +3970,6 @@ namespace dftfe
                        false,
                        d_dftParamsPtr->verbosity >= 4 ? true : false);
 
-#ifdef DFTFE_WITH_DEVICE
-          if (d_dftParamsPtr->useDevice)
-            kohnShamDFTEigenOperatorDevice
-              .preComputeShapeFunctionGradientIntegrals(d_lpspQuadratureId,
-                                                        true);
-#endif
-
           computing_timer.enter_subsection(
             "Nuclear self-potential perturbation solve");
 
@@ -3980,7 +3979,10 @@ namespace dftfe
             d_phiTotAXQuadratureIdElectro,
             d_binsStartDofHandlerIndexElectro,
 #ifdef DFTFE_WITH_DEVICE
-            kohnShamDFTEigenOperatorDevice,
+            FEOrder == FEOrderElectro ?
+              d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
+              d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
+            d_BLASWrapperPtr,
 #endif
             d_constraintsPRefined,
             d_imagePositionsTrunc,
@@ -4016,13 +4018,6 @@ namespace dftfe
                        false,
                        d_dftParamsPtr->verbosity >= 4 ? true : false);
 
-#ifdef DFTFE_WITH_DEVICE
-          if (d_dftParamsPtr->useDevice)
-            kohnShamDFTEigenOperatorDevice
-              .preComputeShapeFunctionGradientIntegrals(d_lpspQuadratureId,
-                                                        true);
-#endif
-
           computing_timer.enter_subsection(
             "Nuclear self-potential perturbation solve");
 
@@ -4032,7 +4027,10 @@ namespace dftfe
             d_phiTotAXQuadratureIdElectro,
             d_binsStartDofHandlerIndexElectro,
 #ifdef DFTFE_WITH_DEVICE
-            kohnShamDFTEigenOperatorDevice,
+            FEOrder == FEOrderElectro ?
+              d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
+              d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
+            d_BLASWrapperPtr,
 #endif
             d_constraintsPRefined,
             d_imagePositionsTrunc,
@@ -4067,12 +4065,6 @@ namespace dftfe
                  true,
                  false,
                  d_dftParamsPtr->verbosity >= 4 ? true : false);
-
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      kohnShamDFTEigenOperatorDevice.preComputeShapeFunctionGradientIntegrals(
-        d_lpspQuadratureId, true);
-#endif
   }
 
   // Output wfc

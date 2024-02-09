@@ -658,16 +658,6 @@ namespace dftfe
         &        quadratureGradValueData,
       const bool isConsiderGradData = false);
 
-    /**
-     *@brief subtract atomic densities at quadrature points
-     *
-     */
-    void
-    subtractAtomicRhoQuadValuesGradients(
-      std::map<dealii::CellId, std::vector<double>> &quadratureValueData,
-      std::map<dealii::CellId, std::vector<double>> &quadratureGradValueData,
-      const bool isConsiderGradData = false);
-
 
     /**
      *@brief Finds the global dof ids of the nodes containing atoms.
@@ -790,12 +780,6 @@ namespace dftfe
      */
     double
     totalCharge(const dealii::DoFHandler<3> &    dofHandlerOfField,
-                const distributedCPUVec<double> &rhoNodalField,
-                std::map<dealii::CellId, std::vector<double>> &rhoQuadValues);
-
-
-    double
-    totalCharge(const dealii::DoFHandler<3> &    dofHandlerOfField,
                 const distributedCPUVec<double> &rhoNodalField);
 
 
@@ -816,10 +800,6 @@ namespace dftfe
                 const distributedCPUVec<double> &    rhoNodalField);
 
 
-    void
-    dipole(const dealii::DoFHandler<3> &dofHandlerOfField,
-           const std::map<dealii::CellId, std::vector<double>> *rhoQuadValues,
-           bool                                                 centerofCharge);
 
     double
     rhofieldl2Norm(const dealii::MatrixFree<3, double> &matrixFreeDataObject,
@@ -839,18 +819,6 @@ namespace dftfe
     double
     fieldGradl2Norm(const dealii::MatrixFree<3, double> &matrixFreeDataObject,
                     const distributedCPUVec<double> &    field);
-
-    /**
-     *@brief l2 projection
-     */
-    void
-    l2ProjectionQuadToNodal(
-      const dealii::MatrixFree<3, double> &                matrixFreeDataObject,
-      const dealii::AffineConstraints<double> &            constraintMatrix,
-      const unsigned int                                   dofHandlerId,
-      const unsigned int                                   quadratureId,
-      const std::map<dealii::CellId, std::vector<double>> &quadratureValueData,
-      distributedCPUVec<double> &                          nodalField);
 
     /**
      *@brief l2 projection

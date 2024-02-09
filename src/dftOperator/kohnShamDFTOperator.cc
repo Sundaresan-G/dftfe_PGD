@@ -497,17 +497,6 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   const std::vector<double> &
   kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
-    getShapeFunctionValuesDensityGaussQuad() const
-  {
-    return d_densityGaussQuadShapeFunctionValues;
-  }
-
-
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
-  const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionGradValuesDensityGaussQuad() const
   {
     return d_densityGaussQuadShapeFunctionGradientValues;

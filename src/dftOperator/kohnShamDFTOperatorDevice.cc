@@ -204,28 +204,6 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
-    getShapeFunctionGradientIntegral()
-  {
-    return d_cellShapeFunctionGradientIntegralFlattenedDevice;
-  }
-
-
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
-  dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
-    getShapeFunctionGradientIntegralElectro()
-  {
-    return d_cellShapeFunctionGradientIntegralFlattenedDeviceElectro;
-  }
-
-
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValues()

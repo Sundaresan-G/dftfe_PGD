@@ -525,7 +525,7 @@ namespace dftfe
     const unsigned int quadratureIndex,
     const double       cutOffVal,
     const unsigned int cutOffType);
-
+#ifdef USE_COMPLEX
   template void
   AtomCenteredSphericalFunctionContainer::computeSparseStructure(
     std::shared_ptr<
@@ -537,7 +537,7 @@ namespace dftfe
     const double       cutOffVal,
     const unsigned int cutOffType);
 
-
+#endif
   const std::map<unsigned int, std::vector<int>> &
   AtomCenteredSphericalFunctionContainer::getSparsityPattern()
   {

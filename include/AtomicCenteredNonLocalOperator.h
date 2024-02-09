@@ -35,6 +35,7 @@
 #include <MultiVector.h>
 #include <DeviceTypeConfig.h>
 #include <cmath>
+#include <linearAlgebraOperations.h>
 
 namespace dftfe
 {
