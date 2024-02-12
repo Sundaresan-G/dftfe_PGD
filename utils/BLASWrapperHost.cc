@@ -72,7 +72,7 @@ namespace dftfe
       const ValueType2       alpha,
       const dftfe::size_type n) const
     {
-      std::transform(x, x + n, x, [&](auto &c) { return alpha * c; });
+      std::transform(x, x + n, x, [&alpha](auto &c) { return alpha * c; });
     }
     // for xscal
     template void
