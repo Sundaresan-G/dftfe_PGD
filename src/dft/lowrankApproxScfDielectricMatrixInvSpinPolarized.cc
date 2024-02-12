@@ -415,9 +415,11 @@ namespace dftfe
   } // namespace internalLowrankJacInv
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     lowrankApproxScfDielectricMatrixInvSpinPolarized(const unsigned int scfIter)
   {
     int this_process;

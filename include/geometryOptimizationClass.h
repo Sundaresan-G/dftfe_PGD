@@ -42,11 +42,12 @@ namespace dftfe
                               const std::string restartFilesPath,
                               const MPI_Comm &  mpi_comm_parent,
                               const bool        restart,
-                              const int         verbosity);
+                              const int         verbosity,
+                              const bool        useDevice);
 
 
     void
-    init(const std::string parameter_file);
+    init(const std::string parameter_file, const bool useDevice);
 
     /**
      * @brief runOpt:

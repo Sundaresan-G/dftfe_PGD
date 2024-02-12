@@ -18,12 +18,15 @@
 //
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
-kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeHamiltonianMatrix(
-  const unsigned int kPointIndex,
-  const unsigned int spinIndex,
-  const bool         onlyHPrimePartForFirstOrderDensityMatResponse)
+kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+  computeHamiltonianMatrix(
+    const unsigned int kPointIndex,
+    const unsigned int spinIndex,
+    const bool         onlyHPrimePartForFirstOrderDensityMatResponse)
 {
   dealii::TimerOutput computingTimerStandard(
     mpi_communicator,
@@ -889,9 +892,12 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeHamiltonianMatrix(
 
 // This piece of code needs to be changed later when required as this is still
 // in macrocell subcell mode
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
-kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeKineticMatrix()
+kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+  computeKineticMatrix()
 {
   //
   // Get the number of locally owned cells

@@ -29,21 +29,21 @@
 namespace dftfe
 {
 #include "computeLocalAndNonLocalHamiltonianTimesX.cc"
-#include "computeNonLocalProjectorKetTimesXTimesV.cc"
-#include "computeNonLocalHamiltonianTimesXMemoryOpt.cc"
 #include "hamiltonianMatrixCalculator.cc"
-#include "matrixVectorProductImplementations.cc"
 #include "shapeFunctionDataCalculator.cc"
 
 
   //
   // constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::kohnShamDFTOperatorClass(
-    dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-    const MPI_Comm &                   mpi_comm_parent,
-    const MPI_Comm &                   mpi_comm_domain)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    kohnShamDFTOperatorClass(
+      dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+      const MPI_Comm &                                mpi_comm_parent,
+      const MPI_Comm &                                mpi_comm_domain)
     : dftPtr(_dftPtr)
     , d_kPointIndex(0)
     , d_numberNodesPerElement(_dftPtr->matrix_free_data.get_dofs_per_cell(
@@ -70,15 +70,17 @@ namespace dftfe
   //
   // initialize kohnShamDFTOperatorClass object
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::init()
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::init()
   {
     computing_timer.enter_subsection("kohnShamDFTOperatorClass setup");
 
     d_basisOperationsPtrHost = dftPtr->d_basisOperationsPtrHost;
     d_oncvClassPtr           = dftPtr->d_oncvClassPtr;
-    d_ONCVnonLocalOperator   = d_oncvClassPtr->d_nonLocalOperatorHost;
+    d_ONCVnonLocalOperator   = d_oncvClassPtr->getNonLocalOperator();
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
     d_sqrtMassVector.reinit(d_invSqrtMassVector);
@@ -178,16 +180,21 @@ namespace dftfe
     computing_timer.leave_subsection("kohnShamDFTOperatorClass setup");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::resetExtPotHamFlag()
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    resetExtPotHamFlag()
   {
     d_isStiffnessMatrixExternalPotCorrComputed = false;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::reinit(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::reinit(
     const unsigned int                    numberWaveFunctions,
     distributedCPUVec<dataTypes::number> &flattenedArray,
     bool                                  flag)
@@ -207,14 +214,9 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-          numberWaveFunctions,
-          dftPtr->d_projectorKetTimesVectorParFlattened);
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,
-          projectorKetTimesVector,
-          d_SphericalFunctionKetTimesVectorParFlattened);
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+            numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -240,9 +242,11 @@ namespace dftfe
       d_FullflattenedArrayCellLocalProcIndexIdMap);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::reinit(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::reinit(
     const unsigned int                         numberWaveFunctions,
     distributedCPUMultiVec<dataTypes::number> &flattenedArray,
     bool                                       flag)
@@ -255,14 +259,9 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-          numberWaveFunctions,
-          dftPtr->d_projectorKetTimesVectorParFlattened);
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,
-          projectorKetTimesVector,
-          d_SphericalFunctionKetTimesVectorParFlattened);
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+            numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
 
 
@@ -295,50 +294,34 @@ namespace dftfe
     d_cellHamMatrixTimesWaveMatrix.resize(d_numberNodesPerElement *
                                             numberWaveFunctions,
                                           0.0);
-
-    if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
-      {
-        for (unsigned int iAtom = 0;
-             iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-             ++iAtom)
-          {
-            const unsigned int atomId =
-              dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-            const int numberSingleAtomPseudoWaveFunctions =
-              dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-            projectorKetTimesVector[atomId].resize(
-              numberWaveFunctions * numberSingleAtomPseudoWaveFunctions, 0.0);
-          }
-      }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::reinit(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::reinit(
     const unsigned int numberWaveFunctions)
   {
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-          numberWaveFunctions,
-          dftPtr->d_projectorKetTimesVectorParFlattened);
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          numberWaveFunctions,
-          projectorKetTimesVector,
-          d_SphericalFunctionKetTimesVectorParFlattened);
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+            numberWaveFunctions, d_SphericalFunctionKetTimesVectorParFlattened);
       }
   }
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::initCellWaveFunctionMatrix(
-    const unsigned int                         numberWaveFunctions,
-    distributedCPUMultiVec<dataTypes::number> &src,
-    std::vector<dataTypes::number> &           cellWaveFunctionMatrix)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    initCellWaveFunctionMatrix(
+      const unsigned int                         numberWaveFunctions,
+      distributedCPUMultiVec<dataTypes::number> &src,
+      std::vector<dataTypes::number> &           cellWaveFunctionMatrix)
   {
     cellWaveFunctionMatrix.resize(d_numberCellsLocallyOwned *
                                     d_numberNodesPerElement *
@@ -376,9 +359,11 @@ namespace dftfe
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     fillGlobalArrayFromCellWaveFunctionMatrix(
       const unsigned int                         numberWaveFunctions,
       const std::vector<dataTypes::number> &     cellWaveFunctionMatrix,
@@ -419,12 +404,14 @@ namespace dftfe
 
 
   // Y = a*X + Y
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::initWithScalar(
-    const unsigned int              numberWaveFunctions,
-    double                          scalarValue,
-    std::vector<dataTypes::number> &cellWaveFunctionMatrix)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    initWithScalar(const unsigned int              numberWaveFunctions,
+                   double                          scalarValue,
+                   std::vector<dataTypes::number> &cellWaveFunctionMatrix)
 
   {
     unsigned int numberCells = dftPtr->matrix_free_data.n_physical_cells();
@@ -436,9 +423,11 @@ namespace dftfe
 
 
   // Y = a*X + b*Y
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::axpby(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::axpby(
     double                                scalarA,
     double                                scalarB,
     const unsigned int                    numberWaveFunctions,
@@ -469,9 +458,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getInteriorSurfaceNodesMapFromGlobalArray(
       std::vector<unsigned int> &globalArrayClassificationMap)
 
@@ -479,78 +470,87 @@ namespace dftfe
     globalArrayClassificationMap = d_globalArrayClassificationMap;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<dealii::types::global_dof_index> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getFlattenedArrayCellLocalProcIndexIdMap() const
   {
     return d_FullflattenedArrayCellLocalProcIndexIdMap;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUMultiVec<dataTypes::number> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelProjectorKetTimesBlockVector()
   {
-    return dftPtr->d_projectorKetTimesVectorParFlattened;
+    // FIX ME with correct call from ONCV
+    // return dftPtr->d_projectorKetTimesVectorParFlattened;
+    return d_SphericalFunctionKetTimesVectorParFlattened;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
-    getShapeFunctionValuesDensityGaussQuad() const
-  {
-    return d_densityGaussQuadShapeFunctionValues;
-  }
-
-
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionGradValuesDensityGaussQuad() const
   {
     return d_densityGaussQuadShapeFunctionGradientValues;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValuesDensityGaussLobattoQuad() const
   {
     return d_densityGlQuadShapeFunctionValues;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValuesDensityTransposed() const
   {
     return d_shapeFunctionValueDensityTransposed;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValuesNLPTransposed() const
   {
     return d_shapeFunctionValueNLPTransposed;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionGradientValuesNLPTransposed() const
   {
     return d_shapeFunctionGradientValueNLPTransposed;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<double> &
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::getInverseJacobiansNLP()
-    const
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    getInverseJacobiansNLP() const
   {
     return d_inverseJacobiansNLP;
   }
@@ -560,13 +560,15 @@ namespace dftfe
   //
   // compute mass Vector
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeMassVector(
-    const dealii::DoFHandler<3> &            dofHandler,
-    const dealii::AffineConstraints<double> &constraintMatrix,
-    distributedCPUVec<double> &              sqrtMassVec,
-    distributedCPUVec<double> &              invSqrtMassVec)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeMassVector(const dealii::DoFHandler<3> &            dofHandler,
+                      const dealii::AffineConstraints<double> &constraintMatrix,
+                      distributedCPUVec<double> &              sqrtMassVec,
+                      distributedCPUVec<double> &              invSqrtMassVec)
   {
     computing_timer.enter_subsection("kohnShamDFTOperatorClass Mass assembly");
     invSqrtMassVec = 0.0;
@@ -633,20 +635,24 @@ namespace dftfe
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::reinitkPointSpinIndex(
-    const unsigned int kPointIndex,
-    const unsigned int spinIndex)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    reinitkPointSpinIndex(const unsigned int kPointIndex,
+                          const unsigned int spinIndex)
   {
     d_kPointIndex = kPointIndex;
     d_spinIndex   = spinIndex;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeVEff(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::computeVEff(
     const std::vector<
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &rhoValues,
@@ -747,9 +753,11 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeVEff(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::computeVEff(
     const std::vector<
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &rhoValues,
@@ -938,440 +946,39 @@ namespace dftfe
   }
 
 
-#ifdef USE_COMPLEX
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::HX(
-    distributedCPUMultiVec<std::complex<double>> &src,
-    const unsigned int                            numberWaveFunctions,
-    const bool                                    scaleFlag,
-    const double                                  scalar,
-    distributedCPUMultiVec<std::complex<double>> &dst,
-    const bool onlyHPrimePartForFirstOrderDensityMatResponse)
-
-
-  {
-    const unsigned int numberDofs = src.locallyOwnedSize();
-    const unsigned int inc        = 1;
-
-    //
-    // scale src vector with M^{-1/2}
-    //
-    for (unsigned int i = 0; i < numberDofs; ++i)
-      {
-        const double scalingCoeff =
-          d_invSqrtMassVector.local_element(i) * scalar;
-        zdscal_(&numberWaveFunctions,
-                &scalingCoeff,
-                src.data() + i * numberWaveFunctions,
-                &inc);
-      }
-
-
-    if (scaleFlag)
-      {
-        for (int i = 0; i < numberDofs; ++i)
-          {
-            const double scalingCoeff = d_sqrtMassVector.local_element(i);
-            zdscal_(&numberWaveFunctions,
-                    &scalingCoeff,
-                    dst.data() + i * numberWaveFunctions,
-                    &inc);
-          }
-      }
-
-    //
-    // update slave nodes before doing element-level matrix-vec multiplication
-    //
-    src.updateGhostValues();
-    dftPtr->constraintsNoneDataInfo.distribute(src);
-
-
-
-    //
-    // Hloc*M^{-1/2}*X
-    //
-    computeLocalHamiltonianTimesX(src, numberWaveFunctions, dst);
-
-    //
-    // required if its a pseudopotential calculation and number of nonlocal
-    // atoms are greater than zero H^{nloc}*M^{-1/2}*X
-    if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0 &&
-        !onlyHPrimePartForFirstOrderDensityMatResponse)
-      {
-        computeNonLocalHamiltonianTimesX(src, numberWaveFunctions, dst);
-      }
-
-
-    //
-    // update master node contributions from its correponding slave nodes
-    //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
-
-
-
-    src.zeroOutGhosts();
-    dst.accumulateAddLocallyOwned();
-    dst.zeroOutGhosts();
-
-    //
-    // M^{-1/2}*H*M^{-1/2}*X
-    //
-    for (unsigned int i = 0; i < numberDofs; ++i)
-      {
-        const double scalingCoeff = d_invSqrtMassVector.local_element(i);
-        zdscal_(&numberWaveFunctions,
-                &scalingCoeff,
-                dst.data() + i * numberWaveFunctions,
-                &inc);
-      }
-
-
-    //
-    // unscale src M^{1/2}*X
-    //
-    for (unsigned int i = 0; i < numberDofs; ++i)
-      {
-        const double scalingCoeff =
-          d_sqrtMassVector.local_element(i) * (1.0 / scalar);
-        zdscal_(&numberWaveFunctions,
-                &scalingCoeff,
-                src.data() + i * numberWaveFunctions,
-                &inc);
-      }
-  }
-
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::HX(
-    distributedCPUMultiVec<std::complex<double>> &src,
-    std::vector<std::complex<double>> &           cellSrcWaveFunctionMatrix,
-    const unsigned int                            numberWaveFunctions,
-    const bool                                    scaleFlag,
-    const double                                  scalar,
-    const double                                  scalarA,
-    const double                                  scalarB,
-    distributedCPUMultiVec<std::complex<double>> &dst,
-    std::vector<std::complex<double>> &           cellDstWaveFunctionMatrix)
-  {
-    AssertThrow(false, dftUtils::ExcNotImplementedYet());
-  }
-
-#else
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::HX(
-    distributedCPUMultiVec<double> &src,
-    const unsigned int numberWaveFunctions,
-    const bool scaleFlag,
-    const double scalar,
-    distributedCPUMultiVec<double> &dst,
-    const bool onlyHPrimePartForFirstOrderDensityMatResponse)
-  {
-    const unsigned int numberDofs = src.locallyOwnedSize();
-    const unsigned int inc = 1;
-
-
-    //
-    // scale src vector with M^{-1/2}
-    //
-    for (unsigned int i = 0; i < numberDofs; ++i)
-      {
-        const double scalingCoeff = d_invSqrtMassVector.local_element(i);
-        dscal_(&numberWaveFunctions,
-               &scalingCoeff,
-               src.data() + i * numberWaveFunctions,
-               &inc);
-      }
-
-
-    if (scaleFlag)
-      {
-        for (int i = 0; i < numberDofs; ++i)
-          {
-            const double scalingCoeff = d_sqrtMassVector.local_element(i);
-            dscal_(&numberWaveFunctions,
-                   &scalingCoeff,
-                   dst.data() + i * numberWaveFunctions,
-                   &inc);
-          }
-      }
-
-    //
-    // update slave nodes before doing element-level matrix-vec multiplication
-    //
-    src.updateGhostValues();
-    dftPtr->constraintsNoneDataInfo.distribute(src);
-
-
-    //
-    // Hloc*M^{-1/2}*X
-    //
-    computeLocalHamiltonianTimesX(src, numberWaveFunctions, dst, scalar);
-
-    //
-    // required if its a pseudopotential calculation and number of nonlocal
-    // atoms are greater than zero H^{nloc}*M^{-1/2}*X
-    if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0 &&
-        !onlyHPrimePartForFirstOrderDensityMatResponse)
-      {
-        computeNonLocalHamiltonianTimesX(src, numberWaveFunctions, dst, scalar);
-      }
-
-
-
-    //
-    // update master node contributions from its correponding slave nodes
-    //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
-
-    src.zeroOutGhosts();
-    dst.accumulateAddLocallyOwned();
-    dst.zeroOutGhosts();
-
-    //
-    // M^{-1/2}*H*M^{-1/2}*X
-    //
-    for (unsigned int i = 0; i < numberDofs; ++i)
-      {
-        dscal_(&numberWaveFunctions,
-               &d_invSqrtMassVector.local_element(i),
-               dst.data() + i * numberWaveFunctions,
-               &inc);
-      }
-
-    //
-    // unscale src M^{1/2}*X
-    //
-    for (unsigned int i = 0; i < numberDofs; ++i)
-      {
-        double scalingCoeff = d_sqrtMassVector.local_element(i);
-        dscal_(&numberWaveFunctions,
-               &scalingCoeff,
-               src.data() + i * numberWaveFunctions,
-               &inc);
-      }
-  }
-
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::HX(
-    distributedCPUMultiVec<double> &src,
-    std::vector<double> &cellSrcWaveFunctionMatrix,
-    const unsigned int numberWaveFunctions,
-    const bool scaleFlag,
-    const double scalar,
-    const double scalarA,
-    const double scalarB,
-    distributedCPUMultiVec<double> &dst,
-    std::vector<double> &cellDstWaveFunctionMatrix)
-  {
-    const unsigned int numberDofs = src.locallyOwnedSize();
-    const unsigned int inc = 1;
-
-
-    for (unsigned int iDof = 0; iDof < numberDofs; ++iDof)
-      {
-        if (d_globalArrayClassificationMap[iDof] == 1)
-          {
-            const double scalingCoeff = d_invSqrtMassVector.local_element(iDof);
-            for (unsigned int iWave = 0; iWave < numberWaveFunctions; ++iWave)
-              {
-                src.data()[iDof * numberWaveFunctions + iWave] *= scalingCoeff;
-              }
-          }
-      }
-
-    unsigned int productNumNodesWaveFunctions =
-      d_numberNodesPerElement * numberWaveFunctions;
-    std::vector<dealii::types::global_dof_index> cell_dof_indicesGlobal(
-      d_numberNodesPerElement);
-
-    typename dealii::DoFHandler<3>::active_cell_iterator
-      cellPtr = dftPtr->matrix_free_data
-                  .get_dof_handler(dftPtr->d_densityDofHandlerIndex)
-                  .begin_active(),
-      endcellPtr = dftPtr->matrix_free_data
-                     .get_dof_handler(dftPtr->d_densityDofHandlerIndex)
-                     .end();
-
-    unsigned int iElem = 0;
-    for (; cellPtr != endcellPtr; ++cellPtr)
-      {
-        if (cellPtr->is_locally_owned())
-          {
-            unsigned int indexTemp = productNumNodesWaveFunctions * iElem;
-
-            cellPtr->get_dof_indices(cell_dof_indicesGlobal);
-            for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                 ++iNode)
-              {
-                if (d_nodesPerCellClassificationMap[iNode] == 0)
-                  {
-                    dealii::types::global_dof_index localDoFId =
-                      dftPtr->matrix_free_data.get_vector_partitioner()
-                        ->global_to_local(cell_dof_indicesGlobal[iNode]);
-                    const double scalingCoeff =
-                      d_invSqrtMassVector.local_element(localDoFId);
-                    unsigned int indexVal =
-                      indexTemp + numberWaveFunctions * iNode;
-                    for (unsigned int iWave = 0; iWave < numberWaveFunctions;
-                         ++iWave)
-                      {
-                        cellSrcWaveFunctionMatrix[indexVal + iWave] *=
-                          scalingCoeff;
-                      }
-                  }
-              }
-            iElem++;
-          }
-      }
-
-
-    if (scaleFlag)
-      {
-        for (int i = 0; i < numberDofs; ++i)
-          {
-            if (d_globalArrayClassificationMap[i] == 1)
-              {
-                const double scalingCoeff = d_sqrtMassVector.local_element(i);
-                dscal_(&numberWaveFunctions,
-                       &scalingCoeff,
-                       dst.data() + i * numberWaveFunctions,
-                       &inc);
-              }
-          }
-      }
-
-
-
-    //
-    // update slave nodes before doing element-level matrix-vec multiplication
-    //
-    src.updateGhostValues();
-    dftPtr->constraintsNoneDataInfo.distribute(src);
-
-
-
-    computeHamiltonianTimesXInternal(src,
-                                     cellSrcWaveFunctionMatrix,
-                                     numberWaveFunctions,
-                                     dst,
-                                     cellDstWaveFunctionMatrix,
-                                     scalar,
-                                     scalarA,
-                                     scalarB,
-                                     scaleFlag);
-
-
-    //
-    // update master node contributions from its correponding slave nodes
-    //
-    dftPtr->constraintsNoneDataInfo.distribute_slave_to_master(dst);
-
-
-    src.zeroOutGhosts();
-    dst.accumulateAddLocallyOwned();
-    dst.zeroOutGhosts();
-
-    // unscale cell level src vector
-    for (unsigned int iDof = 0; iDof < numberDofs; ++iDof)
-      {
-        const double scalingCoeff = d_sqrtMassVector.local_element(iDof);
-        if (d_globalArrayClassificationMap[iDof] == 1)
-          {
-            for (unsigned int iWave = 0; iWave < numberWaveFunctions; ++iWave)
-              {
-                src.data()[iDof * numberWaveFunctions + iWave] *= scalingCoeff;
-              }
-          }
-      }
-
-    cellPtr =
-      dftPtr->matrix_free_data.get_dof_handler(dftPtr->d_densityDofHandlerIndex)
-        .begin_active();
-    endcellPtr =
-      dftPtr->matrix_free_data.get_dof_handler(dftPtr->d_densityDofHandlerIndex)
-        .end();
-
-    iElem = 0;
-    for (; cellPtr != endcellPtr; ++cellPtr)
-      {
-        if (cellPtr->is_locally_owned())
-          {
-            cellPtr->get_dof_indices(cell_dof_indicesGlobal);
-            unsigned int indexTemp = productNumNodesWaveFunctions * iElem;
-            for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                 ++iNode)
-              {
-                if (d_nodesPerCellClassificationMap[iNode] == 0)
-                  {
-                    dealii::types::global_dof_index localDoFId =
-                      dftPtr->matrix_free_data.get_vector_partitioner()
-                        ->global_to_local(cell_dof_indicesGlobal[iNode]);
-                    const double scalingCoeff =
-                      d_sqrtMassVector.local_element(localDoFId);
-                    unsigned int indexVal =
-                      indexTemp + numberWaveFunctions * iNode;
-                    for (unsigned int iWave = 0; iWave < numberWaveFunctions;
-                         ++iWave)
-                      {
-                        unsigned int indexVal =
-                          indexTemp + numberWaveFunctions * iNode;
-                        cellSrcWaveFunctionMatrix[indexVal + iWave] *=
-                          scalingCoeff;
-                      }
-                  }
-              }
-            iElem++;
-          }
-      }
-
-    //
-    // M^{-1/2}*H*M^{-1/2}*X
-    //
-    for (unsigned int i = 0; i < numberDofs; ++i)
-      {
-        if (d_globalArrayClassificationMap[i] == 1)
-          {
-            dscal_(&numberWaveFunctions,
-                   &d_invSqrtMassVector.local_element(i),
-                   dst.data() + i * numberWaveFunctions,
-                   &inc);
-          }
-      }
-
-    dftPtr->constraintsNoneDataInfo.set_zero(src);
-  }
-#endif
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::HX(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::HX(
     std::vector<distributedCPUMultiVec<dataTypes::number> *> &src,
     const double                                              scalarHX,
     const double                                              scalarY,
     const double                                              scalarX,
-    std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst)
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst,
+    const bool onlyHPrimePartForFirstOrderDensityMatResponse)
   {
     src[0]->updateGhostValues();
     scaledConstraintsNoneDataInfoPtr->distribute(*(src[0]));
     computeHamiltonianTimesXInternal(
-      (*src[0]), (*dst[0]), scalarHX, scalarY, scalarX);
+      (*src[0]), (*dst[0]), scalarHX, scalarY, scalarX, onlyHPrimePartForFirstOrderDensityMatResponse);
 
     scaledConstraintsNoneDataInfoPtr->distribute_slave_to_master(*(dst[0]));
 
     src[0]->zeroOutGhosts();
+    scaledConstraintsNoneDataInfoPtr->set_zero(*src[0]);
     dst[0]->accumulateAddLocallyOwned();
     dst[0]->zeroOutGhosts();
   }
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::XtHX(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::XtHX(
     const dataTypes::number *       X,
     const unsigned int              numberWaveFunctions,
     const unsigned int              numberDofs,
@@ -1409,7 +1016,10 @@ namespace dftfe
     //
     bool   scaleFlag = false;
     double scalar    = 1.0;
-    HX(XTemp, numberWaveFunctions, scaleFlag, scalar, Y);
+    // HX(XTemp, numberWaveFunctions, scaleFlag, scalar, Y);
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> XArrayPtrs{&XTemp};
+    std::vector<distributedCPUMultiVec<dataTypes::number> *> YArrayPtrs{&Y};
+    HX(XArrayPtrs, scalar, 0.0, 0.0, YArrayPtrs);
 
 #ifdef USE_COMPLEX
     for (unsigned int i = 0; i < Y.locallyOwnedSize(); ++i)
@@ -1456,9 +1066,11 @@ namespace dftfe
     dealii::Utilities::MPI::sum(ProjHam, mpi_communicator, ProjHam);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::XtHX(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::XtHX(
     const dataTypes::number *                        X,
     const unsigned int                               numberWaveFunctions,
     const unsigned int                               numberDofs,
@@ -1549,13 +1161,22 @@ namespace dftfe
             HXBlock.setValue(dataTypes::number(0));
             const bool   scaleFlag = false;
             const double scalar    = 1.0;
-
-            HX(XBlock,
-               B,
-               scaleFlag,
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> XArrayPtrs{
+              &XBlock};
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> YArrayPtrs{
+              &HXBlock};
+            HX(XArrayPtrs,
                scalar,
-               HXBlock,
+               0.0,
+               0.0,
+               YArrayPtrs,
                onlyHPrimePartForFirstOrderDensityMatResponse);
+            // HX(XBlock,
+            //    B,
+            //    scaleFlag,
+            //    scalar,
+            //    HXBlock,
+            //    onlyHPrimePartForFirstOrderDensityMatResponse);
 
             MPI_Barrier(getMPICommunicator());
 
@@ -1630,9 +1251,11 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::XtHXMixedPrec(
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::XtHXMixedPrec(
     const dataTypes::number *                        X,
     const unsigned int                               N,
     const unsigned int                               Ncore,
@@ -1725,13 +1348,17 @@ namespace dftfe
             HXBlock.setValue(dataTypes::number(0));
             const bool   scaleFlag = false;
             const double scalar    = 1.0;
-
-            HX(XBlock,
-               B,
-               scaleFlag,
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> XArrayPtrs{
+              &XBlock};
+            std::vector<distributedCPUMultiVec<dataTypes::number> *> YArrayPtrs{
+              &HXBlock};
+            HX(XArrayPtrs,
                scalar,
-               HXBlock,
+               0.0,
+               0.0,
+               YArrayPtrs,
                onlyHPrimePartForFirstOrderDensityMatResponse);
+
 
             MPI_Barrier(getMPICommunicator());
 
@@ -1865,18 +1492,22 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeVEffSpinPolarized(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiValues,
-    const unsigned int                                   spinIndex,
-    const std::map<dealii::CellId, std::vector<double>> &externalPotCorrValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const unsigned int externalPotCorrQuadratureId)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffSpinPolarized(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                phiValues,
+      const unsigned int spinIndex,
+      const std::map<dealii::CellId, std::vector<double>>
+        &externalPotCorrValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const unsigned int externalPotCorrQuadratureId)
 
   {
     const unsigned int totalLocallyOwnedCells =
@@ -1985,22 +1616,26 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeVEffSpinPolarized(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiValues,
-    const unsigned int                                   spinIndex,
-    const std::map<dealii::CellId, std::vector<double>> &externalPotCorrValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-    const unsigned int externalPotCorrQuadratureId)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffSpinPolarized(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                phiValues,
+      const unsigned int spinIndex,
+      const std::map<dealii::CellId, std::vector<double>>
+        &externalPotCorrValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
+      const unsigned int externalPotCorrQuadratureId)
   {
     const unsigned int totalLocallyOwnedCells =
       dftPtr->matrix_free_data.n_physical_cells();
@@ -2236,11 +1871,15 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeVEffExternalPotCorr(
-    const std::map<dealii::CellId, std::vector<double>> &externalPotCorrValues,
-    const unsigned int externalPotCorrQuadratureId)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffExternalPotCorr(
+      const std::map<dealii::CellId, std::vector<double>>
+        &                externalPotCorrValues,
+      const unsigned int externalPotCorrQuadratureId)
   {
     d_externalPotCorrQuadratureId = externalPotCorrQuadratureId;
     const int numberQuadraturePoints =
@@ -2286,18 +1925,21 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeVEffPrime(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoPrimeValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiPrimeValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffPrime(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues)
   {
     const unsigned int totalLocallyOwnedCells =
       dftPtr->matrix_free_data.n_physical_cells();
@@ -2406,9 +2048,11 @@ namespace dftfe
 
 
   // Fourth order stencil finite difference stencil used
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffPrimeSpinPolarized(
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
@@ -2896,25 +2540,28 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::computeVEffPrime(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoPrimeValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoPrimeValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiPrimeValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues)
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffPrime(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues)
   {
     const unsigned int totalLocallyOwnedCells =
       dftPtr->matrix_free_data.n_physical_cells();
@@ -3194,9 +2841,11 @@ namespace dftfe
   }
 
   // Fourth order stencil finite difference stencil used
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffPrimeSpinPolarized(
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>

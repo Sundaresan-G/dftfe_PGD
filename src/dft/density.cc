@@ -24,14 +24,16 @@
 namespace dftfe
 {
   // calculate electron density
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::compute_rhoOut(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_rhoOut(
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator,
 #endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &        kohnShamDFTEigenOperatorCPU,
     const bool isConsiderSpectrumSplitting,
     const bool isGroundState)
@@ -118,6 +120,7 @@ namespace dftfe
                             fermiEnergyUp,
                             fermiEnergyDown,
                             d_basisOperationsPtrDevice,
+                            d_BLASWrapperPtr,
                             d_densityDofHandlerIndex,
                             d_densityQuadratureId,
                             d_kPointWeights,
@@ -142,6 +145,7 @@ namespace dftfe
                             fermiEnergyUp,
                             fermiEnergyDown,
                             d_basisOperationsPtrHost,
+                            d_BLASWrapperPtrHost,
                             d_densityDofHandlerIndex,
                             d_densityQuadratureId,
                             d_kPointWeights,
@@ -227,9 +231,11 @@ namespace dftfe
 
   // rho data reinitilization without remeshing. The rho out of last ground
   // state solve is made the rho in of the new solve
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::noRemeshRhoDataInit()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::noRemeshRhoDataInit()
   {
     // cleanup of existing rho Out and rho In data
     clearRhoData();
@@ -289,14 +295,16 @@ namespace dftfe
     normalizeRhoInQuadValues();
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeRhoNodalFromPSI(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeRhoNodalFromPSI(
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator,
 #endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &  kohnShamDFTEigenOperatorCPU,
     bool isConsiderSpectrumSplitting)
   {
@@ -359,6 +367,7 @@ namespace dftfe
                         fermiEnergyUp,
                         fermiEnergyDown,
                         d_basisOperationsPtrDevice,
+                        d_BLASWrapperPtr,
                         d_densityDofHandlerIndex,
                         d_gllQuadratureId,
                         d_kPointWeights,
@@ -382,6 +391,7 @@ namespace dftfe
                         fermiEnergyUp,
                         fermiEnergyDown,
                         d_basisOperationsPtrHost,
+                        d_BLASWrapperPtrHost,
                         d_densityDofHandlerIndex,
                         d_gllQuadratureId,
                         d_kPointWeights,

@@ -21,6 +21,9 @@
 #include "headers.h"
 #include "operator.h"
 #include "dftParameters.h"
+#include "FEBasisOperations.h"
+#include "oncvClass.h"
+#include <memory>
 
 namespace dftfe
 {
@@ -28,7 +31,14 @@ namespace dftfe
   {
     void
     wfcContractionsForceKernelsAllH(
-      operatorDFTClass &                      operatorMatrix,
+      std::shared_ptr<dftfe::basis::FEBasisOperations<
+        dataTypes::number,
+        double,
+        dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
+      operatorDFTClass &                  operatorMatrix,
+      std::shared_ptr<
+        dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>>
+                                              oncvClassPtr,
       const dataTypes::number *               X,
       const unsigned int                      spinPolarizedFlag,
       const unsigned int                      spinIndex,

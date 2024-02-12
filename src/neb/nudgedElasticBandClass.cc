@@ -30,6 +30,7 @@ namespace dftfe
     const MPI_Comm &   mpi_comm_parent,
     const bool         restart,
     const int          verbosity,
+    const bool         useDevice,
     const int          d_numberOfImages,
     const bool         imageFreeze,
     double             Kmax,
@@ -139,6 +140,7 @@ namespace dftfe
               "NEB",
               d_restartFilesPath,
               d_verbosity < 4 ? -1 : d_verbosity,
+              useDevice,
               Image == 0 ? false : true));
           }
       }
@@ -195,6 +197,7 @@ namespace dftfe
               "NEB",
               d_restartFilesPath,
               d_verbosity < 4 ? -1 : d_verbosity,
+              useDevice,
               Image == 0 ? false : true));
           }
       }

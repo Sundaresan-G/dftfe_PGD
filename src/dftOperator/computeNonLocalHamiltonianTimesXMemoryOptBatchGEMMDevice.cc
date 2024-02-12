@@ -24,9 +24,11 @@
 // skip1 is set to true extraction and C^{T}*X computation are skipped and
 // computations directly start from V*C^{T}*X. When skip2 is set to true only
 // extraction and C^{T}*X computations are performed.
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
-kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalHamiltonianTimesX(
     const dataTypes::number *                src,
     distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
@@ -35,148 +37,88 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
     const bool                               skip1,
     const bool                               skip2)
 {
-  const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0),
-                          scalarCoeffBeta  = dataTypes::number(0.0);
-
-  //
-  // compute C^{\dagger}*X
-  //
-  dftfe::utils::deviceSynchronize();
-
-  unsigned int strideA = numberWaveFunctions * d_numberNodesPerElement;
-  unsigned int strideB = d_numberNodesPerElement * d_maxSingleAtomPseudoWfc;
-  unsigned int strideC = numberWaveFunctions * d_maxSingleAtomPseudoWfc;
-  unsigned int totalNonLocalElements =
-    d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
-
-
-  if (totalNonLocalElements > 0 && !skip1)
+  if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
     {
-      d_ONCVnonLocalOperator->applyCTonX(
-        d_A,
-        d_sphericalFnTimesVectorParFlattenedDevice,
-        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-    }
-
-  // this routine was interfering with overlapping communication and compute. So
-  // called separately inside chebyshevFilter. So skip this if either skip1 or
-  // skip2 are set to true
-  if (!skip1 && !skip2)
-    {
-      projectorKetTimesVector.setValue(0);
-    }
-
-
-
-  // Operations related to skip2 (extraction and C^{T}*X) are over. So return
-  // control back to chebyshevFilter
-  if (skip2)
-    return;
-
-  if (!skip1)
-    {
-      d_ONCVnonLocalOperator->applyAllReduceonCTX(
-        projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
-    }
-
-  //
-  // Start operations related to skip1 (V*C^{\dagger}*X, C*V*C^{\dagger}*X and
-  // assembly)
-  //
-  if (totalNonLocalElements > 0)
-    {
-      //
-      // compute V*C^{\dagger}*X
-
-      d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
-                                                     true);
-
-      //
-      // compute C*V*C^{\dagger}*x
-      //
-      // For multiple CTX change beta to 1.0 from here
-      d_ONCVnonLocalOperator->applyConVCTX(
-        d_cellHamMatrixTimesWaveMatrixNonLocalDevice,
-        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
-
-
-      for (unsigned int iAtom = 0; iAtom < d_totalNonlocalAtomsCurrentProc;
-           ++iAtom)
+      if (d_totalNonlocalElemsPseudo > 0 && !skip1)
         {
-          const unsigned int accum = d_numberCellsAccumNonLocalAtoms[iAtom];
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-          addNonLocalContributionDeviceKernel<<<
-            (numberWaveFunctions + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE *
-              d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-            numberWaveFunctions,
-            d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrixNonLocalDevice.begin() +
-              accum * d_numberNodesPerElement * numberWaveFunctions),
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrix.begin()),
-            d_cellNodeIdMapNonLocalToLocalDevice.begin() +
-              accum * d_numberNodesPerElement);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-          hipLaunchKernelGGL(
-            addNonLocalContributionDeviceKernel,
-            (numberWaveFunctions + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE *
-              d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::DEVICE_BLOCK_SIZE,
-            0,
-            0,
-            numberWaveFunctions,
-            d_numberCellsNonLocalAtoms[iAtom] * d_numberNodesPerElement,
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrixNonLocalDevice.begin() +
-              accum * d_numberNodesPerElement * numberWaveFunctions),
-            dftfe::utils::makeDataTypeDeviceCompatible(
-              d_cellHamMatrixTimesWaveMatrix.begin()),
-            d_cellNodeIdMapNonLocalToLocalDevice.begin() +
-              accum * d_numberNodesPerElement);
-#endif
+          // dftfe::utils::deviceSynchronize();
+          // std::cout<<"Starting CTX: "<<std::endl;
+          d_ONCVnonLocalOperator->applyCconjtransOnX(
+            d_cellWaveFunctionMatrix,
+            std::pair<unsigned int, unsigned int>(0,
+                                                  d_totalNonlocalElemsPseudo));
         }
+
+      // this routine was interfering with overlapping communication and
+      // compute. So called separately inside chebyshevFilter. So skip this if
+      // either skip1 or skip2 are set to true
+      if (!skip1 && !skip2)
+        {
+          projectorKetTimesVector.setValue(0);
+        }
+
+      d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
+        projectorKetTimesVector, skip1, skip2);
+
+      // Operations related to skip2 (extraction and C^{T}*X) are over. So
+      // return control back to chebyshevFilter
+      if (skip2)
+        return;
+
+
+
+      if (d_totalNonlocalElemsPseudo > 0)
+        {
+          d_ONCVnonLocalOperator->applyVOnCconjtransX(
+            CouplingStructure::diagonal,
+            d_oncvClassPtr->getCouplingMatrix(),
+            projectorKetTimesVector,
+            true);
+          d_ONCVnonLocalOperator->applyCOnVCconjtransX(
+            d_cellHamMatrixTimesWaveMatrix,
+            std::pair<unsigned int, unsigned int>(0,
+                                                  d_totalNonlocalElemsPseudo));
+        }
+
+      if (std::is_same<dataTypes::number, std::complex<double>>::value)
+        {
+          utils::deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
+            (d_tempRealVec.size()),
+            dst,
+            d_tempRealVec.begin(),
+            d_tempImagVec.begin());
+
+          dftfe::utils::deviceKernelsGeneric::axpyStridedBlockAtomicAdd(
+            numberWaveFunctions,
+            d_numLocallyOwnedCells * d_numberNodesPerElement,
+            d_cellHamMatrixTimesWaveMatrix.begin(),
+            d_tempRealVec.begin(),
+            d_tempImagVec.begin(),
+            d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
+
+
+          utils::deviceKernelsGeneric::copyRealArrsToComplexArrDevice(
+            (d_tempRealVec.size()),
+            d_tempRealVec.begin(),
+            d_tempImagVec.begin(),
+            dst);
+        }
+      else
+        dftfe::utils::deviceKernelsGeneric::axpyStridedBlockAtomicAdd(
+          numberWaveFunctions,
+          d_numLocallyOwnedCells * d_numberNodesPerElement,
+          d_cellHamMatrixTimesWaveMatrix.begin(),
+          dst,
+          d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
     }
-
-  if (std::is_same<dataTypes::number, std::complex<double>>::value)
-    {
-      utils::deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
-        (d_tempRealVec.size()),
-        dst,
-        d_tempRealVec.begin(),
-        d_tempImagVec.begin());
-
-      dftfe::utils::deviceKernelsGeneric::axpyStridedBlockAtomicAdd(
-        numberWaveFunctions,
-        d_numLocallyOwnedCells * d_numberNodesPerElement,
-        d_cellHamMatrixTimesWaveMatrix.begin(),
-        d_tempRealVec.begin(),
-        d_tempImagVec.begin(),
-        d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
-
-
-      utils::deviceKernelsGeneric::copyRealArrsToComplexArrDevice(
-        (d_tempRealVec.size()),
-        d_tempRealVec.begin(),
-        d_tempImagVec.begin(),
-        dst);
-    }
-  else
-    dftfe::utils::deviceKernelsGeneric::axpyStridedBlockAtomicAdd(
-      numberWaveFunctions,
-      d_numLocallyOwnedCells * d_numberNodesPerElement,
-      d_cellHamMatrixTimesWaveMatrix.begin(),
-      dst,
-      d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
 }
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
-kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeNonLocalProjectorKetTimesXTimesV(
     const dataTypes::number *                src,
     distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
@@ -190,62 +132,30 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
   //
   // compute C^{\dagger}*X
   //
-  unsigned int totalNonLocalElements =
-    d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor();
 
-  if (totalNonLocalElements > 0)
+  if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
     {
-      dftfe::utils::deviceKernelsGeneric::stridedCopyToBlock(
-        numberWaveFunctions,
-        totalLocallyOwnedCells * d_numberNodesPerElement,
-        src,
-        d_cellWaveFunctionMatrix.begin(),
-        d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
-      d_ONCVnonLocalOperator->applyCTonX(
-        d_A,
-        d_sphericalFnTimesVectorParFlattenedDevice,
-        std::pair<unsigned int, unsigned int>(0, totalNonLocalElements));
+      if (d_totalNonlocalElemsPseudo > 0)
+        {
+          dftfe::utils::deviceKernelsGeneric::stridedCopyToBlock(
+            numberWaveFunctions,
+            totalLocallyOwnedCells * d_numberNodesPerElement,
+            src,
+            d_cellWaveFunctionMatrix.begin(),
+            d_flattenedArrayCellLocalProcIndexIdMapDevice.begin());
+          d_ONCVnonLocalOperator->applyCconjtransOnX(
+            d_cellWaveFunctionMatrix,
+            std::pair<unsigned int, unsigned int>(0,
+                                                  d_totalNonlocalElemsPseudo));
+        }
 
-      // dftfe::utils::deviceBlasWrapper::gemmBatched(
-      //   d_deviceBlasHandle,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   numberWaveFunctions,
-      //   d_maxSingleAtomPseudoWfc,
-      //   d_numberNodesPerElement,
-      //   &scalarCoeffAlpha,
-      //   (const dataTypes::number **)d_A,
-      //   numberWaveFunctions,
-      //   (const dataTypes::number **)d_B,
-      //   d_numberNodesPerElement,
-      //   &scalarCoeffBeta,
-      //   d_C,
-      //   numberWaveFunctions,
-      //   d_totalNonlocalElems);
-
-      // dftfe::utils::deviceBlasWrapper::gemm(
-      //   d_deviceBlasHandle,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   dftfe::utils::DEVICEBLAS_OP_N,
-      //   numberWaveFunctions,
-      //   d_totalPseudoWfcNonLocal,
-      //   d_totalNonlocalElems * d_maxSingleAtomPseudoWfc,
-      //   &scalarCoeffAlpha,
-      //   d_projectorKetTimesVectorAllCellsDevice.begin(),
-      //   numberWaveFunctions,
-      //   d_projectorKetTimesVectorAllCellsReductionDevice.begin(),
-      //   d_totalNonlocalElems * d_maxSingleAtomPseudoWfc,
-      //   &scalarCoeffBeta,
-      //   d_projectorKetTimesVectorParFlattenedDevice.begin(),
-      //   numberWaveFunctions);
+      projectorKetTimesVector.setValue(0);
+      d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
+        projectorKetTimesVector);
+      d_ONCVnonLocalOperator->applyVOnCconjtransX(
+        CouplingStructure::diagonal,
+        d_oncvClassPtr->getCouplingMatrix(),
+        projectorKetTimesVector,
+        false);
     }
-
-  projectorKetTimesVector.setValue(0);
-
-  d_ONCVnonLocalOperator->applyAllReduceonCTX(
-    projectorKetTimesVector, d_sphericalFnTimesVectorParFlattenedDevice);
-
-
-  d_oncvClassPtr->applynonLocalHamiltonianMatrix(projectorKetTimesVector,
-                                                 false);
 }

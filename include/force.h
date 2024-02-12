@@ -28,13 +28,14 @@
 #  include "kohnShamDFTOperatorDevice.h"
 #endif
 #include <dftd.h>
-
+#include <oncvClass.h>
+#include <AtomicCenteredNonLocalOperator.h>
 
 
 namespace dftfe
 {
   // forward declaration
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class dftClass;
 
   /**
@@ -48,10 +49,12 @@ namespace dftfe
    *
    * @author Sambit Das
    */
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   class forceClass
   {
-    friend class dftClass<FEOrder, FEOrderElectro>;
+    friend class dftClass<FEOrder, FEOrderElectro, memorySpace>;
 
   public:
     /** @brief Constructor.
@@ -60,10 +63,10 @@ namespace dftfe
      *  @param mpi_comm_parent parent mpi_communicator
      *  @param mpi_comm_domain domain decomposition mpi_communicator
      */
-    forceClass(dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-               const MPI_Comm &                   mpi_comm_parent,
-               const MPI_Comm &                   mpi_comm_domain,
-               const dftParameters &              dftParams);
+    forceClass(dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+               const MPI_Comm &                                mpi_comm_parent,
+               const MPI_Comm &                                mpi_comm_domain,
+               const dftParameters &                           dftParams);
 
     /** @brief initializes data structures inside forceClass assuming unmoved triangulation.
      *
@@ -132,10 +135,10 @@ namespace dftfe
     computeAtomsForces(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const dispersionCorrection &         dispersionCorr,
       const unsigned int                   eigenDofHandlerIndex,
@@ -206,10 +209,10 @@ namespace dftfe
     computeStress(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const dispersionCorrection &         dispersionCorr,
       const unsigned int                   eigenDofHandlerIndex,
@@ -310,10 +313,10 @@ namespace dftfe
     computeConfigurationalForceEEshelbyTensorFPSPFnlLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,
@@ -384,10 +387,10 @@ namespace dftfe
     computeConfigurationalForceTotalLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,
@@ -622,10 +625,10 @@ namespace dftfe
     computeStressEEshelbyEPSPEnlEk(
       const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
         &kohnShamDFTEigenOperatorDevice,
 #endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
         &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,
@@ -829,7 +832,7 @@ namespace dftfe
     const bool d_allowGaussianOverlapOnAtoms = false;
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro> *dftPtr;
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *dftPtr;
 
     /// Finite element object for configurational force computation. Linear
     /// finite elements with three force field components are used.
@@ -979,9 +982,7 @@ namespace dftfe
 
     std::vector<distributedCPUVec<double>> d_gaussianWeightsVecAtoms;
 
-    /// map from cell id to set of non local atom ids (local numbering)
-    // std::map<dealii::CellId,std::set<unsigned int>>
-    // d_cellIdToNonlocalAtomIdsLocalCompactSupportMap;
+
 
     /// domain decomposition mpi_communicator
     const MPI_Comm d_mpiCommParent;

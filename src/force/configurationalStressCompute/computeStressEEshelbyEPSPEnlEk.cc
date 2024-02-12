@@ -30,42 +30,49 @@ namespace dftfe
 {
   // compute configurational stress contribution from all terms except the
   // nuclear self energy
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeStressEEshelbyEPSPEnlEk(
-    const dealii::MatrixFree<3, double> &matrixFreeData,
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeStressEEshelbyEPSPEnlEk(
+      const dealii::MatrixFree<3, double> &matrixFreeData,
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice,
+      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
+        &kohnShamDFTEigenOperatorDevice,
 #endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
-    const unsigned int                                 eigenDofHandlerIndex,
-    const unsigned int                   smearedChargeQuadratureId,
-    const unsigned int                   lpspQuadratureIdElectro,
-    const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
-    const unsigned int                   phiTotDofHandlerIndexElectro,
-    const distributedCPUVec<double> &    phiTotRhoOutElectro,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoOutValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoOutValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &rhoTotalOutValuesLpsp,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &gradRhoTotalOutValuesLpsp,
-    const std::map<dealii::CellId, std::vector<double>> &pseudoVLocElectro,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &                                                  pseudoVLocAtomsElectro,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &hessianRhoCoreValues,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &gradRhoCoreAtoms,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &                                              hessianRhoCoreAtoms,
-    const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro)
+      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+        &                                  kohnShamDFTEigenOperator,
+      const unsigned int                   eigenDofHandlerIndex,
+      const unsigned int                   smearedChargeQuadratureId,
+      const unsigned int                   lpspQuadratureIdElectro,
+      const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
+      const unsigned int                   phiTotDofHandlerIndexElectro,
+      const distributedCPUVec<double> &    phiTotRhoOutElectro,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoOutValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoOutValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &rhoTotalOutValuesLpsp,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &gradRhoTotalOutValuesLpsp,
+      const std::map<dealii::CellId, std::vector<double>> &pseudoVLocElectro,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &pseudoVLocAtomsElectro,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &hessianRhoCoreValues,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &gradRhoCoreAtoms,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &                                              hessianRhoCoreAtoms,
+      const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro)
   {
     int this_process;
     MPI_Comm_rank(d_mpiCommParent, &this_process);
@@ -223,7 +230,8 @@ namespace dftfe
         std::vector<dataTypes::number>
           projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened(
             numKPoints *
-              dftPtr->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+              dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                ->getTotalNonTrivialSphericalFnsOverAllCells() *
               numQuadPointsNLP * 3,
             dataTypes::number(0.0));
 
@@ -231,100 +239,118 @@ namespace dftfe
         std::vector<dataTypes::number>
           projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened(
             numKPoints *
-              dftPtr->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+              dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                ->getTotalNonTrivialSphericalFnsOverAllCells() *
               numQuadPointsNLP,
             dataTypes::number(0.0));
 #endif
 
 
 #if defined(DFTFE_WITH_DEVICE)
+
         if (d_dftParams.useDevice)
           {
-            MPI_Barrier(d_mpiCommParent);
-            double device_time = MPI_Wtime();
+            if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+              {
+                MPI_Barrier(d_mpiCommParent);
+                double device_time = MPI_Wtime();
 
-            forceDevice::wfcContractionsForceKernelsAllH(
-              dftPtr->d_basisOperationsPtrDevice,
-              kohnShamDFTEigenOperatorDevice,
-              dftPtr->d_eigenVectorsFlattenedDevice.begin(),
-              d_dftParams.spinPolarized,
-              spinIndex,
-              dftPtr->eigenValues,
-              partialOccupancies,
-              dftPtr->d_kPointCoordinates,
-              &dftPtr->d_nonTrivialAllCellsPseudoWfcIdToElemIdMap[0],
-              &dftPtr->d_projecterKetTimesFlattenedVectorLocalIds[0],
-              localVectorSize,
-              numEigenVectors,
-              numPhysicalCells,
-              numQuadPoints,
-              numQuadPointsNLP,
-              dftPtr->matrix_free_data.get_dofs_per_cell(
-                dftPtr->d_densityDofHandlerIndex),
-              dftPtr->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads,
-              &elocWfcEshelbyTensorQuadValuesH[0],
-              &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
-                [0],
+                forceDevice::wfcContractionsForceKernelsAllH(
+                  dftPtr->d_basisOperationsPtrDevice,
+                  kohnShamDFTEigenOperatorDevice,
+                  dftPtr->d_oncvClassPtr,
+                  dftPtr->d_eigenVectorsFlattenedDevice.begin(),
+                  d_dftParams.spinPolarized,
+                  spinIndex,
+                  dftPtr->eigenValues,
+                  partialOccupancies,
+                  dftPtr->d_kPointCoordinates,
+                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                     ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
+                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                     ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
+                  localVectorSize,
+                  numEigenVectors,
+                  numPhysicalCells,
+                  numQuadPoints,
+                  numQuadPointsNLP,
+                  dftPtr->matrix_free_data.get_dofs_per_cell(
+                    dftPtr->d_densityDofHandlerIndex),
+                  dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                    ->getTotalNonTrivialSphericalFnsOverAllCells(),
+                  &elocWfcEshelbyTensorQuadValuesH[0],
+                  &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                    [0],
 #  ifdef USE_COMPLEX
-              &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
-                [0],
+                  &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                    [0],
 #  endif
-              d_mpiCommParent,
-              dftPtr->interBandGroupComm,
-              isPseudopotential,
-              false,
-              true,
-              d_dftParams);
-            MPI_Barrier(d_mpiCommParent);
-            device_time = MPI_Wtime() - device_time;
+                  d_mpiCommParent,
+                  dftPtr->interBandGroupComm,
+                  isPseudopotential,
+                  false,
+                  true,
+                  d_dftParams);
+                MPI_Barrier(d_mpiCommParent);
+                device_time = MPI_Wtime() - device_time;
 
-            if (this_process == 0 && d_dftParams.verbosity >= 4)
-              std::cout << "Time for wfc contractions in stress: "
-                        << device_time << std::endl;
+                if (this_process == 0 && d_dftParams.verbosity >= 4)
+                  std::cout
+                    << "Time for wfc contractions in stress: " << device_time
+                    << std::endl;
+              }
           }
         else
 #endif
           {
             MPI_Barrier(d_mpiCommParent);
             double host_time = MPI_Wtime();
-
-            force::wfcContractionsForceKernelsAllH(
-              kohnShamDFTEigenOperator,
-              dftPtr->d_eigenVectorsFlattenedHost.begin(),
-              d_dftParams.spinPolarized,
-              spinIndex,
-              dftPtr->eigenValues,
-              partialOccupancies,
-              dftPtr->d_kPointCoordinates,
-              &dftPtr->d_nonTrivialAllCellsPseudoWfcIdToElemIdMap[0],
-              &dftPtr->d_projecterKetTimesFlattenedVectorLocalIds[0],
-              localVectorSize,
-              numEigenVectors,
-              numPhysicalCells,
-              numQuadPoints,
-              numQuadPointsNLP,
-              dftPtr->matrix_free_data.get_dofs_per_cell(
-                dftPtr->d_densityDofHandlerIndex),
-              dftPtr->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads,
-              &elocWfcEshelbyTensorQuadValuesH[0],
-              &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
-                [0],
+            if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+              {
+                force::wfcContractionsForceKernelsAllH(
+                  dftPtr->d_basisOperationsPtrHost,
+                  kohnShamDFTEigenOperator,
+                  dftPtr->d_oncvClassPtr,
+                  dftPtr->d_eigenVectorsFlattenedHost.begin(),
+                  d_dftParams.spinPolarized,
+                  spinIndex,
+                  dftPtr->eigenValues,
+                  partialOccupancies,
+                  dftPtr->d_kPointCoordinates,
+                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                     ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
+                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                     ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
+                  localVectorSize,
+                  numEigenVectors,
+                  numPhysicalCells,
+                  numQuadPoints,
+                  numQuadPointsNLP,
+                  dftPtr->matrix_free_data.get_dofs_per_cell(
+                    dftPtr->d_densityDofHandlerIndex),
+                  dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                    ->getTotalNonTrivialSphericalFnsOverAllCells(),
+                  &elocWfcEshelbyTensorQuadValuesH[0],
+                  &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                    [0],
 #ifdef USE_COMPLEX
-              &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
-                [0],
+                  &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                    [0],
 #endif
-              d_mpiCommParent,
-              dftPtr->interBandGroupComm,
-              isPseudopotential,
-              false,
-              true,
-              d_dftParams);
-            MPI_Barrier(d_mpiCommParent);
-            host_time = MPI_Wtime() - host_time;
+                  d_mpiCommParent,
+                  dftPtr->interBandGroupComm,
+                  isPseudopotential,
+                  false,
+                  true,
+                  d_dftParams);
+                MPI_Barrier(d_mpiCommParent);
+                host_time = MPI_Wtime() - host_time;
 
-            if (this_process == 0 && d_dftParams.verbosity >= 4)
-              std::cout << "Time for wfc contractions in stress: " << host_time
-                        << std::endl;
+                if (this_process == 0 && d_dftParams.verbosity >= 4)
+                  std::cout
+                    << "Time for wfc contractions in stress: " << host_time
+                    << std::endl;
+              }
           }
 
         // dataTypes::number check1 =
@@ -413,7 +439,8 @@ namespace dftfe
                   jxwQuadsSubCells,
                   cell,
                   cellIdToCellNumberMap,
-                  dftPtr->d_nonLocalPSP_zetalmDeltaVlProductDistImageAtoms,
+                  dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                    ->getAtomCenteredKpointTimesSphericalFnTimesDistFromAtomQuadValues(),
 #ifdef USE_COMPLEX
                   projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
 #endif
@@ -1300,26 +1327,30 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeStressEEshelbyEElectroPhiTot(
-    const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
-    const unsigned int                   phiTotDofHandlerIndexElectro,
-    const unsigned int                   smearedChargeQuadratureId,
-    const unsigned int                   lpspQuadratureIdElectro,
-    const distributedCPUVec<double> &    phiTotRhoOutElectro,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &rhoTotalOutValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &rhoTotalOutValuesLpsp,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &gradRhoTotalOutValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &gradRhoTotalOutValuesLpsp,
-    const std::map<dealii::CellId, std::vector<double>> &pseudoVLocElectro,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &                                              pseudoVLocAtomsElectro,
-    const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro)
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeStressEEshelbyEElectroPhiTot(
+      const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
+      const unsigned int                   phiTotDofHandlerIndexElectro,
+      const unsigned int                   smearedChargeQuadratureId,
+      const unsigned int                   lpspQuadratureIdElectro,
+      const distributedCPUVec<double> &    phiTotRhoOutElectro,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &rhoTotalOutValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &rhoTotalOutValuesLpsp,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &gradRhoTotalOutValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &gradRhoTotalOutValuesLpsp,
+      const std::map<dealii::CellId, std::vector<double>> &pseudoVLocElectro,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &                                              pseudoVLocAtomsElectro,
+      const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro)
   {
     dealii::FEEvaluation<
       3,

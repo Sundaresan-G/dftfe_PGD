@@ -23,6 +23,8 @@
 #    include "operatorDevice.h"
 #    include "dftParameters.h"
 #    include "FEBasisOperations.h"
+#    include "oncvClass.h"
+#    include <memory>
 
 namespace dftfe
 {
@@ -34,8 +36,11 @@ namespace dftfe
         dftfe::basis::FEBasisOperations<dataTypes::number,
                                         double,
                                         dftfe::utils::MemorySpace::DEVICE>>
-        &                                     basisOperationsPtr,
-      operatorDFTDeviceClass &                operatorMatrix,
+        &                     basisOperationsPtr,
+      operatorDFTDeviceClass &operatorMatrix,
+      std::shared_ptr<
+        dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>>
+                                              oncvClassPtr,
       const dataTypes::number *               X,
       const unsigned int                      spinPolarizedFlag,
       const unsigned int                      spinIndex,

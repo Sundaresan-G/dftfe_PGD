@@ -30,7 +30,7 @@
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class dftClass;
 #endif
 
@@ -43,86 +43,32 @@ namespace dftfe
   //
   // Define kohnShamDFTOperatorClass class
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   class kohnShamDFTOperatorClass : public operatorDFTClass
   {
     // template <unsigned int T1, unsigned int T2>
-    friend class dftClass<FEOrder, FEOrderElectro>;
+    friend class dftClass<FEOrder, FEOrderElectro, memorySpace>;
 
     // template <unsigned int T>
     //	friend class symmetryClass;
 
   public:
-    kohnShamDFTOperatorClass(dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-                             const MPI_Comm &                   mpi_comm_parent,
-                             const MPI_Comm &mpi_comm_domain);
-
-    /**
-     * @brief Compute discretized operator matrix times multi-vectors and add it to the existing dst vector
-     * works for both real and complex data types
-     * @param src Vector containing current values of source array with multi-vector array stored
-     * in a flattened format with all the wavefunction value corresponding to a
-     given node is stored
-     * contiguously (non-const as we scale src and rescale src to avoid creation
-     of temporary vectors)
-     * @param numberComponents Number of multi-fields(vectors)
-
-     * @param scaleFlag which decides whether dst has to be scaled square root of diagonal mass matrix before evaluating
-     * matrix times src vector
-     * @param scalar which multiplies src before evaluating matrix times src vector
-     * @param dst Vector containing sum of dst vector and operator times given multi-vectors product
-     */
-    void
-    HX(distributedCPUMultiVec<dataTypes::number> &src,
-       const unsigned int                         numberComponents,
-       const bool                                 scaleFlag,
-       const double                               scalar,
-       distributedCPUMultiVec<dataTypes::number> &dst,
-       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+    kohnShamDFTOperatorClass(
+      dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+      const MPI_Comm &                                mpi_comm_parent,
+      const MPI_Comm &                                mpi_comm_domain);
 
 
-    /**
-* @brief Compute discretized operator matrix times multi-vectors and add it to the existing dst vector
-* works for real and complex data types (Optimized matrix times multi-vectors
-using different datastructures for
-           * interior nodes and exterior nodes to reduce memory access costs
-during global to cell level vectors and vice versa)
-* @param src Vector containing current values of source array with multi-vector array stored
-* in a flattened format with all the wavefunction value corresponding to a given
-node is stored
-* contiguously (non-const as we scale src and rescale src to avoid creation of
-temporary vectors)
-           * @param cellSrcWaveFunctionMatrix containing current values of source array with multi-vector array stored
-* in a flattened format with all the wavefunction value corresponding to a given
-node is stored
-* contiguously for a given cell
-* @param numberComponents Number of multi-fields(vectors)
-
-* @param scaleFlag which decides whether dst has to be scaled square root of diagonal mass matrix before evaluating
-* matrix times src vector
-* @param scalar which multiplies src before evaluating matrix times src vector
-           * @param scalarA which is used for Chebyshev recursive iteration
-           * @param scalarB which is used for Chebyshev recursive iteration
-* @param dst Vector containing sum of dst vector and operator times given multi-vectors product
-           * @param cellDstWaveFunctionMatrix containing sum of cell level dst vector and operator times given multi-vectors product
-           */
-    void
-    HX(distributedCPUMultiVec<dataTypes::number> &src,
-       std::vector<dataTypes::number> &           cellSrcWaveFunctionMatrix,
-       const unsigned int                         numberComponents,
-       const bool                                 scaleFlag,
-       const double                               scalar,
-       const double                               scalarA,
-       const double                               scalarB,
-       distributedCPUMultiVec<dataTypes::number> &dst,
-       std::vector<dataTypes::number> &           cellDstWaveFunctionMatrix);
 
     void
     HX(std::vector<distributedCPUMultiVec<dataTypes::number> *> &src,
        const double                                              scalarHX,
        const double                                              scalarY,
        const double                                              scalarX,
-       std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst);
+       std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst,
+       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
 
     /**
@@ -444,9 +390,6 @@ node is stored
     getParallelProjectorKetTimesBlockVector();
 
     const std::vector<double> &
-    getShapeFunctionValuesDensityGaussQuad() const;
-
-    const std::vector<double> &
     getShapeFunctionGradValuesDensityGaussQuad() const;
 
     const std::vector<double> &
@@ -520,43 +463,7 @@ node is stored
     std::vector<std::vector<dataTypes::number>> d_cellMassMatrix;
     std::vector<double> d_cellHamiltonianMatrixExternalPotCorr;
 
-    /**
-     * @brief implementation of matrix-vector product using cell-level stiffness matrices.
-     * works for both real and complex data type
-     * @param src Vector containing current values of source array with multi-vector array stored
-     * in a flattened format with all the wavefunction value corresponding to a
-     * given node is stored contiguously.
-     * @param numberWaveFunctions Number of wavefunctions at a given node.
-     * @param dst Vector containing matrix times given multi-vectors product
-     */
-    void
-    computeLocalHamiltonianTimesX(
-      const distributedCPUMultiVec<dataTypes::number> &src,
-      const unsigned int                               numberWaveFunctions,
-      distributedCPUMultiVec<dataTypes::number> &      dst,
-      const double                                     scalar = 1.0);
 
-    void
-    computeLocalHamiltonianTimesX(
-      const distributedCPUMultiVec<dataTypes::number> &src,
-      std::vector<dataTypes::number> &           cellSrcWaveFunctionMatrix,
-      const unsigned int                         numberWaveFunctions,
-      distributedCPUMultiVec<dataTypes::number> &dst,
-      std::vector<dataTypes::number> &           cellDstWaveFunctionMatrix,
-      const double                               scalar = 1.0);
-
-
-    void
-    computeHamiltonianTimesXInternal(
-      const distributedCPUMultiVec<dataTypes::number> &src,
-      std::vector<dataTypes::number> &           cellSrcWaveFunctionMatrix,
-      const unsigned int                         numberWaveFunctions,
-      distributedCPUMultiVec<dataTypes::number> &dst,
-      std::vector<dataTypes::number> &           cellDstWaveFunctionMatrix,
-      const double                               scalar    = 1.0,
-      const double                               scalarA   = 1.0,
-      const double                               scalarB   = 1.0,
-      bool                                       scaleFlag = false);
 
     void
     computeHamiltonianTimesXInternal(
@@ -564,37 +471,13 @@ node is stored
       distributedCPUMultiVec<dataTypes::number> &      dst,
       const double                                     scalarHX = 1.0,
       const double                                     scalarY  = 1.0,
-      const double                                     scalarX  = 1.0);
+      const double                                     scalarX  = 1.0,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse  = false);
 
-
-
-    /**
-     * @brief implementation of non-local Hamiltonian matrix-vector product
-     * using non-local discretized projectors at cell-level.
-     * works for both complex and real data type
-     * @param src Vector containing current values of source array with multi-vector array stored
-     * in a flattened format with all the wavefunction value corresponding to a
-     * given node is stored contiguously.
-     * @param numberWaveFunctions Number of wavefunctions at a given node.
-     * @param dst Vector containing matrix times given multi-vectors product
-     */
-    void
-    computeNonLocalHamiltonianTimesX(
-      const distributedCPUMultiVec<dataTypes::number> &src,
-      const unsigned int                               numberWaveFunctions,
-      distributedCPUMultiVec<dataTypes::number> &      dst,
-      const double                                     scalar = 1.0) const;
-
-    void
-    computeNonLocalProjectorKetTimesXTimesV(
-      distributedCPUMultiVec<dataTypes::number> &src,
-      distributedCPUMultiVec<dataTypes::number>
-        &                projectorKetTimesVectorFlattened,
-      const unsigned int numberWaveFunctions);
 
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro> *dftPtr;
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *dftPtr;
 
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
@@ -691,11 +574,11 @@ node is stored
                                       dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtrHost;
 
-    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
+      d_oncvClassPtr;
 
     std::shared_ptr<
-      AtomicCenteredNonLocalOperator<dataTypes::number,
-                                     dftfe::utils::MemorySpace::HOST>>
+      AtomicCenteredNonLocalOperator<dataTypes::number, memorySpace>>
       d_ONCVnonLocalOperator;
 
     /// flag for precomputing stiffness matrix contribution from

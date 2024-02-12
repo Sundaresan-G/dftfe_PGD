@@ -20,38 +20,50 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<dealii::types::global_dof_index> &
-  dftClass<FEOrder, FEOrderElectro>::getLocalDofIndicesReal() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getLocalDofIndicesReal() const
   {
     return local_dof_indicesReal;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<dealii::types::global_dof_index> &
-  dftClass<FEOrder, FEOrderElectro>::getLocalDofIndicesImag() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getLocalDofIndicesImag() const
   {
     return local_dof_indicesImag;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<dealii::types::global_dof_index> &
-  dftClass<FEOrder, FEOrderElectro>::getLocalProcDofIndicesReal() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getLocalProcDofIndicesReal()
+    const
   {
     return localProc_dof_indicesReal;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const std::vector<dealii::types::global_dof_index> &
-  dftClass<FEOrder, FEOrderElectro>::getLocalProcDofIndicesImag() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getLocalProcDofIndicesImag()
+    const
   {
     return localProc_dof_indicesImag;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dealii::MatrixFree<3, double> &
-  dftClass<FEOrder, FEOrderElectro>::getMatrixFreeData() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getMatrixFreeData() const
   {
     return matrix_free_data;
   }

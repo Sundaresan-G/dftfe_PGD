@@ -1070,9 +1070,11 @@ namespace
 } // namespace
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
-kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeHamiltonianMatricesAllkpt(
     const unsigned int spinIndex,
     const bool         onlyHPrimePartForFirstOrderDensityMatResponse)
@@ -1258,7 +1260,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
           d_basisOperationsPtrDevice->shapeFunctionGradientBasisData().data(),
           d_basisOperationsPtrDevice->inverseJacobiansBasisData().data(),
           d_basisOperationsPtrDevice->cellsTypeFlag(),
-          d_cellShapeFunctionGradientIntegralFlattenedDevice.begin(),
+          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData().begin(),
           d_vEffJxWDevice.begin(),
           d_basisOperationsPtrDevice->JxWBasisData().begin(),
           d_derExcWithSigmaTimesGradRhoJxWDevice.begin(),
@@ -1290,7 +1292,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
           d_basisOperationsPtrDevice->shapeFunctionGradientBasisData().data(),
           d_basisOperationsPtrDevice->inverseJacobiansBasisData().data(),
           d_basisOperationsPtrDevice->cellsTypeFlag(),
-          d_cellShapeFunctionGradientIntegralFlattenedDevice.begin(),
+          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData().begin(),
           d_vEffJxWDevice.begin(),
           d_basisOperationsPtrDevice->JxWBasisData().begin(),
           d_derExcWithSigmaTimesGradRhoJxWDevice.begin(),
@@ -1321,7 +1323,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
           d_basisOperationsPtrDevice->shapeFunctionGradientBasisData().data(),
           d_basisOperationsPtrDevice->inverseJacobiansBasisData().data(),
           d_basisOperationsPtrDevice->cellsTypeFlag(),
-          d_cellShapeFunctionGradientIntegralFlattenedDevice.begin(),
+          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData().begin(),
           d_vEffJxWDevice.begin(),
           d_basisOperationsPtrDevice->JxWBasisData().begin(),
           d_cellHamiltonianMatrixExternalPotCorrFlattenedDevice.begin(),
@@ -1352,7 +1354,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
           d_basisOperationsPtrDevice->shapeFunctionGradientBasisData().data(),
           d_basisOperationsPtrDevice->inverseJacobiansBasisData().data(),
           d_basisOperationsPtrDevice->cellsTypeFlag(),
-          d_cellShapeFunctionGradientIntegralFlattenedDevice.begin(),
+          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData().begin(),
           d_vEffJxWDevice.begin(),
           d_basisOperationsPtrDevice->JxWBasisData().begin(),
           d_cellHamiltonianMatrixExternalPotCorrFlattenedDevice.begin(),

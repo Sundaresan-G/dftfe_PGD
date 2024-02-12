@@ -51,6 +51,7 @@ namespace dftfe
                            const MPI_Comm &   mpi_comm_parent,
                            const bool         restart,
                            const int          verbosity,
+                           const bool         useDevice,
                            const int          d_numberOfImages,
                            const bool         imageFreeze,
                            double             Kmax,

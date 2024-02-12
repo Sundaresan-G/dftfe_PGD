@@ -156,7 +156,6 @@ namespace dftfe
     bool         useDensityMatrixPerturbationRankUpdates;
     double       xlbomdKernelRankUpdateFDParameter;
     bool         smearedNuclearCharges;
-    bool         HXOptimFlag;
     bool         floatingNuclearCharges;
     bool         nonLinearCoreCorrection;
     unsigned int maxLineSearchIterCGPRP;
@@ -207,7 +206,8 @@ namespace dftfe
                      const bool         printParams      = false,
                      const std::string  mode             = "GS",
                      const std::string  restartFilesPath = ".",
-                     const int          _verbosity       = 1);
+                     const int          _verbosity       = 1,
+                     const bool         _useDevice       = false);
 
     /**
      * Check parameters

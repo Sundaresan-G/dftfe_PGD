@@ -349,167 +349,6 @@ namespace dftfe
     }
 
 
-    //
-    // chebyshev filtering of given subspace XArray
-    //
-    template <typename T>
-    void
-    chebyshevFilterOpt(operatorDFTClass &              operatorMatrix,
-                       distributedCPUMultiVec<T> &     XArray,
-                       std::vector<dataTypes::number> &cellXWaveFunctionMatrix,
-                       const unsigned int              numberWaveFunctions,
-                       const unsigned int              m,
-                       const double                    a,
-                       const double                    b,
-                       const double                    a0)
-    {
-      double       sigma, sigma2;
-      const double e      = (b - a) / 2.0;
-      const double c      = (b + a) / 2.0;
-      sigma               = e / (a0 - c);
-      const double sigma1 = sigma;
-      const double gamma  = 2.0 / sigma1;
-
-      std::vector<T> cellYWaveFunctionMatrix;
-
-      // init cellYWaveFunctionMatrix to a given scalar
-      double scalarValue = 0.0;
-      operatorMatrix.initWithScalar(numberWaveFunctions,
-                                    scalarValue,
-                                    cellYWaveFunctionMatrix);
-
-
-      std::vector<unsigned int> globalArrayClassificationMap;
-      operatorMatrix.getInteriorSurfaceNodesMapFromGlobalArray(
-        globalArrayClassificationMap);
-
-
-
-      //
-      // create YArray
-      // initialize to zeros.
-      // x
-      distributedCPUMultiVec<T> YArray(XArray, T(0.0));
-
-
-      //
-      // call HX
-      //
-      bool   scaleFlag = false;
-      double scalar    = 1.0;
-
-
-      operatorMatrix.HX(XArray,
-                        cellXWaveFunctionMatrix,
-                        numberWaveFunctions,
-                        scaleFlag,
-                        scalar,
-                        scalar,
-                        scalar,
-                        YArray,
-                        cellYWaveFunctionMatrix);
-
-
-      double alpha1 = sigma1 / e, alpha2 = -c;
-
-      //
-      // YArray = YArray + alpha2*XArray and YArray = alpha1*YArray
-      //
-
-      //
-      // Do surface nodes recursive iteration for dealii vectors
-      //
-      const unsigned int numberDofs = YArray.locallyOwnedSize();
-      for (unsigned int iDof = 0; iDof < numberDofs; ++iDof)
-        {
-          if (globalArrayClassificationMap[iDof] == 1)
-            {
-              std::transform(YArray.begin() + iDof * numberWaveFunctions,
-                             YArray.begin() + (iDof + 1) * numberWaveFunctions,
-                             XArray.begin() + iDof * numberWaveFunctions,
-                             YArray.begin() + iDof * numberWaveFunctions,
-                             [&alpha1, &alpha2](auto &a, auto &b) {
-                               return alpha1 * (a + alpha2 * b);
-                             });
-            }
-        }
-
-
-      //
-      // Do recursive iteration only for interior cell nodes using cell-level
-      // loop
-      // Y = a*X + Y
-      operatorMatrix.axpby(alpha1 * alpha2,
-                           alpha1,
-                           numberWaveFunctions,
-                           cellXWaveFunctionMatrix,
-                           cellYWaveFunctionMatrix);
-
-
-      //
-      for (unsigned int degree = 2; degree < m + 1; ++degree)
-        {
-          sigma2 = 1.0 / (gamma - sigma);
-          alpha1 = 2.0 * sigma2 / e, alpha2 = -(sigma * sigma2);
-
-          //
-          // multiply XArray with alpha2
-          // and XArray = XArray - c*alpha1*YArray
-
-
-          //
-          // Do surface nodes recursive iteration for dealii vectors
-          //
-          for (unsigned int iDof = 0; iDof < numberDofs; ++iDof)
-            {
-              if (globalArrayClassificationMap[iDof] == 1)
-                {
-                  std::transform(YArray.begin() + iDof * numberWaveFunctions,
-                                 YArray.begin() +
-                                   (iDof + 1) * numberWaveFunctions,
-                                 XArray.begin() + iDof * numberWaveFunctions,
-                                 XArray.begin() + iDof * numberWaveFunctions,
-                                 [&alpha1, &alpha2, &c](auto &a, auto &b) {
-                                   return alpha2 * b - c * alpha1 * a;
-                                 });
-                }
-            }
-
-          //
-          // call HX
-          //
-          bool   scaleFlag = true;
-          double scalarA   = -c * alpha1;
-          double scalarB   = alpha2;
-          operatorMatrix.HX(YArray,
-                            cellYWaveFunctionMatrix,
-                            numberWaveFunctions,
-                            scaleFlag,
-                            alpha1,
-                            scalarA,
-                            scalarB,
-                            XArray,
-                            cellXWaveFunctionMatrix);
-
-          //
-          // XArray = YArray (may have to optimize this, so that swap happens
-          // only for surface nodes for deallii vectors and interior nodes for
-          // cellwavefunction matrices
-          //
-          XArray.swap(YArray);
-          cellXWaveFunctionMatrix.swap(cellYWaveFunctionMatrix);
-
-          //
-          // YArray = YNewArray
-          //
-          sigma = sigma2;
-        }
-
-      // copy back YArray to XArray
-      XArray                  = YArray;
-      cellXWaveFunctionMatrix = cellYWaveFunctionMatrix;
-    }
-
 
     template <typename T>
     void
@@ -2454,10 +2293,11 @@ namespace dftfe
               MPI_Barrier(mpiCommDomain);
               // evaluate H times XBlock and store in HXBlock
               HXBlock.setValue(T(0.));
-              const bool   scaleFlag = false;
-              const double scalar    = 1.0;
-              operatorMatrix.HX(XBlock, B, scaleFlag, scalar, HXBlock);
-
+              const bool                               scaleFlag = false;
+              const double                             scalar    = 1.0;
+              std::vector<distributedCPUMultiVec<T> *> XArrayPtrs{&XBlock};
+              std::vector<distributedCPUMultiVec<T> *> YArrayPtrs{&HXBlock};
+              operatorMatrix.HX(XArrayPtrs, scalar, 0.0, 0.0, YArrayPtrs);
               // compute residual norms:
               for (unsigned int iDof = 0; iDof < localVectorSize; ++iDof)
                 for (unsigned int iWave = 0; iWave < B; iWave++)
@@ -2929,8 +2769,10 @@ namespace dftfe
       //
       const bool   scaleFlag = false;
       const double scalar    = 1.0;
-      operatorMatrix.HX(vVector, 1, scaleFlag, scalar, fVector);
 
+      std::vector<distributedCPUMultiVec<T> *> XArrayPtrs{&vVector};
+      std::vector<distributedCPUMultiVec<T> *> YArrayPtrs{&fVector};
+      operatorMatrix.HX(XArrayPtrs, 1.0, 0.0, 0.0, YArrayPtrs);
       // evaluate fVector^{H}*vVector
       fVector.dot(vVector, &alpha);
       fVector.add(-1.0 * alpha, vVector);
@@ -2947,8 +2789,10 @@ namespace dftfe
           vVector.scaleAndAdd(0.0, 1.0 / beta, fVector);
 
           fVector.setValue(T(0));
-          operatorMatrix.HX(vVector, 1, scaleFlag, scalar, fVector);
 
+          std::vector<distributedCPUMultiVec<T> *> XArrayPtrs{&vVector};
+          std::vector<distributedCPUMultiVec<T> *> YArrayPtrs{&fVector};
+          operatorMatrix.HX(XArrayPtrs, 1.0, 0.0, 0.0, YArrayPtrs);
           fVector.add(-1.0 * beta, v0Vector); // beta is real
 
           fVector.dot(vVector, &alpha);
@@ -3245,15 +3089,6 @@ namespace dftfe
                     const double,
                     const double);
 
-    template void
-    chebyshevFilterOpt(operatorDFTClass &operatorMatrix,
-                       distributedCPUMultiVec<dataTypes::number> &X,
-                       std::vector<dataTypes::number> &cellWaveFunctionMatrix,
-                       const unsigned int              numberComponents,
-                       const unsigned int              m,
-                       const double                    a,
-                       const double                    b,
-                       const double                    a0);
 
 
     template void

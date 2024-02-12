@@ -41,9 +41,11 @@ namespace dftfe
                               const std::vector<bool> &  periodicBc);
   } // namespace internal
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::saveTriaInfoAndRhoNodalData()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::saveTriaInfoAndRhoNodalData()
   {
     d_basisOperationsPtrElectroHost->reinit(0,
                                             0,
@@ -102,9 +104,11 @@ namespace dftfe
     pcout << "...checkpointing done." << std::endl;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::loadTriaInfoAndRhoNodalData()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::loadTriaInfoAndRhoNodalData()
   {
     pcout << "Reading tria info and rho data from checkpoint in progress..."
           << std::endl;
@@ -144,9 +148,12 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeDomainAndAtomCoordinates()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    writeDomainAndAtomCoordinates()
   {
     dftUtils::writeDataIntoFile(d_domainBoundingVectors,
                                 "domainBoundingVectorsCurrent.chk",
@@ -293,9 +300,11 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeDomainAndAtomCoordinates(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::writeDomainAndAtomCoordinates(
     const std::string Path) const
   {
     dftUtils::writeDataIntoFile(d_domainBoundingVectors,
@@ -367,10 +376,12 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeStructureEnergyForcesDataPostProcess(
-    const std::string Path) const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    writeStructureEnergyForcesDataPostProcess(const std::string Path) const
   {
     const int                        numberGlobalAtoms = atomLocations.size();
     std::vector<std::vector<double>> data(

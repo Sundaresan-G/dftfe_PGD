@@ -48,6 +48,21 @@ namespace dftfe
       const ValueType *   sphericalFnTimesWfcParallelVec,
       ValueType *         sphericalFnTimesWfcDealiiParallelVec,
       const unsigned int *indexMapDealiiParallelNumbering);
+    template <typename ValueType>
+    void
+    addNonLocalContribution(
+      const unsigned int numberCellsForAtom,
+      const unsigned int numberNodesPerElement,
+      const unsigned int numberWfc,
+      const unsigned int numberCellsTraversed,
+      const dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &nonLocalContribution,
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &TotalContribution,
+      const dftfe::utils::MemoryStorage<unsigned int,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &cellNodeIdMapNonLocalToLocal);
 
 
   } // namespace AtomicCenteredNonLocalOperatorKernelsDevice

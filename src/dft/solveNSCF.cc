@@ -28,14 +28,16 @@
 #include <energyCalculator.h>
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::solveNoSCF()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::solveNoSCF()
   {
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
 #ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
       &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
 #endif
 
@@ -79,7 +81,10 @@ namespace dftfe
         d_baseDofHandlerIndexElectro,
         d_phiTotAXQuadratureIdElectro,
         d_binsStartDofHandlerIndexElectro,
-        kohnShamDFTEigenOperatorDevice,
+        FEOrder == FEOrderElectro ?
+          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
+          d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
+        d_BLASWrapperPtr,
         d_constraintsPRefined,
         d_imagePositionsTrunc,
         d_imageIdsTrunc,

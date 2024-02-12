@@ -29,7 +29,7 @@
 namespace dftfe
 {
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class dftClass;
 #endif
 
@@ -42,13 +42,16 @@ namespace dftfe
   //
   // Define kohnShamDFTOperatorDeviceClass class
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   class kohnShamDFTOperatorDeviceClass : public operatorDFTDeviceClass
   {
   public:
-    kohnShamDFTOperatorDeviceClass(dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-                                   const MPI_Comm &mpi_comm_parent,
-                                   const MPI_Comm &mpi_comm_domain);
+    kohnShamDFTOperatorDeviceClass(
+      dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+      const MPI_Comm &                                mpi_comm_parent,
+      const MPI_Comm &                                mpi_comm_domain);
 
     /**
      * @brief destructor
@@ -73,12 +76,6 @@ namespace dftfe
 
     distributedCPUVec<dataTypes::number> &
     getProjectorKetTimesVectorSingle();
-
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-    getShapeFunctionGradientIntegral();
-
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-    getShapeFunctionGradientIntegralElectro();
 
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
       &
@@ -587,74 +584,18 @@ namespace dftfe
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
       d_kSquareTimesHalfVecDevice;
 
-    /// for non local
-
-    std::vector<dataTypes::number>
-      d_cellHamiltonianMatrixNonLocalFlattenedConjugate;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice;
-    std::vector<dataTypes::number>
-      d_cellHamiltonianMatrixNonLocalFlattenedTranspose;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_projectorKetTimesVectorParFlattenedDevice;
+    unsigned int d_totalNonlocalElemsPseudo;
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorParFlattenedDevice;
 
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-      d_projectorKetTimesVectorAllCellsDevice;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-                        d_projectorKetTimesVectorDevice;
-    std::vector<double> d_nonLocalPseudoPotentialConstants;
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-      d_nonLocalPseudoPotentialConstantsDevice;
-
-    std::vector<dataTypes::number> d_projectorKetTimesVectorAllCellsReduction;
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE>
-                              d_projectorKetTimesVectorAllCellsReductionDevice;
-    std::vector<unsigned int> d_pseudoWfcAccumNonlocalAtoms;
-    unsigned int              d_totalNonlocalAtomsCurrentProc;
-    unsigned int              d_totalNonlocalElems;
-    unsigned int              d_totalPseudoWfcNonLocal;
-    unsigned int              d_maxSingleAtomPseudoWfc;
-    std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
-    std::vector<unsigned int> d_pseduoWfcNonLocalAtoms;
-    std::vector<unsigned int> d_numberCellsNonLocalAtoms;
-    std::vector<unsigned int> d_numberCellsAccumNonLocalAtoms;
-    std::vector<dealii::types::global_dof_index>
-      d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal;
-    dftfe::utils::MemoryStorage<dealii::types::global_dof_index,
-                                dftfe::utils::MemorySpace::DEVICE>
-                              d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice;
-    std::vector<unsigned int> d_projectorIdsParallelNumberingMap;
-    dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
-                     d_projectorIdsParallelNumberingMapDevice;
-    std::vector<int> d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec;
-    dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
-                              d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice;
-    std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
-    dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
-                              d_cellNodeIdMapNonLocalToLocalDevice;
     std::vector<unsigned int> d_normalCellIdToMacroCellIdMap;
     std::vector<unsigned int> d_macroCellIdToNormalCellIdMap;
 
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_locallyOwnedProcBoundaryNodesVectorDevice;
 
-    bool                d_isMallocCalled = false;
-    dataTypes::number **d_A, **d_B, **d_C;
-    dataTypes::number **h_d_A, **h_d_B, **h_d_C;
+    bool d_isMallocCalled = false;
 
     /**
      * @brief implementation of matrix-vector product using cell-level stiffness matrices.
@@ -694,7 +635,7 @@ namespace dftfe
 
 
     /// pointer to dft class
-    dftClass<FEOrder, FEOrderElectro> *dftPtr;
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *dftPtr;
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,
@@ -706,11 +647,11 @@ namespace dftfe
                                       dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtrHost;
 
-    std::shared_ptr<dftfe::oncvClass<dataTypes::number>> d_oncvClassPtr;
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
+      d_oncvClassPtr;
 
     std::shared_ptr<
-      AtomicCenteredNonLocalOperator<dataTypes::number,
-                                     dftfe::utils::MemorySpace::DEVICE>>
+      AtomicCenteredNonLocalOperator<dataTypes::number, memorySpace>>
       d_ONCVnonLocalOperator;
 
 

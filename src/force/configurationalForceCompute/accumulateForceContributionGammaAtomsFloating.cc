@@ -21,9 +21,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     accumulateForceContributionGammaAtomsFloating(
       const std::map<unsigned int, std::vector<double>>
         &                  forceContributionLocalGammaAtoms,

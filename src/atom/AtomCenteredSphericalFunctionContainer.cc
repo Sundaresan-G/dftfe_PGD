@@ -175,8 +175,8 @@ namespace dftfe
     for (int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
       {
         unsigned int atomId = d_AtomIdsInCurrentProcess[iAtom];
-        unsigned int Zno    = d_atomicNumbers[atomId];
-        totalShapeFns += d_numSphericalFunctions.find(Zno)->second;
+        unsigned int Znum   = d_atomicNumbers[atomId];
+        totalShapeFns += d_numSphericalFunctions.find(Znum)->second;
       }
 
     return (totalShapeFns);
@@ -204,11 +204,14 @@ namespace dftfe
     getTotalAtomsAndNonLocalElementsInCurrentProcessor(
       unsigned int &             totalAtomsInCurrentProcessor,
       unsigned int &             totalNonLocalElements,
+      std::vector<unsigned int> &numberCellsForEachAtom,
       std::vector<unsigned int> &numberCellsAccumNonLocalAtoms)
   {
     totalAtomsInCurrentProcessor = d_AtomIdsInCurrentProcess.size();
     numberCellsAccumNonLocalAtoms.clear();
     numberCellsAccumNonLocalAtoms.resize(totalAtomsInCurrentProcessor, 0);
+    numberCellsForEachAtom.clear();
+    numberCellsForEachAtom.resize(totalAtomsInCurrentProcessor, 0);
     totalNonLocalElements = 0;
     for (unsigned int iAtom = 0; iAtom < totalAtomsInCurrentProcessor; iAtom++)
       {
@@ -217,16 +220,17 @@ namespace dftfe
           d_elementIndexesInAtomCompactSupport[atomId].size();
         numberCellsAccumNonLocalAtoms[iAtom] = totalNonLocalElements;
         totalNonLocalElements += numberElementsInCompactSupport;
+        numberCellsForEachAtom[iAtom] = numberElementsInCompactSupport;
       }
   }
 
   const unsigned int
   AtomCenteredSphericalFunctionContainer::getTotalSphericalFunctionIndexStart(
-    unsigned int Zno,
+    unsigned int Znum,
     unsigned int alpha)
   {
-    std::vector<unsigned int> beta = d_totalSphericalFunctionIndexStart[Zno];
-    if (alpha < getTotalNumberOfRadialSphericalFunctionsPerAtom(Zno))
+    std::vector<unsigned int> beta = d_totalSphericalFunctionIndexStart[Znum];
+    if (alpha < getTotalNumberOfRadialSphericalFunctionsPerAtom(Znum))
       return beta[alpha];
     else
       {
@@ -256,6 +260,42 @@ namespace dftfe
   {
     return d_sphericalFunctionsContainer;
   }
+
+  void
+  AtomCenteredSphericalFunctionContainer::getDataForSparseStructure(
+    const std::map<unsigned int, std::vector<int>> &sparsityPattern,
+    const std::vector<std::vector<dealii::CellId>>
+      &elementIdsInAtomCompactSupport,
+    const std::vector<std::vector<unsigned int>>
+      &                              elementIndexesInAtomCompactSupport,
+    const std::vector<unsigned int> &atomIdsInCurrentProcess,
+    unsigned int                     numberElements)
+  {
+    d_sparsityPattern.clear();
+    d_elementIdsInAtomCompactSupport.clear();
+    d_elementIndexesInAtomCompactSupport.clear();
+    d_AtomIdsInCurrentProcess.clear();
+
+    d_sparsityPattern                    = sparsityPattern;
+    d_elementIdsInAtomCompactSupport     = elementIdsInAtomCompactSupport;
+    d_elementIndexesInAtomCompactSupport = elementIndexesInAtomCompactSupport;
+    d_AtomIdsInCurrentProcess            = atomIdsInCurrentProcess;
+    d_AtomIdsInElement.clear();
+    d_AtomIdsInElement.resize(numberElements);
+
+    for (int iCell = 0; iCell < numberElements; ++iCell)
+      {
+        for (int iAtom = 0; iAtom < d_AtomIdsInCurrentProcess.size(); iAtom++)
+          {
+            if (d_sparsityPattern[d_AtomIdsInCurrentProcess[iAtom]][iCell] >= 0)
+              {
+                d_AtomIdsInElement[iCell].push_back(
+                  d_AtomIdsInCurrentProcess[iAtom]);
+              }
+          }
+      }
+  }
+
   template <typename NumberType>
   void
   AtomCenteredSphericalFunctionContainer::computeSparseStructure(
@@ -314,10 +354,10 @@ namespace dftfe
         //
         int          matCount            = 0;
         bool         isAtomIdInProcessor = false;
-        unsigned int Zno                 = d_atomicNumbers[iAtom];
+        unsigned int Znum                = d_atomicNumbers[iAtom];
         //
         //
-        int numberSphericalFunctions = d_numRadialSphericalFunctions[Zno];
+        int numberSphericalFunctions = d_numRadialSphericalFunctions[Znum];
 
         //
         // get the global charge Id of the current nonlocal atom
@@ -372,14 +412,17 @@ namespace dftfe
                     chargePoint[2] =
                       d_periodicImageCoord[iAtom][3 * iImageAtomCount + 2];
                   }
-
+                // if(iCell == 0)
+                //   std::cout<<"DEBUG coordinates: "<<iAtom<<"
+                //   "<<chargePoint[0]<<" "<<chargePoint[1]<<"
+                //   "<<chargePoint[2]<<std::endl;
 
                 for (unsigned int iPsp = 0; iPsp < numberSphericalFunctions;
                      ++iPsp)
                   {
                     std::shared_ptr<AtomCenteredSphericalFunctionBase>
                       SphericalFunction =
-                        d_sphericalFunctionsContainer[std::make_pair(Zno,
+                        d_sphericalFunctionsContainer[std::make_pair(Znum,
                                                                      iPsp)];
                     double radialProjVal;
                     for (int iQuadPoint = 0;
@@ -398,12 +441,16 @@ namespace dftfe
                               SphericalFunction->getRadialValue(r);
 
 
-                            if (RadVal >= cutOffVal)
+                            if (std::fabs(RadVal) >= cutOffVal)
                               {
                                 sparseFlag = 1;
                                 if (r > maxR)
                                   maxR = r;
-
+                                // std::cout
+                                //   << "DEBUG: iAtom RadVal projIndex Cell: "
+                                //   << iAtom << " " << r << " "
+                                //   << std::fabs(RadVal) << " " << iPsp << " "
+                                //   << iCell << std::endl;
                                 break;
                               }
                           }
@@ -428,6 +475,8 @@ namespace dftfe
               {
                 dealii::CellId cell    = basisOperationsPtr->cellID(iCell);
                 sparsityPattern[iCell] = matCount;
+                // std::cout<<"Debug: iAtom iCell cellid maxR: "<<iAtom<<"
+                // "<<iCell<<" "<<cell<<" "<<maxR<<std::endl;
                 d_elementIdsInAtomCompactSupport[iAtom].push_back(cell);
                 d_elementIndexesInAtomCompactSupport[iAtom].push_back(iCell);
                 matCount += 1;
@@ -442,7 +491,7 @@ namespace dftfe
                   << iAtom << " is "
                   << d_elementIndexesInAtomCompactSupport[iAtom].size()
                   << std::endl;
-        #endif
+#endif
 
         if (isAtomIdInProcessor)
           {
@@ -476,7 +525,7 @@ namespace dftfe
     const unsigned int quadratureIndex,
     const double       cutOffVal,
     const unsigned int cutOffType);
-
+#ifdef USE_COMPLEX
   template void
   AtomCenteredSphericalFunctionContainer::computeSparseStructure(
     std::shared_ptr<
@@ -488,7 +537,7 @@ namespace dftfe
     const double       cutOffVal,
     const unsigned int cutOffType);
 
-
+#endif
   const std::map<unsigned int, std::vector<int>> &
   AtomCenteredSphericalFunctionContainer::getSparsityPattern()
   {

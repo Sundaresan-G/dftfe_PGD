@@ -23,9 +23,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initBoundaryConditions(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initBoundaryConditions(
     const bool recomputeBasisData,
     const bool meshOnlyDeformed,
     const bool vselfPerturbationUpdateForStress)
@@ -271,11 +273,7 @@ namespace dftfe
       {
         if (!vselfPerturbationUpdateForStress)
           {
-            d_basisOperationsPtrHost = std::make_shared<
-              dftfe::basis::FEBasisOperations<dataTypes::number,
-                                              double,
-                                              dftfe::utils::MemorySpace::HOST>>(
-              matrix_free_data, d_constraintsVector, d_BLASWrapperPtrHost);
+            d_basisOperationsPtrHost->clear();
             dftfe::basis::UpdateFlags updateFlagsAll =
               dftfe::basis::update_values | dftfe::basis::update_jxw |
               dftfe::basis::update_inversejacobians |
@@ -295,9 +293,13 @@ namespace dftfe
                                                                updateFlagsAll,
                                                                updateFlagsAll,
                                                                updateFlagsAll};
-            d_basisOperationsPtrHost->init(d_densityDofHandlerIndex,
+            d_basisOperationsPtrHost->init(matrix_free_data,
+                                           d_constraintsVector,
+                                           d_densityDofHandlerIndex,
                                            quadratureIndices,
                                            updateFlags);
+            d_basisOperationsPtrHost->computeCellStiffnessMatrix(
+              d_feOrderPlusOneQuadratureId, 1, true, false);
           }
       }
     if (!d_dftParamsPtr->useDevice && recomputeBasisData)
@@ -324,13 +326,7 @@ namespace dftfe
       {
         if (!vselfPerturbationUpdateForStress)
           {
-            d_basisOperationsPtrDevice =
-              std::make_shared<dftfe::basis::FEBasisOperations<
-                dataTypes::number,
-                double,
-                dftfe::utils::MemorySpace::DEVICE>>(matrix_free_data,
-                                                    d_constraintsVector,
-                                                    d_BLASWrapperPtr);
+            d_basisOperationsPtrDevice->clear();
             d_basisOperationsPtrDevice->init(*d_basisOperationsPtrHost);
             const unsigned int BVec =
               std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues);
@@ -340,9 +336,12 @@ namespace dftfe
             else
               d_basisOperationsPtrDevice->createScratchMultiVectors(
                 BVec, (d_dftParamsPtr->spinPolarized + 1));
+            d_basisOperationsPtrDevice->computeCellStiffnessMatrix(
+              d_feOrderPlusOneQuadratureId, 50, true, false);
           }
         else
           {
+            d_basisOperationsPtrDevice->clear();
             dftfe::basis::UpdateFlags updateFlagsGradientsAndInvJacobians =
               dftfe::basis::update_inversejacobians | dftfe::basis::update_jxw |
               dftfe::basis::update_gradients;
@@ -362,9 +361,14 @@ namespace dftfe
               updateFlagsValuesGradients,
               updateFlagsAll,
               updateFlagsGradientsAndInvJacobians};
-            d_basisOperationsPtrDevice->init(d_densityDofHandlerIndex,
+            d_basisOperationsPtrDevice->init(matrix_free_data,
+                                             d_constraintsVector,
+                                             d_densityDofHandlerIndex,
                                              quadratureIndices,
                                              updateFlags);
+            if (FEOrder != FEOrderElectro)
+              d_basisOperationsPtrDevice->computeCellStiffnessMatrix(
+                d_feOrderPlusOneQuadratureId, 50, true, false);
           }
       }
     else if (d_dftParamsPtr->useDevice)

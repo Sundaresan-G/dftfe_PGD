@@ -31,6 +31,7 @@ namespace dftfe
   {
     namespace
     {
+      // FIXME: use basisOperations instead of operatorMatrix
       void
       interpolatePsiComputeELocWfcEshelbyTensor(
         operatorDFTClass &                         operatorMatrix,
@@ -604,7 +605,15 @@ namespace dftfe
 
       void
       computeBlockContribution(
-        operatorDFTClass &                         operatorMatrix,
+        std::shared_ptr<dftfe::basis::FEBasisOperations<
+          dataTypes::number,
+          double,
+          dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
+        operatorDFTClass &                  operatorMatrix,
+        std::shared_ptr<
+          dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>>
+                                                   oncvClassPtr,
+        const unsigned int                         kPointIndex,
         distributedCPUMultiVec<dataTypes::number> &flattenedArrayBlock,
         distributedCPUMultiVec<dataTypes::number> &projectorKetTimesVector,
         const dataTypes::number *                  X,
@@ -656,6 +665,8 @@ namespace dftfe
             flattenedArrayBlock.data()[iNode * numPsi + iWave] =
               X[iNode * N + startingVecId + iWave];
         flattenedArrayBlock.updateGhostValues();
+
+        // FIMXE: use basisOperations
         (operatorMatrix.getOverloadedConstraintMatrix())
           ->distribute(flattenedArrayBlock);
 
@@ -687,8 +698,12 @@ namespace dftfe
 
         if (isPsp)
           {
-            operatorMatrix.computeNonLocalProjectorKetTimesXTimesV(
-              flattenedArrayBlock, projectorKetTimesVector, numPsi);
+            oncvClassPtr->getNonLocalOperator()->applyVCconjtransOnX(
+              flattenedArrayBlock,
+              kPointIndex,
+              CouplingStructure::diagonal,
+              oncvClassPtr->getCouplingMatrix(),
+              projectorKetTimesVector);
 
             if (totalNonTrivialPseudoWfcs > 0)
               {
@@ -725,7 +740,14 @@ namespace dftfe
 
     void
     wfcContractionsForceKernelsAllH(
-      operatorDFTClass &                      operatorMatrix,
+      std::shared_ptr<dftfe::basis::FEBasisOperations<
+        dataTypes::number,
+        double,
+        dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
+      operatorDFTClass &                  operatorMatrix,
+      std::shared_ptr<
+        dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>>
+                                              oncvClassPtr,
       const dataTypes::number *               X,
       const unsigned int                      spinPolarizedFlag,
       const unsigned int                      spinIndex,
@@ -770,7 +792,8 @@ namespace dftfe
 
       distributedCPUMultiVec<dataTypes::number> flattenedArrayBlock;
 
-
+      // FIXME: use getMPIPatternP2PSphericalFunKetTimesX from Atom nonlocal
+      // operator calss once implemented
       distributedCPUMultiVec<dataTypes::number> &projectorKetTimesVector =
         operatorMatrix.getParallelProjectorKetTimesBlockVector();
 
@@ -891,7 +914,10 @@ namespace dftfe
 
 
                   computeBlockContribution(
+                    basisOperationsPtr,
                     operatorMatrix,
+                    oncvClassPtr,
+                    kPoint,
                     flattenedArrayBlock,
                     projectorKetTimesVector,
                     X +

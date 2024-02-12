@@ -78,172 +78,20 @@ namespace dftfe
     }
 
 
-    template <typename numberType>
-    __global__ void
-    copyToParallelNonLocalVecFromReducedVec(
-      const unsigned int  numWfcs,
-      const unsigned int  totalPseudoWfcs,
-      const numberType *  reducedProjectorKetTimesWfcVec,
-      numberType *        projectorKetTimesWfcParallelVec,
-      const unsigned int *indexMapFromParallelVecToReducedVec)
-    {
-      const unsigned int globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
-      const unsigned int numberEntries  = totalPseudoWfcs * numWfcs;
 
-      for (unsigned int index = globalThreadId; index < numberEntries;
-           index += blockDim.x * gridDim.x)
-        {
-          const unsigned int blockIndex      = index / numWfcs;
-          const unsigned int intraBlockIndex = index % numWfcs;
-          projectorKetTimesWfcParallelVec
-            [indexMapFromParallelVecToReducedVec[blockIndex] * numWfcs +
-             intraBlockIndex] = reducedProjectorKetTimesWfcVec[index];
-        }
-    }
-
-    template <typename numberType>
-    __global__ void
-    copyFromParallelNonLocalVecToAllCellsVec(
-      const unsigned int numWfcs,
-      const unsigned int numNonLocalCells,
-      const unsigned int maxSingleAtomPseudoWfc,
-      const numberType * projectorKetTimesWfcParallelVec,
-      numberType *       projectorKetTimesWfcAllCellsVec,
-      const int *        indexMapPaddedToParallelVec)
-    {
-      const unsigned int globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
-      const unsigned int numberEntries =
-        numNonLocalCells * maxSingleAtomPseudoWfc * numWfcs;
-
-      for (unsigned int index = globalThreadId; index < numberEntries;
-           index += blockDim.x * gridDim.x)
-        {
-          const unsigned int blockIndex      = index / numWfcs;
-          const unsigned int intraBlockIndex = index % numWfcs;
-          const int mappedIndex = indexMapPaddedToParallelVec[blockIndex];
-          if (mappedIndex != -1)
-            projectorKetTimesWfcAllCellsVec[index] =
-              projectorKetTimesWfcParallelVec[mappedIndex * numWfcs +
-                                              intraBlockIndex];
-        }
-    }
-
-
-    template <typename numberType>
-    __global__ void
-    copyToDealiiParallelNonLocalVec(
-      const unsigned int  numWfcs,
-      const unsigned int  totalPseudoWfcs,
-      const numberType *  projectorKetTimesWfcParallelVec,
-      numberType *        projectorKetTimesWfcDealiiParallelVec,
-      const unsigned int *indexMapDealiiParallelNumbering)
-    {
-      const unsigned int globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
-      const unsigned int numberEntries  = totalPseudoWfcs * numWfcs;
-
-      for (unsigned int index = globalThreadId; index < numberEntries;
-           index += blockDim.x * gridDim.x)
-        {
-          const unsigned int blockIndex      = index / numWfcs;
-          const unsigned int intraBlockIndex = index % numWfcs;
-          const unsigned int mappedIndex =
-            indexMapDealiiParallelNumbering[blockIndex];
-
-          projectorKetTimesWfcDealiiParallelVec[mappedIndex * numWfcs +
-                                                intraBlockIndex] =
-            projectorKetTimesWfcParallelVec[index];
-        }
-    }
-
-    template <typename numberType>
-    __global__ void
-    copyFromDealiiParallelNonLocalVec(
-      const unsigned int  numWfcs,
-      const unsigned int  totalPseudoWfcs,
-      numberType *        projectorKetTimesWfcParallelVec,
-      const numberType *  projectorKetTimesWfcDealiiParallelVec,
-      const unsigned int *indexMapDealiiParallelNumbering)
-    {
-      const unsigned int globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
-      const unsigned int numberEntries  = totalPseudoWfcs * numWfcs;
-
-      for (unsigned int index = globalThreadId; index < numberEntries;
-           index += blockDim.x * gridDim.x)
-        {
-          const unsigned int blockIndex      = index / numWfcs;
-          const unsigned int intraBlockIndex = index % numWfcs;
-          const unsigned int mappedIndex =
-            indexMapDealiiParallelNumbering[blockIndex];
-
-          projectorKetTimesWfcParallelVec[index] =
-            projectorKetTimesWfcDealiiParallelVec[mappedIndex * numWfcs +
-                                                  intraBlockIndex];
-        }
-    }
-
-    __global__ void
-    addNonLocalContributionDeviceKernel(
-      const dealii::types::global_dof_index contiguousBlockSize,
-      const dealii::types::global_dof_index numContiguousBlocks,
-      const double *                        xVec,
-      double *                              yVec,
-      const unsigned int *                  xVecToyVecBlockIdMap)
-    {
-      const dealii::types::global_dof_index globalThreadId =
-        blockIdx.x * blockDim.x + threadIdx.x;
-      const dealii::types::global_dof_index numberEntries =
-        numContiguousBlocks * contiguousBlockSize;
-
-      for (unsigned int index = globalThreadId; index < numberEntries;
-           index += blockDim.x * gridDim.x)
-        {
-          dealii::types::global_dof_index blockIndex =
-            index / contiguousBlockSize;
-          dealii::types::global_dof_index intraBlockIndex =
-            index % contiguousBlockSize;
-          yVec[xVecToyVecBlockIdMap[blockIndex] * contiguousBlockSize +
-               intraBlockIndex] += xVec[index];
-        }
-    }
-
-    __global__ void
-    addNonLocalContributionDeviceKernel(
-      const dealii::types::global_dof_index    contiguousBlockSize,
-      const dealii::types::global_dof_index    numContiguousBlocks,
-      const dftfe::utils::deviceDoubleComplex *xVec,
-      dftfe::utils::deviceDoubleComplex *      yVec,
-      const unsigned int *                     xVecToyVecBlockIdMap)
-    {
-      const dealii::types::global_dof_index globalThreadId =
-        blockIdx.x * blockDim.x + threadIdx.x;
-      const dealii::types::global_dof_index numberEntries =
-        numContiguousBlocks * contiguousBlockSize;
-
-      for (unsigned int index = globalThreadId; index < numberEntries;
-           index += blockDim.x * gridDim.x)
-        {
-          dealii::types::global_dof_index blockIndex =
-            index / contiguousBlockSize;
-          dealii::types::global_dof_index intraBlockIndex =
-            index % contiguousBlockSize;
-          yVec[xVecToyVecBlockIdMap[blockIndex] * contiguousBlockSize +
-               intraBlockIndex] =
-            dftfe::utils::add(
-              yVec[xVecToyVecBlockIdMap[blockIndex] * contiguousBlockSize +
-                   intraBlockIndex],
-              xVec[index]);
-        }
-    }
   } // namespace
 
   //
   // constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
-    kohnShamDFTOperatorDeviceClass(dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-                                   const MPI_Comm &mpi_comm_parent,
-                                   const MPI_Comm &mpi_comm_domain)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    kohnShamDFTOperatorDeviceClass(
+      dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+      const MPI_Comm &                                mpi_comm_parent,
+      const MPI_Comm &                                mpi_comm_domain)
     : dftPtr(_dftPtr)
     , d_kPointIndex(0)
     , d_numberNodesPerElement(_dftPtr->matrix_free_data.get_dofs_per_cell())
@@ -274,26 +122,22 @@ namespace dftfe
   //
   // destructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     ~kohnShamDFTOperatorDeviceClass()
   {
-    if (d_isMallocCalled)
-      {
-        free(h_d_A);
-        free(h_d_B);
-        free(h_d_C);
-        dftfe::utils::deviceFree(d_A);
-        dftfe::utils::deviceFree(d_B);
-        dftfe::utils::deviceFree(d_C);
-      }
-    d_ONCVnonLocalOperator->freeDeviceVectors();
+    if (d_isMallocCalled == true)
+      d_ONCVnonLocalOperator->freeDeviceVectors();
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::createDeviceBlasHandle()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    createDeviceBlasHandle()
   {
     dftfe::utils::deviceBlasWrapper::create(&d_deviceBlasHandle);
 #ifdef DFTFE_WTIH_DEVICE_CUDA
@@ -303,77 +147,77 @@ namespace dftfe
 #endif
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::destroyDeviceBlasHandle()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    destroyDeviceBlasHandle()
   {
     dftfe::utils::deviceBlasWrapper::destroy(d_deviceBlasHandle);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::deviceBlasHandle_t &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::getDeviceBlasHandle()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getDeviceBlasHandle()
   {
     return d_deviceBlasHandle;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const double *
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::getSqrtMassVec()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getSqrtMassVec()
   {
     return d_sqrtMassVectorDevice.begin();
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const double *
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::getInvSqrtMassVec()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getInvSqrtMassVec()
   {
     return d_invSqrtMassVectorDevice.begin();
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<dataTypes::number> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getProjectorKetTimesVectorSingle()
   {
-    return dftPtr->d_projectorKetTimesVectorPar[0];
+    // FIX ME with correct call from ONCV
+    // return dftPtr->d_projectorKetTimesVectorPar[0];
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
-    getShapeFunctionGradientIntegral()
-  {
-    return d_cellShapeFunctionGradientIntegralFlattenedDevice;
-  }
-
-
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
-    getShapeFunctionGradientIntegralElectro()
-  {
-    return d_cellShapeFunctionGradientIntegralFlattenedDeviceElectro;
-  }
-
-
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::getShapeFunctionValues()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getShapeFunctionValues()
   {
     d_basisOperationsPtrDevice->reinit(0, 0, dftPtr->d_densityQuadratureId);
     return d_basisOperationsPtrDevice->shapeFunctionBasisData(true);
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValuesTransposed(const bool use2pPlusOneGLQuad)
   {
     d_basisOperationsPtrDevice->reinit(0,
@@ -384,9 +228,11 @@ namespace dftfe
     return d_basisOperationsPtrDevice->shapeFunctionBasisData(false);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionValuesNLPTransposed()
   {
     d_basisOperationsPtrDevice->reinit(0, 0, dftPtr->d_nlpspQuadratureId);
@@ -394,52 +240,64 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getShapeFunctionGradientValuesNLPTransposed()
   {
     return d_shapeFunctionGradientValueNLPTransposedDevice;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::getInverseJacobiansNLP()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getInverseJacobiansNLP()
   {
     return d_inverseJacobiansNLPDevice;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<dealii::types::global_dof_index,
                               dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getFlattenedArrayCellLocalProcIndexIdMap()
   {
     return d_flattenedArrayCellLocalProcIndexIdMapDevice;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<dataTypes::number,
                               dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder,
-                                 FEOrderElectro>::getCellWaveFunctionMatrix()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    getCellWaveFunctionMatrix()
   {
     return d_cellWaveFunctionMatrix;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<dataTypes::number> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelVecSingleComponent()
   {
     return d_parallelVecSingleComponent;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedDeviceVec<dataTypes::number> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelChebyBlockVectorDevice()
   {
     const unsigned int BVec =
@@ -448,9 +306,11 @@ namespace dftfe
     return d_basisOperationsPtrDevice->getMultiVector(BVec);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedDeviceVec<dataTypes::number> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelChebyBlockVector2Device()
   {
     const unsigned int BVec =
@@ -459,18 +319,21 @@ namespace dftfe
     return d_basisOperationsPtrDevice->getMultiVector(BVec, 1);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedDeviceVec<dataTypes::number> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getParallelProjectorKetTimesBlockVectorDevice()
   {
-    // return d_parallelProjectorKetTimesBlockVectorDevice;
     return d_parallelSphericalFnKetTimesBlockVectorDevice;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE> &
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     getLocallyOwnedProcBoundaryNodesVectorDevice()
   {
     return d_locallyOwnedProcBoundaryNodesVectorDevice;
@@ -480,16 +343,18 @@ namespace dftfe
   //
   // initialize kohnShamDFTOperatorDeviceClass object
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::init()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::init()
   {
     computing_timer.enter_subsection("kohnShamDFTOperatorDeviceClass setup");
 
     d_basisOperationsPtrDevice = dftPtr->d_basisOperationsPtrDevice;
     d_basisOperationsPtrHost   = dftPtr->d_basisOperationsPtrHost;
     d_oncvClassPtr             = dftPtr->d_oncvClassPtr;
-    d_ONCVnonLocalOperator     = d_oncvClassPtr->d_nonLocalOperatorDevice;
+    d_ONCVnonLocalOperator     = d_oncvClassPtr->getNonLocalOperator();
     dftPtr->matrix_free_data.initialize_dof_vector(
       d_invSqrtMassVector, dftPtr->d_densityDofHandlerIndex);
     d_sqrtMassVector.reinit(d_invSqrtMassVector);
@@ -507,17 +372,22 @@ namespace dftfe
     computing_timer.leave_subsection("kohnShamDFTOperatorDeviceClass setup");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::resetExtPotHamFlag()
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    resetExtPotHamFlag()
   {
     d_isStiffnessMatrixExternalPotCorrComputed = false;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::reinit(
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::reinit(
     const unsigned int numberWaveFunctions,
     bool               flag)
   {
@@ -651,316 +521,17 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-          dftPtr->d_projectorKetTimesVectorPar[0].get_partitioner(),
-          BVec,
-          d_parallelProjectorKetTimesBlockVectorDevice);
-
-        d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-          BVec,
-          d_sphericalFnTimesVectorParFlattenedDevice,
-          d_parallelSphericalFnKetTimesBlockVectorDevice);
-
-        d_totalPseudoWfcNonLocal = 0;
-        d_totalNonlocalElems     = 0;
-        d_totalNonlocalAtomsCurrentProc =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-        unsigned int maxPseudoWfc = 0;
-        d_numberCellsAccumNonLocalAtoms.resize(d_totalNonlocalAtomsCurrentProc);
-        std::vector<unsigned int> numPseduoWfcsAccum(
-          d_totalNonlocalAtomsCurrentProc);
-        for (unsigned int iAtom = 0;
-             iAtom < dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
-             ++iAtom)
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
           {
-            const unsigned int atomId =
-              dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-            const unsigned int numberSingleAtomPseudoWaveFunctions =
-              dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-            if (numberSingleAtomPseudoWaveFunctions > maxPseudoWfc)
-              maxPseudoWfc = numberSingleAtomPseudoWaveFunctions;
-
-            numPseduoWfcsAccum[iAtom] = d_totalPseudoWfcNonLocal;
-            d_totalPseudoWfcNonLocal += numberSingleAtomPseudoWaveFunctions;
-            const unsigned int numberElementsInCompactSupport =
-              dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-            d_numberCellsAccumNonLocalAtoms[iAtom] = d_totalNonlocalElems;
-            d_totalNonlocalElems += numberElementsInCompactSupport;
+            d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+              BVec, d_parallelSphericalFnKetTimesBlockVectorDevice);
+            d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
+              d_cellWaveFunctionMatrix);
+            d_totalNonlocalElemsPseudo =
+              d_ONCVnonLocalOperator
+                ->getTotalNonLocalElementsInCurrentProcessor();
+            d_isMallocCalled = true;
           }
-
-        d_maxSingleAtomPseudoWfc = maxPseudoWfc;
-        d_cellHamMatrixTimesWaveMatrixNonLocalDevice.resize(
-          d_totalNonlocalElems * numberWaveFunctions * d_numberNodesPerElement,
-          dataTypes::number(0.0));
-
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugate.clear();
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugate.resize(
-          dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
-            d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
-          dataTypes::number(0.0));
-        d_cellHamiltonianMatrixNonLocalFlattenedTranspose.clear();
-        d_cellHamiltonianMatrixNonLocalFlattenedTranspose.resize(
-          dftPtr->d_kPointWeights.size() * d_totalNonlocalElems *
-            d_numberNodesPerElement * d_maxSingleAtomPseudoWfc,
-          dataTypes::number(0.0));
-        d_nonLocalPseudoPotentialConstants.clear();
-        d_nonLocalPseudoPotentialConstants.resize(d_totalPseudoWfcNonLocal,
-                                                  0.0);
-
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.clear();
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.resize(
-          d_totalNonlocalElems * d_numberNodesPerElement, 0);
-        d_projectorKetTimesVectorAllCellsDevice.resize(
-          d_totalNonlocalElems * numberWaveFunctions * d_maxSingleAtomPseudoWfc,
-          dataTypes::number(0.0));
-
-
-        d_projectorIdsParallelNumberingMap.clear();
-        d_projectorIdsParallelNumberingMap.resize(d_totalPseudoWfcNonLocal, 0);
-
-        d_projectorKetTimesVectorParFlattenedDevice.resize(
-          numberWaveFunctions * d_totalPseudoWfcNonLocal, 0.0);
-
-
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.clear();
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.resize(
-          d_totalNonlocalElems * d_maxSingleAtomPseudoWfc, -1);
-
-        d_nonlocalElemIdToLocalElemIdMap.clear();
-        d_nonlocalElemIdToLocalElemIdMap.resize(d_totalNonlocalElems, 0);
-
-        d_projectorKetTimesVectorAllCellsReduction.clear();
-        d_projectorKetTimesVectorAllCellsReduction.resize(
-          d_totalNonlocalElems * d_maxSingleAtomPseudoWfc *
-            d_totalPseudoWfcNonLocal,
-          dataTypes::number(0.0));
-
-
-
-        d_cellNodeIdMapNonLocalToLocal.clear();
-        d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
-                                              d_numberNodesPerElement);
-
-
-
-        unsigned int countElemNode   = 0;
-        unsigned int countElem       = 0;
-        unsigned int countPseudoWfc1 = 0;
-        d_numberCellsNonLocalAtoms.resize(d_totalNonlocalAtomsCurrentProc);
-        for (unsigned int iAtom = 0; iAtom < d_totalNonlocalAtomsCurrentProc;
-             ++iAtom)
-          {
-            const unsigned int atomId =
-              dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-            const unsigned int numberPseudoWaveFunctions =
-              dftPtr->d_numberPseudoAtomicWaveFunctions[atomId];
-
-            d_numberCellsNonLocalAtoms[iAtom] =
-              dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-
-            for (unsigned int ipseudowfc = 0;
-                 ipseudowfc < numberPseudoWaveFunctions;
-                 ++ipseudowfc)
-              {
-                const unsigned int id =
-                  dftPtr->d_projectorKetTimesVectorPar[0]
-                    .get_partitioner()
-                    ->global_to_local(
-                      dftPtr->d_projectorIdsNumberingMapCurrentProcess
-                        [std::make_pair(atomId, ipseudowfc)]);
-
-                d_projectorIdsParallelNumberingMap[countPseudoWfc1] = id;
-
-                d_nonLocalPseudoPotentialConstants[id] =
-                  dftPtr
-                    ->d_nonLocalPseudoPotentialConstants[atomId][ipseudowfc];
-                for (unsigned int iElemComp = 0;
-                     iElemComp <
-                     dftPtr->d_elementIteratorsInAtomCompactSupport[atomId]
-                       .size();
-                     ++iElemComp)
-                  {
-                    d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec
-                      [d_numberCellsAccumNonLocalAtoms[iAtom] *
-                         d_maxSingleAtomPseudoWfc +
-                       iElemComp * d_maxSingleAtomPseudoWfc + ipseudowfc] = id;
-                  }
-                countPseudoWfc1++;
-              }
-
-            for (unsigned int iElemComp = 0;
-                 iElemComp <
-                 dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-                 ++iElemComp)
-              {
-                const unsigned int elementId =
-                  dftPtr->d_elementIdsInAtomCompactSupport[atomId][iElemComp];
-                for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                     ++iNode)
-                  {
-                    dealii::types::global_dof_index localNodeId =
-                      d_flattenedArrayCellLocalProcIndexIdMap
-                        [elementId * d_numberNodesPerElement + iNode];
-                    d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal
-                      [countElemNode] = localNodeId;
-                    d_cellNodeIdMapNonLocalToLocal[countElemNode] =
-                      elementId * d_numberNodesPerElement + iNode;
-                    countElemNode++;
-                  }
-              }
-
-            for (unsigned int iElemComp = 0;
-                 iElemComp <
-                 dftPtr->d_elementIteratorsInAtomCompactSupport[atomId].size();
-                 ++iElemComp)
-              {
-                const unsigned int elementId =
-                  dftPtr->d_elementIdsInAtomCompactSupport[atomId][iElemComp];
-                d_nonlocalElemIdToLocalElemIdMap[countElem] = elementId;
-
-                for (unsigned int ikpoint = 0;
-                     ikpoint < dftPtr->d_kPointWeights.size();
-                     ikpoint++)
-                  for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                       ++iNode)
-                    {
-                      for (unsigned int iPseudoWave = 0;
-                           iPseudoWave < numberPseudoWaveFunctions;
-                           ++iPseudoWave)
-                        {
-                          d_cellHamiltonianMatrixNonLocalFlattenedConjugate
-                            [ikpoint * d_totalNonlocalElems *
-                               d_numberNodesPerElement *
-                               d_maxSingleAtomPseudoWfc +
-                             countElem * d_maxSingleAtomPseudoWfc *
-                               d_numberNodesPerElement +
-                             d_numberNodesPerElement * iPseudoWave + iNode] =
-                              dftPtr
-                                ->d_nonLocalProjectorElementMatricesConjugate
-                                  [atomId][iElemComp]
-                                  [ikpoint * d_numberNodesPerElement *
-                                     numberPseudoWaveFunctions +
-                                   d_numberNodesPerElement * iPseudoWave +
-                                   iNode];
-
-                          d_cellHamiltonianMatrixNonLocalFlattenedTranspose
-                            [ikpoint * d_totalNonlocalElems *
-                               d_numberNodesPerElement *
-                               d_maxSingleAtomPseudoWfc +
-                             countElem * d_numberNodesPerElement *
-                               d_maxSingleAtomPseudoWfc +
-                             d_maxSingleAtomPseudoWfc * iNode + iPseudoWave] =
-                              dftPtr
-                                ->d_nonLocalProjectorElementMatricesTranspose
-                                  [atomId][iElemComp]
-                                  [ikpoint * d_numberNodesPerElement *
-                                     numberPseudoWaveFunctions +
-                                   numberPseudoWaveFunctions * iNode +
-                                   iPseudoWave];
-                        }
-                    }
-
-
-                for (unsigned int iPseudoWave = 0;
-                     iPseudoWave < numberPseudoWaveFunctions;
-                     ++iPseudoWave)
-                  {
-                    const unsigned int columnStartId =
-                      (numPseduoWfcsAccum[iAtom] + iPseudoWave) *
-                      d_totalNonlocalElems * d_maxSingleAtomPseudoWfc;
-                    const unsigned int columnRowId =
-                      countElem * d_maxSingleAtomPseudoWfc + iPseudoWave;
-                    d_projectorKetTimesVectorAllCellsReduction[columnStartId +
-                                                               columnRowId] =
-                      dataTypes::number(1.0);
-                  }
-
-                countElem++;
-              }
-          }
-
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.resize(
-          d_cellHamiltonianMatrixNonLocalFlattenedConjugate.size());
-        d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.copyFrom(
-          d_cellHamiltonianMatrixNonLocalFlattenedConjugate);
-
-        d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice.resize(
-          d_cellHamiltonianMatrixNonLocalFlattenedTranspose.size());
-        d_cellHamiltonianMatrixNonLocalFlattenedTransposeDevice.copyFrom(
-          d_cellHamiltonianMatrixNonLocalFlattenedTranspose);
-
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice.resize(
-          d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal.size());
-        d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice.copyFrom(
-          d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal);
-
-        d_projectorIdsParallelNumberingMapDevice.resize(
-          d_projectorIdsParallelNumberingMap.size());
-        d_projectorIdsParallelNumberingMapDevice.copyFrom(
-          d_projectorIdsParallelNumberingMap);
-
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.resize(
-          d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size());
-        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.copyFrom(
-          d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec);
-
-        d_projectorKetTimesVectorAllCellsReductionDevice.resize(
-          d_projectorKetTimesVectorAllCellsReduction.size());
-        d_projectorKetTimesVectorAllCellsReductionDevice.copyFrom(
-          d_projectorKetTimesVectorAllCellsReduction);
-
-
-
-        d_cellNodeIdMapNonLocalToLocalDevice.resize(
-          d_cellNodeIdMapNonLocalToLocal.size());
-        d_cellNodeIdMapNonLocalToLocalDevice.copyFrom(
-          d_cellNodeIdMapNonLocalToLocal);
-
-        if (d_isMallocCalled)
-          {
-            free(h_d_A);
-            free(h_d_B);
-            free(h_d_C);
-            dftfe::utils::deviceFree(d_A);
-            dftfe::utils::deviceFree(d_B);
-            dftfe::utils::deviceFree(d_C);
-          }
-        h_d_A = (dataTypes::number **)malloc(d_totalNonlocalElems *
-                                             sizeof(dataTypes::number *));
-        h_d_B = (dataTypes::number **)malloc(d_totalNonlocalElems *
-                                             sizeof(dataTypes::number *));
-        h_d_C = (dataTypes::number **)malloc(d_totalNonlocalElems *
-                                             sizeof(dataTypes::number *));
-
-
-        for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
-          {
-            h_d_A[i] =
-              d_cellWaveFunctionMatrix.begin() +
-              d_ONCVnonLocalOperator->d_nonlocalElemIdToLocalElemIdMap[i] *
-                numberWaveFunctions * d_numberNodesPerElement;
-            h_d_C[i] = d_projectorKetTimesVectorAllCellsDevice.begin() +
-                       i * numberWaveFunctions * d_maxSingleAtomPseudoWfc;
-          }
-
-        dftfe::utils::deviceMalloc((void **)&d_A,
-                                   d_totalNonlocalElems *
-                                     sizeof(dataTypes::number *));
-
-        dftfe::utils::deviceMalloc((void **)&d_B,
-                                   d_totalNonlocalElems *
-                                     sizeof(dataTypes::number *));
-
-        dftfe::utils::deviceMalloc((void **)&d_C,
-                                   d_totalNonlocalElems *
-                                     sizeof(dataTypes::number *));
-
-        dftfe::utils::deviceMemcpyH2D(
-          d_A, h_d_A, d_totalNonlocalElems * sizeof(dataTypes::number *));
-        dftfe::utils::deviceMemcpyH2D(
-          d_C, h_d_C, d_totalNonlocalElems * sizeof(dataTypes::number *));
-
-        d_isMallocCalled = true;
       }
 
     dftfe::utils::deviceMemGetInfo(&free_t, &total_t);
@@ -972,13 +543,15 @@ namespace dftfe
   //
   // compute mass Vector
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::computeMassVector(
-    const dealii::DoFHandler<3> &            dofHandler,
-    const dealii::AffineConstraints<double> &constraintMatrix,
-    distributedCPUVec<double> &              sqrtMassVec,
-    distributedCPUVec<double> &              invSqrtMassVec)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeMassVector(const dealii::DoFHandler<3> &            dofHandler,
+                      const dealii::AffineConstraints<double> &constraintMatrix,
+                      distributedCPUVec<double> &              sqrtMassVec,
+                      distributedCPUVec<double> &              invSqrtMassVec)
   {
     computing_timer.enter_subsection(
       "kohnShamDFTOperatorDeviceClass Mass assembly");
@@ -1068,9 +641,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     reinitkPointSpinIndex(const unsigned int kPointIndex,
                           const unsigned int spinIndex)
   {
@@ -1081,43 +656,27 @@ namespace dftfe
 
     if (dftPtr->d_dftParamsPtr->isPseudopotential)
       {
-        // std::cout << "DEBUGKS Total nolocal Elements: " <<
-        // d_totalNonlocalElems
-        //           << std::endl;
-        for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
-          {
-            h_d_B[i] =
-              d_cellHamiltonianMatrixNonLocalFlattenedConjugateDevice.begin() +
-              d_kPointIndex * d_totalNonlocalElems * d_numberNodesPerElement *
-                d_maxSingleAtomPseudoWfc +
-              i * d_numberNodesPerElement * d_maxSingleAtomPseudoWfc;
-            // std::cout
-            //   << "DEBUG: i and value: " << i << " "
-            //   << d_cellHamiltonianMatrixNonLocalFlattenedConjugate
-            //        [d_kPointIndex * d_totalNonlocalElems *
-            //           d_numberNodesPerElement * d_maxSingleAtomPseudoWfc +
-            //         i * d_numberNodesPerElement * d_maxSingleAtomPseudoWfc]
-            //   << std::endl;
-          }
-
-        dftfe::utils::deviceMemcpyH2D(
-          d_B, h_d_B, d_totalNonlocalElems * sizeof(dataTypes::number *));
-        d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+          d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
       }
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::computeVEff(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiValues,
-    const std::map<dealii::CellId, std::vector<double>> &externalPotCorrValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const unsigned int externalPotCorrQuadratureId)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEff(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &phiValues,
+      const std::map<dealii::CellId, std::vector<double>>
+        &externalPotCorrValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const unsigned int externalPotCorrQuadratureId)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -1203,21 +762,25 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::computeVEff(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiValues,
-    const std::map<dealii::CellId, std::vector<double>> &externalPotCorrValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-    const unsigned int externalPotCorrQuadratureId)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEff(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &phiValues,
+      const std::map<dealii::CellId, std::vector<double>>
+        &externalPotCorrValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
+      const unsigned int externalPotCorrQuadratureId)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -1370,9 +933,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffSpinPolarized(
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
@@ -1481,9 +1046,11 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffSpinPolarized(
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
@@ -1696,9 +1263,11 @@ namespace dftfe
                                  externalPotCorrQuadratureId);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffExternalPotCorr(
       const std::map<dealii::CellId, std::vector<double>>
         &                externalPotCorrValues,
@@ -1741,18 +1310,21 @@ namespace dftfe
     d_vEffExternalPotCorrJxWDevice.copyFrom(d_vEffExternalPotCorrJxW);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::computeVEffPrime(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoPrimeValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiPrimeValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffPrime(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -1860,9 +1432,11 @@ namespace dftfe
 
 
   // Fourth order stencil finite difference stencil used
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffPrimeSpinPolarized(
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
@@ -2343,25 +1917,28 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::computeVEffPrime(
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &rhoPrimeValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoValues,
-    const std::vector<
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &gradRhoPrimeValues,
-    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      &                                                  phiPrimeValues,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues)
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVEffPrime(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoPrimeValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoPrimeValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                                                  phiPrimeValues,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues)
   {
     d_basisOperationsPtrHost->reinit(0, 0, dftPtr->d_densityQuadratureId);
     const unsigned int totalLocallyOwnedCells =
@@ -2626,9 +2203,11 @@ namespace dftfe
 
 
   // Fourth order stencil finite difference stencil used
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeVEffPrimeSpinPolarized(
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
@@ -3656,9 +3235,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::HX(
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::HX(
     distributedDeviceVec<dataTypes::number> &    src,
     distributedDeviceVec<dataTypes::numberFP32> &tempFloatArray,
     distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
@@ -3728,7 +3309,7 @@ namespace dftfe
 
     // H^{nloc}*M^{-1/2}*X
     if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        (dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0) &&
+        (d_totalNonlocalElemsPseudo > 0) &&
         !onlyHPrimePartForFirstOrderDensityMatResponse)
       {
         computeNonLocalHamiltonianTimesX(src.begin(),
@@ -3811,9 +3392,11 @@ namespace dftfe
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::HX(
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::HX(
     distributedDeviceVec<dataTypes::number> &src,
     distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
     const unsigned int                       localVectorSize,
@@ -3866,7 +3449,7 @@ namespace dftfe
 
     // H^{nloc}*M^{-1/2}*X
     if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        (dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0) &&
+        (d_totalNonlocalElemsPseudo > 0) &&
         !onlyHPrimePartForFirstOrderDensityMatResponse)
       {
         computeNonLocalHamiltonianTimesX(src.begin(),
@@ -3919,9 +3502,11 @@ namespace dftfe
   // computePart1 are skipped and only computations performed are: second
   // compute part of nonlocalHX, assembly (only local processor), and
   // distribute_slave_to_master.
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::HXCheby(
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::HXCheby(
     distributedDeviceVec<dataTypes::number> &    src,
     distributedDeviceVec<dataTypes::numberFP32> &tempFloatArray,
     distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
@@ -3978,7 +3563,7 @@ namespace dftfe
 
     // H^{nloc}*M^{-1/2}*X
     if (dftPtr->d_dftParamsPtr->isPseudopotential &&
-        dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0)
+        d_totalNonlocalElemsPseudo > 0)
       {
         computeNonLocalHamiltonianTimesX(src.begin(),
                                          projectorKetTimesVector,
@@ -4045,9 +3630,11 @@ namespace dftfe
 
 
   // X^{T}*HConj*XConj
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::XtHX(
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::XtHX(
     const dataTypes::number *                        X,
     distributedDeviceVec<dataTypes::number> &        XBlock,
     distributedDeviceVec<dataTypes::number> &        HXBlock,
@@ -4205,9 +3792,11 @@ namespace dftfe
 
   // X^{T}*HConj*XConj  with overlap of computation and
   // communication
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     XtHXOverlapComputeCommun(
       const dataTypes::number *                        X,
       distributedDeviceVec<dataTypes::number> &        XBlock,
@@ -4594,9 +4183,11 @@ namespace dftfe
   // 7) [COM] Perform blocking MPI_Allreduce on curent block and copy to
   // scalapack matrix
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     XtHXMixedPrecOverlapComputeCommun(
       const dataTypes::number *                        X,
       distributedDeviceVec<dataTypes::number> &        XBlock,
@@ -5124,9 +4715,11 @@ namespace dftfe
 
   // X^{T}*HConj*XConj  with overlap of computation and
   // communication
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+  kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     XtHXMixedPrecCommunOverlapComputeCommun(
       const dataTypes::number *                        X,
       distributedDeviceVec<dataTypes::number> &        XBlock,

@@ -394,10 +394,12 @@ namespace dftfe
   // Configurational force on atoms corresponding to Gaussian generator.
   // Generator is discretized using linear FE shape functions. Configurational
   // force on nodes due to linear FE shape functions precomputed
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeAtomsForcesGaussianGenerator(
-    bool allowGaussianOverlapOnAtoms)
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeAtomsForcesGaussianGenerator(bool allowGaussianOverlapOnAtoms)
   {
     unsigned int vertices_per_cell = dealii::GeometryInfo<3>::vertices_per_cell;
     const std::vector<std::vector<double>> &atomLocations =
@@ -684,9 +686,11 @@ namespace dftfe
 #endif
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::printAtomsForces()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::printAtomsForces()
   {
     const int numberGlobalAtoms = dftPtr->atomLocations.size();
     if (!d_dftParams.reproducible_output)

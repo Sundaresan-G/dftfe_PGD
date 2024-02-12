@@ -122,7 +122,6 @@ SET(TARGET_SRC
   ./src/dft/initBoundaryConditions.cc
   ./src/dft/initCoreRho.cc
   ./src/dft/initElectronicFields.cc
-  ./src/dft/initPseudo-OV.cc
   ./src/dft/initPseudoLocal.cc
   ./src/dft/initRho.cc
   ./src/dft/initUnmovedTriangulation.cc
@@ -156,6 +155,10 @@ SET(TARGET_SRC
   ./src/force/configurationalStressCompute/computeStressEself.cc
   ./src/force/configurationalStressCompute/stress.cc
   ./src/force/createBinObjectsForce.cc
+  ./src/force/locateAtomCoreNodesForce.cc  
+  ./utils/FEBasisOperationsKernelsInternalHost.cc
+  ./utils/FEBasisOperations.cc
+  ./utils/FEBasisOperationsKernels.cc
   ./src/force/locateAtomCoreNodesForce.cc
   ./src/atom/AtomPseudoWavefunctions.cc
   ./src/atom/AtomCenteredSphericalFunctionContainer.cc
@@ -163,7 +166,11 @@ SET(TARGET_SRC
   ./src/atom/AtomCenteredSphericalFunctionSinc.cc
   ./src/atom/AtomCenteredSphericalFunctionBessel.cc
   ./src/atom/AtomCenteredSphericalFunctionGaussian.cc
-  ./src/atom/AtomCenteredSphericalFunctionSpline.cc)
+  ./src/atom/AtomCenteredSphericalFunctionSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionValenceDensitySpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 
@@ -191,7 +198,7 @@ SET(DEVICE_SRC
   ./src/solvers/linearSolverProblemDevice.cc
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
-  ./utils/FEBasisOperationsKernelsDevice.cc
+  ./utils/FEBasisOperationsKernelsInternalDevice.cc
   ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 
@@ -221,7 +228,7 @@ SET(DEVICE_SRC
   ./src/solvers/linearSolverProblemDevice.cc
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
-  ./utils/FEBasisOperationsKernelsDevice.cc
+  ./utils/FEBasisOperationsKernelsInternalDevice.cc
   ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 

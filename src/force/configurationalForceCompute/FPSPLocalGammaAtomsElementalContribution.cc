@@ -24,28 +24,32 @@ namespace dftfe
 {
   //(locally used function) compute FPSPLocal contibution due to Gamma(Rj) for
   // given set of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::FPSPLocalGammaAtomsElementalContribution(
-    std::map<unsigned int, std::vector<double>>
-      &                                  forceContributionFPSPLocalGammaAtoms,
-    dealii::FEValues<3> &                feValues,
-    dealii::FEFaceValues<3> &            feFaceValues,
-    dealii::FEEvaluation<3,
-                         1,
-                         C_num1DQuadLPSP<FEOrder>() * C_numCopies1DQuadLPSP(),
-                         3> &            forceEval,
-    const dealii::MatrixFree<3, double> &matrixFreeData,
-    const unsigned int                   phiTotDofHandlerIndexElectro,
-    const unsigned int                   cell,
-    const dealii::AlignedVector<dealii::VectorizedArray<double>> &rhoQuads,
-    const dealii::AlignedVector<
-      dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &gradRhoQuads,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &                                              pseudoVLocAtoms,
-    const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManager,
-    const std::vector<std::map<dealii::CellId, unsigned int>>
-      &cellsVselfBallsClosestAtomIdDofHandler)
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    FPSPLocalGammaAtomsElementalContribution(
+      std::map<unsigned int, std::vector<double>>
+        &                                  forceContributionFPSPLocalGammaAtoms,
+      dealii::FEValues<3> &                feValues,
+      dealii::FEFaceValues<3> &            feFaceValues,
+      dealii::FEEvaluation<3,
+                           1,
+                           C_num1DQuadLPSP<FEOrder>() * C_numCopies1DQuadLPSP(),
+                           3> &            forceEval,
+      const dealii::MatrixFree<3, double> &matrixFreeData,
+      const unsigned int                   phiTotDofHandlerIndexElectro,
+      const unsigned int                   cell,
+      const dealii::AlignedVector<dealii::VectorizedArray<double>> &rhoQuads,
+      const dealii::AlignedVector<
+        dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &gradRhoQuads,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &                                              pseudoVLocAtoms,
+      const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManager,
+      const std::vector<std::map<dealii::CellId, unsigned int>>
+        &cellsVselfBallsClosestAtomIdDofHandler)
   {
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor1;
     for (unsigned int idim = 0; idim < 3; idim++)
@@ -399,9 +403,11 @@ namespace dftfe
   //(locally used function) accumulate and distribute FPSPLocal contibution due
   // to
   // Gamma(Rj)
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     distributeForceContributionFPSPLocalGammaAtoms(
       const std::map<unsigned int, std::vector<double>>
         &forceContributionFPSPLocalGammaAtoms,

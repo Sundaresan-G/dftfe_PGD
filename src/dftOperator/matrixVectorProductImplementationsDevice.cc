@@ -24,9 +24,11 @@
  */
 
 
-template <unsigned int FEOrder, unsigned int FEOrderElectro>
+template <unsigned int              FEOrder,
+          unsigned int              FEOrderElectro,
+          dftfe::utils::MemorySpace memorySpace>
 void
-kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
+kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
   computeLocalHamiltonianTimesX(
     const dataTypes::number *src,
     const unsigned int       numberWaveFunctions,
@@ -80,7 +82,7 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>::
 
 
   if (!(dftPtr->d_dftParamsPtr->isPseudopotential &&
-        dftPtr->d_nonLocalAtomGlobalChargeIds.size() > 0) ||
+        d_totalNonlocalElemsPseudo > 0) ||
       onlyHPrimePartForFirstOrderDensityMatResponse)
     {
       if (std::is_same<dataTypes::number, std::complex<double>>::value)

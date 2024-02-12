@@ -52,11 +52,6 @@ namespace dftfe
 
       prm.enter_subsection("GPU");
       {
-        prm.declare_entry("USE GPU",
-                          "false",
-                          dealii::Patterns::Bool(),
-                          "[Standard] Use GPU for compute.");
-
         prm.declare_entry(
           "USE TF32 OP",
           "false",
@@ -1207,17 +1202,15 @@ namespace dftfe
     toleranceKinetic       = 1e-03;
     cellConstraintType     = 12; // all cell components to be relaxed
 
-    verbosity             = 0;
-    keepScratchFolder     = false;
-    restartFolder         = ".";
-    saveRhoData           = false;
-    loadRhoData           = false;
-    restartSpinFromNoSpin = false;
-    reproducible_output   = false;
-    meshAdaption          = false;
-    pinnedNodeForPBC      = true;
-    HXOptimFlag           = false;
-
+    verbosity                                      = 0;
+    keepScratchFolder                              = false;
+    restartFolder                                  = ".";
+    saveRhoData                                    = false;
+    loadRhoData                                    = false;
+    restartSpinFromNoSpin                          = false;
+    reproducible_output                            = false;
+    meshAdaption                                   = false;
+    pinnedNodeForPBC                               = true;
     startingWFCType                                = "";
     restrictToOnePass                              = false;
     writeWfcSolutionFields                         = false;
@@ -1329,7 +1322,8 @@ namespace dftfe
                                   const bool         printParams,
                                   const std::string  mode,
                                   const std::string  restartFilesPath,
-                                  const int          _verbosity)
+                                  const int          _verbosity,
+                                  const bool         _useDevice)
   {
     dealii::ParameterHandler prm;
     internalDftParameters::declare_parameters(prm);
@@ -1337,6 +1331,7 @@ namespace dftfe
     prm.parse_input(parameter_file, "", true);
     solverMode          = mode;
     verbosity           = _verbosity;
+    useDevice           = _useDevice;
     reproducible_output = prm.get_bool("REPRODUCIBLE OUTPUT");
     keepScratchFolder   = prm.get_bool("KEEP SCRATCH FOLDER");
     restartFolder       = restartFilesPath;
@@ -1345,7 +1340,6 @@ namespace dftfe
 
     prm.enter_subsection("GPU");
     {
-      useDevice                  = prm.get_bool("USE GPU");
       useTF32Device              = prm.get_bool("USE TF32 OP");
       deviceFineGrainedTimings   = prm.get_bool("FINE GRAINED GPU TIMINGS");
       allowFullCPUMemSubspaceRot = prm.get_bool("SUBSPACE ROT FULL CPU MEM");
@@ -1564,10 +1558,9 @@ namespace dftfe
         numCoreWfcXtHX = prm.get_integer("XTHX CORE EIGENSTATES");
         spectrumSplitStartingScfIter =
           prm.get_integer("SPECTRUM SPLIT STARTING SCF ITER");
-        chebyshevOrder = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
-        useELPA        = prm.get_bool("USE ELPA");
-        HXOptimFlag    = prm.get_bool("ENABLE HAMILTONIAN TIMES VECTOR OPTIM");
-        orthogType     = prm.get("ORTHOGONALIZATION TYPE");
+        chebyshevOrder     = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
+        useELPA            = prm.get_bool("USE ELPA");
+        orthogType         = prm.get("ORTHOGONALIZATION TYPE");
         chebyshevTolerance = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
         wfcBlockSize       = prm.get_integer("WFC BLOCK SIZE");
         chebyWfcBlockSize  = prm.get_integer("CHEBY WFC BLOCK SIZE");
@@ -1908,10 +1901,6 @@ namespace dftfe
         useMixedPrecCheby                   = true;
         reuseLanczosUpperBoundFromFirstCall = true;
       }
-#ifdef USE_COMPLEX
-    HXOptimFlag = false;
-#endif
-
 
 #ifdef DFTFE_WITH_DEVICE
     if (!isPseudopotential && useDevice)

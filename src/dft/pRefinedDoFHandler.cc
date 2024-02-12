@@ -26,8 +26,10 @@ namespace dftfe
   //
   // compute total charge using quad point values
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void dftClass<FEOrder, FEOrderElectro>::createpRefinedDofHandler(
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void dftClass<FEOrder, FEOrderElectro, memorySpace>::createpRefinedDofHandler(
     dealii::parallel::distributed::Triangulation<3> &triaObject)
   {
     //
@@ -177,9 +179,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initpRefinedObjects(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initpRefinedObjects(
     const bool recomputeBasisData,
     const bool meshOnlyDeformed,
     const bool vselfPerturbationUpdateForStress)
@@ -380,14 +384,9 @@ namespace dftfe
                                     additional_data);
     if (recomputeBasisData)
       {
-        d_basisOperationsPtrElectroHost = std::make_shared<
-          dftfe::basis::
-            FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>(
-          d_matrixFreeDataPRefined,
-          d_constraintsVectorElectro,
-          d_BLASWrapperPtrHost);
         if (!vselfPerturbationUpdateForStress)
           {
+            d_basisOperationsPtrElectroHost->clear();
             dftfe::basis::UpdateFlags updateFlagsAll =
               dftfe::basis::update_values | dftfe::basis::update_jxw |
               dftfe::basis::update_inversejacobians |
@@ -404,15 +403,20 @@ namespace dftfe
               updateFlagsAll,
               dftfe::basis::update_quadpoints,
               updateFlagsAll};
-            d_basisOperationsPtrElectroHost->init(d_baseDofHandlerIndexElectro,
+            d_basisOperationsPtrElectroHost->init(d_matrixFreeDataPRefined,
+                                                  d_constraintsVectorElectro,
+                                                  d_baseDofHandlerIndexElectro,
                                                   quadratureIndices,
                                                   updateFlags);
           }
         else
           {
+            d_basisOperationsPtrElectroHost->clear();
             std::vector<unsigned int>              quadratureIndices;
             std::vector<dftfe::basis::UpdateFlags> updateFlags;
-            d_basisOperationsPtrElectroHost->init(d_baseDofHandlerIndexElectro,
+            d_basisOperationsPtrElectroHost->init(d_matrixFreeDataPRefined,
+                                                  d_constraintsVectorElectro,
+                                                  d_baseDofHandlerIndexElectro,
                                                   quadratureIndices,
                                                   updateFlags);
           }
@@ -425,18 +429,16 @@ namespace dftfe
       {
         if (!vselfPerturbationUpdateForStress)
           {
-            d_basisOperationsPtrElectroDevice =
-              std::make_shared<dftfe::basis::FEBasisOperations<
-                double,
-                double,
-                dftfe::utils::MemorySpace::DEVICE>>(d_matrixFreeDataPRefined,
-                                                    d_constraintsVectorElectro,
-                                                    d_BLASWrapperPtr);
+            d_basisOperationsPtrElectroDevice->clear();
             d_basisOperationsPtrElectroDevice->init(
               *d_basisOperationsPtrElectroHost);
+            if (FEOrder != FEOrderElectro)
+              d_basisOperationsPtrElectroDevice->computeCellStiffnessMatrix(
+                d_phiTotAXQuadratureIdElectro, 50, true, false);
           }
         else
           {
+            d_basisOperationsPtrElectroDevice->clear();
             dftfe::basis::UpdateFlags updateFlagsGradientsAndInvJacobians =
               dftfe::basis::update_inversejacobians | dftfe::basis::update_jxw |
               dftfe::basis::update_gradients;
@@ -446,7 +448,14 @@ namespace dftfe
             std::vector<dftfe::basis::UpdateFlags> updateFlags{
               updateFlagsGradientsAndInvJacobians};
             d_basisOperationsPtrElectroDevice->init(
-              d_baseDofHandlerIndexElectro, quadratureIndices, updateFlags);
+              d_matrixFreeDataPRefined,
+              d_constraintsVectorElectro,
+              d_baseDofHandlerIndexElectro,
+              quadratureIndices,
+              updateFlags);
+            if (FEOrder != FEOrderElectro)
+              d_basisOperationsPtrElectroDevice->computeCellStiffnessMatrix(
+                d_phiTotAXQuadratureIdElectro, 50, true, false);
           }
       }
 #endif

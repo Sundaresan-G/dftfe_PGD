@@ -324,10 +324,12 @@ namespace dftfe
     }
   } // namespace internalLowrankJacInv
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::lowrankApproxScfDielectricMatrixInv(
-    const unsigned int scfIter)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    lowrankApproxScfDielectricMatrixInv(const unsigned int scfIter)
   {
     int this_process;
     MPI_Comm_rank(d_mpiCommParent, &this_process);
