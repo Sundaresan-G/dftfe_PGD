@@ -407,7 +407,7 @@ namespace dftfe
     return dealii::Utilities::MPI::sum(value, mpi_communicator);
   }
 
-    template <unsigned int              FEOrder,
+  template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void

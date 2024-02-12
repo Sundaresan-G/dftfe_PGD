@@ -116,7 +116,7 @@ namespace dftfe
     unsigned int                            sparsityPatternQuadratureId,
     unsigned int                            nlpspQuadratureId,
     unsigned int                            densityQuadratureIdElectro,
-    std::shared_ptr<excManager>                            excFunctionalPtr,
+    std::shared_ptr<excManager>             excFunctionalPtr,
     const std::vector<std::vector<double>> &atomLocations,
     unsigned int                            numEigenValues)
   {
