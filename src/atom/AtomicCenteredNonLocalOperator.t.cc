@@ -1997,6 +1997,13 @@ namespace dftfe
                                         d_numberWaveFunctions,
                                       0.0);
 
+        d_BLASWrapperPtr->stridedCopyToBlock(
+          d_numberWaveFunctions,
+          d_totalNonlocalElems * d_numberNodesPerElement,
+          src.data(),
+          cellWaveFunctionMatrix.begin(),
+          d_flattenedNonLocalCellDofIndexToProcessDofIndexMap.begin());
+
 
         if (d_totalNonlocalElems)
           {
