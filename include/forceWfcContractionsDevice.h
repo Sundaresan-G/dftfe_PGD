@@ -37,10 +37,10 @@ namespace dftfe
         dftfe::basis::FEBasisOperations<dataTypes::number,
                                         double,
                                         dftfe::utils::MemorySpace::DEVICE>>
-        &                     basisOperationsPtr,
-          const std::shared_ptr<
+        &basisOperationsPtr,
+      const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                                     BLASWrapperPtr,    
+        &                     BLASWrapperPtr,
       operatorDFTDeviceClass &operatorMatrix,
       std::shared_ptr<
         dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>>

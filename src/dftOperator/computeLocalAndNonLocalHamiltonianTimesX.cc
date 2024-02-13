@@ -66,35 +66,36 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
             0 &&
           !onlyHPrimePartForFirstOrderDensityMatResponse)
         {
-          std::vector<unsigned int> cellsOfInterest = d_ONCVnonLocalOperator->getNonlocalElementToCellIdVector();
+          std::vector<unsigned int> cellsOfInterest =
+            d_ONCVnonLocalOperator->getNonlocalElementToCellIdVector();
           for (unsigned int iElem = 0; iElem < cellsOfInterest.size(); ++iElem)
             {
-                  unsigned int iCell = cellsOfInterest[iElem];
-                  for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
-                       ++iNode)
-                    {
-                      dealii::types::global_dof_index localNodeId =
-                        d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
-                      const double scalarCoeffAlpha =
-                        d_invSqrtElementalMassVector[iCell *
-                                                       d_numberNodesPerElement +
-                                                     iNode];
-                      std::transform(src.begin() + localNodeId,
-                                     src.begin() + localNodeId +
-                                       numberWaveFunctions,
-                                     d_cellWaveFunctionMatrix.begin() +
-                                       numberWaveFunctions * iNode,
-                                     [&scalarCoeffAlpha](auto &a) {
-                                       return scalarCoeffAlpha * a;
-                                     });
-                    } // scaling
+              unsigned int iCell = cellsOfInterest[iElem];
+              for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
+                   ++iNode)
+                {
+                  dealii::types::global_dof_index localNodeId =
+                    d_flattenedArrayCellLocalProcIndexIdMap[iCell][iNode];
+                  const double scalarCoeffAlpha =
+                    d_invSqrtElementalMassVector[iCell *
+                                                   d_numberNodesPerElement +
+                                                 iNode];
+                  std::transform(src.begin() + localNodeId,
+                                 src.begin() + localNodeId +
+                                   numberWaveFunctions,
+                                 d_cellWaveFunctionMatrix.begin() +
+                                   numberWaveFunctions * iNode,
+                                 [&scalarCoeffAlpha](auto &a) {
+                                   return scalarCoeffAlpha * a;
+                                 });
+                } // scaling
 
-                  d_ONCVnonLocalOperator->applyCconjtransOnX(
-                    d_cellWaveFunctionMatrix,
-                    std::pair<unsigned int, unsigned int>(iElem, iElem + 1));
+              d_ONCVnonLocalOperator->applyCconjtransOnX(
+                d_cellWaveFunctionMatrix,
+                std::pair<unsigned int, unsigned int>(iElem, iElem + 1));
 
 
-            }     // Cell Loop
+            } // Cell Loop
           d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
             d_SphericalFunctionKetTimesVectorParFlattened);
           d_ONCVnonLocalOperator->applyVOnCconjtransX(
