@@ -553,6 +553,7 @@ namespace dftfe
       {
         subspaceIterationSolverDevice.solveNoRR(
           kohnShamDFTEigenOperator,
+          d_BLASWrapperPtr,
           elpaScala,
           d_eigenVectorsFlattenedDevice.begin() +
             ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
@@ -574,6 +575,7 @@ namespace dftfe
                                            spinType] =
           subspaceIterationSolverDevice.solve(
             kohnShamDFTEigenOperator,
+            d_BLASWrapperPtr,
             elpaScala,
             d_eigenVectorsFlattenedDevice.begin() +
               ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
@@ -769,6 +771,7 @@ namespace dftfe
 
     subspaceIterationSolverDevice.densityMatrixEigenBasisFirstOrderResponse(
       kohnShamDFTEigenOperator,
+      d_BLASWrapperPtr,
       d_eigenVectorsDensityMatrixPrimeFlattenedDevice.begin() +
         ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
           d_numEigenValues *

@@ -257,6 +257,7 @@ namespace dftfe
 
                 forceDevice::wfcContractionsForceKernelsAllH(
                   dftPtr->d_basisOperationsPtrDevice,
+                  dftPtr->d_BLASWrapperPtr,
                   kohnShamDFTEigenOperatorDevice,
                   dftPtr->d_oncvClassPtr,
                   dftPtr->d_eigenVectorsFlattenedDevice.begin(),

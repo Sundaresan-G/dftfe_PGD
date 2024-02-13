@@ -66,10 +66,10 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
             0 &&
           !onlyHPrimePartForFirstOrderDensityMatResponse)
         {
-          for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
+          std::vector<unsigned int> cellsOfInterest = d_ONCVnonLocalOperator->getNonlocalElementToCellIdVector();
+          for (unsigned int iElem = 0; iElem < cellsOfInterest.size(); ++iElem)
             {
-              if (d_ONCVnonLocalOperator->atomSupportInElement(iCell))
-                {
+                  unsigned int iCell = cellsOfInterest[iElem];
                   for (unsigned int iNode = 0; iNode < d_numberNodesPerElement;
                        ++iNode)
                     {
@@ -91,9 +91,9 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
 
                   d_ONCVnonLocalOperator->applyCconjtransOnX(
                     d_cellWaveFunctionMatrix,
-                    std::pair<unsigned int, unsigned int>(iCell, iCell + 1));
+                    std::pair<unsigned int, unsigned int>(iElem, iElem + 1));
 
-                } // if nonlocalAtomPResent
+
             }     // Cell Loop
           d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
             d_SphericalFunctionKetTimesVectorParFlattened);

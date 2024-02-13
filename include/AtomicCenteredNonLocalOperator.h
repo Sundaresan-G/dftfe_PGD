@@ -129,8 +129,16 @@ namespace dftfe
     freeDeviceVectors();
 #endif
     // Getter functions
+    //Returns the vector that takes in nonlocalElementIndex and returns the cellID 
+    const std::vector<unsigned int> & 
+    getNonlocalElementToCellIdVector() const;
+    //Returns the number of atoms in current processor
     unsigned int
     getTotalAtomInCurrentProcessor() const;
+
+    const  dftfe::utils::MemoryStorage<dftfe::global_size_type,
+                                memorySpace> &
+    getFlattenedNonLocalCellDofIndexToProcessDofIndexMap() const;
 
     unsigned int
     getTotalNonLocalElementsInCurrentProcessor() const;
@@ -453,10 +461,10 @@ namespace dftfe
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorAllCellsReductionDevice;
     std::vector<dftfe::global_size_type>
-      d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocal;
+      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector;
     dftfe::utils::MemoryStorage<dftfe::global_size_type,
-                                dftfe::utils::MemorySpace::DEVICE>
-                              d_flattenedArrayCellLocalProcIndexIdFlattenedMapNonLocalDevice;
+                                memorySpace>
+                              d_flattenedNonLocalCellDofIndexToProcessDofIndexMap;
     std::vector<unsigned int> d_sphericalFnIdsParallelNumberingMap;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
                      d_sphericalFnIdsParallelNumberingMapDevice;
@@ -464,6 +472,7 @@ namespace dftfe
     dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
                               d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice;
     std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
+    std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_cellNodeIdMapNonLocalToLocalDevice;
 #endif
