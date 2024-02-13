@@ -2,6 +2,8 @@
 #  CMakeList file for DFT-FE
 ##
 CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Set the name of the project and target:
 SET(TARGET "dftfe_exe")
 SET(TARGETLIB "dftfe")
@@ -48,7 +50,7 @@ SET(TARGET_SRC
   ./src/dft/vselfBinsManager.cc
   ./src/dft/energyCalculator.cc
   ./src/dft/densityCalculator.cc
-  ./src/dft/densityFirstOrderResponseCalculatorCPU.cc
+  ./src/dft/densityFirstOrderResponseCalculator.cc
   ./src/excManager/excDensityBaseClass.cpp
   ./src/excManager/excDensityLDAClass.cpp
   ./src/excManager/excWavefunctionBaseClass.cpp
@@ -179,7 +181,7 @@ SET(DEVICE_SRC
   ./utils/DeviceKernelsGeneric.cc
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
-  ./src/dft/densityFirstOrderResponseCalculatorDevice.cc
+  ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dftOperator/operatorDevice.cc
   ./src/dftOperator/kohnShamDFTOperatorDevice.cc
   ./src/dft/solveVselfInBinsDevice.cc
@@ -209,7 +211,7 @@ SET(DEVICE_SRC
   ./utils/DeviceKernelsGeneric.cc
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
-  ./src/dft/densityFirstOrderResponseCalculatorDevice.cc
+  ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dftOperator/operatorDevice.cc
   ./src/dftOperator/kohnShamDFTOperatorDevice.cc
   ./src/dft/solveVselfInBinsDevice.cc

@@ -25,6 +25,7 @@
 #    include "FEBasisOperations.h"
 #    include "oncvClass.h"
 #    include <memory>
+#    include <BLASWrapper.h>
 
 namespace dftfe
 {
@@ -37,6 +38,9 @@ namespace dftfe
                                         double,
                                         dftfe::utils::MemorySpace::DEVICE>>
         &                     basisOperationsPtr,
+          const std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                     BLASWrapperPtr,    
       operatorDFTDeviceClass &operatorMatrix,
       std::shared_ptr<
         dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>>

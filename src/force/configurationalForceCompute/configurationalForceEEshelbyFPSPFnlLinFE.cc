@@ -250,6 +250,7 @@ namespace dftfe
             if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
               forceDevice::wfcContractionsForceKernelsAllH(
                 dftPtr->d_basisOperationsPtrDevice,
+                dftPtr->d_BLASWrapperPtr,
                 kohnShamDFTEigenOperatorDevice,
                 dftPtr->d_oncvClassPtr,
                 dftPtr->d_eigenVectorsFlattenedDevice.begin(),
