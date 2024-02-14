@@ -1018,9 +1018,6 @@ namespace dftfe
           d_cellNodeIdMapNonLocalToLocal);
         d_nonlocalElemIdToCellIdVector.clear();
         d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.clear();
-        std::cout << "DEBUG: Size of d_nonlocalElemIdToLocalElemIdMap: "
-                  << d_nonlocalElemIdToLocalElemIdMap.size() << " "
-                  << d_totalNonlocalElems << std::endl;
         for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
             unsigned int iCell = d_nonlocalElemIdToLocalElemIdMap[i];
