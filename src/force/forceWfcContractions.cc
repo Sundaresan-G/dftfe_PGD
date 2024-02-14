@@ -406,7 +406,7 @@ namespace dftfe
                   'N',
                   'N',
                   1,
-                  currentBlockSizeNlp * numQuadsNLP * 3,
+                  currentBlockSizeNlp * 3 * numQuadsNLP,
                   numPsi,
                   &scalarCoeffAlphaNlp,
                   onesVecNLP.data(),
@@ -421,17 +421,17 @@ namespace dftfe
                 dftfe::utils::MemoryTransfer<dftfe::utils::MemorySpace::HOST,
                                              memorySpace>::
                   copy(
-                    currentBlockSizeNlp * numQuadsNLP * 3,
+                    currentBlockSizeNlp * 3 * numQuadsNLP,
                     projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedHPinnedTemp,
                     projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedBlock
                       .data());
 
 
                 for (unsigned int i = 0;
-                     i < currentBlockSizeNlp * numQuadsNLP * 3;
+                     i < currentBlockSizeNlp * 3 * numQuadsNLP;
                      i++)
                   projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedH
-                    [startingIdNlp * numQuadsNLP * 3 + i] +=
+                    [startingIdNlp * 3 * numQuadsNLP + i] +=
                     projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedHPinnedTemp
                       [i];
 #ifdef USE_COMPLEX
@@ -602,7 +602,7 @@ namespace dftfe
                         X + iNode * N + startingVecId,
                         numPsi * sizeof(dataTypes::number));
 #if defined(DFTFE_WITH_DEVICE)
-        else if (memorySpace == memorySpace)
+        else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
           dftfe::utils::deviceKernelsGeneric::stridedCopyToBlockConstantStride(
             numPsi,
             N,
