@@ -839,12 +839,12 @@ namespace dftfe
 
         d_nonlocalElemIdToLocalElemIdMap.clear();
         d_nonlocalElemIdToLocalElemIdMap.resize(d_totalNonlocalElems, 0);
-
+        d_sphericalFnTimesVectorAllCellsReduction.clear();
         d_sphericalFnTimesVectorAllCellsReduction.resize(
           d_totalNonlocalElems * d_maxSingleAtomContribution *
             d_totalNonLocalEntries,
           ValueType(0.0));
-
+        d_cellNodeIdMapNonLocalToLocal.clear();
         d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
                                               d_numberNodesPerElement);
 
@@ -996,24 +996,26 @@ namespace dftfe
           d_cellHamiltonianMatrixNonLocalFlattenedTranspose);
 
 
-
+        d_sphericalFnIdsParallelNumberingMapDevice.clear();
         d_sphericalFnIdsParallelNumberingMapDevice.resize(
           d_sphericalFnIdsParallelNumberingMap.size());
         d_sphericalFnIdsParallelNumberingMapDevice.copyFrom(
           d_sphericalFnIdsParallelNumberingMap);
-
+        d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.clear();
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.resize(
           d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size());
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.copyFrom(
           d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec);
-
+        d_sphericalFnTimesVectorAllCellsReductionDevice.clear();
         d_sphericalFnTimesVectorAllCellsReductionDevice.resize(
           d_sphericalFnTimesVectorAllCellsReduction.size());
         d_sphericalFnTimesVectorAllCellsReductionDevice.copyFrom(
           d_sphericalFnTimesVectorAllCellsReduction);
 
+        d_cellNodeIdMapNonLocalToLocalDevice.clear();
         d_cellNodeIdMapNonLocalToLocalDevice.resize(
           d_cellNodeIdMapNonLocalToLocal.size());
+
         d_cellNodeIdMapNonLocalToLocalDevice.copyFrom(
           d_cellNodeIdMapNonLocalToLocal);
         d_nonlocalElemIdToCellIdVector.clear();
@@ -1092,12 +1094,13 @@ namespace dftfe
           d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
           waveFunctionBlockSize,
           sphericalFunctionKetTimesVectorParFlattened);
+        d_sphericalFnTimesVectorAllCellsDevice.clear();
         d_sphericalFnTimesVectorAllCellsDevice.resize(
           d_totalNonlocalElems * d_numberWaveFunctions *
             d_maxSingleAtomContribution,
           ValueType(0.0));
 
-
+        d_cellHamMatrixTimesWaveMatrixNonLocalDevice.clear();
         d_cellHamMatrixTimesWaveMatrixNonLocalDevice.resize(
           d_numberWaveFunctions * d_totalNonlocalElems *
             d_numberNodesPerElement,

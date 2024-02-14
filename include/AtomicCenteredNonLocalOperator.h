@@ -431,11 +431,7 @@ namespace dftfe
       d_cellHamMatrixTimesWaveMatrixNonLocalDevice;
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorAllCellsDevice;
-    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-                        d_sphericalFnTimesVectorDevice;
-    std::vector<double> d_nonLocalPseudoPotentialConstants;
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-      d_nonLocalPseudoPotentialConstantsDevice;
+
 
     std::vector<ValueType> d_sphericalFnTimesVectorAllCellsReduction;
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
