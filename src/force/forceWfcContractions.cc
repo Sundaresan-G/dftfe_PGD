@@ -268,7 +268,7 @@ namespace dftfe
                           numQuads,
                           psiQuadsFlat.data(),
                           gradPsiQuadsFlat.data(),
-                          eigenValuesD.data(),
+                          eigenValues.data(),
                           partialOccupancies.data(),
 #  ifdef USE_COMPLEX
                           kcoordx,
