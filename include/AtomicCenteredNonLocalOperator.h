@@ -433,6 +433,11 @@ namespace dftfe
       d_sphericalFnTimesWavefunMatrix;
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesWavefunctionMatrix;
+    std::vector<dftfe::global_size_type>
+      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector;
+    dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
+                              d_flattenedNonLocalCellDofIndexToProcessDofIndexMap;   
+    std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;                             
 #if defined(DFTFE_WITH_DEVICE)
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
       **hostWfcPointers;
@@ -460,10 +465,7 @@ namespace dftfe
     std::vector<ValueType> d_sphericalFnTimesVectorAllCellsReduction;
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
       d_sphericalFnTimesVectorAllCellsReductionDevice;
-    std::vector<dftfe::global_size_type>
-      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector;
-    dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
-                              d_flattenedNonLocalCellDofIndexToProcessDofIndexMap;
+
     std::vector<unsigned int> d_sphericalFnIdsParallelNumberingMap;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
                      d_sphericalFnIdsParallelNumberingMapDevice;
@@ -471,7 +473,7 @@ namespace dftfe
     dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
                               d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice;
     std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
-    std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;
+    
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_cellNodeIdMapNonLocalToLocalDevice;
 #endif
