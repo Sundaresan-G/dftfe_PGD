@@ -8,6 +8,7 @@ template class symmetryClass<6, 7, dftfe::utils::MemorySpace::HOST>;
 template class symmetryClass<6, 8, dftfe::utils::MemorySpace::HOST>;
 template class symmetryClass<6, 9, dftfe::utils::MemorySpace::HOST>;
 template class symmetryClass<7, 7, dftfe::utils::MemorySpace::HOST>;
+#ifdef DFTFE_WITH_DEVICE
 template class symmetryClass<2, 2, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<3, 3, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<4, 4, dftfe::utils::MemorySpace::DEVICE>;
@@ -17,6 +18,7 @@ template class symmetryClass<6, 7, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<6, 8, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<6, 9, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<7, 7, dftfe::utils::MemorySpace::DEVICE>;
+#endif
 #else
 template class symmetryClass<1, 1, dftfe::utils::MemorySpace::HOST>;
 template class symmetryClass<1, 2, dftfe::utils::MemorySpace::HOST>;
@@ -62,6 +64,7 @@ template class symmetryClass<8, 13, dftfe::utils::MemorySpace::HOST>;
 template class symmetryClass<8, 14, dftfe::utils::MemorySpace::HOST>;
 template class symmetryClass<8, 15, dftfe::utils::MemorySpace::HOST>;
 template class symmetryClass<8, 16, dftfe::utils::MemorySpace::HOST>;
+#ifdef DFTFE_WITH_DEVICE
 template class symmetryClass<1, 1, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<1, 2, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<2, 2, dftfe::utils::MemorySpace::DEVICE>;
@@ -106,4 +109,5 @@ template class symmetryClass<8, 13, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<8, 14, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<8, 15, dftfe::utils::MemorySpace::DEVICE>;
 template class symmetryClass<8, 16, dftfe::utils::MemorySpace::DEVICE>;
+#endif
 #endif

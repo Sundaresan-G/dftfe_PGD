@@ -158,6 +158,7 @@ namespace dftfe
       create_dftfe<8, 16, dftfe::utils::MemorySpace::HOST>
 #endif
     };
+#ifdef DFTFE_WITH_DEVICE
     typedef void (*create_fnDevice)(const MPI_Comm &      mpi_comm_parent,
                                     const MPI_Comm &      mpi_comm_domain,
                                     const MPI_Comm &      interpoolcomm,
@@ -224,6 +225,7 @@ namespace dftfe
       create_dftfe<8, 16, dftfe::utils::MemorySpace::DEVICE>
 #endif
     };
+#endif
   } // namespace internalWrapper
 
   void
@@ -960,6 +962,7 @@ namespace dftfe
                    *d_dftfeParamsPtr,
                    &d_dftfeBasePtr);
           }
+#ifdef DFTFE_WITH_DEVICE
         else if (useDevice)
           {
             internalWrapper::create_fnDevice create =
@@ -972,6 +975,7 @@ namespace dftfe
                    *d_dftfeParamsPtr,
                    &d_dftfeBasePtr);
           }
+#endif
         d_dftfeBasePtr->set();
         d_dftfeBasePtr->init();
       }
