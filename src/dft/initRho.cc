@@ -300,10 +300,6 @@ namespace dftfe
                                 rhoNodalValue +=
                                   d_oncvClassPtr->getRadialValenceDensity(
                                     atomLocations[chargeId][0], distanceToAtom);
-                                // pcout<<distanceToAtom<<" "<<
-                                // d_oncvClassPtr->getRadialValenceDensity(
-                                //     atomLocations[chargeId][0],
-                                //     distanceToAtom)<<std::endl;
                               }
                           }
                       }
