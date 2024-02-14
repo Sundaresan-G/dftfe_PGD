@@ -600,7 +600,6 @@ namespace dftfe
                           {
                             value = d_oncvClassPtr->getRadialLocalPseudo(
                               atomicNumber, distanceToAtom);
-                            // add here
                           }
                         else
                           {

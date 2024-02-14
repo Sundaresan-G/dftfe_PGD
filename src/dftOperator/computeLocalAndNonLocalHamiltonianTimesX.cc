@@ -46,7 +46,8 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
       //
       // element level matrix-vector multiplications
       //
-      if (dftPtr->d_dftParamsPtr->isPseudopotential)
+      if (dftPtr->d_dftParamsPtr->isPseudopotential &&
+          !dftPtr->d_dftParamsPtr->pawPseudoPotential)
         {
           d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
           d_SphericalFunctionKetTimesVectorParFlattened.setValue(0.0);
@@ -62,6 +63,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
         dftPtr->matrix_free_data.n_physical_cells();
       std::vector<bool> dofEncountered(nRelaventDofs, false);
       if (dftPtr->d_dftParamsPtr->isPseudopotential &&
+          !dftPtr->d_dftParamsPtr->pawPseudoPotential &&
           d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor() >
             0 &&
           !onlyHPrimePartForFirstOrderDensityMatResponse)
@@ -141,6 +143,7 @@ kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>::
             numberWaveFunctions);
 
           if (dftPtr->d_dftParamsPtr->isPseudopotential &&
+              !dftPtr->d_dftParamsPtr->pawPseudoPotential &&
               !onlyHPrimePartForFirstOrderDensityMatResponse)
             {
               d_ONCVnonLocalOperator->applyCOnVCconjtransX(

@@ -891,13 +891,17 @@ namespace dftfe
             << init_core << std::endl;
         determineAtomsOfInterstPseudopotential(atomLocations);
         MPI_Barrier(d_mpiCommParent);
-        d_oncvClassPtr->initialiseNonLocalContribution(
-          d_atomLocationsInterestPseudopotential,
-          d_imageIdsTrunc,
-          d_imagePositionsTrunc,
-          d_kPointWeights,     // accounts for interpool
-          d_kPointCoordinates, // accounts for interpool
-          updateNonlocalSparsity);
+        if (d_dftParamsPtr->isPseudopotential == true &&
+            d_dftParamsPtr->pawPseudoPotential == false)
+          {
+            d_oncvClassPtr->initialiseNonLocalContribution(
+              d_atomLocationsInterestPseudopotential,
+              d_imageIdsTrunc,
+              d_imagePositionsTrunc,
+              d_kPointWeights,     // accounts for interpool
+              d_kPointCoordinates, // accounts for interpool
+              updateNonlocalSparsity);
+          }
       }
   }
 
@@ -1171,22 +1175,24 @@ namespace dftfe
     //
     // initialize pseudopotential data for both local and nonlocal part
     //
-    d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
+    if (d_dftParamsPtr->isPseudopotential == true &&
+        d_dftParamsPtr->pawPseudoPotential == false)
+      d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
-                               d_basisOperationsPtrDevice,
+                                 d_basisOperationsPtrDevice,
 #endif
-                               d_BLASWrapperPtrHost,
+                                 d_BLASWrapperPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
-                               d_BLASWrapperPtr,
+                                 d_BLASWrapperPtr,
 #endif
-                               d_densityQuadratureId,
-                               d_lpspQuadratureId,
-                               d_sparsityPatternQuadratureId,
-                               d_nlpspQuadratureId,
-                               d_densityQuadratureIdElectro,
-                               d_excManagerPtr,
-                               atomLocations,
-                               d_numEigenValues);
+                                 d_densityQuadratureId,
+                                 d_lpspQuadratureId,
+                                 d_sparsityPatternQuadratureId,
+                                 d_nlpspQuadratureId,
+                                 d_densityQuadratureIdElectro,
+                                 d_excManagerPtr,
+                                 atomLocations,
+                                 d_numEigenValues);
 
 
     //
