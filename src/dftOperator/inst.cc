@@ -8,7 +8,7 @@ template class kohnShamDFTOperatorClass<6, 7, dftfe::utils::MemorySpace::HOST>;
 template class kohnShamDFTOperatorClass<6, 8, dftfe::utils::MemorySpace::HOST>;
 template class kohnShamDFTOperatorClass<6, 9, dftfe::utils::MemorySpace::HOST>;
 template class kohnShamDFTOperatorClass<7, 7, dftfe::utils::MemorySpace::HOST>;
-#ifdef DFTFE_WITH_DEVICE
+#  ifdef DFTFE_WITH_DEVICE
 template class kohnShamDFTOperatorClass<2,
                                         2,
                                         dftfe::utils::MemorySpace::DEVICE>;
@@ -36,7 +36,7 @@ template class kohnShamDFTOperatorClass<6,
 template class kohnShamDFTOperatorClass<7,
                                         7,
                                         dftfe::utils::MemorySpace::DEVICE>;
-#endif
+#  endif
 #else
 template class kohnShamDFTOperatorClass<1, 1, dftfe::utils::MemorySpace::HOST>;
 template class kohnShamDFTOperatorClass<1, 2, dftfe::utils::MemorySpace::HOST>;
@@ -82,7 +82,7 @@ template class kohnShamDFTOperatorClass<8, 13, dftfe::utils::MemorySpace::HOST>;
 template class kohnShamDFTOperatorClass<8, 14, dftfe::utils::MemorySpace::HOST>;
 template class kohnShamDFTOperatorClass<8, 15, dftfe::utils::MemorySpace::HOST>;
 template class kohnShamDFTOperatorClass<8, 16, dftfe::utils::MemorySpace::HOST>;
-#ifdef DFTFE_WITH_DEVICE
+#  ifdef DFTFE_WITH_DEVICE
 template class kohnShamDFTOperatorClass<1,
                                         1,
                                         dftfe::utils::MemorySpace::DEVICE>;
@@ -215,5 +215,5 @@ template class kohnShamDFTOperatorClass<8,
 template class kohnShamDFTOperatorClass<8,
                                         16,
                                         dftfe::utils::MemorySpace::DEVICE>;
-#endif
+#  endif
 #endif
