@@ -516,8 +516,8 @@ namespace dftfe
           {
             d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
               BVec, d_parallelSphericalFnKetTimesBlockVectorDevice);
-            d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
-              d_cellWaveFunctionMatrix);
+            // d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
+            //   d_cellWaveFunctionMatrix);
             d_totalNonlocalElemsPseudo =
               d_ONCVnonLocalOperator
                 ->getTotalNonLocalElementsInCurrentProcessor();

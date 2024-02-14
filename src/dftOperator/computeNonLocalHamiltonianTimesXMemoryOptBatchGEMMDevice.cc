@@ -39,12 +39,24 @@ kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
 {
   if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
     {
+
       if (d_totalNonlocalElemsPseudo > 0 && !skip1)
         {
           // dftfe::utils::deviceSynchronize();
           // std::cout<<"Starting CTX: "<<std::endl;
+          dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE> cellWaveFunctionMatrixNonLocal;
+          cellWaveFunctionMatrixNonLocal.resize(d_totalNonlocalElemsPseudo*d_numberNodesPerElement*numberWaveFunctions);
+  dftfe::utils::deviceKernelsGeneric::stridedCopyToBlock(
+    numberWaveFunctions,
+    d_totalNonlocalElemsPseudo * d_numberNodesPerElement,
+    src,
+    cellWaveFunctionMatrixNonLocal.begin(),
+    d_ONCVnonLocalOperator->getFlattenedNonLocalCellDofIndexToProcessDofIndexMap().begin());
+
+
           d_ONCVnonLocalOperator->applyCconjtransOnX(
-            d_cellWaveFunctionMatrix,
+            cellWaveFunctionMatrixNonLocal,
             std::pair<unsigned int, unsigned int>(0,
                                                   d_totalNonlocalElemsPseudo));
         }
