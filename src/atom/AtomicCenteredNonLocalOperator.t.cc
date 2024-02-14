@@ -1063,21 +1063,18 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &sphericalFunctionKetTimesVectorParFlattened)
   {
+    std::vector<dftfe::global_size_type> tempNonLocalCellDofVector(d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.size());
     std::transform(
       d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.begin(),
       d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.end(),
-      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.begin(),
+      tempNonLocalCellDofVector.begin(),
       [&waveFunctionBlockSize](auto &c) { return c * waveFunctionBlockSize; });
     d_flattenedNonLocalCellDofIndexToProcessDofIndexMap.clear();
     d_flattenedNonLocalCellDofIndexToProcessDofIndexMap.resize(
       d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.size());
     d_flattenedNonLocalCellDofIndexToProcessDofIndexMap.copyFrom(
-      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector);
-    std::transform(
-      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.begin(),
-      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.end(),
-      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.begin(),
-      [&waveFunctionBlockSize](auto &c) { return c / waveFunctionBlockSize; });
+      tempNonLocalCellDofVector);
+
     if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         d_numberWaveFunctions = waveFunctionBlockSize;
