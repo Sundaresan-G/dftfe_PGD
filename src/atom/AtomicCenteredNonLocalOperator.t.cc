@@ -1030,26 +1030,26 @@ namespace dftfe
           d_cellNodeIdMapNonLocalToLocal.size());
         d_cellNodeIdMapNonLocalToLocalDevice.copyFrom(
           d_cellNodeIdMapNonLocalToLocal);
-   d_nonlocalElemIdToCellIdVector.clear();
-    d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.clear();
-    std::cout<<"DEBUG: Size of d_nonlocalElemIdToLocalElemIdMap: "<<d_nonlocalElemIdToLocalElemIdMap.size()<<" "<<d_totalNonlocalElems<<std::endl;
-    for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
-      {
-        
-        unsigned int iCell = d_nonlocalElemIdToLocalElemIdMap[i];
-        
-        d_nonlocalElemIdToCellIdVector.push_back(iCell);
-        for (int iNode = 0; iNode < d_numberNodesPerElement; iNode++)
+        d_nonlocalElemIdToCellIdVector.clear();
+        d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.clear();
+        std::cout << "DEBUG: Size of d_nonlocalElemIdToLocalElemIdMap: "
+                  << d_nonlocalElemIdToLocalElemIdMap.size() << " "
+                  << d_totalNonlocalElems << std::endl;
+        for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
-            dftfe::global_size_type localNodeId =
-              basisOperationsPtr->d_cellDofIndexToProcessDofIndexMap
-                [iCell * d_numberNodesPerElement + iNode];
-            d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.push_back(
-              localNodeId);
+            unsigned int iCell = d_nonlocalElemIdToLocalElemIdMap[i];
+
+            d_nonlocalElemIdToCellIdVector.push_back(iCell);
+            for (int iNode = 0; iNode < d_numberNodesPerElement; iNode++)
+              {
+                dftfe::global_size_type localNodeId =
+                  basisOperationsPtr->d_cellDofIndexToProcessDofIndexMap
+                    [iCell * d_numberNodesPerElement + iNode];
+                d_flattenedNonLocalCellDofIndexToProcessDofIndexVector
+                  .push_back(localNodeId);
+              }
           }
       }
-      }
- 
 
 
 
@@ -1063,7 +1063,8 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &sphericalFunctionKetTimesVectorParFlattened)
   {
-    std::vector<dftfe::global_size_type> tempNonLocalCellDofVector(d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.size());
+    std::vector<dftfe::global_size_type> tempNonLocalCellDofVector(
+      d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.size());
     std::transform(
       d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.begin(),
       d_flattenedNonLocalCellDofIndexToProcessDofIndexVector.end(),
@@ -1998,12 +1999,6 @@ namespace dftfe
                                         d_numberWaveFunctions,
                                       0.0);
 
-        d_BLASWrapperPtr->stridedCopyToBlock(
-          d_numberWaveFunctions,
-          d_totalNonlocalElems * d_numberNodesPerElement,
-          src.data(),
-          cellWaveFunctionMatrix.begin(),
-          d_flattenedNonLocalCellDofIndexToProcessDofIndexMap.begin());
 
 
         if (d_totalNonlocalElems)

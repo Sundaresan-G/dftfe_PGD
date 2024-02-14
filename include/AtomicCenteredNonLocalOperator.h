@@ -434,11 +434,11 @@ namespace dftfe
     std::vector<dftfe::global_size_type>
       d_flattenedNonLocalCellDofIndexToProcessDofIndexVector;
     dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
-                              d_flattenedNonLocalCellDofIndexToProcessDofIndexMap;   
-    std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;                             
+                              d_flattenedNonLocalCellDofIndexToProcessDofIndexMap;
+    std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;
 #if defined(DFTFE_WITH_DEVICE)
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-      d_sphericalFnTimesWavefunctionMatrix;
+                d_sphericalFnTimesWavefunctionMatrix;
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
       **hostWfcPointers;
     ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp,
@@ -473,7 +473,7 @@ namespace dftfe
     dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
                               d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice;
     std::vector<unsigned int> d_cellNodeIdMapNonLocalToLocal;
-    
+
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
       d_cellNodeIdMapNonLocalToLocalDevice;
 #endif

@@ -168,7 +168,7 @@ namespace dftfe
                                     dftBase **            dftBaseDoublePtr);
 
     static create_fnDevice order_listDevice[] = {
-#ifdef DFTFE_MINIMAL_COMPILE
+#  ifdef DFTFE_MINIMAL_COMPILE
       create_dftfe<2, 2, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<3, 3, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<4, 4, dftfe::utils::MemorySpace::DEVICE>,
@@ -178,7 +178,7 @@ namespace dftfe
       create_dftfe<6, 8, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<6, 9, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<7, 7, dftfe::utils::MemorySpace::DEVICE>
-#else
+#  else
       create_dftfe<1, 1, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<1, 2, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<2, 2, dftfe::utils::MemorySpace::DEVICE>,
@@ -223,7 +223,7 @@ namespace dftfe
       create_dftfe<8, 14, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<8, 15, dftfe::utils::MemorySpace::DEVICE>,
       create_dftfe<8, 16, dftfe::utils::MemorySpace::DEVICE>
-#endif
+#  endif
     };
 #endif
   } // namespace internalWrapper

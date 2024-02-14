@@ -8,7 +8,7 @@ template class forceClass<6, 7, dftfe::utils::MemorySpace::HOST>;
 template class forceClass<6, 8, dftfe::utils::MemorySpace::HOST>;
 template class forceClass<6, 9, dftfe::utils::MemorySpace::HOST>;
 template class forceClass<7, 7, dftfe::utils::MemorySpace::HOST>;
-#ifdef DFTFE_WITH_DEVICE
+#  ifdef DFTFE_WITH_DEVICE
 template class forceClass<2, 2, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<3, 3, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<4, 4, dftfe::utils::MemorySpace::DEVICE>;
@@ -18,7 +18,7 @@ template class forceClass<6, 7, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<6, 8, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<6, 9, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<7, 7, dftfe::utils::MemorySpace::DEVICE>;
-#endif
+#  endif
 #else
 template class forceClass<1, 1, dftfe::utils::MemorySpace::HOST>;
 template class forceClass<1, 2, dftfe::utils::MemorySpace::HOST>;
@@ -64,7 +64,7 @@ template class forceClass<8, 13, dftfe::utils::MemorySpace::HOST>;
 template class forceClass<8, 14, dftfe::utils::MemorySpace::HOST>;
 template class forceClass<8, 15, dftfe::utils::MemorySpace::HOST>;
 template class forceClass<8, 16, dftfe::utils::MemorySpace::HOST>;
-#ifdef DFTFE_WITH_DEVICE
+#  ifdef DFTFE_WITH_DEVICE
 template class forceClass<1, 1, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<1, 2, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<2, 2, dftfe::utils::MemorySpace::DEVICE>;
@@ -109,5 +109,5 @@ template class forceClass<8, 13, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<8, 14, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<8, 15, dftfe::utils::MemorySpace::DEVICE>;
 template class forceClass<8, 16, dftfe::utils::MemorySpace::DEVICE>;
-#endif
+#  endif
 #endif
