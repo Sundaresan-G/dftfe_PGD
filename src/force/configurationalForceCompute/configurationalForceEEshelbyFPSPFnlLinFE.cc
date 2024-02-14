@@ -22,9 +22,6 @@
 #include <eshelbyTensorSpinPolarized.h>
 #include <dftUtils.h>
 #include <forceWfcContractions.h>
-#ifdef DFTFE_WITH_DEVICE
-#  include <forceWfcContractionsDevice.h>
-#endif
 
 namespace dftfe
 {
@@ -248,10 +245,11 @@ namespace dftfe
             MPI_Barrier(d_mpiCommParent);
             double device_time = MPI_Wtime();
             if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-              forceDevice::wfcContractionsForceKernelsAllH(
+              force::wfcContractionsForceKernelsAllH(
                 dftPtr->d_basisOperationsPtrDevice,
+                dftPtr->d_densityQuadratureId,
+                dftPtr->d_nlpspQuadratureId,
                 dftPtr->d_BLASWrapperPtr,
-                kohnShamDFTEigenOperatorDevice,
                 dftPtr->d_oncvClassPtr,
                 dftPtr->d_eigenVectorsFlattenedDevice.begin(),
                 d_dftParams.spinPolarized,
@@ -268,8 +266,6 @@ namespace dftfe
                 numPhysicalCells,
                 numQuadPoints,
                 numQuadPointsNLP,
-                dftPtr->matrix_free_data.get_dofs_per_cell(
-                  dftPtr->d_densityDofHandlerIndex),
                 dftPtr->d_oncvClassPtr->getNonLocalOperator()
                   ->getTotalNonTrivialSphericalFnsOverAllCells(),
                 &elocWfcEshelbyTensorQuadValuesH[0],
@@ -301,7 +297,9 @@ namespace dftfe
             if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
               force::wfcContractionsForceKernelsAllH(
                 dftPtr->d_basisOperationsPtrHost,
-                kohnShamDFTEigenOperator,
+                dftPtr->d_densityQuadratureId,
+                dftPtr->d_nlpspQuadratureId,
+                dftPtr->d_BLASWrapperPtr,
                 dftPtr->d_oncvClassPtr,
                 dftPtr->d_eigenVectorsFlattenedHost.begin(),
                 d_dftParams.spinPolarized,
@@ -318,8 +316,6 @@ namespace dftfe
                 numPhysicalCells,
                 numQuadPoints,
                 numQuadPointsNLP,
-                dftPtr->matrix_free_data.get_dofs_per_cell(
-                  dftPtr->d_densityDofHandlerIndex),
                 dftPtr->d_oncvClassPtr->getNonLocalOperator()
                   ->getTotalNonTrivialSphericalFnsOverAllCells(),
                 &elocWfcEshelbyTensorQuadValuesH[0],

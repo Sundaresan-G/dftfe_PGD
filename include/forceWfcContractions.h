@@ -15,33 +15,31 @@
 // ---------------------------------------------------------------------
 //
 
-#  ifndef forceWfcContractions_H_
-#    define forceWfcContractions_H_
+#ifndef forceWfcContractions_H_
+#define forceWfcContractions_H_
 
-#    include "headers.h"
-#    include "dftParameters.h"
-#    include "FEBasisOperations.h"
-#    include "oncvClass.h"
-#    include <memory>
-#    include <BLASWrapper.h>
+#include "headers.h"
+#include "dftParameters.h"
+#include "FEBasisOperations.h"
+#include "oncvClass.h"
+#include <memory>
+#include <BLASWrapper.h>
 
 namespace dftfe
 {
   namespace force
   {
-    template <dftfe::utils::MemorySpace memorySpace>    
+    template <dftfe::utils::MemorySpace memorySpace>
     void
     wfcContractionsForceKernelsAllH(
       std::shared_ptr<
-        dftfe::basis::FEBasisOperations<dataTypes::number,
-                                        double,
-                                        memorySpace>>
-        &basisOperationsPtr,
-      const std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-        &                     BLASWrapperPtr,
-      std::shared_ptr<
-        dftfe::oncvClass<dataTypes::number, memorySpace>>
+        dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
+        &                basisOperationsPtr,
+      const unsigned int densityQuadratureId,
+      const unsigned int nlpspQuadratureId,
+      const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
+        &BLASWrapperPtr,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
                                               oncvClassPtr,
       const dataTypes::number *               X,
       const unsigned int                      spinPolarizedFlag,
@@ -56,15 +54,14 @@ namespace dftfe
       const unsigned int  numCells,
       const unsigned int  numQuads,
       const unsigned int  numQuadsNLP,
-      const unsigned int  numNodesPerElement,
       const unsigned int  totalNonTrivialPseudoWfcs,
       double *            eshelbyTensorQuadValuesH,
       dataTypes::number *
         projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedH,
-#    ifdef USE_COMPLEX
+#ifdef USE_COMPLEX
       dataTypes::number
         *projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattenedH,
-#    endif
+#endif
       const MPI_Comm &     mpiCommParent,
       const MPI_Comm &     interBandGroupComm,
       const bool           isPsp,
@@ -73,4 +70,4 @@ namespace dftfe
       const dftParameters &dftParams);
   } // namespace force
 } // namespace dftfe
-#  endif
+#endif
