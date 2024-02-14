@@ -257,17 +257,11 @@ namespace dftfe
                 dftPtr->eigenValues,
                 partialOccupancies,
                 dftPtr->d_kPointCoordinates,
-                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                   ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                   ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
                 localVectorSize,
                 numEigenVectors,
                 numPhysicalCells,
                 numQuadPoints,
                 numQuadPointsNLP,
-                dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                  ->getTotalNonTrivialSphericalFnsOverAllCells(),
                 &elocWfcEshelbyTensorQuadValuesH[0],
                 &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                   [0],
@@ -307,17 +301,11 @@ namespace dftfe
                 dftPtr->eigenValues,
                 partialOccupancies,
                 dftPtr->d_kPointCoordinates,
-                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                   ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-                &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                   ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
                 localVectorSize,
                 numEigenVectors,
                 numPhysicalCells,
                 numQuadPoints,
                 numQuadPointsNLP,
-                dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                  ->getTotalNonTrivialSphericalFnsOverAllCells(),
                 &elocWfcEshelbyTensorQuadValuesH[0],
                 &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                   [0],

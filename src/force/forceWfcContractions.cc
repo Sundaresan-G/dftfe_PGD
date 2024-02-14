@@ -743,15 +743,12 @@ namespace dftfe
       const std::vector<std::vector<double>> &eigenValuesH,
       const std::vector<std::vector<double>> &partialOccupanciesH,
       const std::vector<double> &             kPointCoordinates,
-      const unsigned int *                    nonTrivialIdToElemIdMapH,
-      const unsigned int *projecterKetTimesFlattenedVectorLocalIdsH,
-      const unsigned int  MLoc,
-      const unsigned int  N,
-      const unsigned int  numCells,
-      const unsigned int  numQuads,
-      const unsigned int  numQuadsNLP,
-      const unsigned int  totalNonTrivialPseudoWfcs,
-      double *            eshelbyTensorQuadValuesH,
+      const unsigned int                      MLoc,
+      const unsigned int                      N,
+      const unsigned int                      numCells,
+      const unsigned int                      numQuads,
+      const unsigned int                      numQuadsNLP,
+      double *                                eshelbyTensorQuadValuesH,
       dataTypes::number *
         projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedH,
 #ifdef USE_COMPLEX
@@ -832,6 +829,11 @@ namespace dftfe
         eshelbyTensorContributions(cellsBlockSize * numQuads * blockSize * 9,
                                    0.0);
 
+      const unsigned int totalNonTrivialPseudoWfcs =
+        isPsp ? oncvClassPtr->getNonLocalOperator()
+                  ->getTotalNonTrivialSphericalFnsOverAllCells() :
+                0;
+
       const unsigned int innerBlockSizeEnlp =
         std::min((unsigned int)10, totalNonTrivialPseudoWfcs);
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
@@ -871,7 +873,8 @@ namespace dftfe
             MemoryTransfer<memorySpace, dftfe::utils::MemorySpace::HOST>::copy(
               totalNonTrivialPseudoWfcs,
               nonTrivialIdToElemIdMap.data(),
-              nonTrivialIdToElemIdMapH);
+              &(oncvClassPtr->getNonLocalOperator()
+                  ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0]));
 
           /*
           dftfe::utils::deviceMemcpyH2D(nonTrivialIdToElemIdMapD.data(),
@@ -884,7 +887,8 @@ namespace dftfe
             MemoryTransfer<memorySpace, dftfe::utils::MemorySpace::HOST>::copy(
               totalNonTrivialPseudoWfcs,
               projecterKetTimesFlattenedVectorLocalIds.data(),
-              projecterKetTimesFlattenedVectorLocalIdsH);
+              &(oncvClassPtr->getNonLocalOperator()
+                  ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0]));
 
           /*
           dftfe::utils::deviceMemcpyH2D(
@@ -1091,15 +1095,12 @@ namespace dftfe
       const std::vector<std::vector<double>> &eigenValuesH,
       const std::vector<std::vector<double>> &partialOccupanciesH,
       const std::vector<double> &             kPointCoordinates,
-      const unsigned int *                    nonTrivialIdToElemIdMapH,
-      const unsigned int *projecterKetTimesFlattenedVectorLocalIdsH,
-      const unsigned int  MLoc,
-      const unsigned int  N,
-      const unsigned int  numCells,
-      const unsigned int  numQuads,
-      const unsigned int  numQuadsNLP,
-      const unsigned int  totalNonTrivialPseudoWfcs,
-      double *            eshelbyTensorQuadValuesH,
+      const unsigned int                      MLoc,
+      const unsigned int                      N,
+      const unsigned int                      numCells,
+      const unsigned int                      numQuads,
+      const unsigned int                      numQuadsNLP,
+      double *                                eshelbyTensorQuadValuesH,
       dataTypes::number *
         projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedH,
 #  ifdef USE_COMPLEX
@@ -1135,15 +1136,12 @@ namespace dftfe
       const std::vector<std::vector<double>> &eigenValuesH,
       const std::vector<std::vector<double>> &partialOccupanciesH,
       const std::vector<double> &             kPointCoordinates,
-      const unsigned int *                    nonTrivialIdToElemIdMapH,
-      const unsigned int *projecterKetTimesFlattenedVectorLocalIdsH,
-      const unsigned int  MLoc,
-      const unsigned int  N,
-      const unsigned int  numCells,
-      const unsigned int  numQuads,
-      const unsigned int  numQuadsNLP,
-      const unsigned int  totalNonTrivialPseudoWfcs,
-      double *            eshelbyTensorQuadValuesH,
+      const unsigned int                      MLoc,
+      const unsigned int                      N,
+      const unsigned int                      numCells,
+      const unsigned int                      numQuads,
+      const unsigned int                      numQuadsNLP,
+      double *                                eshelbyTensorQuadValuesH,
       dataTypes::number *
         projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedH,
 #ifdef USE_COMPLEX
