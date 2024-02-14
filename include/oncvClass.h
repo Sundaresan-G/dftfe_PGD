@@ -269,11 +269,12 @@ namespace dftfe
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
       d_BasisOperatorHostPtr;
+#if defined(DFTFE_WITH_DEVICE)
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::DEVICE>>
       d_BasisOperatorDevicePtr;
-
+#endif
 
     std::map<unsigned int, bool>                      d_atomTypeCoreFlagMap;
     bool                                              d_floatingNuclearCharges;

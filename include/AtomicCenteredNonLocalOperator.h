@@ -431,14 +431,14 @@ namespace dftfe
       unsigned int,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
       d_sphericalFnTimesWavefunMatrix;
-    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-      d_sphericalFnTimesWavefunctionMatrix;
     std::vector<dftfe::global_size_type>
       d_flattenedNonLocalCellDofIndexToProcessDofIndexVector;
     dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
                               d_flattenedNonLocalCellDofIndexToProcessDofIndexMap;   
     std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;                             
 #if defined(DFTFE_WITH_DEVICE)
+    dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+      d_sphericalFnTimesWavefunctionMatrix;
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
       **hostWfcPointers;
     ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp,
