@@ -15,29 +15,33 @@
 // ---------------------------------------------------------------------
 //
 
-#ifndef forceWfcContractions_H_
-#define forceWfcContractions_H_
+#  ifndef forceWfcContractions_H_
+#    define forceWfcContractions_H_
 
-#include "headers.h"
-#include "operator.h"
-#include "dftParameters.h"
-#include "FEBasisOperations.h"
-#include "oncvClass.h"
-#include <memory>
+#    include "headers.h"
+#    include "dftParameters.h"
+#    include "FEBasisOperations.h"
+#    include "oncvClass.h"
+#    include <memory>
+#    include <BLASWrapper.h>
 
 namespace dftfe
 {
   namespace force
   {
+    template <dftfe::utils::MemorySpace memorySpace>    
     void
     wfcContractionsForceKernelsAllH(
-      std::shared_ptr<dftfe::basis::FEBasisOperations<
-        dataTypes::number,
-        double,
-        dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
-      operatorDFTClass &                  operatorMatrix,
       std::shared_ptr<
-        dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>>
+        dftfe::basis::FEBasisOperations<dataTypes::number,
+                                        double,
+                                        memorySpace>>
+        &basisOperationsPtr,
+      const std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<memorySpace>>
+        &                     BLASWrapperPtr,
+      std::shared_ptr<
+        dftfe::oncvClass<dataTypes::number, memorySpace>>
                                               oncvClassPtr,
       const dataTypes::number *               X,
       const unsigned int                      spinPolarizedFlag,
@@ -57,10 +61,10 @@ namespace dftfe
       double *            eshelbyTensorQuadValuesH,
       dataTypes::number *
         projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedH,
-#ifdef USE_COMPLEX
+#    ifdef USE_COMPLEX
       dataTypes::number
         *projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattenedH,
-#endif
+#    endif
       const MPI_Comm &     mpiCommParent,
       const MPI_Comm &     interBandGroupComm,
       const bool           isPsp,
@@ -69,4 +73,4 @@ namespace dftfe
       const dftParameters &dftParams);
   } // namespace force
 } // namespace dftfe
-#endif
+#  endif
