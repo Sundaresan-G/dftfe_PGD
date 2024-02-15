@@ -433,15 +433,15 @@ namespace dftfe
 #  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
       nlpContractionContributionPsiIndexDeviceKernel<<<
         (wfcBlockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-          dftfe::utils::DEVICE_BLOCK_SIZE * numQuadsNLP * 3 * blockSizeNlp,
+          dftfe::utils::DEVICE_BLOCK_SIZE * numQuadsNLP * blockSizeNlp,
         dftfe::utils::DEVICE_BLOCK_SIZE>>>(
         wfcBlockSize,
-        numQuadsNLP * 3,
+        numQuadsNLP,
         blockSizeNlp,
         startingIdNlp,
         dftfe::utils::makeDataTypeDeviceCompatible(
-          projectorKetTimesVectorParFlattened),
-        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiQuadsNLP),
+          projectorKetTimesVectorPar),
+        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiOrPsiQuadValuesNLP),
         partialOccupancies,
         nonTrivialIdToElemIdMap,
         projecterKetTimesFlattenedVectorLocalIds,
@@ -450,17 +450,17 @@ namespace dftfe
       hipLaunchKernelGGL(
         nlpContractionContributionPsiIndexDeviceKernel,
         (wfcBlockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-          dftfe::utils::DEVICE_BLOCK_SIZE * numQuadsNLP * 3 * blockSizeNlp,
+          dftfe::utils::DEVICE_BLOCK_SIZE * numQuadsNLP * blockSizeNlp,
         dftfe::utils::DEVICE_BLOCK_SIZE,
         0,
         0,
         wfcBlockSize,
-        numQuadsNLP * 3,
+        numQuadsNLP,
         blockSizeNlp,
         startingIdNlp,
         dftfe::utils::makeDataTypeDeviceCompatible(
-          projectorKetTimesVectorParFlattened),
-        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiQuadsNLP),
+          projectorKetTimesVectorPar),
+        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiOrPsiQuadValuesNLP),
         partialOccupancies,
         nonTrivialIdToElemIdMap,
         projecterKetTimesFlattenedVectorLocalIds,

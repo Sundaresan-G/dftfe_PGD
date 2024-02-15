@@ -299,7 +299,7 @@ namespace dftfe
               dftPtr->d_basisOperationsPtrHost,
               dftPtr->d_densityQuadratureId,
               dftPtr->d_nlpspQuadratureId,
-              dftPtr->d_BLASWrapperPtr,
+              dftPtr->d_BLASWrapperPtrHost,
               dftPtr->d_oncvClassPtr,
               dftPtr->d_eigenVectorsFlattenedHost.begin(),
               d_dftParams.spinPolarized,
