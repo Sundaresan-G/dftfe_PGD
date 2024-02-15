@@ -341,8 +341,8 @@ namespace dftfe
 
     d_basisOperationsPtrDevice = dftPtr->d_basisOperationsPtrDevice;
     d_basisOperationsPtrHost   = dftPtr->d_basisOperationsPtrHost;
-    if (d_dftParamsPtr->isPseudopotential == true &&
-        d_dftParamsPtr->pawPseudoPotential == false)
+    if (dftPtr->d_dftParamsPtr->isPseudopotential == true &&
+        dftPtr->d_dftParamsPtr->pawPseudoPotential == false)
       {
         d_oncvClassPtr         = dftPtr->d_oncvClassPtr;
         d_ONCVnonLocalOperator = d_oncvClassPtr->getNonLocalOperator();
