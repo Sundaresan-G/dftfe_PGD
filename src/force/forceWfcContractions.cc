@@ -377,16 +377,16 @@ namespace dftfe
                                                          numQuadsNLP * 3 *
                                                          numPsi +
                                                        iquad * numPsi + iwfc] =
-                              partialOccupancies[iwfc] *
+                              partialOccupancies.data()[iwfc] *
                               dftfe::utils::complexConj(
                                 gradPsiQuadsNLP
-                                  .data()[nonTrivialIdToElemIdMap
+                                  .data()[nonTrivialIdToElemIdMap.data()
                                               [startingIdNlp + ipseudowfc] *
                                             3 * numQuadsNLP * numPsi +
                                           iquad * numPsi + iwfc]) *
                               projectorKetTimesVectorParFlattened
                                 [projecterKetTimesFlattenedVectorLocalIds
-                                     [startingIdNlp + ipseudowfc] *
+                                     .data()[startingIdNlp + ipseudowfc] *
                                    numPsi +
                                  iwfc];
                           }
@@ -395,8 +395,8 @@ namespace dftfe
                 else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
                   forceDeviceKernels::nlpContractionContributionPsiIndex(
                     numPsi,
-                    numQuadsNLP * 3,
                     currentBlockSizeNlp,
+                    numQuadsNLP * 3,
                     startingIdNlp,
                     projectorKetTimesVectorParFlattened,
                     gradPsiQuadsNLP.data(),
@@ -451,16 +451,16 @@ namespace dftfe
                           nlpContractionContribution[ipseudowfc * numQuadsNLP *
                                                        numPsi +
                                                      iquad * numPsi + iwfc] =
-                            partialOccupancies[iwfc] *
+                            partialOccupancies.data()[iwfc] *
                             dftfe::utils::complexConj(
-                              psiQuadsNLP
-                                .data()[nonTrivialIdToElemIdMap[startingIdNlp +
-                                                                ipseudowfc] *
-                                          numQuadsNLP * numPsi +
-                                        iquad * numPsi + iwfc]) *
+                              psiQuadsNLP.data()[nonTrivialIdToElemIdMap
+                                                     .data()[startingIdNlp +
+                                                             ipseudowfc] *
+                                                   numQuadsNLP * numPsi +
+                                                 iquad * numPsi + iwfc]) *
                             projectorKetTimesVectorParFlattened
                               [projecterKetTimesFlattenedVectorLocalIds
-                                   [startingIdNlp + ipseudowfc] *
+                                   .data()[startingIdNlp + ipseudowfc] *
                                  numPsi +
                                iwfc];
                   }
@@ -468,8 +468,8 @@ namespace dftfe
                 else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
                   forceDeviceKernels::nlpContractionContributionPsiIndex(
                     numPsi,
-                    numQuadsNLP,
                     currentBlockSizeNlp,
+                    numQuadsNLP,
                     startingIdNlp,
                     projectorKetTimesVectorParFlattened,
                     psiQuadsNLP.data(),
