@@ -77,8 +77,10 @@ namespace dftfe
               {
                 basisOperationsPtr->interpolateKernel(
                   Xb,
-                  psiQuadsNLP.data(),
-                  gradPsiQuadsNLP.data(),
+                  psiQuadsNLP.data() +
+                    startingId * basisOperationsPtr->nQuadsPerCell() * BVec,
+                  gradPsiQuadsNLP.data() +
+                    startingId * 3 * basisOperationsPtr->nQuadsPerCell() * BVec,
                   std::pair<unsigned int, unsigned int>(startingId,
                                                         startingId +
                                                           currentBlockSize));
@@ -159,24 +161,27 @@ namespace dftfe
                             for (unsigned int iwfc = 0; iwfc < BVec; iwfc++)
                               {
                                 const dataTypes::number psiQuad =
-                                  psiQuadsFlat[j * numQuads * BVec +
-                                               iquad * BVec + iwfc];
+                                  psiQuadsFlat.data()[j * numQuads * BVec +
+                                                      iquad * BVec + iwfc];
                                 const double partOcc = partialOccupancies[iwfc];
                                 const double eigenValue = eigenValues[iwfc];
 
                                 std::vector<dataTypes::number> gradPsiQuad(3);
                                 gradPsiQuad[0] =
-                                  gradPsiQuadsFlat[j * 3 * numQuads * BVec +
-                                                   iquad * BVec + iwfc];
+                                  gradPsiQuadsFlat
+                                    .data()[j * 3 * numQuads * BVec +
+                                            iquad * BVec + iwfc];
                                 gradPsiQuad[1] =
-                                  gradPsiQuadsFlat[j * 3 * numQuads * BVec +
-                                                   numQuads * BVec +
-                                                   iquad * BVec + iwfc];
+                                  gradPsiQuadsFlat
+                                    .data()[j * 3 * numQuads * BVec +
+                                            numQuads * BVec + iquad * BVec +
+                                            iwfc];
 
                                 gradPsiQuad[2] =
-                                  gradPsiQuadsFlat[j * 3 * numQuads * BVec +
-                                                   2 * numQuads * BVec +
-                                                   iquad * BVec + iwfc];
+                                  gradPsiQuadsFlat
+                                    .data()[j * 3 * numQuads * BVec +
+                                            2 * numQuads * BVec + iquad * BVec +
+                                            iwfc];
 
                                 const double identityFactor =
                                   partOcc *
@@ -348,6 +353,7 @@ namespace dftfe
         const int remBlockSizeNlp =
           totalNonTrivialPseudoWfcs - numberBlocksNlp * blockSizeNlp;
 
+
         dataTypes::number scalarCoeffAlphaNlp = dataTypes::number(1.0);
         dataTypes::number scalarCoeffBetaNlp  = dataTypes::number(0.0);
 
@@ -374,10 +380,10 @@ namespace dftfe
                               partialOccupancies[iwfc] *
                               dftfe::utils::complexConj(
                                 gradPsiQuadsNLP
-                                  [nonTrivialIdToElemIdMap[startingIdNlp +
-                                                           ipseudowfc] *
-                                     3 * numQuadsNLP * numPsi +
-                                   iquad * numPsi + iwfc]) *
+                                  .data()[nonTrivialIdToElemIdMap
+                                              [startingIdNlp + ipseudowfc] *
+                                            3 * numQuadsNLP * numPsi +
+                                          iquad * numPsi + iwfc]) *
                               projectorKetTimesVectorParFlattened
                                 [projecterKetTimesFlattenedVectorLocalIds
                                      [startingIdNlp + ipseudowfc] *
@@ -447,10 +453,11 @@ namespace dftfe
                                                      iquad * numPsi + iwfc] =
                             partialOccupancies[iwfc] *
                             dftfe::utils::complexConj(
-                              psiQuadsNLP[nonTrivialIdToElemIdMap
-                                              [startingIdNlp + ipseudowfc] *
-                                            numQuadsNLP * numPsi +
-                                          iquad * numPsi + iwfc]) *
+                              psiQuadsNLP
+                                .data()[nonTrivialIdToElemIdMap[startingIdNlp +
+                                                                ipseudowfc] *
+                                          numQuadsNLP * numPsi +
+                                        iquad * numPsi + iwfc]) *
                             projectorKetTimesVectorParFlattened
                               [projecterKetTimesFlattenedVectorLocalIds
                                    [startingIdNlp + ipseudowfc] *
