@@ -439,8 +439,7 @@ namespace dftfe
         numQuadsNLP,
         blockSizeNlp,
         startingIdNlp,
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          projectorKetTimesVectorPar),
+        dftfe::utils::makeDataTypeDeviceCompatible(projectorKetTimesVectorPar),
         dftfe::utils::makeDataTypeDeviceCompatible(gradPsiOrPsiQuadValuesNLP),
         partialOccupancies,
         nonTrivialIdToElemIdMap,
@@ -458,8 +457,7 @@ namespace dftfe
         numQuadsNLP,
         blockSizeNlp,
         startingIdNlp,
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          projectorKetTimesVectorPar),
+        dftfe::utils::makeDataTypeDeviceCompatible(projectorKetTimesVectorPar),
         dftfe::utils::makeDataTypeDeviceCompatible(gradPsiOrPsiQuadValuesNLP),
         partialOccupancies,
         nonTrivialIdToElemIdMap,

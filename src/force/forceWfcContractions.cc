@@ -395,7 +395,7 @@ namespace dftfe
                 else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
                   forceDeviceKernels::nlpContractionContributionPsiIndex(
                     numPsi,
-                    numQuadsNLP*3,
+                    numQuadsNLP * 3,
                     currentBlockSizeNlp,
                     startingIdNlp,
                     projectorKetTimesVectorParFlattened,
