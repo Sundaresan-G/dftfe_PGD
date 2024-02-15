@@ -227,19 +227,18 @@ namespace dftfe
       hipLaunchKernelGGL(
         addNonLocalContributionDeviceKernel,
         (numberWfc + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-          dftfe::utils::DEVICE_BLOCK_SIZE * d_numberCellsNonLocalAtoms[iAtom] *
+          dftfe::utils::DEVICE_BLOCK_SIZE * numberCellsForAtom *
           numberNodesPerElement,
         dftfe::utils::DEVICE_BLOCK_SIZE,
         0,
         0,
         numberWfc,
-        d_numberCellsNonLocalAtoms[iAtom] * numberNodesPerElement,
+        numberCellsForAtom * numberNodesPerElement,
         dftfe::utils::makeDataTypeDeviceCompatible(
           nonLocalContribution.begin() +
           numberCellsTraversed * numberNodesPerElement * numberWfc),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          d_cellHamMatrixTimesWaveMatrix.begin()),
-        TotalContribution.begin() +
+        dftfe::utils::makeDataTypeDeviceCompatible(TotalContribution.begin()),
+        cellNodeIdMapNonLocalToLocal.begin() +
           numberCellsTraversed * numberNodesPerElement);
 #endif
     }
