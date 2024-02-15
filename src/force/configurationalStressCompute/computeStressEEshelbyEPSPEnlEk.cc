@@ -225,23 +225,31 @@ namespace dftfe
           numKPoints * numPhysicalCells * numQuadPoints * 9, 0.0);
 
         std::vector<dataTypes::number>
-          projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened(
-            numKPoints *
-              dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                ->getTotalNonTrivialSphericalFnsOverAllCells() *
-              numQuadPointsNLP * 3,
-            dataTypes::number(0.0));
+          projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened;
 
 #ifdef USE_COMPLEX
         std::vector<dataTypes::number>
-          projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened(
-            numKPoints *
-              dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                ->getTotalNonTrivialSphericalFnsOverAllCells() *
-              numQuadPointsNLP,
-            dataTypes::number(0.0));
+          projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened;
 #endif
 
+        if (isPseudopotential)
+          {
+            projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+              .resize(numKPoints *
+                        dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                          ->getTotalNonTrivialSphericalFnsOverAllCells() *
+                        numQuadPointsNLP * 3,
+                      dataTypes::number(0.0));
+
+#ifdef USE_COMPLEX
+            projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+              .resize(numKPoints *
+                        dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                          ->getTotalNonTrivialSphericalFnsOverAllCells() *
+                        numQuadPointsNLP,
+                      dataTypes::number(0.0));
+#endif
+          }
 
 #if defined(DFTFE_WITH_DEVICE)
 
