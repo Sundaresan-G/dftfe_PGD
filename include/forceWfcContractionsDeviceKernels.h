@@ -51,7 +51,7 @@ namespace dftfe
                                              const double kcoordy,
                                              const double kcoordz,
 #    endif
-                                             double *eshelbyTensor
+                                             double *eshelbyTensorContributions
 #    ifdef USE_COMPLEX
                                              ,
                                              const bool addEk

@@ -483,7 +483,7 @@ namespace dftfe
                                              const double kcoordy,
                                              const double kcoordz,
 #  endif
-                                             double *eshelbyTensor
+                                             double *eshelbyTensorContributions
 #  ifdef USE_COMPLEX
                                              ,
                                              const bool addEk
@@ -499,7 +499,7 @@ namespace dftfe
         cellsBlockSize * numQuads * 9,
         numQuads,
         dftfe::utils::makeDataTypeDeviceCompatible(psiQuadValues),
-        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiQuadsValues),
+        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiQuadValues),
         eigenValues,
         partialOccupancies,
 #    ifdef USE_COMPLEX
@@ -525,7 +525,7 @@ namespace dftfe
         cellsBlockSize * numQuads * 9,
         numQuads,
         dftfe::utils::makeDataTypeDeviceCompatible(psiQuadValues),
-        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiQuadsValues),
+        dftfe::utils::makeDataTypeDeviceCompatible(gradPsiQuadValues),
         eigenValues,
         partialOccupancies,
 #    ifdef USE_COMPLEX
