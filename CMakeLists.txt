@@ -189,7 +189,7 @@ SET(DEVICE_SRC
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
   ./src/linAlg/rayleighRitzDevice.cc
-  ./src/force/forceWfcContractionsDevice.cc
+  ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.cu.cc
   ./utils/DeviceBlasWrapper.cu.cc
@@ -219,7 +219,7 @@ SET(DEVICE_SRC
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
   ./src/linAlg/rayleighRitzDevice.cc
-  ./src/force/forceWfcContractionsDevice.cc
+  ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.hip.cc
   ./utils/DeviceBlasWrapper.hip.cc

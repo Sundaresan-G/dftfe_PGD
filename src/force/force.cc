@@ -20,9 +20,6 @@
 
 #include <force.h>
 #include <forceWfcContractions.h>
-#ifdef DFTFE_WITH_DEVICE
-#  include <forceWfcContractionsDevice.h>
-#endif
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 
 #include <constants.h>

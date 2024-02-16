@@ -354,7 +354,7 @@ namespace dftfe
               d_densityQuadratureId,
               d_feOrderPlusOneQuadratureId};
             std::vector<dftfe::basis::UpdateFlags> updateFlags{
-              updateFlagsValuesGradients,
+              updateFlagsAll,
               updateFlagsAll,
               updateFlagsGradientsAndInvJacobians};
             d_basisOperationsPtrDevice->init(matrix_free_data,

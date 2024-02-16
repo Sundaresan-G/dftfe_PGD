@@ -140,19 +140,20 @@ namespace dftfe
                             temp1[2] = zetalmDeltaVlProductDistImageAtoms
                               [startingPseudoWfcIdFlattened * 3 +
                                iPseudoWave * numQuadPoints * 3 + q * 3 + 2];
-
                             temp2[0] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 0];
+                                 iPseudoWave * 3 * numQuadPoints + q];
                             temp2[1] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 1];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 numQuadPoints + q];
                             temp2[2] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 2];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 2 * numQuadPoints + q];
 #ifdef USE_COMPLEX
                             const dataTypes::number temp3 =
                               projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened

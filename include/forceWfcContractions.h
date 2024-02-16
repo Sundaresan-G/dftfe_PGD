@@ -19,25 +19,27 @@
 #define forceWfcContractions_H_
 
 #include "headers.h"
-#include "operator.h"
 #include "dftParameters.h"
 #include "FEBasisOperations.h"
 #include "oncvClass.h"
 #include <memory>
+#include <BLASWrapper.h>
 
 namespace dftfe
 {
   namespace force
   {
+    template <dftfe::utils::MemorySpace memorySpace>
     void
     wfcContractionsForceKernelsAllH(
-      std::shared_ptr<dftfe::basis::FEBasisOperations<
-        dataTypes::number,
-        double,
-        dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
-      operatorDFTClass &                  operatorMatrix,
       std::shared_ptr<
-        dftfe::oncvClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>>
+        dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
+        &                basisOperationsPtr,
+      const unsigned int densityQuadratureId,
+      const unsigned int nlpspQuadratureId,
+      const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
+        &BLASWrapperPtr,
+      std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
                                               oncvClassPtr,
       const dataTypes::number *               X,
       const unsigned int                      spinPolarizedFlag,
@@ -45,16 +47,12 @@ namespace dftfe
       const std::vector<std::vector<double>> &eigenValuesH,
       const std::vector<std::vector<double>> &partialOccupanciesH,
       const std::vector<double> &             kPointCoordinates,
-      const unsigned int *                    nonTrivialIdToElemIdMapH,
-      const unsigned int *projecterKetTimesFlattenedVectorLocalIdsH,
-      const unsigned int  MLoc,
-      const unsigned int  N,
-      const unsigned int  numCells,
-      const unsigned int  numQuads,
-      const unsigned int  numQuadsNLP,
-      const unsigned int  numNodesPerElement,
-      const unsigned int  totalNonTrivialPseudoWfcs,
-      double *            eshelbyTensorQuadValuesH,
+      const unsigned int                      MLoc,
+      const unsigned int                      N,
+      const unsigned int                      numCells,
+      const unsigned int                      numQuads,
+      const unsigned int                      numQuadsNLP,
+      double *                                eshelbyTensorQuadValuesH,
       dataTypes::number *
         projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattenedH,
 #ifdef USE_COMPLEX

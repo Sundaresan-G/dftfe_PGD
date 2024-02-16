@@ -22,9 +22,6 @@
 #include <eshelbyTensor.h>
 #include <eshelbyTensorSpinPolarized.h>
 #include <forceWfcContractions.h>
-#ifdef DFTFE_WITH_DEVICE
-#  include <forceWfcContractionsDevice.h>
-#endif
 
 namespace dftfe
 {
@@ -228,130 +225,116 @@ namespace dftfe
           numKPoints * numPhysicalCells * numQuadPoints * 9, 0.0);
 
         std::vector<dataTypes::number>
-          projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened(
-            numKPoints *
-              dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                ->getTotalNonTrivialSphericalFnsOverAllCells() *
-              numQuadPointsNLP * 3,
-            dataTypes::number(0.0));
+          projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened;
 
 #ifdef USE_COMPLEX
         std::vector<dataTypes::number>
-          projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened(
-            numKPoints *
-              dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                ->getTotalNonTrivialSphericalFnsOverAllCells() *
-              numQuadPointsNLP,
-            dataTypes::number(0.0));
+          projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened;
 #endif
 
+        if (isPseudopotential)
+          {
+            projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+              .resize(numKPoints *
+                        dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                          ->getTotalNonTrivialSphericalFnsOverAllCells() *
+                        numQuadPointsNLP * 3,
+                      dataTypes::number(0.0));
+
+#ifdef USE_COMPLEX
+            projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+              .resize(numKPoints *
+                        dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                          ->getTotalNonTrivialSphericalFnsOverAllCells() *
+                        numQuadPointsNLP,
+                      dataTypes::number(0.0));
+#endif
+          }
 
 #if defined(DFTFE_WITH_DEVICE)
-
-        if (d_dftParams.useDevice)
+        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
           {
-            if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-              {
-                MPI_Barrier(d_mpiCommParent);
-                double device_time = MPI_Wtime();
+            MPI_Barrier(d_mpiCommParent);
+            double device_time = MPI_Wtime();
 
-                forceDevice::wfcContractionsForceKernelsAllH(
-                  dftPtr->d_basisOperationsPtrDevice,
-                  dftPtr->d_BLASWrapperPtr,
-                  kohnShamDFTEigenOperatorDevice,
-                  dftPtr->d_oncvClassPtr,
-                  dftPtr->d_eigenVectorsFlattenedDevice.begin(),
-                  d_dftParams.spinPolarized,
-                  spinIndex,
-                  dftPtr->eigenValues,
-                  partialOccupancies,
-                  dftPtr->d_kPointCoordinates,
-                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                     ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                     ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
-                  localVectorSize,
-                  numEigenVectors,
-                  numPhysicalCells,
-                  numQuadPoints,
-                  numQuadPointsNLP,
-                  dftPtr->matrix_free_data.get_dofs_per_cell(
-                    dftPtr->d_densityDofHandlerIndex),
-                  dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                    ->getTotalNonTrivialSphericalFnsOverAllCells(),
-                  &elocWfcEshelbyTensorQuadValuesH[0],
-                  &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
-                    [0],
+            force::wfcContractionsForceKernelsAllH(
+              dftPtr->d_basisOperationsPtrDevice,
+              dftPtr->d_densityQuadratureId,
+              dftPtr->d_nlpspQuadratureId,
+              dftPtr->d_BLASWrapperPtr,
+              dftPtr->d_oncvClassPtr,
+              dftPtr->d_eigenVectorsFlattenedDevice.begin(),
+              d_dftParams.spinPolarized,
+              spinIndex,
+              dftPtr->eigenValues,
+              partialOccupancies,
+              dftPtr->d_kPointCoordinates,
+              localVectorSize,
+              numEigenVectors,
+              numPhysicalCells,
+              numQuadPoints,
+              numQuadPointsNLP,
+              &elocWfcEshelbyTensorQuadValuesH[0],
+              &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                [0],
 #  ifdef USE_COMPLEX
-                  &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
-                    [0],
+              &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                [0],
 #  endif
-                  d_mpiCommParent,
-                  dftPtr->interBandGroupComm,
-                  isPseudopotential,
-                  false,
-                  true,
-                  d_dftParams);
-                MPI_Barrier(d_mpiCommParent);
-                device_time = MPI_Wtime() - device_time;
+              d_mpiCommParent,
+              dftPtr->interBandGroupComm,
+              isPseudopotential,
+              false,
+              true,
+              d_dftParams);
+            MPI_Barrier(d_mpiCommParent);
+            device_time = MPI_Wtime() - device_time;
 
-                if (this_process == 0 && d_dftParams.verbosity >= 4)
-                  std::cout
-                    << "Time for wfc contractions in stress: " << device_time
-                    << std::endl;
-              }
+            if (this_process == 0 && d_dftParams.verbosity >= 4)
+              std::cout << "Time for wfc contractions in stress: "
+                        << device_time << std::endl;
           }
         else
 #endif
           {
             MPI_Barrier(d_mpiCommParent);
             double host_time = MPI_Wtime();
-            if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
-              {
-                force::wfcContractionsForceKernelsAllH(
-                  dftPtr->d_basisOperationsPtrHost,
-                  kohnShamDFTEigenOperator,
-                  dftPtr->d_oncvClassPtr,
-                  dftPtr->d_eigenVectorsFlattenedHost.begin(),
-                  d_dftParams.spinPolarized,
-                  spinIndex,
-                  dftPtr->eigenValues,
-                  partialOccupancies,
-                  dftPtr->d_kPointCoordinates,
-                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                     ->getNonTrivialAllCellsSphericalFnAlphaToElemIdMap()[0],
-                  &dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                     ->getSphericalFnTimesVectorFlattenedVectorLocalIds()[0],
-                  localVectorSize,
-                  numEigenVectors,
-                  numPhysicalCells,
-                  numQuadPoints,
-                  numQuadPointsNLP,
-                  dftPtr->matrix_free_data.get_dofs_per_cell(
-                    dftPtr->d_densityDofHandlerIndex),
-                  dftPtr->d_oncvClassPtr->getNonLocalOperator()
-                    ->getTotalNonTrivialSphericalFnsOverAllCells(),
-                  &elocWfcEshelbyTensorQuadValuesH[0],
-                  &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
-                    [0],
+            force::wfcContractionsForceKernelsAllH(
+              dftPtr->d_basisOperationsPtrHost,
+              dftPtr->d_densityQuadratureId,
+              dftPtr->d_nlpspQuadratureId,
+              dftPtr->d_BLASWrapperPtrHost,
+              dftPtr->d_oncvClassPtr,
+              dftPtr->d_eigenVectorsFlattenedHost.begin(),
+              d_dftParams.spinPolarized,
+              spinIndex,
+              dftPtr->eigenValues,
+              partialOccupancies,
+              dftPtr->d_kPointCoordinates,
+              localVectorSize,
+              numEigenVectors,
+              numPhysicalCells,
+              numQuadPoints,
+              numQuadPointsNLP,
+              &elocWfcEshelbyTensorQuadValuesH[0],
+              &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                [0],
 #ifdef USE_COMPLEX
-                  &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
-                    [0],
+              &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                [0],
 #endif
-                  d_mpiCommParent,
-                  dftPtr->interBandGroupComm,
-                  isPseudopotential,
-                  false,
-                  true,
-                  d_dftParams);
-                MPI_Barrier(d_mpiCommParent);
-                host_time = MPI_Wtime() - host_time;
+              d_mpiCommParent,
+              dftPtr->interBandGroupComm,
+              isPseudopotential,
+              false,
+              true,
+              d_dftParams);
+            MPI_Barrier(d_mpiCommParent);
+            host_time = MPI_Wtime() - host_time;
 
-                if (this_process == 0 && d_dftParams.verbosity >= 4)
-                  std::cout
-                    << "Time for wfc contractions in stress: " << host_time
-                    << std::endl;
-              }
+            if (this_process == 0 && d_dftParams.verbosity >= 4)
+              std::cout << "Time for wfc contractions in stress: " << host_time
+                        << std::endl;
           }
 
         // dataTypes::number check1 =
