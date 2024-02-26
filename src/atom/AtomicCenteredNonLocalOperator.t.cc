@@ -1860,6 +1860,16 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     else
       {
+        //Assert check cellRange.second - cellRange.first != d_nonlocalElements
+      AssertThrow(
+        cellRange.second - cellRange.first == d_totalNonlocalElems,
+        dealii::ExcMessage(
+          "DFT-FE Error: Inconsistent cellRange in use. All the nonlocal Cells must be in range."));
+        // Xpointer not same assert check
+      AssertThrow(
+        X.begin() == d_wfcStartPointer,
+        dealii::ExcMessage(
+          "DFT-FE Error: Inconsistent X called. Make sure the input X is correct."));        
         const ValueType scalarCoeffAlpha = ValueType(1.0),
                         scalarCoeffBeta  = ValueType(0.0);
 
@@ -2200,6 +2210,7 @@ namespace dftfe
                                    d_numberWaveFunctions *
                                    d_numberNodesPerElement;
           }
+        d_wfcStartPointer = cellWaveFunctionMatrix.begin();  
         dftfe::utils::deviceMemcpyH2D(deviceWfcPointers,
                                       hostWfcPointers,
                                       d_totalNonlocalElems *

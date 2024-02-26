@@ -442,6 +442,7 @@ namespace dftfe
                               d_sphericalFnTimesWavefunctionMatrix;
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
       **hostWfcPointers;
+    ValueType *d_wfcStartPointer;  
     ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp,
       **deviceWfcPointers;                              
     std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
