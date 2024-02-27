@@ -106,6 +106,28 @@ namespace dftfe
           FEBasisOperations<ValueType, double, dftfe::utils::MemorySpace::HOST>>
                          basisOperationsPtr,
       const unsigned int quadratureIndex);
+#if defined(DFTFE_WITH_DEVICE)
+    // for device specific initialise
+    /**
+     * @brief
+     * @param[in] totalAtomsInCurrentProcessor number of atoms in current
+     * processor based on compact support
+     * @param[out] totalNonLocalElements number of nonLocal elements in current
+     * processor
+     * @param[out] numberCellsForEachAtom number of cells associated which each
+     * atom in the current processor. vecot of size totalAtomsInCurrentProcessor
+     * @param[out] numberCellsAccumNonLocalAtoms number of cells accumulated
+     * till iatom in current processor. vector of size
+     * totalAtomsInCurrentProcessor
+     */
+    void
+    initialiseCellWaveFunctionPointers(
+      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        &cellWaveFunctionMatrix);
+
+    void
+    freeDeviceVectors();
+#endif      
 
     // Getter functions
     // Returns the vector that takes in nonlocalElementIndex and returns the
@@ -418,6 +440,11 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
                               d_sphericalFnTimesWavefunctionMatrix;
+    ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
+      **hostWfcPointers;
+    ValueType *d_wfcStartPointer;  
+    ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp,
+      **deviceWfcPointers;                              
     std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
 
     // Data structures moved from KSOperatorDevice

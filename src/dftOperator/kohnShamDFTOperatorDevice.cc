@@ -127,7 +127,10 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>::
     ~kohnShamDFTOperatorDeviceClass()
-  {}
+  {
+    if (d_isMallocCalled == true)
+      d_ONCVnonLocalOperator->freeDeviceVectors();    
+  }
 
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
@@ -518,6 +521,8 @@ namespace dftfe
           {
             d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
               BVec, d_parallelSphericalFnKetTimesBlockVectorDevice);
+            d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
+              d_cellWaveFunctionMatrix);
             d_totalNonlocalElemsPseudo =
               d_ONCVnonLocalOperator
                 ->getTotalNonLocalElementsInCurrentProcessor();
