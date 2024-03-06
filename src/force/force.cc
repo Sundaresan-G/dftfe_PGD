@@ -281,12 +281,6 @@ namespace dftfe
   void
   forceClass<FEOrder, FEOrderElectro, memorySpace>::computeAtomsForces(
     const dealii::MatrixFree<3, double> &matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperatorDevice,
-#endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      &                                  kohnShamDFTEigenOperator,
     const dispersionCorrection &         dispersionCorr,
     const unsigned int                   eigenDofHandlerIndex,
     const unsigned int                   smearedChargeQuadratureId,
@@ -330,10 +324,6 @@ namespace dftfe
                           d_cellFacesVselfBallSurfacesDofHandlerForceElectro);
 
     computeConfigurationalForceTotalLinFE(matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-                                          kohnShamDFTEigenOperatorDevice,
-#endif
-                                          kohnShamDFTEigenOperator,
                                           eigenDofHandlerIndex,
                                           smearedChargeQuadratureId,
                                           lpspQuadratureIdElectro,
@@ -469,12 +459,6 @@ namespace dftfe
   forceClass<FEOrder, FEOrderElectro, memorySpace>::
     computeConfigurationalForceTotalLinFE(
       const dealii::MatrixFree<3, double> &matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-        &kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-        &                                  kohnShamDFTEigenOperator,
       const unsigned int                   eigenDofHandlerIndex,
       const unsigned int                   smearedChargeQuadratureId,
       const unsigned int                   lpspQuadratureIdElectro,
@@ -512,10 +496,6 @@ namespace dftfe
     // nuclear self energy
     computeConfigurationalForceEEshelbyTensorFPSPFnlLinFE(
       matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTEigenOperator,
       eigenDofHandlerIndex,
       smearedChargeQuadratureId,
       lpspQuadratureIdElectro,

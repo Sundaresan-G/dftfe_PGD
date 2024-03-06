@@ -49,6 +49,12 @@ namespace dftfe
         dealii::Patterns::Bool(),
         "[Advanced] If set to true this option does not delete the dftfeScratch folder when the dftfe object is destroyed. This is useful for debugging and code development. Default: false.");
 
+      prm.declare_entry(
+        "MEM OPT MODE",
+        "true",
+        dealii::Patterns::Bool(),
+        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.");
+
 
       prm.enter_subsection("GPU");
       {
@@ -1335,18 +1341,22 @@ namespace dftfe
     reproducible_output = prm.get_bool("REPRODUCIBLE OUTPUT");
     keepScratchFolder   = prm.get_bool("KEEP SCRATCH FOLDER");
     restartFolder       = restartFilesPath;
+    memOptMode          = prm.get_bool("MEM OPT MODE");
     writeStructreEnergyForcesFileForPostProcess =
       prm.get_bool("WRITE STRUCTURE ENERGY FORCES DATA POST PROCESS");
 
     prm.enter_subsection("GPU");
     {
-      useTF32Device              = useDevice && prm.get_bool("USE TF32 OP");
-      deviceFineGrainedTimings   = useDevice && prm.get_bool("FINE GRAINED GPU TIMINGS");
-      allowFullCPUMemSubspaceRot = useDevice && prm.get_bool("SUBSPACE ROT FULL CPU MEM");
-      autoDeviceBlockSizes       = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
-      useDeviceDirectAllReduce   = useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
-      useELPADeviceKernel        = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
-      deviceMemOptMode           = prm.get_bool("GPU MEM OPT MODE");
+      useTF32Device = useDevice && prm.get_bool("USE TF32 OP");
+      deviceFineGrainedTimings =
+        useDevice && prm.get_bool("FINE GRAINED GPU TIMINGS");
+      allowFullCPUMemSubspaceRot =
+        useDevice && prm.get_bool("SUBSPACE ROT FULL CPU MEM");
+      autoDeviceBlockSizes = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
+      useDeviceDirectAllReduce =
+        useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
+      useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
+      deviceMemOptMode    = prm.get_bool("GPU MEM OPT MODE");
     }
     prm.leave_subsection();
 

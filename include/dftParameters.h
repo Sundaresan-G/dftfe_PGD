@@ -167,6 +167,7 @@ namespace dftfe
     unsigned int highestStateOfInterestForChebFiltering;
     bool         useELPADeviceKernel;
     bool         deviceMemOptMode;
+    bool         memOptMode;
 
 
     unsigned int dc_dispersioncorrectiontype;

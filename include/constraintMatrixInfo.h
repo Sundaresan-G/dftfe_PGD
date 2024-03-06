@@ -115,6 +115,12 @@ namespace dftfe
       initializeScaledConstraints(
         const distributedCPUVec<double> &invSqrtMassVec);
 
+      void
+      initializeScaledConstraints(
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::HOST>
+          &invSqrtMassVec);
+
 
       /**
        * @brief sets field values at constrained nodes to be zero

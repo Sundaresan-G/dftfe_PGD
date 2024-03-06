@@ -57,9 +57,8 @@ namespace dftfe
       const unsigned int numberCellsTraversed,
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &nonLocalContribution,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &TotalContribution,
+        &        nonLocalContribution,
+      ValueType *TotalContribution,
       const dftfe::utils::MemoryStorage<unsigned int,
                                         dftfe::utils::MemorySpace::DEVICE>
         &cellNodeIdMapNonLocalToLocal);

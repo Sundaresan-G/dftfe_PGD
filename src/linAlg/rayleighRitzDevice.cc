@@ -79,23 +79,23 @@ namespace dftfe
 
     void
     rayleighRitz(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      elpaScalaManager &                           elpaScala,
-      dataTypes::number *                          X,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      std::vector<double> &                        eigenValues,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams,
-      const bool                                   useMixedPrecOverall)
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      std::vector<double> &                    eigenValues,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams,
+      const bool                               useMixedPrecOverall)
     {
       dealii::ConditionalOStream pcout(
         std::cout,
@@ -141,57 +141,71 @@ namespace dftfe
       if (useMixedPrecOverall && dftParams.useMixedPrecXTHXSpectrumSplit)
         {
           if (dftParams.useMixedPrecCommunOnlyXTHXCGSO)
-            operatorMatrix.XtHXMixedPrecCommunOverlapComputeCommun(
-              X,
-              Xb,
-              HXb,
-              projectorKetTimesVector,
-              M,
-              N,
-              dftParams.numCoreWfcXtHX,
-              handle,
-              processGrid,
-              projHamPar,
-              devicecclMpiCommDomain);
-          else
-            operatorMatrix.XtHXMixedPrecOverlapComputeCommun(
-              X,
-              Xb,
-              floatXb,
-              HXb,
-              projectorKetTimesVector,
-              M,
-              N,
-              dftParams.numCoreWfcXtHX,
-              handle,
-              processGrid,
-              projHamPar,
-              devicecclMpiCommDomain);
-        }
-      else
-        {
-          if (dftParams.overlapComputeCommunOrthoRR)
-            operatorMatrix.XtHXOverlapComputeCommun(X,
+            XtHXMixedPrecCommunOverlapComputeCommun(operatorMatrix,
+                                                    X,
                                                     Xb,
                                                     HXb,
                                                     projectorKetTimesVector,
                                                     M,
                                                     N,
+                                                    dftParams.numCoreWfcXtHX,
                                                     handle,
                                                     processGrid,
                                                     projHamPar,
-                                                    devicecclMpiCommDomain);
+                                                    devicecclMpiCommDomain,
+                                                    mpiCommDomain,
+                                                    interBandGroupComm,
+                                                    dftParams);
           else
-            operatorMatrix.XtHX(X,
-                                Xb,
-                                HXb,
-                                projectorKetTimesVector,
-                                M,
-                                N,
-                                handle,
-                                processGrid,
-                                projHamPar,
-                                devicecclMpiCommDomain);
+            XtHXMixedPrecOverlapComputeCommun(operatorMatrix,
+                                              X,
+                                              Xb,
+                                              floatXb,
+                                              HXb,
+                                              projectorKetTimesVector,
+                                              M,
+                                              N,
+                                              dftParams.numCoreWfcXtHX,
+                                              handle,
+                                              processGrid,
+                                              projHamPar,
+                                              devicecclMpiCommDomain,
+                                              mpiCommDomain,
+                                              interBandGroupComm,
+                                              dftParams);
+        }
+      else
+        {
+          if (dftParams.overlapComputeCommunOrthoRR)
+            XtHXOverlapComputeCommun(operatorMatrix,
+                                     X,
+                                     Xb,
+                                     HXb,
+                                     projectorKetTimesVector,
+                                     M,
+                                     N,
+                                     handle,
+                                     processGrid,
+                                     projHamPar,
+                                     devicecclMpiCommDomain,
+                                     mpiCommDomain,
+                                     interBandGroupComm,
+                                     dftParams);
+          else
+            XtHX(operatorMatrix,
+                 X,
+                 Xb,
+                 HXb,
+                 projectorKetTimesVector,
+                 M,
+                 N,
+                 handle,
+                 processGrid,
+                 projHamPar,
+                 devicecclMpiCommDomain,
+                 mpiCommDomain,
+                 interBandGroupComm,
+                 dftParams);
         }
 
       if (dftParams.deviceFineGrainedTimings)
@@ -354,23 +368,23 @@ namespace dftfe
 
     void
     rayleighRitzGEP(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      elpaScalaManager &                           elpaScala,
-      dataTypes::number *                          X,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      std::vector<double> &                        eigenValues,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams,
-      const bool                                   useMixedPrecOverall)
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      std::vector<double> &                    eigenValues,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams,
+      const bool                               useMixedPrecOverall)
     {
       dealii::ConditionalOStream pcout(
         std::cout,
@@ -624,27 +638,35 @@ namespace dftfe
                   dataTypes::number(0.0));
 
       if (dftParams.overlapComputeCommunOrthoRR)
-        operatorMatrix.XtHXOverlapComputeCommun(X,
-                                                Xb,
-                                                HXb,
-                                                projectorKetTimesVector,
-                                                M,
-                                                N,
-                                                handle,
-                                                processGrid,
-                                                projHamPar,
-                                                devicecclMpiCommDomain);
+        XtHXOverlapComputeCommun(operatorMatrix,
+                                 X,
+                                 Xb,
+                                 HXb,
+                                 projectorKetTimesVector,
+                                 M,
+                                 N,
+                                 handle,
+                                 processGrid,
+                                 projHamPar,
+                                 devicecclMpiCommDomain,
+                                 mpiCommDomain,
+                                 interBandGroupComm,
+                                 dftParams);
       else
-        operatorMatrix.XtHX(X,
-                            Xb,
-                            HXb,
-                            projectorKetTimesVector,
-                            M,
-                            N,
-                            handle,
-                            processGrid,
-                            projHamPar,
-                            devicecclMpiCommDomain);
+        XtHX(operatorMatrix,
+             X,
+             Xb,
+             HXb,
+             projectorKetTimesVector,
+             M,
+             N,
+             handle,
+             processGrid,
+             projHamPar,
+             devicecclMpiCommDomain,
+             mpiCommDomain,
+             interBandGroupComm,
+             dftParams);
 
       if (dftParams.deviceFineGrainedTimings)
         {
@@ -820,25 +842,25 @@ namespace dftfe
 
     void
     rayleighRitzGEPSpectrumSplitDirect(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      elpaScalaManager &                           elpaScala,
-      dataTypes::number *                          X,
-      dataTypes::number *                          XFrac,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const unsigned int                           Noc,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      std::vector<double> &                        eigenValues,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams,
-      const bool                                   useMixedPrecOverall)
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      dataTypes::number *                                  XFrac,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const unsigned int                       Noc,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      std::vector<double> &                    eigenValues,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams,
+      const bool                               useMixedPrecOverall)
     {
       dealii::ConditionalOStream pcout(
         std::cout,
@@ -1227,44 +1249,55 @@ namespace dftfe
 
       if (useMixedPrecOverall && dftParams.useMixedPrecXTHXSpectrumSplit)
         {
-          operatorMatrix.XtHXMixedPrecOverlapComputeCommun(
-            X,
-            Xb,
-            floatXb,
-            HXb,
-            projectorKetTimesVector,
-            M,
-            N,
-            Noc,
-            handle,
-            processGrid,
-            projHamPar,
-            devicecclMpiCommDomain);
+          XtHXMixedPrecOverlapComputeCommun(operatorMatrix,
+                                            X,
+                                            Xb,
+                                            floatXb,
+                                            HXb,
+                                            projectorKetTimesVector,
+                                            M,
+                                            N,
+                                            Noc,
+                                            handle,
+                                            processGrid,
+                                            projHamPar,
+                                            devicecclMpiCommDomain,
+                                            mpiCommDomain,
+                                            interBandGroupComm,
+                                            dftParams);
         }
       else
         {
           if (dftParams.overlapComputeCommunOrthoRR)
-            operatorMatrix.XtHXOverlapComputeCommun(X,
-                                                    Xb,
-                                                    HXb,
-                                                    projectorKetTimesVector,
-                                                    M,
-                                                    N,
-                                                    handle,
-                                                    processGrid,
-                                                    projHamPar,
-                                                    devicecclMpiCommDomain);
+            XtHXOverlapComputeCommun(operatorMatrix,
+                                     X,
+                                     Xb,
+                                     HXb,
+                                     projectorKetTimesVector,
+                                     M,
+                                     N,
+                                     handle,
+                                     processGrid,
+                                     projHamPar,
+                                     devicecclMpiCommDomain,
+                                     mpiCommDomain,
+                                     interBandGroupComm,
+                                     dftParams);
           else
-            operatorMatrix.XtHX(X,
-                                Xb,
-                                HXb,
-                                projectorKetTimesVector,
-                                M,
-                                N,
-                                handle,
-                                processGrid,
-                                projHamPar,
-                                devicecclMpiCommDomain);
+            XtHX(operatorMatrix,
+                 X,
+                 Xb,
+                 HXb,
+                 projectorKetTimesVector,
+                 M,
+                 N,
+                 handle,
+                 processGrid,
+                 projHamPar,
+                 devicecclMpiCommDomain,
+                 mpiCommDomain,
+                 interBandGroupComm,
+                 dftParams);
         }
 
       // Construct the full HConjProj matrix
@@ -1455,24 +1488,24 @@ namespace dftfe
 
     void
     densityMatrixEigenBasisFirstOrderResponse(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      dataTypes::number *                          X,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      const std::vector<double> &                  eigenValues,
-      const double                                 fermiEnergy,
-      std::vector<double> &                        densityMatDerFermiEnergy,
-      dftfe::elpaScalaManager &                    elpaScala,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams)
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      const std::vector<double> &              eigenValues,
+      const double                             fermiEnergy,
+      std::vector<double> &                    densityMatDerFermiEnergy,
+      dftfe::elpaScalaManager &                elpaScala,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams)
     {
       dealii::ConditionalOStream pcout(
         std::cout,
@@ -1508,44 +1541,55 @@ namespace dftfe
                   dataTypes::number(0.0));
 
       if (dftParams.singlePrecLRD && dftParams.overlapComputeCommunOrthoRR)
-        operatorMatrix.XtHXMixedPrecOverlapComputeCommun(
-          X,
-          Xb,
-          floatXb,
-          HXb,
-          projectorKetTimesVector,
-          M,
-          N,
-          N,
-          handle,
-          processGrid,
-          projHamPrimePar,
-          devicecclMpiCommDomain,
-          true);
+        XtHXMixedPrecOverlapComputeCommun(operatorMatrix,
+                                          X,
+                                          Xb,
+                                          floatXb,
+                                          HXb,
+                                          projectorKetTimesVector,
+                                          M,
+                                          N,
+                                          N,
+                                          handle,
+                                          processGrid,
+                                          projHamPrimePar,
+                                          devicecclMpiCommDomain,
+                                          mpiCommDomain,
+                                          interBandGroupComm,
+                                          dftParams,
+                                          true);
       else if (dftParams.overlapComputeCommunOrthoRR)
-        operatorMatrix.XtHXOverlapComputeCommun(X,
-                                                Xb,
-                                                HXb,
-                                                projectorKetTimesVector,
-                                                M,
-                                                N,
-                                                handle,
-                                                processGrid,
-                                                projHamPrimePar,
-                                                devicecclMpiCommDomain,
-                                                true);
+        XtHXOverlapComputeCommun(operatorMatrix,
+                                 X,
+                                 Xb,
+                                 HXb,
+                                 projectorKetTimesVector,
+                                 M,
+                                 N,
+                                 handle,
+                                 processGrid,
+                                 projHamPrimePar,
+                                 devicecclMpiCommDomain,
+                                 mpiCommDomain,
+                                 interBandGroupComm,
+                                 dftParams,
+                                 true);
       else
-        operatorMatrix.XtHX(X,
-                            Xb,
-                            HXb,
-                            projectorKetTimesVector,
-                            M,
-                            N,
-                            handle,
-                            processGrid,
-                            projHamPrimePar,
-                            devicecclMpiCommDomain,
-                            true);
+        XtHX(operatorMatrix,
+             X,
+             Xb,
+             HXb,
+             projectorKetTimesVector,
+             M,
+             N,
+             handle,
+             processGrid,
+             projHamPrimePar,
+             devicecclMpiCommDomain,
+             mpiCommDomain,
+             interBandGroupComm,
+             dftParams,
+             true);
 
       if (dftParams.deviceFineGrainedTimings)
         {

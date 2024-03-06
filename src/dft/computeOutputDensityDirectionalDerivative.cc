@@ -37,12 +37,8 @@ namespace dftfe
   {
     computing_timer.enter_subsection("Output density direction derivative");
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
     const dealii::Quadrature<3> &quadrature =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
@@ -239,139 +235,41 @@ namespace dftfe
 
     for (unsigned int s = 0; s < (1 + d_dftParamsPtr->spinPolarized); ++s)
       {
-        if (d_excManagerPtr->getDensityBasedFamilyType() ==
-            densityFamilyType::LDA)
-          {
-            computing_timer.enter_subsection("VEffPrime Computation");
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrimeSpinPolarized(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore);
-                else
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrime(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore);
-              }
-#endif
-            if (!d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperator.computeVEffPrimeSpinPolarized(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore);
-                else
-                  kohnShamDFTEigenOperator.computeVEffPrime(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore);
-              }
-
-            computing_timer.leave_subsection("VEffPrime Computation");
-          }
-        else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                 densityFamilyType::GGA)
-          {
-            computing_timer.enter_subsection("VEffPrime Computation");
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrimeSpinPolarized(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    d_gradDensityInQuadValues,
-                    gradRhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore,
-                    d_gradRhoCore);
-                else
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrime(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    d_gradDensityInQuadValues,
-                    gradRhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore,
-                    d_gradRhoCore);
-              }
-#endif
-            if (!d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperator.computeVEffPrimeSpinPolarized(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    d_gradDensityInQuadValues,
-                    gradRhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore,
-                    d_gradRhoCore);
-                else
-                  kohnShamDFTEigenOperator.computeVEffPrime(
-                    d_densityInQuadValues,
-                    rhoPrimeValues,
-                    d_gradDensityInQuadValues,
-                    gradRhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore,
-                    d_gradRhoCore);
-              }
-
-            computing_timer.leave_subsection("VEffPrime Computation");
-          }
+        computing_timer.enter_subsection("VEffPrime Computation");
+        kohnShamDFTEigenOperator.computeVEffPrime(d_densityInQuadValues,
+                                                  rhoPrimeValues,
+                                                  d_gradDensityInQuadValues,
+                                                  gradRhoPrimeValues,
+                                                  electrostaticPotPrimeValues,
+                                                  d_rhoCore,
+                                                  d_gradRhoCore,
+                                                  s);
+        computing_timer.leave_subsection("VEffPrime Computation");
 
         for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
           {
             if (kPoint == 0)
               {
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(kPoint,
-                                                                       s);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
+                kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
 
                 computing_timer.enter_subsection(
                   "Hamiltonian matrix prime computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice
-                    .computeHamiltonianMatricesAllkpt(s, true);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeHamiltonianMatrix(kPoint,
-                                                                    s,
-                                                                    true);
+                kohnShamDFTEigenOperator.computeCellHamiltonianMatrix(true);
 
                 computing_timer.leave_subsection(
                   "Hamiltonian matrix prime computation");
               }
 
 #ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
+            if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
               kohnShamEigenSpaceFirstOrderDensityMatResponse(
                 s,
                 kPoint,
-                kohnShamDFTEigenOperatorDevice,
+                kohnShamDFTEigenOperator,
                 *d_elpaScala,
                 d_subspaceIterationSolverDevice);
 #endif
-            if (!d_dftParamsPtr->useDevice)
+            if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
               kohnShamEigenSpaceFirstOrderDensityMatResponse(
                 s, kPoint, kohnShamDFTEigenOperator, *d_elpaScala);
           }
@@ -380,14 +278,7 @@ namespace dftfe
     computing_timer.enter_subsection(
       "Density first order response computation");
 
-    computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTEigenOperator,
-      fv,
-      fvSpin0,
-      fvSpin1);
+    computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(fv, fvSpin0, fvSpin1);
 
     computing_timer.leave_subsection(
       "Density first order response computation");
@@ -404,12 +295,6 @@ namespace dftfe
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-        &kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-        &                        kohnShamDFTEigenOperatorCPU,
       distributedCPUVec<double> &fv,
       distributedCPUVec<double> &fvSpin0,
       distributedCPUVec<double> &fvSpin1)

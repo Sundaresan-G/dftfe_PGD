@@ -127,7 +127,7 @@ namespace dftfe
 
     void
     freeDeviceVectors();
-#endif      
+#endif
 
     // Getter functions
     // Returns the vector that takes in nonlocalElementIndex and returns the
@@ -242,9 +242,8 @@ namespace dftfe
      * elements
      */
     void
-    applyCconjtransOnX(
-      const dftfe::utils::MemoryStorage<ValueType, memorySpace> &X,
-      const std::pair<unsigned int, unsigned int>                cellRange);
+    applyCconjtransOnX(const ValueType *                           X,
+                       const std::pair<unsigned int, unsigned int> cellRange);
 
     /**
      * @brief completes the VCconjX on nodal vector src. The src vector must have all ghost nodes and contraint nodes updated.
@@ -297,9 +296,8 @@ namespace dftfe
      * elements
      */
     void
-    applyCOnVCconjtransX(
-      dftfe::utils::MemoryStorage<ValueType, memorySpace> &Xout,
-      const std::pair<unsigned int, unsigned int>          cellRange);
+    applyCOnVCconjtransX(ValueType *                                 Xout,
+                         const std::pair<unsigned int, unsigned int> cellRange);
 
 
   protected:
@@ -439,12 +437,12 @@ namespace dftfe
     std::vector<unsigned int> d_nonlocalElemIdToCellIdVector;
 #if defined(DFTFE_WITH_DEVICE)
     dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-                              d_sphericalFnTimesWavefunctionMatrix;
+                d_sphericalFnTimesWavefunctionMatrix;
     ValueType **hostPointerCDagger, **hostPointerCDaggeOutTemp,
       **hostWfcPointers;
-    ValueType *d_wfcStartPointer;  
+    ValueType * d_wfcStartPointer;
     ValueType **devicePointerCDagger, **devicePointerCDaggerOutTemp,
-      **deviceWfcPointers;                              
+      **deviceWfcPointers;
     std::vector<unsigned int> d_nonlocalElemIdToLocalElemIdMap;
 
     // Data structures moved from KSOperatorDevice

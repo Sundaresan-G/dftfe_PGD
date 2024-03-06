@@ -22,7 +22,7 @@
 
 #    include "deviceDirectCCLWrapper.h"
 #    include "headers.h"
-#    include "operatorDevice.h"
+#    include "operator.h"
 #    include "elpaScalaManager.h"
 #    include "dftParameters.h"
 #    include <BLASWrapper.h>
@@ -59,11 +59,11 @@ namespace dftfe
      * @brief Solve a generalized eigen problem.
      */
     double
-    solve(operatorDFTDeviceClass &               operatorMatrix,
+    solve(operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
           const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<
-            dftfe::utils::MemorySpace::DEVICE>> &BLASWrapperPtr,
-          elpaScalaManager &                     elpaScala,
-          dataTypes::number *                    eigenVectorsFlattenedDevice,
+            dftfe::utils::MemorySpace::DEVICE>> &              BLASWrapperPtr,
+          elpaScalaManager &                                   elpaScala,
+          dataTypes::number *      eigenVectorsFlattenedDevice,
           dataTypes::number *      eigenVectorsRotFracDensityFlattenedDevice,
           const unsigned int       flattenedSize,
           const unsigned int       totalNumberWaveFunctions,
@@ -81,18 +81,20 @@ namespace dftfe
      * @brief Used for XL-BOMD.
      */
     void
-    solveNoRR(operatorDFTDeviceClass &               operatorMatrix,
-              const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<
-                dftfe::utils::MemorySpace::DEVICE>> &BLASWrapperPtr,
-              elpaScalaManager &                     elpaScala,
-              dataTypes::number *      eigenVectorsFlattenedDevice,
-              const unsigned int       flattenedSize,
-              const unsigned int       totalNumberWaveFunctions,
-              std::vector<double> &    eigenValues,
-              utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-              const MPI_Comm &         interBandGroupComm,
-              const unsigned int       numberPasses,
-              const bool               useMixedPrecOverall);
+    solveNoRR(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                      BLASWrapperPtr,
+      elpaScalaManager &       elpaScala,
+      dataTypes::number *      eigenVectorsFlattenedDevice,
+      const unsigned int       flattenedSize,
+      const unsigned int       totalNumberWaveFunctions,
+      std::vector<double> &    eigenValues,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      const unsigned int       numberPasses,
+      const bool               useMixedPrecOverall);
 
 
     /**
@@ -100,7 +102,7 @@ namespace dftfe
      */
     void
     densityMatrixEigenBasisFirstOrderResponse(
-      operatorDFTDeviceClass &operatorMatrix,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
         &                        BLASWrapperPtr,

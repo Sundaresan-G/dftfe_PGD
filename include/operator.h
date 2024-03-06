@@ -27,6 +27,11 @@
 #include "elpaScalaManager.h"
 
 #include <vector>
+#if defined(DFTFE_WITH_DEVICE)
+#  include <constraintMatrixInfoDevice.h>
+#  include <DeviceBlasWrapper.h> //FIX ME
+#  include "deviceDirectCCLWrapper.h"
+#endif
 
 namespace dftfe
 {
@@ -35,6 +40,7 @@ namespace dftfe
    *
    * @author Phani Motamarri, Sambit Das
    */
+  template <dftfe::utils::MemorySpace memorySpace>
   class operatorDFTClass
   {
     //
@@ -44,7 +50,17 @@ namespace dftfe
     /**
      * @brief Destructor.
      */
-    virtual ~operatorDFTClass() = 0;
+    virtual ~operatorDFTClass(){};
+
+#if defined(DFTFE_WITH_DEVICE)
+    using constraintInfoClass =
+      typename std::conditional<memorySpace ==
+                                  dftfe::utils::MemorySpace::DEVICE,
+                                dftUtils::constraintMatrixInfoDevice,
+                                dftUtils::constraintMatrixInfo>::type;
+#else
+    using constraintInfoClass = dftUtils::constraintMatrixInfo;
+#endif
 
     /**
      * @brief initialize operatorClass
@@ -52,6 +68,11 @@ namespace dftfe
      */
     virtual void
     init() = 0;
+
+
+    virtual dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &
+    getScratchFEMultivector(const unsigned int numVectors,
+                            const unsigned int index) = 0;
 
     /**
      * @brief initializes parallel layouts and index maps for HX, XtHX and creates a flattened array format for X
@@ -64,138 +85,26 @@ namespace dftfe
      * given node being stored contiguously
      *
      */
-    virtual void
-    reinit(const unsigned int                    wavefunBlockSize,
-           distributedCPUVec<dataTypes::number> &X,
-           bool                                  flag) = 0;
 
     virtual void
-    reinit(const unsigned int                         wavefunBlockSize,
-           distributedCPUMultiVec<dataTypes::number> &X,
-           bool                                       flag) = 0;
-
-    virtual void
-    reinit(const unsigned int wavefunBlockSize) = 0;
+    reinit(const std::vector<double> &kPointCoordinates,
+           const std::vector<double> &kPointWeights) = 0;
 
     virtual void
     reinitkPointSpinIndex(const unsigned int kPointIndex,
                           const unsigned int spinIndex) = 0;
 
     virtual void
-    initCellWaveFunctionMatrix(
-      const unsigned int                         numberWaveFunctions,
-      distributedCPUMultiVec<dataTypes::number> &X,
-      std::vector<dataTypes::number> &           cellWaveFunctionMatrix) = 0;
+    reinitNumberWavefunctions(const unsigned int numWfc) = 0;
 
 
     virtual void
-    fillGlobalArrayFromCellWaveFunctionMatrix(
-      const unsigned int                         wavefunBlockSize,
-      const std::vector<dataTypes::number> &     cellWaveFunctionMatrix,
-      distributedCPUMultiVec<dataTypes::number> &X) = 0;
-
-    virtual void
-    initWithScalar(const unsigned int              numberWaveFunctions,
-                   double                          scalarValue,
-                   std::vector<dataTypes::number> &cellWaveFunctionMatrix) = 0;
-
-    virtual void
-    axpby(double                                scalarA,
-          double                                scalarB,
-          const unsigned int                    numberWaveFunctions,
-          const std::vector<dataTypes::number> &cellXWaveFunctionMatrix,
-          std::vector<dataTypes::number> &      cellYWaveFunctionMatrix) = 0;
-
-    virtual void
-    getInteriorSurfaceNodesMapFromGlobalArray(
-      std::vector<unsigned int> &globalArrayClassificationMap) = 0;
-
-
-    /**
-     * @brief compute diagonal mass matrix
-     *
-     * @param dofHandler dofHandler associated with the current mesh
-     * @param constraintMatrix constraints to be used
-     * @param sqrtMassVec output the value of square root of diagonal mass matrix
-     * @param invSqrtMassVec output the value of inverse square root of diagonal mass matrix
-     */
-    virtual void
-    computeMassVector(const dealii::DoFHandler<3> &            dofHandler,
-                      const dealii::AffineConstraints<double> &constraintMatrix,
-                      distributedCPUVec<double> &              sqrtMassVec,
-                      distributedCPUVec<double> &invSqrtMassVec) = 0;
-
-
-
-    virtual void
-    HX(std::vector<distributedCPUMultiVec<dataTypes::number> *> &src,
-       const double                                              scalarHX,
-       const double                                              scalarY,
-       const double                                              scalarX,
-       std::vector<distributedCPUMultiVec<dataTypes::number> *> &dst,
+    HX(dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+       const double scalarHX,
+       const double scalarY,
+       const double scalarX,
+       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
-
-
-
-    /**
-     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
-     *
-     * @param X Vector of Vectors containing multi-wavefunction fields
-     * @param numberComponents number of wavefunctions associated with a given node
-     * @param ProjMatrix projected small matrix
-     */
-    virtual void
-    XtHX(const dataTypes::number *       X,
-         const unsigned int              numberComponents,
-         const unsigned int              numberLocalDofs,
-         std::vector<dataTypes::number> &ProjHam) = 0;
-
-    /**
-     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
-     *
-     * @param X Vector of Vectors containing multi-wavefunction fields
-     * @param numberComponents number of wavefunctions associated with a given node
-     * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
-     * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
-     * of the operation into the given subspace
-     */
-    virtual void
-    XtHX(const dataTypes::number *                        X,
-         const unsigned int                               numberComponents,
-         const unsigned int                               numberLocalDofs,
-         const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-         dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-         const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
-
-
-    /**
-     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
-     *
-     * @param X Vector of Vectors containing multi-wavefunction fields
-     * @param totalNumberComponents number of wavefunctions associated with a given node
-     * @param singlePrecComponents number of wavecfuntions starting from the first for
-     * which the project Hamiltionian block will be computed in single
-     * procession. However the cross blocks will still be computed in double
-     * precision.
-     * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
-     * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
-     * of the operation into the given subspace
-     */
-    virtual void
-    XtHXMixedPrec(
-      const dataTypes::number *                        X,
-      const unsigned int                               totalNumberComponents,
-      const unsigned int                               singlePrecComponents,
-      const unsigned int                               numberLocalDofs,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
-
-
-    void
-    setInvSqrtMassVector(distributedCPUVec<double> &X);
-    distributedCPUVec<double> &
-    getInvSqrtMassVector();
 
 
     /**
@@ -203,114 +112,27 @@ namespace dftfe
      *
      * @return pointer to constraint matrix eigen
      */
-    dftUtils::constraintMatrixInfo *
-    getOverloadedConstraintMatrix() const;
+    virtual dftUtils::constraintMatrixInfo *
+    getOverloadedConstraintMatrixHost() const = 0;
 
-
-    /**
-     * @brief Get matrix free data
-     *
-     * @return pointer to matrix free data
-     */
-    const dealii::MatrixFree<3, double> *
-    getMatrixFreeData() const;
-
-
-    /**
-     * @brief Get relevant mpi communicator
-     *
-     * @return mpi communicator
-     */
-    const MPI_Comm &
-    getMPICommunicator() const;
-
-
+    virtual constraintInfoClass *
+    getOverloadedConstraintMatrix() const = 0;
     /**
      * @brief Get index map of flattened array to cell based numbering
      *
      * @return pointer to constraint matrix eigen
      */
-    virtual const std::vector<dealii::types::global_dof_index> &
-    getFlattenedArrayCellLocalProcIndexIdMap() const = 0;
-
-
-    virtual distributedCPUMultiVec<dataTypes::number> &
+    virtual dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &
     getParallelProjectorKetTimesBlockVector() = 0;
 
-    virtual const std::vector<double> &
-    getShapeFunctionGradValuesDensityGaussQuad() const = 0;
+    virtual const MPI_Comm &
+    getMPICommunicatorDomain() = 0;
 
-    virtual const std::vector<double> &
-    getShapeFunctionValuesDensityGaussLobattoQuad() const = 0;
+    virtual const dftfe::utils::MemoryStorage<double, memorySpace> &
+    getInverseSqrtMassVector() = 0;
 
-    virtual const std::vector<double> &
-    getShapeFunctionValuesDensityTransposed() const = 0;
-
-    virtual const std::vector<double> &
-    getShapeFunctionValuesNLPTransposed() const = 0;
-
-    virtual const std::vector<double> &
-    getShapeFunctionGradientValuesNLPTransposed() const = 0;
-
-    virtual const std::vector<double> &
-    getInverseJacobiansNLP() const = 0;
-
-
-  protected:
-    /**
-     * @brief default Constructor.
-     */
-    operatorDFTClass();
-
-
-    /**
-     * @brief Constructor.
-     */
-    operatorDFTClass(const MPI_Comm &                     mpi_comm_replica,
-                     const dealii::MatrixFree<3, double> &matrix_free_data,
-                     dftUtils::constraintMatrixInfo &     constraintMatrixNone);
-
-  protected:
-    //
-    // Get overloaded constraint matrix object constructed using 1-component FE
-    // object
-    //
-    dftUtils::constraintMatrixInfo *d_constraintMatrixData;
-    //
-    // matrix-free data
-    //
-    const dealii::MatrixFree<3, double> *d_matrix_free_data;
-
-    //
-    // inv sqrt mass vector
-    //
-    distributedCPUVec<double> d_invSqrtMassVector;
-
-    /// index map
-    std::vector<dealii::types::global_dof_index>
-      d_FullflattenedArrayCellLocalProcIndexIdMap;
-
-    /// density quad rule shape function data for FEOrder mesh with node index
-    /// being the fastest index
-    std::vector<double> d_densityGaussQuadShapeFunctionValues;
-
-    std::vector<double> d_densityGaussQuadShapeFunctionGradientValues;
-    /// FEOrderRhoNodal+1 Gauss Lobotto quadrature shape function data for
-    /// FEOrder mesh with node index being the fastest index
-    std::vector<double> d_densityGlQuadShapeFunctionValues;
-
-    std::vector<double> d_shapeFunctionValueDensityTransposed;
-
-    std::vector<double> d_shapeFunctionValueNLPTransposed;
-
-    std::vector<double> d_shapeFunctionGradientValueNLPTransposed;
-
-    std::vector<double> d_inverseJacobiansNLP;
-
-    //
-    // mpi communicator
-    //
-    MPI_Comm d_mpi_communicator;
+    virtual const dftfe::utils::MemoryStorage<double, memorySpace> &
+    getSqrtMassVector() = 0;
   };
 } // namespace dftfe
 #endif

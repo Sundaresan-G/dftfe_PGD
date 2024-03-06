@@ -36,7 +36,6 @@
 #ifdef DFTFE_WITH_DEVICE
 #  include <chebyshevOrthogonalizedSubspaceIterationSolverDevice.h>
 #  include <constraintMatrixInfoDevice.h>
-#  include <kohnShamDFTOperatorDevice.h>
 #  include "deviceKernelsGeneric.h"
 #  include <poissonSolverProblemDevice.h>
 #  include <kerkerSolverProblemDevice.h>
@@ -50,7 +49,7 @@
 #include <eigenSolver.h>
 #include <interpolation.h>
 #include <kerkerSolverProblem.h>
-#include <kohnShamDFTOperator.h>
+#include <KohnShamHamiltonianOperator.h>
 #include <meshMovementAffineTransform.h>
 #include <meshMovementGaussian.h>
 #include <poissonSolverProblem.h>
@@ -94,9 +93,6 @@ namespace dftfe
   class symmetryClass;
   template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class forceClass;
-
-  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
-  class kohnShamDFTOperatorClass;
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   /**
@@ -111,14 +107,6 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   class dftClass : public dftBase
   {
-    friend class kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>;
-
-#ifdef DFTFE_WITH_DEVICE
-    friend class kohnShamDFTOperatorDeviceClass<FEOrder,
-                                                FEOrderElectro,
-                                                memorySpace>;
-#endif
-
     friend class forceClass<FEOrder, FEOrderElectro, memorySpace>;
 
     friend class symmetryClass<FEOrder, FEOrderElectro, memorySpace>;
@@ -709,24 +697,11 @@ namespace dftfe
      *@brief computes density nodal data from wavefunctions
      */
     void
-    computeRhoNodalFromPSI(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-        &kohnShamDFTEigenOperator,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-        &  kohnShamDFTEigenOperatorCPU,
-      bool isConsiderSpectrumSplitting);
+    computeRhoNodalFromPSI(bool isConsiderSpectrumSplitting);
 
 
     void
     computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-        &kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-        &                        kohnShamDFTEigenOperatorCPU,
       distributedCPUVec<double> &fv,
       distributedCPUVec<double> &fvSpin0,
       distributedCPUVec<double> &fvSpin1);
@@ -882,15 +857,8 @@ namespace dftfe
      *@brief Computes output electron-density from wavefunctions
      */
     void
-    compute_rhoOut(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-        &kohnShamDFTEigenOperator,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-        &        kohnShamDFTEigenOperatorCPU,
-      const bool isConsiderSpectrumSplitting,
-      const bool isGroundState = false);
+    compute_rhoOut(const bool isConsiderSpectrumSplitting,
+                   const bool isGroundState = false);
 
     /**
      *@brief Mixing schemes for mixing electron-density
@@ -1293,12 +1261,7 @@ namespace dftfe
 
     bool d_kohnShamDFTOperatorsInitialized;
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> *d_kohnShamDFTOperatorPtr;
 
     const std::string d_dftfeScratchFolderName;
 
@@ -1512,12 +1475,7 @@ namespace dftfe
     /// Compute Gateaux derivative of vself field in bins with respect to affine
     /// strain tensor components
     void
-    computeVselfFieldGateauxDerFD(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-        &kohnShamDFTEigenOperatorDevice
-#endif
-    );
+    computeVselfFieldGateauxDerFD();
 
     /// dftParameters object
     dftParameters *d_dftParamsPtr;
@@ -1577,13 +1535,11 @@ namespace dftfe
     bool scfConverged;
     void
     nscf(
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-        &                                             kohnShamDFTEigenOperator,
+      KohnShamHamiltonianOperator<memorySpace> &      kohnShamDFTEigenOperator,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver);
     void
     initnscf(
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-        &                                            kohnShamDFTEigenOperator,
+      KohnShamHamiltonianOperator<memorySpace> &     kohnShamDFTEigenOperator,
       poissonSolverProblem<FEOrder, FEOrderElectro> &phiTotalSolverProblem,
       dealiiLinearSolver &                           CGSolver);
 
@@ -1613,7 +1569,7 @@ namespace dftfe
     kohnShamEigenSpaceCompute(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
         &                                             kohnShamDFTEigenOperator,
       elpaScalaManager &                              elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
@@ -1629,7 +1585,7 @@ namespace dftfe
     kohnShamEigenSpaceCompute(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -1648,7 +1604,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -1660,7 +1616,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala);
 
@@ -1668,7 +1624,7 @@ namespace dftfe
     kohnShamEigenSpaceComputeNSCF(
       const unsigned int spinType,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
         &                                             kohnShamDFTEigenOperator,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
       std::vector<double> &                           residualNormWaveFunctions,

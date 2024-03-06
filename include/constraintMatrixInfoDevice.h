@@ -71,6 +71,19 @@ namespace dftfe
       void
       distribute(distributedDeviceVec<NumberType> &fieldVector) const;
 
+
+      /**
+       * @brief Scales the constraints with the inverse diagonal mass matrix so that the scaling of the vector can be done at the cell level
+       *
+       * @param invSqrtMassVec the inverse diagonal mass matrix
+       */
+      void
+      initializeScaledConstraints(
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::DEVICE>
+          &invSqrtMassVec);
+
+
       /**
        * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
        * slave nodes are the nodes which are to the right of the constraint
@@ -85,49 +98,9 @@ namespace dftfe
       distribute_slave_to_master(
         distributedDeviceVec<double> &fieldVector) const;
 
-      inline void
-      distribute_slave_to_master(
-        distributedDeviceVec<std::complex<double>> &fieldVector) const
-      {}
-
-      /**
-       * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
-       * slave nodes are the nodes which are to the right of the constraint
-       * equation and master nodes are the nodes which are left of the
-       * constraint equation.
-       *
-       * @param fieldVector parallel dealii vector which is the result of matrix-vector product(vmult) withot taking
-       * care of constraints
-       * @param blockSize number of components for a given node
-       */
       void
       distribute_slave_to_master(
-        distributedDeviceVec<std::complex<double>> &fieldVector,
-        double *                                    tempReal,
-        double *                                    tempImag) const;
-
-      inline void
-      distribute_slave_to_master(distributedDeviceVec<double> &fieldVector,
-                                 double *                      tempReal,
-                                 double *                      tempImag) const
-      {}
-
-
-      /**
-       * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
-       * slave nodes are the nodes which are to the right of the constraint
-       * equation and master nodes are the nodes which are left of the
-       * constraint equation.
-       *
-       * @param fieldVector parallel dealii vector which is the result of matrix-vector product(vmult) withot taking
-       * care of constraints
-       * @param blockSize number of components for a given node
-       */
-      void
-      distribute_slave_to_master(
-        distributedDeviceVec<std::complex<float>> &fieldVector,
-        float *                                    tempReal,
-        float *                                    tempImag) const;
+        distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
 
       /**

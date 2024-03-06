@@ -27,7 +27,6 @@
 #include <energyCalculator.h>
 #include <fileReaders.h>
 #include <force.h>
-#include <kohnShamDFTOperator.h>
 #include <linalg.h>
 #include <linearAlgebraOperations.h>
 #include <linearAlgebraOperationsInternal.h>
@@ -1882,38 +1881,42 @@ namespace dftfe
     if (d_kohnShamDFTOperatorsInitialized)
       finalizeKohnShamDFTOperator();
 
-    d_kohnShamDFTOperatorPtr =
-      new kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>(
-        this, d_mpiCommParent, mpi_communicator);
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+      d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
+        d_BLASWrapperPtr,
+        d_basisOperationsPtrDevice,
+        d_basisOperationsPtrHost,
+        d_oncvClassPtr,
+        d_excManagerPtr,
+        d_dftParamsPtr,
+        d_densityQuadratureId,
+        d_lpspQuadratureId,
+        d_feOrderPlusOneQuadratureId,
+        d_mpiCommParent,
+        mpi_communicator);
+    else
+      d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
+        d_BLASWrapperPtrHost,
+        d_basisOperationsPtrHost,
+        d_basisOperationsPtrHost,
+        d_oncvClassPtr,
+        d_excManagerPtr,
+        d_dftParamsPtr,
+        d_densityQuadratureId,
+        d_lpspQuadratureId,
+        d_feOrderPlusOneQuadratureId,
+        d_mpiCommParent,
+        mpi_communicator);
 
-#ifdef DFTFE_WITH_DEVICE
-    d_kohnShamDFTOperatorDevicePtr =
-      new kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>(
-        this, d_mpiCommParent, mpi_communicator);
-#endif
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
-    if (!d_dftParamsPtr->useDevice)
-      {
-        kohnShamDFTEigenOperator.init();
-      }
+    kohnShamDFTEigenOperator.reinit(d_kPointCoordinates, d_kPointWeights);
 
 #ifdef DFTFE_WITH_DEVICE
     if (d_dftParamsPtr->useDevice)
       {
-        kohnShamDFTEigenOperatorDevice.init();
-
-        if (initializeCublas)
-          {
-            kohnShamDFTEigenOperatorDevice.createDeviceBlasHandle();
-          }
-
         AssertThrow(
           (d_numEigenValues % d_dftParamsPtr->chebyWfcBlockSize == 0 ||
            d_numEigenValues / d_dftParamsPtr->chebyWfcBlockSize == 0),
@@ -1970,20 +1973,9 @@ namespace dftfe
            0),
           dealii::ExcMessage(
             "DFT-FE Error: band parallelization group size must be exactly divisible by WFC BLOCK SIZE for Device run."));
-
-        kohnShamDFTEigenOperatorDevice.reinit(
-          std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues), true);
       }
 #endif
 
-    if (!d_dftParamsPtr->useDevice)
-      kohnShamDFTEigenOperator.preComputeShapeFunctionGradientIntegrals(
-        d_lpspQuadratureId);
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      kohnShamDFTEigenOperatorDevice.preComputeShapeFunctionGradientIntegrals(
-        d_lpspQuadratureId);
-#endif
 
     d_kohnShamDFTOperatorsInitialized = true;
 
@@ -2005,16 +1997,14 @@ namespace dftfe
   dftClass<FEOrder, FEOrderElectro, memorySpace>::
     reInitializeKohnShamDFTOperator()
   {
-    if (!d_dftParamsPtr->useDevice)
-      d_kohnShamDFTOperatorPtr->resetExtPotHamFlag();
+    d_kohnShamDFTOperatorPtr->resetExtPotHamFlag();
 
 #ifdef DFTFE_WITH_DEVICE
     if (d_dftParamsPtr->useDevice)
       {
-        d_kohnShamDFTOperatorDevicePtr->resetExtPotHamFlag();
-
-        d_kohnShamDFTOperatorDevicePtr->reinit(
-          std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues), true);
+        // d_kohnShamDFTOperatorPtr->reinit(
+        //   std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues),
+        //   true);
       }
 #endif
   }
@@ -2030,15 +2020,7 @@ namespace dftfe
   {
     if (d_kohnShamDFTOperatorsInitialized)
       {
-#ifdef DFTFE_WITH_DEVICE
-        if (d_dftParamsPtr->useDevice)
-          d_kohnShamDFTOperatorDevicePtr->destroyDeviceBlasHandle();
-#endif
-
         delete d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-        delete d_kohnShamDFTOperatorDevicePtr;
-#endif
       }
   }
 
@@ -2054,12 +2036,8 @@ namespace dftfe
     const bool computestress,
     const bool isRestartGroundStateCalcFromChk)
   {
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
     const dealii::Quadrature<3> &quadrature =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
@@ -2226,6 +2204,7 @@ namespace dftfe
                                  d_pseudoVLoc,
                                  d_pseudoVLocAtoms);
 
+        kohnShamDFTEigenOperator.computeVEffExternalPotCorr(d_pseudoVLoc);
         computingTimerStandard.leave_subsection("Init local PSP");
       }
 
@@ -2749,94 +2728,28 @@ namespace dftfe
 
             for (unsigned int s = 0; s < 2; ++s)
               {
-                if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                    densityFamilyType::LDA)
-                  {
-                    computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperatorDevice.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_lpspQuadratureId);
-#endif
-                    if (!d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperator.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_lpspQuadratureId);
-                    computing_timer.leave_subsection("VEff Computation");
-                  }
-                else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                         densityFamilyType::GGA)
-                  {
-                    computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperatorDevice.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_gradDensityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_gradRhoCore,
-                        d_lpspQuadratureId);
-#endif
-                    if (!d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperator.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_gradDensityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_gradRhoCore,
-                        d_lpspQuadratureId);
-                    computing_timer.leave_subsection("VEff Computation");
-                  }
-
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  {
-                    computing_timer.enter_subsection(
-                      "Hamiltonian Matrix Computation");
-                    kohnShamDFTEigenOperatorDevice
-                      .computeHamiltonianMatricesAllkpt(s);
-                    computing_timer.leave_subsection(
-                      "Hamiltonian Matrix Computation");
-                  }
-#endif
+                computing_timer.enter_subsection("VEff Computation");
+                kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+                                                     d_gradDensityInQuadValues,
+                                                     d_phiInQuadValues,
+                                                     d_rhoCore,
+                                                     d_gradRhoCore,
+                                                     s);
+                computing_timer.leave_subsection("VEff Computation");
 
 
                 for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                      ++kPoint)
                   {
-#ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(
-                        kPoint, s);
-#endif
-                    if (!d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
+                    kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
 
 
 
-                    if (!d_dftParamsPtr->useDevice)
-                      {
-                        computing_timer.enter_subsection(
-                          "Hamiltonian Matrix Computation");
-                        kohnShamDFTEigenOperator.computeHamiltonianMatrix(
-                          kPoint, s);
-                        computing_timer.leave_subsection(
-                          "Hamiltonian Matrix Computation");
-                      }
+                    computing_timer.enter_subsection(
+                      "Hamiltonian Matrix Computation");
+                    kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                    computing_timer.leave_subsection(
+                      "Hamiltonian Matrix Computation");
 
 
                     for (unsigned int j = 0; j < 1; ++j)
@@ -2848,11 +2761,12 @@ namespace dftfe
                           }
 
 #ifdef DFTFE_WITH_DEVICE
-                        if (d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             s,
                             kPoint,
-                            kohnShamDFTEigenOperatorDevice,
+                            kohnShamDFTEigenOperator,
                             *d_elpaScala,
                             d_subspaceIterationSolverDevice,
                             residualNormWaveFunctionsAllkPointsSpins[s][kPoint],
@@ -2870,7 +2784,8 @@ namespace dftfe
                             scfConverged ? false : true,
                             scfIter == 0);
 #endif
-                        if (!d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             s,
                             kPoint,
@@ -2959,6 +2874,20 @@ namespace dftfe
                   {
                     for (unsigned int s = 0; s < 2; ++s)
                       {
+                        if (d_dftParamsPtr->memOptMode)
+                          {
+                            computing_timer.enter_subsection(
+                              "VEff Computation");
+                            kohnShamDFTEigenOperator.computeVEff(
+                              d_densityInQuadValues,
+                              d_gradDensityInQuadValues,
+                              d_phiInQuadValues,
+                              d_rhoCore,
+                              d_gradRhoCore,
+                              s);
+                            computing_timer.leave_subsection(
+                              "VEff Computation");
+                          }
                         for (unsigned int kPoint = 0;
                              kPoint < d_kPointWeights.size();
                              ++kPoint)
@@ -2969,21 +2898,25 @@ namespace dftfe
                                     << std::endl;
                             ;
 
-#ifdef DFTFE_WITH_DEVICE
-                            if (d_dftParamsPtr->useDevice)
-                              kohnShamDFTEigenOperatorDevice
-                                .reinitkPointSpinIndex(kPoint, s);
-#endif
-                            if (!d_dftParamsPtr->useDevice)
-                              kohnShamDFTEigenOperator.reinitkPointSpinIndex(
-                                kPoint, s);
+                            kohnShamDFTEigenOperator.reinitkPointSpinIndex(
+                              kPoint, s);
+                            if (d_dftParamsPtr->memOptMode)
+                              {
+                                computing_timer.enter_subsection(
+                                  "Hamiltonian Matrix Computation");
+                                kohnShamDFTEigenOperator
+                                  .computeCellHamiltonianMatrix();
+                                computing_timer.leave_subsection(
+                                  "Hamiltonian Matrix Computation");
+                              }
 
 #ifdef DFTFE_WITH_DEVICE
-                            if (d_dftParamsPtr->useDevice)
+                            if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                          memorySpace)
                               kohnShamEigenSpaceCompute(
                                 s,
                                 kPoint,
-                                kohnShamDFTEigenOperatorDevice,
+                                kohnShamDFTEigenOperator,
                                 *d_elpaScala,
                                 d_subspaceIterationSolverDevice,
                                 residualNormWaveFunctionsAllkPointsSpins
@@ -2997,7 +2930,8 @@ namespace dftfe
                                 true,
                                 scfIter == 0);
 #endif
-                            if (!d_dftParamsPtr->useDevice)
+                            if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                          memorySpace)
                               kohnShamEigenSpaceCompute(
                                 s,
                                 kPoint,
@@ -3077,87 +3011,26 @@ namespace dftfe
                   d_numEigenValues :
                   d_numEigenValuesRR);
 
-            if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                densityFamilyType::LDA)
-              {
-                computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.computeVEff(
-                    d_densityInQuadValues,
-                    d_phiInQuadValues,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_lpspQuadratureId);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
-                                                       d_phiInQuadValues,
-                                                       d_pseudoVLoc,
-                                                       d_rhoCore,
-                                                       d_lpspQuadratureId);
-                computing_timer.leave_subsection("VEff Computation");
-              }
-            else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                     densityFamilyType::GGA)
-              {
-                computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.computeVEff(
-                    d_densityInQuadValues,
-                    d_gradDensityInQuadValues,
-                    d_phiInQuadValues,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_gradRhoCore,
-                    d_lpspQuadratureId);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeVEff(
-                    d_densityInQuadValues,
-                    d_gradDensityInQuadValues,
-                    d_phiInQuadValues,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_gradRhoCore,
-                    d_lpspQuadratureId);
-                computing_timer.leave_subsection("VEff Computation");
-              }
+            computing_timer.enter_subsection("VEff Computation");
+            kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+                                                 d_gradDensityInQuadValues,
+                                                 d_phiInQuadValues,
+                                                 d_rhoCore,
+                                                 d_gradRhoCore);
+            computing_timer.leave_subsection("VEff Computation");
 
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              {
-                computing_timer.enter_subsection(
-                  "Hamiltonian Matrix Computation");
-                kohnShamDFTEigenOperatorDevice.computeHamiltonianMatricesAllkpt(
-                  0);
-                computing_timer.leave_subsection(
-                  "Hamiltonian Matrix Computation");
-              }
-#endif
 
             for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                  ++kPoint)
               {
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(kPoint,
-                                                                       0);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
+                kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
 
 
-                if (!d_dftParamsPtr->useDevice)
-                  {
-                    computing_timer.enter_subsection(
-                      "Hamiltonian Matrix Computation");
-                    kohnShamDFTEigenOperator.computeHamiltonianMatrix(kPoint,
-                                                                      0);
-                    computing_timer.leave_subsection(
-                      "Hamiltonian Matrix Computation");
-                  }
+                computing_timer.enter_subsection(
+                  "Hamiltonian Matrix Computation");
+                kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                computing_timer.leave_subsection(
+                  "Hamiltonian Matrix Computation");
 
 
                 for (unsigned int j = 0; j < 1; ++j)
@@ -3170,11 +3043,12 @@ namespace dftfe
 
 
 #ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         0,
                         kPoint,
-                        kohnShamDFTEigenOperatorDevice,
+                        kohnShamDFTEigenOperator,
                         *d_elpaScala,
                         d_subspaceIterationSolverDevice,
                         residualNormWaveFunctionsAllkPoints[kPoint],
@@ -3192,7 +3066,8 @@ namespace dftfe
                         scfConverged ? false : true,
                         scfIter == 0);
 #endif
-                    if (!d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         0,
                         kPoint,
@@ -3267,21 +3142,26 @@ namespace dftfe
                           pcout << "Beginning Chebyshev filter pass "
                                 << 1 + count << std::endl;
 
-#ifdef DFTFE_WITH_DEVICE
-                        if (d_dftParamsPtr->useDevice)
-                          kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(
-                            kPoint, 0);
-#endif
-                        if (!d_dftParamsPtr->useDevice)
-                          kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint,
-                                                                         0);
+                        kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint,
+                                                                       0);
+                        if (d_dftParamsPtr->memOptMode)
+                          {
+                            computing_timer.enter_subsection(
+                              "Hamiltonian Matrix Computation");
+                            kohnShamDFTEigenOperator
+                              .computeCellHamiltonianMatrix();
+                            computing_timer.leave_subsection(
+                              "Hamiltonian Matrix Computation");
+                          }
+
 
 #ifdef DFTFE_WITH_DEVICE
-                        if (d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             0,
                             kPoint,
-                            kohnShamDFTEigenOperatorDevice,
+                            kohnShamDFTEigenOperator,
                             *d_elpaScala,
                             d_subspaceIterationSolverDevice,
                             residualNormWaveFunctionsAllkPoints[kPoint],
@@ -3295,7 +3175,8 @@ namespace dftfe
                             scfIter == 0);
 
 #endif
-                        if (!d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             0,
                             kPoint,
@@ -3367,28 +3248,13 @@ namespace dftfe
           }
         else
           {
-#ifdef DFTFE_WITH_DEVICE
-
             compute_rhoOut(
-              kohnShamDFTEigenOperatorDevice,
-              kohnShamDFTEigenOperator,
               (scfIter < d_dftParamsPtr->spectrumSplitStartingScfIter ||
                scfConverged) ?
                 false :
                 true,
               scfConverged ||
                 (scfIter == (d_dftParamsPtr->numSCFIterations - 1)));
-#else
-            compute_rhoOut(
-              kohnShamDFTEigenOperator,
-              (scfIter < d_dftParamsPtr->spectrumSplitStartingScfIter ||
-               scfConverged) ?
-                false :
-                true,
-              scfConverged ||
-                (scfIter == (d_dftParamsPtr->numSCFIterations - 1)));
-
-#endif
           }
         computing_timer.leave_subsection("compute rho");
 
@@ -3807,10 +3673,6 @@ namespace dftfe
             computing_timer.enter_subsection("Ion force computation");
             computingTimerStandard.enter_subsection("Ion force computation");
             forcePtr->computeAtomsForces(matrix_free_data,
-#ifdef DFTFE_WITH_DEVICE
-                                         kohnShamDFTEigenOperatorDevice,
-#endif
-                                         kohnShamDFTEigenOperator,
                                          d_dispersionCorr,
                                          d_eigenDofHandlerIndex,
                                          d_smearedChargeQuadratureIdElectro,
@@ -3866,28 +3728,16 @@ namespace dftfe
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::computeStress()
   {
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
     if (d_dftParamsPtr->isPseudopotential ||
         d_dftParamsPtr->smearedNuclearCharges)
       {
-        computeVselfFieldGateauxDerFD(
-#ifdef DFTFE_WITH_DEVICE
-          kohnShamDFTEigenOperatorDevice
-#endif
-        );
+        computeVselfFieldGateauxDerFD();
       }
 
     forcePtr->computeStress(matrix_free_data,
-#ifdef DFTFE_WITH_DEVICE
-                            kohnShamDFTEigenOperatorDevice,
-#endif
-                            kohnShamDFTEigenOperator,
                             d_dispersionCorr,
                             d_eigenDofHandlerIndex,
                             d_smearedChargeQuadratureIdElectro,
@@ -3916,12 +3766,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeVselfFieldGateauxDerFD(
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperatorDevice
-#endif
-  )
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVselfFieldGateauxDerFD()
   {
     d_vselfFieldGateauxDerStrainFDBins.clear();
     d_vselfFieldGateauxDerStrainFDBins.resize(

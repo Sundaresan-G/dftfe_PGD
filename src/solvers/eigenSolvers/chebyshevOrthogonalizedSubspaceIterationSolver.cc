@@ -114,21 +114,22 @@ namespace dftfe
   //
   void
   chebyshevOrthogonalizedSubspaceIterationSolver::solve(
-    operatorDFTClass &   operatorMatrix,
-    elpaScalaManager &   elpaScala,
-    dataTypes::number *  eigenVectorsFlattened,
+    operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+    elpaScalaManager &                                 elpaScala,
+    dataTypes::number *                                eigenVectorsFlattened,
     dataTypes::number *  eigenVectorsRotFracDensityFlattened,
     const unsigned int   totalNumberWaveFunctions,
     const unsigned int   localVectorSize,
     std::vector<double> &eigenValues,
     std::vector<double> &residualNorms,
     const MPI_Comm &     interBandGroupComm,
+    const MPI_Comm &     mpiCommDomain,
     const bool           computeResidual,
     const bool           useMixedPrec,
     const bool           isFirstScf)
   {
     dealii::TimerOutput computingTimerStandard(
-      operatorMatrix.getMPICommunicator(),
+      mpiCommDomain,
       pcout,
       d_dftParams.reproducible_output || d_dftParams.verbosity < 2 ?
         dealii::TimerOutput::never :
@@ -183,7 +184,7 @@ namespace dftfe
 
 
     if (d_dftParams.verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(operatorMatrix.getMPICommunicator(),
+      dftUtils::printCurrentMemoryUsage(mpiCommDomain,
                                         "Before starting chebyshev filtering");
 
 
@@ -207,11 +208,12 @@ namespace dftfe
     //
     // allocate storage for eigenVectorsFlattenedArray for multiple blocks
     //
-    distributedCPUMultiVec<dataTypes::number> eigenVectorsFlattenedArrayBlock;
-    operatorMatrix.reinit(vectorsBlockSize,
-                          eigenVectorsFlattenedArrayBlock,
-                          true);
+    distributedCPUMultiVec<dataTypes::number> *eigenVectorsFlattenedArrayBlock =
+      &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 0);
 
+    distributedCPUMultiVec<dataTypes::number>
+      *eigenVectorsFlattenedArrayBlock2 =
+        &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 1);
     /// storage for cell wavefunction matrix
     std::vector<dataTypes::number> cellWaveFunctionMatrix;
 
@@ -234,9 +236,12 @@ namespace dftfe
 
             // create custom partitioned dealii array
             if (BVec != vectorsBlockSize)
-              operatorMatrix.reinit(BVec,
-                                    eigenVectorsFlattenedArrayBlock,
-                                    true);
+              {
+                eigenVectorsFlattenedArrayBlock =
+                  &operatorMatrix.getScratchFEMultivector(BVec, 0);
+                eigenVectorsFlattenedArrayBlock2 =
+                  &operatorMatrix.getScratchFEMultivector(BVec, 1);
+              }
 
             // fill the eigenVectorsFlattenedArrayBlock from
             // eigenVectorsFlattenedArray
@@ -247,7 +252,7 @@ namespace dftfe
                           iNode * totalNumberWaveFunctions + jvec,
                         eigenVectorsFlattened +
                           iNode * totalNumberWaveFunctions + jvec + BVec,
-                        eigenVectorsFlattenedArrayBlock.data() + iNode * BVec);
+                        eigenVectorsFlattenedArrayBlock->data() + iNode * BVec);
             computing_timer.leave_subsection(
               "Copy from full to block flattened array");
 
@@ -262,8 +267,8 @@ namespace dftfe
 
             linearAlgebraOperations::chebyshevFilter(
               operatorMatrix,
-              eigenVectorsFlattenedArrayBlock,
-              BVec,
+              *eigenVectorsFlattenedArrayBlock,
+              *eigenVectorsFlattenedArrayBlock2,
               chebyshevOrder,
               d_lowerBoundUnWantedSpectrum,
               d_upperBoundUnWantedSpectrum,
@@ -275,16 +280,15 @@ namespace dftfe
 
             if (d_dftParams.verbosity >= 4)
               dftUtils::printCurrentMemoryUsage(
-                operatorMatrix.getMPICommunicator(),
-                "During blocked chebyshev filtering");
+                mpiCommDomain, "During blocked chebyshev filtering");
 
             // copy the eigenVectorsFlattenedArrayBlock into
             // eigenVectorsFlattenedArray after filtering
             computing_timer.enter_subsection(
               "Copy from block to full flattened array");
             for (unsigned int iNode = 0; iNode < localVectorSize; ++iNode)
-              std::copy(eigenVectorsFlattenedArrayBlock.data() + iNode * BVec,
-                        eigenVectorsFlattenedArrayBlock.data() +
+              std::copy(eigenVectorsFlattenedArrayBlock->data() + iNode * BVec,
+                        eigenVectorsFlattenedArrayBlock->data() +
                           (iNode + 1) * BVec,
                         eigenVectorsFlattened +
                           iNode * totalNumberWaveFunctions + jvec);
@@ -303,7 +307,6 @@ namespace dftfe
           }
       } // block loop
 
-    operatorMatrix.reinit(0, eigenVectorsFlattenedArrayBlock, true);
 
     if (numberBandGroups > 1)
       {
@@ -415,25 +418,24 @@ namespace dftfe
               totalNumberWaveFunctions - eigenValues.size(),
               d_mpiCommParent,
               interBandGroupComm,
-              operatorMatrix.getMPICommunicator(),
+              mpiCommDomain,
               useMixedPrec,
               eigenValues,
               d_dftParams);
           }
         else
           {
-            linearAlgebraOperations::rayleighRitzGEP(
-              operatorMatrix,
-              elpaScala,
-              eigenVectorsFlattened,
-              totalNumberWaveFunctions,
-              localVectorSize,
-              d_mpiCommParent,
-              interBandGroupComm,
-              operatorMatrix.getMPICommunicator(),
-              eigenValues,
-              useMixedPrec,
-              d_dftParams);
+            linearAlgebraOperations::rayleighRitzGEP(operatorMatrix,
+                                                     elpaScala,
+                                                     eigenVectorsFlattened,
+                                                     totalNumberWaveFunctions,
+                                                     localVectorSize,
+                                                     d_mpiCommParent,
+                                                     interBandGroupComm,
+                                                     mpiCommDomain,
+                                                     eigenValues,
+                                                     useMixedPrec,
+                                                     d_dftParams);
           }
         computing_timer.leave_subsection("Rayleigh-Ritz GEP");
 
@@ -447,7 +449,7 @@ namespace dftfe
               eigenValues.size(),
               localVectorSize,
               d_mpiCommParent,
-              operatorMatrix.getMPICommunicator(),
+              mpiCommDomain,
               interBandGroupComm,
               residualNorms,
               d_dftParams);
@@ -461,7 +463,7 @@ namespace dftfe
               totalNumberWaveFunctions,
               localVectorSize,
               d_mpiCommParent,
-              operatorMatrix.getMPICommunicator(),
+              mpiCommDomain,
               interBandGroupComm,
               residualNorms,
               d_dftParams);
@@ -475,7 +477,7 @@ namespace dftfe
           eigenVectorsFlattened,
           totalNumberWaveFunctions,
           localVectorSize,
-          operatorMatrix.getMPICommunicator());
+          mpiCommDomain);
         computing_timer.leave_subsection("Gram-Schmidt Orthogn Opt");
 
         if (d_dftParams.verbosity >= 4)
@@ -495,25 +497,24 @@ namespace dftfe
               totalNumberWaveFunctions - eigenValues.size(),
               d_mpiCommParent,
               interBandGroupComm,
-              operatorMatrix.getMPICommunicator(),
+              mpiCommDomain,
               useMixedPrec,
               eigenValues,
               d_dftParams);
           }
         else
           {
-            linearAlgebraOperations::rayleighRitz(
-              operatorMatrix,
-              elpaScala,
-              eigenVectorsFlattened,
-              totalNumberWaveFunctions,
-              localVectorSize,
-              d_mpiCommParent,
-              interBandGroupComm,
-              operatorMatrix.getMPICommunicator(),
-              eigenValues,
-              d_dftParams,
-              false);
+            linearAlgebraOperations::rayleighRitz(operatorMatrix,
+                                                  elpaScala,
+                                                  eigenVectorsFlattened,
+                                                  totalNumberWaveFunctions,
+                                                  localVectorSize,
+                                                  d_mpiCommParent,
+                                                  interBandGroupComm,
+                                                  mpiCommDomain,
+                                                  eigenValues,
+                                                  d_dftParams,
+                                                  false);
           }
 
 
@@ -538,7 +539,7 @@ namespace dftfe
                   eigenValues.size(),
                   localVectorSize,
                   d_mpiCommParent,
-                  operatorMatrix.getMPICommunicator(),
+                  mpiCommDomain,
                   interBandGroupComm,
                   residualNorms,
                   d_dftParams);
@@ -551,7 +552,7 @@ namespace dftfe
                 totalNumberWaveFunctions,
                 localVectorSize,
                 d_mpiCommParent,
-                operatorMatrix.getMPICommunicator(),
+                mpiCommDomain,
                 interBandGroupComm,
                 residualNorms,
                 d_dftParams);
@@ -568,8 +569,7 @@ namespace dftfe
 
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(
-        operatorMatrix.getMPICommunicator(),
-        "After all steps of subspace iteration");
+        mpiCommDomain, "After all steps of subspace iteration");
   }
 
 
@@ -578,10 +578,10 @@ namespace dftfe
   //
   void
   chebyshevOrthogonalizedSubspaceIterationSolver::solve(
-    operatorDFTClass &                      operatorMatrix,
-    std::vector<distributedCPUVec<double>> &eigenVectors,
-    std::vector<double> &                   eigenValues,
-    std::vector<double> &                   residualNorms)
+    operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+    std::vector<distributedCPUVec<double>> &           eigenVectors,
+    std::vector<double> &                              eigenValues,
+    std::vector<double> &                              residualNorms)
   {}
 
 } // namespace dftfe

@@ -19,7 +19,7 @@
 #    define linearAlgebraOperationsDevice_h
 
 #    include <headers.h>
-#    include <operatorDevice.h>
+#    include <operator.h>
 #    include "process_grid.h"
 #    include "scalapackWrapper.h"
 #    include "elpaScalaManager.h"
@@ -237,158 +237,94 @@ namespace dftfe
 
     void
     rayleighRitz(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      elpaScalaManager &                           elpaScala,
-      dataTypes::number *                          X,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      std::vector<double> &                        eigenValues,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams,
-      const bool                                   useMixedPrecOverall = false);
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      std::vector<double> &                    eigenValues,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams,
+      const bool                               useMixedPrecOverall = false);
 
     void
     rayleighRitzGEP(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      elpaScalaManager &                           elpaScala,
-      dataTypes::number *                          X,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      std::vector<double> &                        eigenValues,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams,
-      const bool                                   useMixedPrecOverall = false);
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      std::vector<double> &                    eigenValues,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams,
+      const bool                               useMixedPrecOverall = false);
 
     void
     rayleighRitzGEPSpectrumSplitDirect(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      elpaScalaManager &                           elpaScala,
-      dataTypes::number *                          X,
-      dataTypes::number *                          XFrac,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const unsigned int                           Noc,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      std::vector<double> &                        eigenValues,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams,
-      const bool                                   useMixedPrecOverall = false);
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      dataTypes::number *                                  XFrac,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const unsigned int                       Noc,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      std::vector<double> &                    eigenValues,
+      dftfe::utils::deviceBlasHandle_t &       handle,
+      const dftParameters &                    dftParams,
+      const bool                               useMixedPrecOverall = false);
 
 
     void
     densityMatrixEigenBasisFirstOrderResponse(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      dataTypes::number *                          X,
-      distributedDeviceVec<dataTypes::number> &    Xb,
-      distributedDeviceVec<dataTypes::numberFP32> &floatXb,
-      distributedDeviceVec<dataTypes::number> &    HXb,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           M,
-      const unsigned int                           N,
-      const MPI_Comm &                             mpiCommParent,
-      const MPI_Comm &                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                    devicecclMpiCommDomain,
-      const MPI_Comm &                             interBandGroupComm,
-      const std::vector<double> &                  eigenValues,
-      const double                                 fermiEnergy,
-      std::vector<double> &                        densityMatDerFermiEnergy,
-      dftfe::elpaScalaManager &                    elpaScala,
-      dftfe::utils::deviceBlasHandle_t &           handle,
-      const dftParameters &                        dftParams);
-
-    /** @brief Calculates an estimate of lower and upper bounds of a matrix using
-     *  k-step Lanczos method.
-     *
-     *  @param  operatorMatrix An object which has access to the given matrix
-     *  @param  vect A dummy vector
-     *  @return double An estimate of the upper bound of the given matrix
-     */
-    std::pair<double, double>
-    lanczosLowerUpperBoundEigenSpectrum(
-      operatorDFTDeviceClass &                 operatorMatrix,
-      distributedDeviceVec<dataTypes::number> &Xb,
-      distributedDeviceVec<dataTypes::number> &Yb,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::numberFP32> &        floatXb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
       distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
-      const unsigned int                       blockSize,
+      const unsigned int                       M,
+      const unsigned int                       N,
+      const MPI_Comm &                         mpiCommParent,
+      const MPI_Comm &                         mpiCommDomain,
+      utils::DeviceCCLWrapper &                devicecclMpiCommDomain,
+      const MPI_Comm &                         interBandGroupComm,
+      const std::vector<double> &              eigenValues,
+      const double                             fermiEnergy,
+      std::vector<double> &                    densityMatDerFermiEnergy,
+      dftfe::elpaScalaManager &                elpaScala,
+      dftfe::utils::deviceBlasHandle_t &       handle,
       const dftParameters &                    dftParams);
-
-
-    /** @brief Apply Chebyshev filter to a given subspace
-     *
-     *  @param[in] operatorMatrix An object which has access to the given matrix
-     *  @param[in,out]  X Given subspace as a dealii array representing multiple
-     * fields as a flattened array. In-place update of the given subspace.
-     *  @param[in]  numberComponents Number of multiple-fields
-     *  @param[in]  m Chebyshev polynomial degree
-     *  @param[in]  a lower bound of unwanted spectrum
-     *  @param[in]  b upper bound of unwanted spectrum
-     *  @param[in]  a0 lower bound of wanted spectrum
-     */
-    void
-    chebyshevFilter(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      distributedDeviceVec<dataTypes::number> &    X,
-      distributedDeviceVec<dataTypes::number> &    Y,
-      distributedDeviceVec<dataTypes::numberFP32> &Z,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector,
-      const unsigned int                           localVectorSize,
-      const unsigned int                           numberComponents,
-      const unsigned int                           m,
-      const double                                 a,
-      const double                                 b,
-      const double                                 a0,
-      const bool                                   mixedPrecOverall,
-      const dftParameters &                        dftParams);
-
-
-    void
-    chebyshevFilter(
-      operatorDFTDeviceClass &                     operatorMatrix,
-      distributedDeviceVec<dataTypes::number> &    X1,
-      distributedDeviceVec<dataTypes::number> &    Y1,
-      distributedDeviceVec<dataTypes::numberFP32> &Z,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector1,
-      distributedDeviceVec<dataTypes::number> &    X2,
-      distributedDeviceVec<dataTypes::number> &    Y2,
-      distributedDeviceVec<dataTypes::number> &    projectorKetTimesVector2,
-      const unsigned int                           localVectorSize,
-      const unsigned int                           numberComponents,
-      const unsigned int                           m,
-      const double                                 a,
-      const double                                 b,
-      const double                                 a0,
-      const bool                                   mixedPrecOverall,
-      const dftParameters &                        dftParams);
 
     void
     computeEigenResidualNorm(
-      operatorDFTDeviceClass &                 operatorMatrix,
-      dataTypes::number *                      X,
-      distributedDeviceVec<dataTypes::number> &Xb,
-      distributedDeviceVec<dataTypes::number> &HXb,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
       distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
       const unsigned int                       M,
       const unsigned int                       N,
@@ -399,6 +335,81 @@ namespace dftfe
       std::vector<double> &                    residualNorm,
       const dftParameters &                    dftParams,
       const bool                               useBandParal = false);
+
+    void
+    XtHX(operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+         const dataTypes::number *                            X,
+         distributedDeviceVec<dataTypes::number> &            XBlock,
+         distributedDeviceVec<dataTypes::number> &            HXBlock,
+         distributedDeviceVec<dataTypes::number> &projectorKetTimesVector,
+         const unsigned int                       M,
+         const unsigned int                       N,
+         dftfe::utils::deviceBlasHandle_t &       handle,
+         const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+         dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+         utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+         const MPI_Comm &         mpiCommDomain,
+         const MPI_Comm &         interBandGroupComm,
+         const dftParameters &    dftParams,
+         const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    void
+    XtHXMixedPrecOverlapComputeCommun(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const dataTypes::number *                            X,
+      distributedDeviceVec<dataTypes::number> &            XBlock,
+      distributedDeviceVec<dataTypes::numberFP32> &        tempFloatBlock,
+      distributedDeviceVec<dataTypes::number> &            HXBlock,
+      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
+      const unsigned int                               M,
+      const unsigned int                               N,
+      const unsigned int                               Noc,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    void
+    XtHXOverlapComputeCommun(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const dataTypes::number *                            X,
+      distributedDeviceVec<dataTypes::number> &            XBlock,
+      distributedDeviceVec<dataTypes::number> &            HXBlock,
+      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
+      const unsigned int                               M,
+      const unsigned int                               N,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+    void
+    XtHXMixedPrecCommunOverlapComputeCommun(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const dataTypes::number *                            X,
+      distributedDeviceVec<dataTypes::number> &            XBlock,
+      distributedDeviceVec<dataTypes::number> &            HXBlock,
+      distributedDeviceVec<dataTypes::number> &        projectorKetTimesVector,
+      const unsigned int                               M,
+      const unsigned int                               N,
+      const unsigned int                               Noc,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
   } // namespace linearAlgebraOperationsDevice
 } // namespace dftfe
 #  endif

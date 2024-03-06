@@ -61,8 +61,8 @@ SET(TARGET_SRC
   ./src/excManager/NNLDA.cc
   ./src/poisson/poissonSolverProblem.cc
   ./src/helmholtz/kerkerSolverProblem.cc
-  ./src/dftOperator/kohnShamDFTOperator.cc
-  ./src/dftOperator/operator.cc
+  ./src/dftOperator/KohnShamHamiltonianOperator.cc
+  ./src/dftOperator/veffPrimeForLRDM.cc
   ./src/force/force.cc
   ./src/force/forceWfcContractions.cc  
   ./src/force/eshelbyTensor/eshelbyTensor.cc
@@ -182,8 +182,6 @@ SET(DEVICE_SRC
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
-  ./src/dftOperator/operatorDevice.cc
-  ./src/dftOperator/kohnShamDFTOperatorDevice.cc
   ./src/dft/solveVselfInBinsDevice.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc
@@ -212,8 +210,6 @@ SET(DEVICE_SRC
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
-  ./src/dftOperator/operatorDevice.cc
-  ./src/dftOperator/kohnShamDFTOperatorDevice.cc
   ./src/dft/solveVselfInBinsDevice.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc

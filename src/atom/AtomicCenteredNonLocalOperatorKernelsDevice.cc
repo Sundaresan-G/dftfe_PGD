@@ -202,9 +202,8 @@ namespace dftfe
       const unsigned int numberCellsTraversed,
       const dftfe::utils::MemoryStorage<ValueType,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &nonLocalContribution,
-      dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-        &TotalContribution,
+        &        nonLocalContribution,
+      ValueType *TotalContribution,
       const dftfe::utils::MemoryStorage<unsigned int,
                                         dftfe::utils::MemorySpace::DEVICE>
         &cellNodeIdMapNonLocalToLocal)
@@ -220,7 +219,7 @@ namespace dftfe
         dftfe::utils::makeDataTypeDeviceCompatible(
           nonLocalContribution.begin() +
           numberCellsTraversed * numberNodesPerElement * numberWfc),
-        dftfe::utils::makeDataTypeDeviceCompatible(TotalContribution.begin()),
+        dftfe::utils::makeDataTypeDeviceCompatible(TotalContribution),
         cellNodeIdMapNonLocalToLocal.begin() +
           numberCellsTraversed * numberNodesPerElement);
 #elif DFTFE_WITH_DEVICE_LANG_HIP
@@ -237,7 +236,7 @@ namespace dftfe
         dftfe::utils::makeDataTypeDeviceCompatible(
           nonLocalContribution.begin() +
           numberCellsTraversed * numberNodesPerElement * numberWfc),
-        dftfe::utils::makeDataTypeDeviceCompatible(TotalContribution.begin()),
+        dftfe::utils::makeDataTypeDeviceCompatible(TotalContribution),
         cellNodeIdMapNonLocalToLocal.begin() +
           numberCellsTraversed * numberNodesPerElement);
 #endif
@@ -289,9 +288,8 @@ namespace dftfe
       const unsigned int numberCellsTraversed,
       const dftfe::utils::MemoryStorage<double,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &nonLocalContribution,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-        &TotalContribution,
+        &     nonLocalContribution,
+      double *TotalContribution,
       const dftfe::utils::MemoryStorage<unsigned int,
                                         dftfe::utils::MemorySpace::DEVICE>
         &cellNodeIdMapNonLocalToLocal);
@@ -304,10 +302,8 @@ namespace dftfe
       const unsigned int numberCellsTraversed,
       const dftfe::utils::MemoryStorage<std::complex<double>,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &nonLocalContribution,
-      dftfe::utils::MemoryStorage<std::complex<double>,
-                                  dftfe::utils::MemorySpace::DEVICE>
-        &TotalContribution,
+        &                   nonLocalContribution,
+      std::complex<double> *TotalContribution,
       const dftfe::utils::MemoryStorage<unsigned int,
                                         dftfe::utils::MemorySpace::DEVICE>
         &cellNodeIdMapNonLocalToLocal);

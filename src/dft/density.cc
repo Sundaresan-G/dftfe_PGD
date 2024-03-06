@@ -29,12 +29,6 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_rhoOut(
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperator,
-#endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      &        kohnShamDFTEigenOperatorCPU,
     const bool isConsiderSpectrumSplitting,
     const bool isGroundState)
   {
@@ -42,14 +36,7 @@ namespace dftfe
         d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA" ||
         d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND")
       {
-#ifdef DFTFE_WITH_DEVICE
-        computeRhoNodalFromPSI(kohnShamDFTEigenOperator,
-                               kohnShamDFTEigenOperatorCPU,
-                               isConsiderSpectrumSplitting);
-#else
-        computeRhoNodalFromPSI(kohnShamDFTEigenOperatorCPU,
-                               isConsiderSpectrumSplitting);
-#endif
+        computeRhoNodalFromPSI(isConsiderSpectrumSplitting);
 
         // normalize rho
         const double charge =
@@ -163,12 +150,7 @@ namespace dftfe
 
         if (d_dftParamsPtr->computeEnergyEverySCF || isGroundState)
           {
-            computeRhoNodalFromPSI(
-#ifdef DFTFE_WITH_DEVICE
-              kohnShamDFTEigenOperator,
-#endif
-              kohnShamDFTEigenOperatorCPU,
-              isConsiderSpectrumSplitting);
+            computeRhoNodalFromPSI(isConsiderSpectrumSplitting);
 
             // normalize rho
             const double charge =
@@ -300,12 +282,6 @@ namespace dftfe
             dftfe::utils::MemorySpace memorySpace>
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::computeRhoNodalFromPSI(
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro, memorySpace>
-      &kohnShamDFTEigenOperator,
-#endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
-      &  kohnShamDFTEigenOperatorCPU,
     bool isConsiderSpectrumSplitting)
   {
     std::vector<
