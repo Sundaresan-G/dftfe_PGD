@@ -621,6 +621,8 @@ namespace dftfe
       d_dftParamsPtr->memOptMode ?
         0 :
         kPointIndex * (d_dftParamsPtr->spinPolarized + 1) + spinIndex;
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+      d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
   }
 
 
@@ -650,7 +652,6 @@ namespace dftfe
               numWaveFunctions, d_ONCVNonLocalProjectorTimesVectorBlock);
             d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
               d_cellWaveFunctionMatrixSrc);
-            d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
           }
         else
           d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(

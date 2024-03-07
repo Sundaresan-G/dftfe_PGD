@@ -1048,6 +1048,26 @@ namespace dftfe
                   .push_back(localNodeId);
               }
           }
+        freeDeviceVectors();
+        hostWfcPointers =
+          (ValueType **)malloc(d_totalNonlocalElems * sizeof(ValueType *));
+        hostPointerCDagger =
+          (ValueType **)malloc(d_totalNonlocalElems * sizeof(ValueType *));
+        hostPointerCDaggeOutTemp =
+          (ValueType **)malloc(d_totalNonlocalElems * sizeof(ValueType *));
+
+
+        dftfe::utils::deviceMalloc((void **)&deviceWfcPointers,
+                                   d_totalNonlocalElems * sizeof(ValueType *));
+
+
+        dftfe::utils::deviceMalloc((void **)&devicePointerCDagger,
+                                   d_totalNonlocalElems * sizeof(ValueType *));
+
+        dftfe::utils::deviceMalloc((void **)&devicePointerCDaggerOutTemp,
+                                   d_totalNonlocalElems * sizeof(ValueType *));
+
+        d_isMallocCalled = true;
       }
 
 
@@ -1119,13 +1139,6 @@ namespace dftfe
           d_numberWaveFunctions * d_totalNonlocalElems *
             d_numberNodesPerElement,
           ValueType(0.0));
-        freeDeviceVectors();
-        hostWfcPointers =
-          (ValueType **)malloc(d_totalNonlocalElems * sizeof(ValueType *));
-        hostPointerCDagger =
-          (ValueType **)malloc(d_totalNonlocalElems * sizeof(ValueType *));
-        hostPointerCDaggeOutTemp =
-          (ValueType **)malloc(d_totalNonlocalElems * sizeof(ValueType *));
 
         for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
@@ -1134,23 +1147,10 @@ namespace dftfe
               i * d_numberWaveFunctions * d_maxSingleAtomContribution;
           }
 
-        dftfe::utils::deviceMalloc((void **)&deviceWfcPointers,
-                                   d_totalNonlocalElems * sizeof(ValueType *));
-
-
-        dftfe::utils::deviceMalloc((void **)&devicePointerCDagger,
-                                   d_totalNonlocalElems * sizeof(ValueType *));
-
-        dftfe::utils::deviceMalloc((void **)&devicePointerCDaggerOutTemp,
-                                   d_totalNonlocalElems * sizeof(ValueType *));
-
         dftfe::utils::deviceMemcpyH2D(devicePointerCDaggerOutTemp,
                                       hostPointerCDaggeOutTemp,
                                       d_totalNonlocalElems *
                                         sizeof(ValueType *));
-
-        d_isMallocCalled = true;
-
 
         d_sphericalFnTimesWavefunctionMatrix.clear();
         d_sphericalFnTimesWavefunctionMatrix.resize(d_numberWaveFunctions *
