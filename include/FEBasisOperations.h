@@ -502,6 +502,57 @@ namespace dftfe
           }
       }
 
+      /**
+       * @brief Cell level inverse diagonal mass matrix in ValueTypeBasisCoeff
+       */
+      const auto &
+      cellInverseMassVector() const
+      {
+        if constexpr (std::is_same<ValueTypeBasisCoeff,
+                                   ValueTypeBasisData>::value)
+          {
+            return d_cellInverseMassVectorBasisType;
+          }
+        else
+          {
+            return d_cellInverseMassVectorCoeffType;
+          }
+      }
+
+      /**
+       * @brief Cell level sqrt diagonal mass matrix in ValueTypeBasisCoeff
+       */
+      const auto &
+      cellSqrtMassVector() const
+      {
+        if constexpr (std::is_same<ValueTypeBasisCoeff,
+                                   ValueTypeBasisData>::value)
+          {
+            return d_cellSqrtMassVectorBasisType;
+          }
+        else
+          {
+            return d_cellSqrtMassVectorCoeffType;
+          }
+      }
+
+      /**
+       * @brief Cell level diagonal mass matrix in ValueTypeBasisCoeff
+       */
+      const auto &
+      cellMassVector() const
+      {
+        if constexpr (std::is_same<ValueTypeBasisCoeff,
+                                   ValueTypeBasisData>::value)
+          {
+            return d_cellMassVectorBasisType;
+          }
+        else
+          {
+            return d_cellMassVectorCoeffType;
+          }
+      }
+
 
       /**
        * @brief Inverse sqrt diagonal mass matrix in ValueTypeBasisCoeff
@@ -517,6 +568,25 @@ namespace dftfe
         else
           {
             return d_inverseSqrtMassVectorCoeffType;
+          }
+      }
+
+
+
+      /**
+       * @brief Inverse sqrt diagonal mass matrix in ValueTypeBasisCoeff
+       */
+      const auto &
+      inverseMassVector() const
+      {
+        if constexpr (std::is_same<ValueTypeBasisCoeff,
+                                   ValueTypeBasisData>::value)
+          {
+            return d_inverseMassVectorBasisType;
+          }
+        else
+          {
+            return d_inverseMassVectorCoeffType;
           }
       }
 
@@ -538,12 +608,50 @@ namespace dftfe
           }
       }
 
+      /**
+       * @brief diagonal mass matrix in ValueTypeBasisCoeff
+       */
+      const auto &
+      massVector() const
+      {
+        if constexpr (std::is_same<ValueTypeBasisCoeff,
+                                   ValueTypeBasisData>::value)
+          {
+            return d_massVectorBasisType;
+          }
+        else
+          {
+            return d_massVectorCoeffType;
+          }
+      }
+
 
       /**
        * @brief Cell level inverse sqrt diagonal mass matrix in ValueTypeBasisData
        */
       const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
       cellInverseSqrtMassVectorBasisData() const;
+
+
+      /**
+       * @brief Cell level inverse  diagonal mass matrix in ValueTypeBasisData
+       */
+      const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+      cellInverseMassVectorBasisData() const;
+
+
+      /**
+       * @brief Cell level sqrt diagonal mass matrix in ValueTypeBasisData
+       */
+      const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+      cellSqrtMassVectorBasisData() const;
+
+
+      /**
+       * @brief Cell level diagonal mass matrix in ValueTypeBasisData
+       */
+      const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+      cellMassVectorBasisData() const;
 
       /**
        * @brief Inverse sqrt diagonal mass matrix in ValueTypeBasisData
@@ -552,10 +660,22 @@ namespace dftfe
       inverseSqrtMassVectorBasisData() const;
 
       /**
+       * @brief Inverse diagonal mass matrix in ValueTypeBasisData
+       */
+      const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+      inverseMassVectorBasisData() const;
+
+      /**
        * @brief sqrt diagonal mass matrix in ValueTypeBasisData
        */
       const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
       sqrtMassVectorBasisData() const;
+
+      /**
+       * @brief diagonal mass matrix in ValueTypeBasisData
+       */
+      const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+      massVectorBasisData() const;
 
       /**
        * @brief returns 2 if all cells on current processor are Cartesian,
@@ -707,9 +827,29 @@ namespace dftfe
       dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
         d_cellMassMatrixCoeffType;
       dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+        d_cellInverseMassVectorBasisType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+        d_cellInverseMassVectorCoeffType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
         d_cellInverseSqrtMassVectorBasisType;
       dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
         d_cellInverseSqrtMassVectorCoeffType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+        d_cellMassVectorBasisType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+        d_cellMassVectorCoeffType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+        d_cellSqrtMassVectorBasisType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+        d_cellSqrtMassVectorCoeffType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+        d_massVectorBasisType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+        d_massVectorCoeffType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+        d_inverseMassVectorBasisType;
+      dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+        d_inverseMassVectorCoeffType;
       dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
         d_inverseSqrtMassVectorBasisType;
       dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>

@@ -229,7 +229,10 @@ namespace dftfe
     std::vector<dftfe::utils::MemoryStorage<double, memorySpace>>
       d_invJacKPointTimesJxW;
     // Constraints scaled with inverse sqrt diagonal Mass Matrix
-    std::shared_ptr<constraintInfoClass> scaledConstraintsNoneDataInfoPtr;
+    std::shared_ptr<constraintInfoClass>
+      inverseMassVectorScaledConstraintsNoneDataInfoPtr;
+    std::shared_ptr<constraintInfoClass>
+      inverseSqrtMassVectorScaledConstraintsNoneDataInfoPtr;
     // kPoint cartesian coordinates
     std::vector<double> d_kPointCoordinates;
     // k point weights

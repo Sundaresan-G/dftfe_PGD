@@ -66,6 +66,8 @@ namespace dftfe
       d_cellStiffnessMatrixCoeffType.clear();
       d_cellMassMatrixBasisType.clear();
       d_cellMassMatrixCoeffType.clear();
+      d_cellInverseMassVectorBasisType.clear();
+      d_cellInverseMassVectorCoeffType.clear();
       d_cellInverseSqrtMassVectorBasisType.clear();
       d_cellInverseSqrtMassVectorCoeffType.clear();
       d_inverseSqrtMassVectorBasisType.clear();
@@ -491,6 +493,36 @@ namespace dftfe
               dftfe::utils::MemorySpace memorySpace>
     const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
     FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellInverseMassVectorBasisData() const
+    {
+      return d_cellInverseMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellSqrtMassVectorBasisData() const
+    {
+      return d_cellSqrtMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellMassVectorBasisData() const
+    {
+      return d_cellMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
       inverseSqrtMassVectorBasisData() const
     {
       return d_inverseSqrtMassVectorBasisType;
@@ -504,6 +536,26 @@ namespace dftfe
       sqrtMassVectorBasisData() const
     {
       return d_sqrtMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      inverseMassVectorBasisData() const
+    {
+      return d_inverseMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      massVectorBasisData() const
+    {
+      return d_massVectorBasisType;
     }
 
 
@@ -1750,11 +1802,16 @@ namespace dftfe
     FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
       computeInverseSqrtMassVector(const bool basisType, const bool ceoffType)
     {
-      distributedCPUVec<double> massVector, sqrtMassVector;
+      distributedCPUVec<double> massVector, sqrtMassVector, invMassVector,
+        invSqrtMassVector;
       d_matrixFreeDataPtr->initialize_dof_vector(massVector, d_dofHandlerID);
       sqrtMassVector.reinit(massVector);
-      massVector     = 0.0;
-      sqrtMassVector = 0.0;
+      invMassVector.reinit(massVector);
+      invSqrtMassVector.reinit(massVector);
+      massVector        = 0.0;
+      sqrtMassVector    = 0.0;
+      invMassVector     = 0.0;
+      invSqrtMassVector = 0.0;
 
       // FIXME : check for roundoff errors
       dealii::QGaussLobatto<3> quadrature(std::cbrt(d_nDofsPerCell));
@@ -1794,6 +1851,7 @@ namespace dftfe
           }
 
       massVector.compress(dealii::VectorOperation::add);
+      massVector.update_ghost_values();
 
 
       for (dealii::types::global_dof_index i = 0; i < massVector.size(); ++i)
@@ -1803,19 +1861,22 @@ namespace dftfe
             sqrtMassVector(i) = std::sqrt(massVector(i));
             if (std::abs(massVector(i)) > 1.0e-15)
               {
-                massVector(i) = 1.0 / std::sqrt(massVector(i));
+                invSqrtMassVector(i) = 1.0 / std::sqrt(massVector(i));
+                invMassVector(i)     = 1.0 / massVector(i);
               }
 
             AssertThrow(
-              !std::isnan(massVector(i)),
+              !std::isnan(invMassVector(i)),
               dealii::ExcMessage(
                 "Value of inverse square root of mass matrix on the unconstrained node is undefined"));
           }
 
-      massVector.compress(dealii::VectorOperation::insert);
-      massVector.update_ghost_values();
+      invMassVector.compress(dealii::VectorOperation::insert);
+      invMassVector.update_ghost_values();
       sqrtMassVector.compress(dealii::VectorOperation::insert);
       sqrtMassVector.update_ghost_values();
+      invSqrtMassVector.compress(dealii::VectorOperation::insert);
+      invSqrtMassVector.update_ghost_values();
 
       cell =
         d_matrixFreeDataPtr->get_dof_handler(d_dofHandlerID).begin_active();
@@ -1824,7 +1885,11 @@ namespace dftfe
 
       dftfe::utils::MemoryStorage<ValueTypeBasisData,
                                   dftfe::utils::MemorySpace::HOST>
-        cellInvSqrtMassVectorHost;
+        cellMassVectorHost, cellInvMassVectorHost, cellInvSqrtMassVectorHost,
+        cellSqrtMassVectorHost;
+      cellMassVectorHost.resize(d_nCells * d_nDofsPerCell);
+      cellInvMassVectorHost.resize(d_nCells * d_nDofsPerCell);
+      cellSqrtMassVectorHost.resize(d_nCells * d_nDofsPerCell);
       cellInvSqrtMassVectorHost.resize(d_nCells * d_nDofsPerCell);
       unsigned int iElemCount = 0;
       for (; cell != endc; ++cell)
@@ -1838,70 +1903,149 @@ namespace dftfe
                     cell_dof_indices[iNode];
                   if ((*d_constraintsVector)[d_dofHandlerID]->is_constrained(
                         globalIndex))
-                    cellInvSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
-                                              iNode] = 1.0;
+                    {
+                      cellMassVectorHost[iElemCount * d_nDofsPerCell + iNode] =
+                        1.0;
+                      cellInvMassVectorHost[iElemCount * d_nDofsPerCell +
+                                            iNode]     = 1.0;
+                      cellSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
+                                             iNode]    = 1.0;
+                      cellInvSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
+                                                iNode] = 1.0;
+                    }
                   else
-                    cellInvSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
-                                              iNode] = massVector(globalIndex);
+                    {
+                      ValueTypeBasisData massVecValue = massVector(globalIndex);
+                      cellMassVectorHost[iElemCount * d_nDofsPerCell + iNode] =
+                        massVecValue;
+                      cellSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
+                                             iNode] = std::sqrt(massVecValue);
+                      if (std::abs(massVecValue) > 1.0e-15)
+                        {
+                          cellInvMassVectorHost[iElemCount * d_nDofsPerCell +
+                                                iNode] = 1.0 / massVecValue;
+                          cellInvSqrtMassVectorHost[iElemCount *
+                                                      d_nDofsPerCell +
+                                                    iNode] =
+                            1.0 / std::sqrt(massVecValue);
+                        }
+                    }
                 }
               ++iElemCount;
             }
         }
       if (basisType)
         {
+          d_cellMassVectorBasisType.resize(cellMassVectorHost.size());
+          d_cellMassVectorBasisType.copyFrom(cellMassVectorHost);
+          d_cellInverseMassVectorBasisType.resize(cellInvMassVectorHost.size());
+          d_cellInverseMassVectorBasisType.copyFrom(cellInvMassVectorHost);
+          d_cellSqrtMassVectorBasisType.resize(cellSqrtMassVectorHost.size());
+          d_cellSqrtMassVectorBasisType.copyFrom(cellSqrtMassVectorHost);
           d_cellInverseSqrtMassVectorBasisType.resize(
             cellInvSqrtMassVectorHost.size());
           d_cellInverseSqrtMassVectorBasisType.copyFrom(
             cellInvSqrtMassVectorHost);
+
           d_inverseSqrtMassVectorBasisType.resize(
-            mpiPatternP2P->localOwnedSize() + mpiPatternP2P->localOwnedSize());
+            mpiPatternP2P->localOwnedSize() + mpiPatternP2P->localGhostSize());
           d_inverseSqrtMassVectorBasisType
             .template copyFrom<dftfe::utils::MemorySpace::HOST>(
-              massVector.begin(),
+              invSqrtMassVector.begin(),
               d_inverseSqrtMassVectorBasisType.size(),
               0,
               0);
           d_sqrtMassVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
-                                           mpiPatternP2P->localOwnedSize());
+                                           mpiPatternP2P->localGhostSize());
           d_sqrtMassVectorBasisType
             .template copyFrom<dftfe::utils::MemorySpace::HOST>(
               sqrtMassVector.begin(), d_sqrtMassVectorBasisType.size(), 0, 0);
+          d_inverseMassVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                              mpiPatternP2P->localGhostSize());
+          d_inverseMassVectorBasisType
+            .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+              invMassVector.begin(), d_inverseMassVectorBasisType.size(), 0, 0);
+          d_massVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                       mpiPatternP2P->localGhostSize());
+          d_massVectorBasisType
+            .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+              massVector.begin(), d_massVectorBasisType.size(), 0, 0);
         }
       if (ceoffType)
         {
           if (!basisType)
             {
+              d_cellMassVectorBasisType.resize(cellMassVectorHost.size());
+              d_cellMassVectorBasisType.copyFrom(cellMassVectorHost);
+              d_cellInverseMassVectorBasisType.resize(
+                cellInvMassVectorHost.size());
+              d_cellInverseMassVectorBasisType.copyFrom(cellInvMassVectorHost);
+              d_cellSqrtMassVectorBasisType.resize(
+                cellSqrtMassVectorHost.size());
+              d_cellSqrtMassVectorBasisType.copyFrom(cellSqrtMassVectorHost);
               d_cellInverseSqrtMassVectorBasisType.resize(
                 cellInvSqrtMassVectorHost.size());
               d_cellInverseSqrtMassVectorBasisType.copyFrom(
                 cellInvSqrtMassVectorHost);
+
               d_inverseSqrtMassVectorBasisType.resize(
                 mpiPatternP2P->localOwnedSize() +
-                mpiPatternP2P->localOwnedSize());
+                mpiPatternP2P->localGhostSize());
               d_inverseSqrtMassVectorBasisType
                 .template copyFrom<dftfe::utils::MemorySpace::HOST>(
-                  massVector.begin(),
+                  invSqrtMassVector.begin(),
                   d_inverseSqrtMassVectorBasisType.size(),
                   0,
                   0);
               d_sqrtMassVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
-                                               mpiPatternP2P->localOwnedSize());
+                                               mpiPatternP2P->localGhostSize());
               d_sqrtMassVectorBasisType
                 .template copyFrom<dftfe::utils::MemorySpace::HOST>(
                   sqrtMassVector.begin(),
                   d_sqrtMassVectorBasisType.size(),
                   0,
                   0);
+              d_inverseMassVectorBasisType.resize(
+                mpiPatternP2P->localOwnedSize() +
+                mpiPatternP2P->localGhostSize());
+              d_inverseMassVectorBasisType
+                .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+                  invMassVector.begin(),
+                  d_inverseMassVectorBasisType.size(),
+                  0,
+                  0);
+              d_massVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                           mpiPatternP2P->localGhostSize());
+              d_massVectorBasisType
+                .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+                  massVector.begin(), d_massVectorBasisType.size(), 0, 0);
             }
           if constexpr (!std::is_same<ValueTypeBasisCoeff,
                                       ValueTypeBasisData>::value)
             {
-              d_cellMassMatrixCoeffType.resize(
+              d_cellInverseMassVectorCoeffType.resize(
+                cellInvMassVectorHost.size());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nCells,
+                d_cellInverseMassVectorBasisType.data(),
+                d_cellInverseMassVectorCoeffType.data());
+              d_cellInverseSqrtMassVectorCoeffType.resize(
                 cellInvSqrtMassVectorHost.size());
               d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
                 d_nDofsPerCell * d_nCells,
                 d_cellInverseSqrtMassVectorBasisType.data(),
-                d_cellMassMatrixCoeffType.data());
+                d_cellInverseSqrtMassVectorCoeffType.data());
+              d_cellMassVectorCoeffType.resize(cellMassVectorHost.size());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nCells,
+                d_cellMassVectorBasisType.data(),
+                d_cellMassVectorCoeffType.data());
+              d_cellSqrtMassVectorCoeffType.resize(
+                cellSqrtMassVectorHost.size());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nCells,
+                d_cellSqrtMassVectorBasisType.data(),
+                d_cellSqrtMassVectorCoeffType.data());
               d_inverseSqrtMassVectorCoeffType.resize(
                 mpiPatternP2P->localOwnedSize() +
                 mpiPatternP2P->localOwnedSize());
@@ -1915,6 +2059,19 @@ namespace dftfe
                 d_sqrtMassVectorCoeffType.size(),
                 d_sqrtMassVectorBasisType.data(),
                 d_sqrtMassVectorCoeffType.data());
+              d_massVectorCoeffType.resize(mpiPatternP2P->localOwnedSize() +
+                                           mpiPatternP2P->localOwnedSize());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_massVectorCoeffType.size(),
+                d_massVectorBasisType.data(),
+                d_massVectorCoeffType.data());
+              d_inverseMassVectorCoeffType.resize(
+                mpiPatternP2P->localOwnedSize() +
+                mpiPatternP2P->localOwnedSize());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_inverseMassVectorCoeffType.size(),
+                d_inverseMassVectorBasisType.data(),
+                d_inverseMassVectorCoeffType.data());
             }
         }
     }

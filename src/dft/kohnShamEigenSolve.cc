@@ -335,19 +335,6 @@ namespace dftfe
           pcout << "spin: " << spinType + 1 << std::endl;
       }
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.getSqrtMassVector().data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
-
     std::vector<double> eigenValuesTemp(isSpectrumSplit ? d_numEigenValuesRR :
                                                           d_numEigenValues,
                                         0.0);
@@ -436,31 +423,6 @@ namespace dftfe
       computeResidual,
       useMixedPrec,
       isFirstScf);
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
-
-    if (isSpectrumSplit && d_numEigenValuesRR != d_numEigenValues)
-      {
-        internal::pointWiseScaleWithDiagonal(
-          kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-          d_numEigenValuesRR,
-          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-          d_eigenVectorsRotFracDensityFlattenedHost.data() +
-            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-              d_numEigenValuesRR *
-              matrix_free_data.get_vector_partitioner()->locally_owned_size());
-      }
 
     //
     // copy the eigenValues and corresponding residual norms back to data

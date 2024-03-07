@@ -42,7 +42,7 @@ static const unsigned int order_lookup[][2] = {
 
 namespace dftfe
 {
-  namespace internal
+  namespace chebyshevOrthogonalizedSubspaceIterationSolverInternal
   {
     unsigned int
     setChebyshevOrder(const unsigned int upperBoundUnwantedSpectrum)
@@ -54,7 +54,32 @@ namespace dftfe
         }
       return 1250;
     }
-  } // namespace internal
+    void
+    pointWiseScaleWithDiagonal(const double *     diagonal,
+                               const unsigned int numberFields,
+                               const unsigned int numberDofs,
+                               dataTypes::number *fieldsArrayFlattened)
+    {
+      const unsigned int inc = 1;
+
+      for (unsigned int i = 0; i < numberDofs; ++i)
+        {
+#ifdef USE_COMPLEX
+          double scalingCoeff = diagonal[i];
+          zdscal_(&numberFields,
+                  &scalingCoeff,
+                  &fieldsArrayFlattened[i * numberFields],
+                  &inc);
+#else
+          double scalingCoeff = diagonal[i];
+          dscal_(&numberFields,
+                 &scalingCoeff,
+                 &fieldsArrayFlattened[i * numberFields],
+                 &inc);
+#endif
+        }
+    }
+  } // namespace chebyshevOrthogonalizedSubspaceIterationSolverInternal
 
   //
   // Constructor.
@@ -143,7 +168,8 @@ namespace dftfe
     if (chebyshevOrder == 0)
       {
         chebyshevOrder =
-          internal::setChebyshevOrder(d_upperBoundUnWantedSpectrum);
+          chebyshevOrthogonalizedSubspaceIterationSolverInternal::
+            setChebyshevOrder(d_upperBoundUnWantedSpectrum);
 
         if (d_dftParams.orthogType.compare("CGS") == 0 &&
             !d_dftParams.isPseudopotential)
@@ -402,6 +428,16 @@ namespace dftfe
     computingTimerStandard.leave_subsection("Chebyshev filtering on CPU");
     if (d_dftParams.verbosity >= 4)
       pcout << "ChebyShev Filtering Done: " << std::endl;
+    //
+    // scale the eigenVectors (initial guess of single atom wavefunctions or
+    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
+    // by M^{1/2}
+    chebyshevOrthogonalizedSubspaceIterationSolverInternal::
+      pointWiseScaleWithDiagonal(operatorMatrix.getSqrtMassVector().data(),
+                                 totalNumberWaveFunctions,
+                                 localVectorSize,
+                                 eigenVectorsFlattened);
+
 
     if (d_dftParams.orthogType.compare("CGS") == 0)
       {
@@ -566,6 +602,28 @@ namespace dftfe
         pcout << "EigenVector Residual Computation Done: " << std::endl;
         pcout << std::endl;
       }
+
+    //
+    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
+    // the usual FE basis
+    //
+    chebyshevOrthogonalizedSubspaceIterationSolverInternal::
+      pointWiseScaleWithDiagonal(
+        operatorMatrix.getInverseSqrtMassVector().data(),
+        totalNumberWaveFunctions,
+        localVectorSize,
+        eigenVectorsFlattened);
+
+    if (eigenValues.size() != totalNumberWaveFunctions)
+      {
+        chebyshevOrthogonalizedSubspaceIterationSolverInternal::
+          pointWiseScaleWithDiagonal(
+            operatorMatrix.getInverseSqrtMassVector().data(),
+            eigenValues.size(),
+            localVectorSize,
+            eigenVectorsRotFracDensityFlattened);
+      }
+
 
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(

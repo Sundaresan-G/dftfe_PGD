@@ -304,7 +304,7 @@ namespace dftfe
 
 
       double alpha1 = sigma1 / e, alpha2 = -c;
-      operatorMatrix.HX(X, alpha1, 0.0, alpha1 * alpha2, Y);
+      operatorMatrix.HXCheby(X, alpha1, 0.0, alpha1 * alpha2, Y);
       //
       // polynomial loop
       //
@@ -318,7 +318,7 @@ namespace dftfe
           //
           // call HX
           //
-          operatorMatrix.HX(Y, alpha1, alpha2, -c * alpha1, X);
+          operatorMatrix.HXCheby(Y, alpha1, alpha2, -c * alpha1, X);
 
 
           //

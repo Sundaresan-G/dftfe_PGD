@@ -106,6 +106,15 @@ namespace dftfe
        dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
 
+    virtual void
+    HXCheby(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+      const double scalarHX,
+      const double scalarY,
+      const double scalarX,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
+
 
     /**
      * @brief Get constraint matrix eigen
