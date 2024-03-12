@@ -423,7 +423,7 @@ namespace dftfe
         for (unsigned int iGhost = 0; iGhost < d_numGhostProcs; ++iGhost)
           {
             const int ghostProcId = d_ghostProcIds[iGhost];
-            err                   = MPI_Isend(&d_numGhostIndicesInGhostProcs[iGhost],
+            err = MPI_Isend(&d_numGhostIndicesInGhostProcs[iGhost],
                             1,
                             MPI_UNSIGNED,
                             ghostProcId,
