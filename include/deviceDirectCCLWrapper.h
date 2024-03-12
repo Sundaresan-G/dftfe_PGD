@@ -22,11 +22,35 @@
 #    include <complex>
 #    include <mpi.h>
 #    include <DeviceTypeConfig.h>
-
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+#      include <nccl.h>
+#    endif
 namespace dftfe
 {
   namespace utils
   {
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+#      define NCCLCHECKASYNC(commPtr)                     \
+        do                                                \
+          {                                               \
+            ncclResult_t state;                           \
+            do                                            \
+              {                                           \
+                ncclCommGetAsyncError(*commPtr, &state);  \
+              }                                           \
+            while (state == ncclInProgress);              \
+            ncclCommGetAsyncError(*commPtr, &state);      \
+            if (state != ncclSuccess)                     \
+              {                                           \
+                printf("Failed, NCCL error %s:%d '%s'\n", \
+                       __FILE__,                          \
+                       __LINE__,                          \
+                       ncclGetErrorString(state));        \
+                exit(EXIT_FAILURE);                       \
+              }                                           \
+          }                                               \
+        while (0)
+#    endif
     /**
      *  @brief Wrapper class for Device Direct collective communications library.
      *  Adapted from
@@ -159,15 +183,15 @@ namespace dftfe
                                                  deviceStream_t &stream)
       {}
 
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      inline static ncclUniqueId *ncclIdPtr;
+      inline static ncclComm_t *  ncclCommPtr;
+      inline static bool          ncclCommInit;
+#    endif
     private:
       int      myRank;
       int      totalRanks;
       MPI_Comm d_mpiComm;
-      bool     commCreated;
-#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      void *ncclIdPtr;
-      void *ncclCommPtr;
-#    endif
     };
   } // namespace utils
 } // namespace dftfe

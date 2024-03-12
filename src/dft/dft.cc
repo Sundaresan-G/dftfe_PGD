@@ -196,7 +196,7 @@ namespace dftfe
 
 #if defined(DFTFE_WITH_DEVICE)
     d_devicecclMpiCommDomainPtr = new utils::DeviceCCLWrapper;
-    if (d_dftParamsPtr->useDeviceDirectAllReduce)
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       d_devicecclMpiCommDomainPtr->init(mpi_comm_domain);
 #endif
     d_pspCutOff =

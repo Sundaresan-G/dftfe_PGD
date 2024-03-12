@@ -293,6 +293,7 @@ namespace dftfe
         constraintsMatrixDataInfoDevice.distribute_slave_to_master(dst);
 
         dst.accumulateAddLocallyOwned();
+        temp.setValue(0);
 
         if (localSize > 0)
 #  ifdef DFTFE_WITH_DEVICE_LANG_CUDA

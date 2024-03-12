@@ -36,26 +36,8 @@ namespace dftfe
 {
   namespace utils
   {
-#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-#    define NCCLCHECK(cmd)                              \
-      do                                                \
-        {                                               \
-          ncclResult_t r = cmd;                         \
-          if (r != ncclSuccess)                         \
-            {                                           \
-              printf("Failed, NCCL error %s:%d '%s'\n", \
-                     __FILE__,                          \
-                     __LINE__,                          \
-                     ncclGetErrorString(r));            \
-              exit(EXIT_FAILURE);                       \
-            }                                           \
-        }                                               \
-      while (0)
-#  endif
-
     DeviceCCLWrapper::DeviceCCLWrapper()
-      : commCreated(false)
-      , d_mpiComm(MPI_COMM_NULL)
+      : d_mpiComm(MPI_COMM_NULL)
     {}
 
     void
@@ -65,17 +47,21 @@ namespace dftfe
       MPICHECK(MPI_Comm_size(mpiComm, &totalRanks));
       MPICHECK(MPI_Comm_rank(mpiComm, &myRank));
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      ncclIdPtr   = (void *)(new ncclUniqueId);
-      ncclCommPtr = (void *)(new ncclComm_t);
-      if (myRank == 0)
-        ncclGetUniqueId((ncclUniqueId *)ncclIdPtr);
-      MPICHECK(MPI_Bcast(
-        ncclIdPtr, sizeof(*((ncclUniqueId *)ncclIdPtr)), MPI_BYTE, 0, mpiComm));
-      NCCLCHECK(ncclCommInitRank((ncclComm_t *)ncclCommPtr,
-                                 totalRanks,
-                                 *((ncclUniqueId *)ncclIdPtr),
-                                 myRank));
-      commCreated = true;
+      if (!ncclCommInit)
+        {
+          ncclIdPtr   = new ncclUniqueId;
+          ncclCommPtr = new ncclComm_t;
+          if (myRank == 0)
+            ncclGetUniqueId(ncclIdPtr);
+          MPICHECK(
+            MPI_Bcast(ncclIdPtr, sizeof(*ncclIdPtr), MPI_BYTE, 0, d_mpiComm));
+          ncclConfig_t config = NCCL_CONFIG_INITIALIZER;
+          config.blocking     = 0;
+          ncclCommInitRankConfig(
+            ncclCommPtr, totalRanks, *ncclIdPtr, myRank, &config);
+          NCCLCHECKASYNC(ncclCommPtr);
+          ncclCommInit = true;
+        }
 #  endif
     }
 
@@ -84,11 +70,11 @@ namespace dftfe
       if (d_mpiComm != MPI_COMM_NULL)
         MPI_Comm_free(&d_mpiComm);
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (commCreated)
+      if (ncclCommInit)
         {
-          ncclCommDestroy(*((ncclComm_t *)ncclCommPtr));
-          delete (ncclComm_t *)ncclCommPtr;
-          delete (ncclUniqueId *)ncclIdPtr;
+          ncclCommDestroy(*ncclCommPtr);
+          delete ncclCommPtr;
+          delete ncclIdPtr;
         }
 #  endif
     }
@@ -100,13 +86,14 @@ namespace dftfe
                                                    deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      NCCLCHECK(ncclAllReduce((const void *)send,
-                              (void *)recv,
-                              size,
-                              ncclFloat,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
+      ncclAllReduce((const void *)send,
+                    (void *)recv,
+                    size,
+                    ncclFloat,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      NCCLCHECKASYNC(ncclCommPtr);
 #  elif DFTFE_WITH_DEVICE_AWARE_MPI
       dftfe::utils::deviceStreamSynchronize(stream);
       if (send == recv)
@@ -131,13 +118,14 @@ namespace dftfe
                                                    deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      NCCLCHECK(ncclAllReduce((const void *)send,
-                              (void *)recv,
-                              size,
-                              ncclDouble,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
+      ncclAllReduce((const void *)send,
+                    (void *)recv,
+                    size,
+                    ncclDouble,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      NCCLCHECKASYNC(ncclCommPtr);
 #  elif DFTFE_WITH_DEVICE_AWARE_MPI
       dftfe::utils::deviceStreamSynchronize(stream);
       if (send == recv)
@@ -170,21 +158,22 @@ namespace dftfe
                                                            tempReal,
                                                            tempImag);
       ncclGroupStart();
-      NCCLCHECK(ncclAllReduce((const void *)tempReal,
-                              (void *)tempReal,
-                              size,
-                              ncclDouble,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
-      NCCLCHECK(ncclAllReduce((const void *)tempImag,
-                              (void *)tempImag,
-                              size,
-                              ncclDouble,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
+      ncclAllReduce((const void *)tempReal,
+                    (void *)tempReal,
+                    size,
+                    ncclDouble,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      ncclAllReduce((const void *)tempImag,
+                    (void *)tempImag,
+                    size,
+                    ncclDouble,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
       ncclGroupEnd();
+      NCCLCHECKASYNC(ncclCommPtr);
 
       deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size,
                                                            tempReal,
@@ -223,22 +212,22 @@ namespace dftfe
                                                            tempReal,
                                                            tempImag);
       ncclGroupStart();
-      NCCLCHECK(ncclAllReduce((const void *)tempReal,
-                              (void *)tempReal,
-                              size,
-                              ncclFloat,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
-      NCCLCHECK(ncclAllReduce((const void *)tempImag,
-                              (void *)tempImag,
-                              size,
-                              ncclFloat,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
+      ncclAllReduce((const void *)tempReal,
+                    (void *)tempReal,
+                    size,
+                    ncclFloat,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      ncclAllReduce((const void *)tempImag,
+                    (void *)tempImag,
+                    size,
+                    ncclFloat,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
       ncclGroupEnd();
-
+      NCCLCHECKASYNC(ncclCommPtr);
       deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size,
                                                            tempReal,
                                                            tempImag,
@@ -273,21 +262,22 @@ namespace dftfe
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       ncclGroupStart();
-      NCCLCHECK(ncclAllReduce((const void *)send1,
-                              (void *)recv1,
-                              size1,
-                              ncclDouble,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
-      NCCLCHECK(ncclAllReduce((const void *)send2,
-                              (void *)recv2,
-                              size2,
-                              ncclFloat,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
+      ncclAllReduce((const void *)send1,
+                    (void *)recv1,
+                    size1,
+                    ncclDouble,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      ncclAllReduce((const void *)send2,
+                    (void *)recv2,
+                    size2,
+                    ncclFloat,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
       ncclGroupEnd();
+      NCCLCHECKASYNC(ncclCommPtr);
 #  elif DFTFE_WITH_DEVICE_AWARE_MPI
       dftfe::utils::deviceStreamSynchronize(stream);
       if (send1 == recv1 && send2 == recv2)
@@ -352,35 +342,36 @@ namespace dftfe
                                                            tempImag2);
 
       ncclGroupStart();
-      NCCLCHECK(ncclAllReduce((const void *)tempReal1,
-                              (void *)tempReal1,
-                              size1,
-                              ncclDouble,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
-      NCCLCHECK(ncclAllReduce((const void *)tempImag1,
-                              (void *)tempImag1,
-                              size1,
-                              ncclDouble,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
-      NCCLCHECK(ncclAllReduce((const void *)tempReal2,
-                              (void *)tempReal2,
-                              size2,
-                              ncclFloat,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
-      NCCLCHECK(ncclAllReduce((const void *)tempImag2,
-                              (void *)tempImag2,
-                              size2,
-                              ncclFloat,
-                              ncclSum,
-                              *((ncclComm_t *)ncclCommPtr),
-                              stream));
+      ncclAllReduce((const void *)tempReal1,
+                    (void *)tempReal1,
+                    size1,
+                    ncclDouble,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      ncclAllReduce((const void *)tempImag1,
+                    (void *)tempImag1,
+                    size1,
+                    ncclDouble,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      ncclAllReduce((const void *)tempReal2,
+                    (void *)tempReal2,
+                    size2,
+                    ncclFloat,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
+      ncclAllReduce((const void *)tempImag2,
+                    (void *)tempImag2,
+                    size2,
+                    ncclFloat,
+                    ncclSum,
+                    *ncclCommPtr,
+                    stream);
       ncclGroupEnd();
+      NCCLCHECKASYNC(ncclCommPtr);
 
       deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size1,
                                                            tempReal1,

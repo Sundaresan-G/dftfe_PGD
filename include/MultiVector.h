@@ -480,6 +480,10 @@ namespace dftfe
       void
       l2Norm(ValueBaseType *normVec) const;
 
+      void
+      setCommunicationPrecision(
+        utils::mpi::communicationPrecision commPrecision);
+
 
       global_size_type
       globalSize() const;

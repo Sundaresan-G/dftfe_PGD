@@ -43,14 +43,14 @@ namespace dftfe
   {
     namespace
     {
-      template <typename ValueType>
+      template <typename ValueType1, typename ValueType2>
       __global__ void
       gatherSendBufferDeviceKernel(
-        const size_type  totalFlattenedSize,
-        const size_type  blockSize,
-        const ValueType *dataArray,
-        const size_type *ownedLocalIndicesForTargetProcs,
-        ValueType *      sendBuffer)
+        const size_type   totalFlattenedSize,
+        const size_type   blockSize,
+        const ValueType1 *dataArray,
+        const size_type * ownedLocalIndicesForTargetProcs,
+        ValueType2 *      sendBuffer)
       {
         const size_type globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
         for (size_type i = globalThreadId; i < totalFlattenedSize;
@@ -65,34 +65,14 @@ namespace dftfe
           }
       }
 
+      template <>
       __global__ void
-      accumAddFromRecvBufferDeviceKernel(
-        const size_type  totalFlattenedSize,
-        const size_type  blockSize,
-        const double *   recvBuffer,
-        const size_type *ownedLocalIndicesForTargetProcs,
-        double *         dataRealArray,
-        double *         dataImagArray)
-      {}
-
-      __global__ void
-      accumAddFromRecvBufferDeviceKernel(
-        const size_type  totalFlattenedSize,
-        const size_type  blockSize,
-        const float *    recvBuffer,
-        const size_type *ownedLocalIndicesForTargetProcs,
-        float *          dataRealArray,
-        float *          dataImagArray)
-      {}
-
-      __global__ void
-      accumAddFromRecvBufferDeviceKernel(
+      gatherSendBufferDeviceKernel(
         const size_type                          totalFlattenedSize,
         const size_type                          blockSize,
-        const dftfe::utils::deviceDoubleComplex *recvBuffer,
-        const size_type *ownedLocalIndicesForTargetProcs,
-        double *         dataRealArray,
-        double *         dataImagArray)
+        const dftfe::utils::deviceDoubleComplex *dataArray,
+        const size_type *                 ownedLocalIndicesForTargetProcs,
+        dftfe::utils::deviceFloatComplex *sendBuffer)
       {
         const size_type globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
         for (size_type i = globalThreadId; i < totalFlattenedSize;
@@ -100,53 +80,48 @@ namespace dftfe
           {
             const size_type blockId      = i / blockSize;
             const size_type intraBlockId = i - blockId * blockSize;
-
-            atomicAdd(&dataRealArray[ownedLocalIndicesForTargetProcs[blockId] *
-                                       blockSize +
-                                     intraBlockId],
-                      dftfe::utils::realPartDevice(recvBuffer[i]));
-            atomicAdd(&dataImagArray[ownedLocalIndicesForTargetProcs[blockId] *
-                                       blockSize +
-                                     intraBlockId],
-                      dftfe::utils::imagPartDevice(recvBuffer[i]));
+            sendBuffer[i].x =
+              dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                        intraBlockId]
+                .x;
+            sendBuffer[i].y =
+              dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                        intraBlockId]
+                .y;
           }
       }
 
+      template <typename ValueType1, typename ValueType2>
+      __global__ void
+      accumAddFromRecvBufferDeviceKernel(
+        const size_type   totalFlattenedSize,
+        const size_type   blockSize,
+        const ValueType1 *recvBuffer,
+        const size_type * ownedLocalIndicesForTargetProcs,
+        ValueType2 *      dataArray)
+      {
+        const size_type globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
+        for (size_type i = globalThreadId; i < totalFlattenedSize;
+             i += blockDim.x * gridDim.x)
+          {
+            const size_type  blockId      = i / blockSize;
+            const size_type  intraBlockId = i - blockId * blockSize;
+            const ValueType2 recvVal      = recvBuffer[i];
+            atomicAdd(
+              &dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                         intraBlockId],
+              recvVal);
+          }
+      }
+
+      template <>
       __global__ void
       accumAddFromRecvBufferDeviceKernel(
         const size_type                         totalFlattenedSize,
         const size_type                         blockSize,
         const dftfe::utils::deviceFloatComplex *recvBuffer,
         const size_type *                       ownedLocalIndicesForTargetProcs,
-        float *                                 dataRealArray,
-        float *                                 dataImagArray)
-      {
-        const size_type globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
-        for (size_type i = globalThreadId; i < totalFlattenedSize;
-             i += blockDim.x * gridDim.x)
-          {
-            const size_type blockId      = i / blockSize;
-            const size_type intraBlockId = i - blockId * blockSize;
-
-            atomicAdd(&dataRealArray[ownedLocalIndicesForTargetProcs[blockId] *
-                                       blockSize +
-                                     intraBlockId],
-                      dftfe::utils::realPartDevice(recvBuffer[i]));
-            atomicAdd(&dataImagArray[ownedLocalIndicesForTargetProcs[blockId] *
-                                       blockSize +
-                                     intraBlockId],
-                      dftfe::utils::imagPartDevice(recvBuffer[i]));
-          }
-      }
-
-      template <typename ValueType>
-      __global__ void
-      accumAddFromRecvBufferDeviceKernel(
-        const size_type  totalFlattenedSize,
-        const size_type  blockSize,
-        const ValueType *recvBuffer,
-        const size_type *ownedLocalIndicesForTargetProcs,
-        ValueType *      dataArray)
+        dftfe::utils::deviceFloatComplex *      dataArray)
       {
         const size_type globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
         for (size_type i = globalThreadId; i < totalFlattenedSize;
@@ -157,13 +132,83 @@ namespace dftfe
 
             atomicAdd(
               &dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
-                         intraBlockId],
-              recvBuffer[i]);
+                         intraBlockId]
+                 .x,
+              dftfe::utils::realPartDevice(recvBuffer[i]));
+            atomicAdd(
+              &dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                         intraBlockId]
+                 .y,
+              dftfe::utils::imagPartDevice(recvBuffer[i]));
           }
       }
+
+      template <>
+      __global__ void
+      accumAddFromRecvBufferDeviceKernel(
+        const size_type                          totalFlattenedSize,
+        const size_type                          blockSize,
+        const dftfe::utils::deviceDoubleComplex *recvBuffer,
+        const size_type *                  ownedLocalIndicesForTargetProcs,
+        dftfe::utils::deviceDoubleComplex *dataArray)
+      {
+        const size_type globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
+        for (size_type i = globalThreadId; i < totalFlattenedSize;
+             i += blockDim.x * gridDim.x)
+          {
+            const size_type blockId      = i / blockSize;
+            const size_type intraBlockId = i - blockId * blockSize;
+
+            atomicAdd(
+              &dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                         intraBlockId]
+                 .x,
+              dftfe::utils::realPartDevice(recvBuffer[i]));
+            atomicAdd(
+              &dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                         intraBlockId]
+                 .y,
+              dftfe::utils::imagPartDevice(recvBuffer[i]));
+          }
+      }
+
+      template <>
+      __global__ void
+      accumAddFromRecvBufferDeviceKernel(
+        const size_type                         totalFlattenedSize,
+        const size_type                         blockSize,
+        const dftfe::utils::deviceFloatComplex *recvBuffer,
+        const size_type *                       ownedLocalIndicesForTargetProcs,
+        dftfe::utils::deviceDoubleComplex *     dataArray)
+      {
+        const size_type globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
+        for (size_type i = globalThreadId; i < totalFlattenedSize;
+             i += blockDim.x * gridDim.x)
+          {
+            const size_type blockId      = i / blockSize;
+            const size_type intraBlockId = i - blockId * blockSize;
+            const double    recvValReal =
+              dftfe::utils::realPartDevice(recvBuffer[i]);
+            const double recvValImag =
+              dftfe::utils::imagPartDevice(recvBuffer[i]);
+
+            atomicAdd(
+              &dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                         intraBlockId]
+                 .x,
+              recvValReal);
+            atomicAdd(
+              &dataArray[ownedLocalIndicesForTargetProcs[blockId] * blockSize +
+                         intraBlockId]
+                 .y,
+              recvValImag);
+          }
+      }
+
     } // namespace
 
     template <typename ValueType>
+    template <typename ValueTypeComm>
     void
     MPICommunicatorP2PKernels<ValueType, utils::MemorySpace::DEVICE>::
       gatherLocallyOwnedEntriesSendBufferToTargetProcs(
@@ -171,7 +216,7 @@ namespace dftfe
         const MemoryStorage<size_type, utils::MemorySpace::DEVICE>
           &             ownedLocalIndicesForTargetProcs,
         const size_type blockSize,
-        MemoryStorage<ValueType, utils::MemorySpace::DEVICE> &sendBuffer)
+        MemoryStorage<ValueTypeComm, utils::MemorySpace::DEVICE> &sendBuffer)
     {
 #  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
       gatherSendBufferDeviceKernel<<<(ownedLocalIndicesForTargetProcs.size() *
@@ -203,166 +248,19 @@ namespace dftfe
 #  endif
     }
 
-    template <>
+    template <typename ValueType>
+    template <typename ValueTypeComm>
     void
-    MPICommunicatorP2PKernels<std::complex<double>,
-                              utils::MemorySpace::DEVICE>::
+    MPICommunicatorP2PKernels<ValueType, utils::MemorySpace::DEVICE>::
       accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
-        const MemoryStorage<std::complex<double>, utils::MemorySpace::DEVICE>
+        const MemoryStorage<ValueTypeComm, utils::MemorySpace::DEVICE>
           &recvBuffer,
         const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
           &             ownedLocalIndicesForTargetProcs,
         const size_type blockSize,
         const size_type locallyOwnedSize,
         const size_type ghostSize,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleRealDataArray,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleImagDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatRealDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatImagDataArray,
-        MemoryStorage<std::complex<double>, dftfe::utils::MemorySpace::DEVICE>
-          &dataArray)
-    {
-      deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
-        (locallyOwnedSize + ghostSize) * blockSize,
-        dataArray.data(),
-        tempDoubleRealDataArray.data(),
-        tempDoubleImagDataArray.data());
-
-#  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      accumAddFromRecvBufferDeviceKernel<<<
-        (ownedLocalIndicesForTargetProcs.size() * blockSize) /
-            dftfe::utils::DEVICE_BLOCK_SIZE +
-          1,
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-        ownedLocalIndicesForTargetProcs.size() * blockSize,
-        blockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(recvBuffer.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          ownedLocalIndicesForTargetProcs.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          tempDoubleRealDataArray.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          tempDoubleImagDataArray.data()));
-#  elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(accumAddFromRecvBufferDeviceKernel,
-                         (ownedLocalIndicesForTargetProcs.size() * blockSize) /
-                             dftfe::utils::DEVICE_BLOCK_SIZE +
-                           1,
-                         dftfe::utils::DEVICE_BLOCK_SIZE,
-                         0,
-                         0,
-                         ownedLocalIndicesForTargetProcs.size() * blockSize,
-                         blockSize,
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           recvBuffer.data()),
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           ownedLocalIndicesForTargetProcs.data()),
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           tempDoubleRealDataArray.data()),
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           tempDoubleImagDataArray.data()));
-#  endif
-
-      deviceKernelsGeneric::copyRealArrsToComplexArrDevice(
-        locallyOwnedSize * blockSize,
-        tempDoubleRealDataArray.data(),
-        tempDoubleImagDataArray.data(),
-        dataArray.data());
-    }
-
-    template <>
-    void
-    MPICommunicatorP2PKernels<std::complex<float>, utils::MemorySpace::DEVICE>::
-      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
-        const MemoryStorage<std::complex<float>, utils::MemorySpace::DEVICE>
-          &recvBuffer,
-        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
-          &             ownedLocalIndicesForTargetProcs,
-        const size_type blockSize,
-        const size_type locallyOwnedSize,
-        const size_type ghostSize,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleRealDataArray,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleImagDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatRealDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatImagDataArray,
-        MemoryStorage<std::complex<float>, dftfe::utils::MemorySpace::DEVICE>
-          &dataArray)
-    {
-      deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
-        (locallyOwnedSize + ghostSize) * blockSize,
-        dataArray.data(),
-        tempFloatRealDataArray.data(),
-        tempFloatImagDataArray.data());
-
-#  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      accumAddFromRecvBufferDeviceKernel<<<
-        (ownedLocalIndicesForTargetProcs.size() * blockSize) /
-            dftfe::utils::DEVICE_BLOCK_SIZE +
-          1,
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-        ownedLocalIndicesForTargetProcs.size() * blockSize,
-        blockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(recvBuffer.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          ownedLocalIndicesForTargetProcs.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          tempFloatRealDataArray.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          tempFloatImagDataArray.data()));
-#  elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(accumAddFromRecvBufferDeviceKernel,
-                         (ownedLocalIndicesForTargetProcs.size() * blockSize) /
-                             dftfe::utils::DEVICE_BLOCK_SIZE +
-                           1,
-                         dftfe::utils::DEVICE_BLOCK_SIZE,
-                         0,
-                         0,
-                         ownedLocalIndicesForTargetProcs.size() * blockSize,
-                         blockSize,
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           recvBuffer.data()),
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           ownedLocalIndicesForTargetProcs.data()),
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           tempFloatRealDataArray.data()),
-                         dftfe::utils::makeDataTypeDeviceCompatible(
-                           tempFloatImagDataArray.data()));
-#  endif
-
-      deviceKernelsGeneric::copyRealArrsToComplexArrDevice(
-        locallyOwnedSize * blockSize,
-        tempFloatRealDataArray.data(),
-        tempFloatImagDataArray.data(),
-        dataArray.data());
-    }
-
-    template <>
-    void
-    MPICommunicatorP2PKernels<double, utils::MemorySpace::DEVICE>::
-      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
-        const MemoryStorage<double, utils::MemorySpace::DEVICE> &recvBuffer,
-        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
-          &             ownedLocalIndicesForTargetProcs,
-        const size_type blockSize,
-        const size_type locallyOwnedSize,
-        const size_type ghostSize,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleRealDataArray,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleImagDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatRealDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatImagDataArray,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &dataArray)
+        MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE> &dataArray)
     {
 #  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
       accumAddFromRecvBufferDeviceKernel<<<
@@ -393,55 +291,16 @@ namespace dftfe
         dftfe::utils::makeDataTypeDeviceCompatible(dataArray.data()));
 #  endif
     }
-
-    template <>
+    template <typename ValueType>
+    template <typename ValueType1, typename ValueType2>
     void
-    MPICommunicatorP2PKernels<float, utils::MemorySpace::DEVICE>::
-      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
-        const MemoryStorage<float, utils::MemorySpace::DEVICE> &recvBuffer,
-        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
-          &             ownedLocalIndicesForTargetProcs,
-        const size_type blockSize,
-        const size_type locallyOwnedSize,
-        const size_type ghostSize,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleRealDataArray,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleImagDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatRealDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatImagDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE> &dataArray)
+    MPICommunicatorP2PKernels<ValueType, utils::MemorySpace::DEVICE>::
+      copyValueType1ArrToValueType2Arr(const size_type   blockSize,
+                                       const ValueType1 *type1Array,
+                                       ValueType2 *      type2Array)
     {
-#  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      accumAddFromRecvBufferDeviceKernel<<<
-        (ownedLocalIndicesForTargetProcs.size() * blockSize) /
-            dftfe::utils::DEVICE_BLOCK_SIZE +
-          1,
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-        ownedLocalIndicesForTargetProcs.size() * blockSize,
-        blockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(recvBuffer.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          ownedLocalIndicesForTargetProcs.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(dataArray.data()));
-#  elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(
-        accumAddFromRecvBufferDeviceKernel,
-        (ownedLocalIndicesForTargetProcs.size() * blockSize) /
-            dftfe::utils::DEVICE_BLOCK_SIZE +
-          1,
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
-        ownedLocalIndicesForTargetProcs.size() * blockSize,
-        blockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(recvBuffer.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(
-          ownedLocalIndicesForTargetProcs.data()),
-        dftfe::utils::makeDataTypeDeviceCompatible(dataArray.data()));
-#  endif
+      dftfe::utils::deviceKernelsGeneric::copyValueType1ArrToValueType2Arr(
+        blockSize, type1Array, type2Array);
     }
 
     template class MPICommunicatorP2PKernels<double,
@@ -452,6 +311,178 @@ namespace dftfe
                                              dftfe::utils::MemorySpace::DEVICE>;
     template class MPICommunicatorP2PKernels<std::complex<float>,
                                              dftfe::utils::MemorySpace::DEVICE>;
+    template void
+    MPICommunicatorP2PKernels<double, utils::MemorySpace::DEVICE>::
+      gatherLocallyOwnedEntriesSendBufferToTargetProcs(
+        const MemoryStorage<double, utils::MemorySpace::DEVICE> &dataArray,
+        const MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        MemoryStorage<double, utils::MemorySpace::DEVICE> &sendBuffer);
+
+    template void
+    MPICommunicatorP2PKernels<double, utils::MemorySpace::DEVICE>::
+      gatherLocallyOwnedEntriesSendBufferToTargetProcs(
+        const MemoryStorage<double, utils::MemorySpace::DEVICE> &dataArray,
+        const MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        MemoryStorage<float, utils::MemorySpace::DEVICE> &sendBuffer);
+
+    template void
+    MPICommunicatorP2PKernels<float, utils::MemorySpace::DEVICE>::
+      gatherLocallyOwnedEntriesSendBufferToTargetProcs(
+        const MemoryStorage<float, utils::MemorySpace::DEVICE> &dataArray,
+        const MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        MemoryStorage<float, utils::MemorySpace::DEVICE> &sendBuffer);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<double>,
+                              utils::MemorySpace::DEVICE>::
+      gatherLocallyOwnedEntriesSendBufferToTargetProcs(
+        const MemoryStorage<std::complex<double>, utils::MemorySpace::DEVICE>
+          &dataArray,
+        const MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        MemoryStorage<std::complex<double>, utils::MemorySpace::DEVICE>
+          &sendBuffer);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<double>,
+                              utils::MemorySpace::DEVICE>::
+      gatherLocallyOwnedEntriesSendBufferToTargetProcs(
+        const MemoryStorage<std::complex<double>, utils::MemorySpace::DEVICE>
+          &dataArray,
+        const MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        MemoryStorage<std::complex<float>, utils::MemorySpace::DEVICE>
+          &sendBuffer);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<float>, utils::MemorySpace::DEVICE>::
+      gatherLocallyOwnedEntriesSendBufferToTargetProcs(
+        const MemoryStorage<std::complex<float>, utils::MemorySpace::DEVICE>
+          &dataArray,
+        const MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        MemoryStorage<std::complex<float>, utils::MemorySpace::DEVICE>
+          &sendBuffer);
+
+    template void
+    MPICommunicatorP2PKernels<double, utils::MemorySpace::DEVICE>::
+      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
+        const MemoryStorage<double, utils::MemorySpace::DEVICE> &recvBuffer,
+        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        const size_type locallyOwnedSize,
+        const size_type ghostSize,
+        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &dataArray);
+
+    template void
+    MPICommunicatorP2PKernels<double, utils::MemorySpace::DEVICE>::
+      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
+        const MemoryStorage<float, utils::MemorySpace::DEVICE> &recvBuffer,
+        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        const size_type locallyOwnedSize,
+        const size_type ghostSize,
+        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE> &dataArray);
+
+    template void
+    MPICommunicatorP2PKernels<float, utils::MemorySpace::DEVICE>::
+      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
+        const MemoryStorage<float, utils::MemorySpace::DEVICE> &recvBuffer,
+        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        const size_type locallyOwnedSize,
+        const size_type ghostSize,
+        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE> &dataArray);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<double>,
+                              utils::MemorySpace::DEVICE>::
+      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
+        const MemoryStorage<std::complex<double>, utils::MemorySpace::DEVICE>
+          &recvBuffer,
+        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        const size_type locallyOwnedSize,
+        const size_type ghostSize,
+        MemoryStorage<std::complex<double>, dftfe::utils::MemorySpace::DEVICE>
+          &dataArray);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<double>,
+                              utils::MemorySpace::DEVICE>::
+      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
+        const MemoryStorage<std::complex<float>, utils::MemorySpace::DEVICE>
+          &recvBuffer,
+        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        const size_type locallyOwnedSize,
+        const size_type ghostSize,
+        MemoryStorage<std::complex<double>, dftfe::utils::MemorySpace::DEVICE>
+          &dataArray);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<float>, utils::MemorySpace::DEVICE>::
+      accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
+        const MemoryStorage<std::complex<float>, utils::MemorySpace::DEVICE>
+          &recvBuffer,
+        const utils::MemoryStorage<size_type, utils::MemorySpace::DEVICE>
+          &             ownedLocalIndicesForTargetProcs,
+        const size_type blockSize,
+        const size_type locallyOwnedSize,
+        const size_type ghostSize,
+        MemoryStorage<std::complex<float>, dftfe::utils::MemorySpace::DEVICE>
+          &dataArray);
+    template void
+    MPICommunicatorP2PKernels<double, dftfe::utils::MemorySpace::DEVICE>::
+      copyValueType1ArrToValueType2Arr(const size_type blockSize,
+                                       const double *  type1Array,
+                                       float *         type2Array);
+
+    template void
+    MPICommunicatorP2PKernels<double, dftfe::utils::MemorySpace::DEVICE>::
+      copyValueType1ArrToValueType2Arr(const size_type blockSize,
+                                       const float *   type1Array,
+                                       double *        type2Array);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<double>,
+                              dftfe::utils::MemorySpace::DEVICE>::
+      copyValueType1ArrToValueType2Arr(const size_type             blockSize,
+                                       const std::complex<double> *type1Array,
+                                       std::complex<float> *       type2Array);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<double>,
+                              dftfe::utils::MemorySpace::DEVICE>::
+      copyValueType1ArrToValueType2Arr(const size_type            blockSize,
+                                       const std::complex<float> *type1Array,
+                                       std::complex<double> *     type2Array);
+    template void
+    MPICommunicatorP2PKernels<float, dftfe::utils::MemorySpace::DEVICE>::
+      copyValueType1ArrToValueType2Arr(const size_type blockSize,
+                                       const float *   type1Array,
+                                       float *         type2Array);
+
+    template void
+    MPICommunicatorP2PKernels<std::complex<float>,
+                              dftfe::utils::MemorySpace::DEVICE>::
+      copyValueType1ArrToValueType2Arr(const size_type            blockSize,
+                                       const std::complex<float> *type1Array,
+                                       std::complex<float> *      type2Array);
 
   } // namespace utils
 } // namespace dftfe
