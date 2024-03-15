@@ -28,9 +28,10 @@
 #include <MemoryStorage.h>
 #include <DataTypeOverloads.h>
 #include <dftfeDataTypes.h>
-#if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+#if defined(DFTFE_WITH_CUDA_NCCL))
 #  include <nccl.h>
-#  include <DeviceTypeConfig.h>
+#elif defined(DFTFE_WITH_HIP_RCCL)
+#  include <rccl.h>
 #endif
 
 
