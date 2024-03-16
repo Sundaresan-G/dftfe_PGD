@@ -1881,6 +1881,7 @@ namespace dftfe
     if (d_kohnShamDFTOperatorsInitialized)
       finalizeKohnShamDFTOperator();
 
+#ifdef DFTFE_WITH_DEVICE
     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
       d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
         d_BLASWrapperPtr,
@@ -1895,6 +1896,7 @@ namespace dftfe
         d_mpiCommParent,
         mpi_communicator);
     else
+#endif
       d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
         d_BLASWrapperPtrHost,
         d_basisOperationsPtrHost,

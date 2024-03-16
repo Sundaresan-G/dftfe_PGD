@@ -23,13 +23,13 @@
 #    include <mpi.h>
 #    include <DeviceTypeConfig.h>
 
-#  if defined(DFTFE_WITH_CUDA_NCCL)
-#    include <nccl.h>
-#    include <DeviceTypeConfig.h>
-#  elif defined(DFTFE_WITH_HIP_RCCL)
-#    include <rccl.h>
-#    include <DeviceTypeConfig.h>
-#  endif
+#    if defined(DFTFE_WITH_CUDA_NCCL)
+#      include <nccl.h>
+#      include <DeviceTypeConfig.h>
+#    elif defined(DFTFE_WITH_HIP_RCCL)
+#      include <rccl.h>
+#      include <DeviceTypeConfig.h>
+#    endif
 
 namespace dftfe
 {
