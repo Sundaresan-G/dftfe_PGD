@@ -179,7 +179,10 @@ namespace dftfe
       const double scalarY,
       const double scalarX,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
-      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false,
+      const bool skip1                                         = false,
+      const bool skip2                                         = false,
+      const bool skip3                                         = false);
 
     void
     HXRR(
