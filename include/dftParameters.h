@@ -162,6 +162,7 @@ namespace dftfe
     unsigned int maxLineSearchIterCGPRP;
     std::string  atomicMassesFile;
     bool         useDeviceDirectAllReduce;
+    bool         useDCCL;
     double       pspCutoffImageCharges;
     bool         reuseLanczosUpperBoundFromFirstCall;
     bool         allowMultipleFilteringPassesAfterFirstScf;

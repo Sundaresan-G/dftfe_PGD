@@ -192,8 +192,9 @@ namespace dftfe
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       inline static ncclUniqueId *ncclIdPtr;
       inline static ncclComm_t *  ncclCommPtr;
-      inline static bool          ncclCommInit;
 #    endif
+      inline static bool ncclCommInit;
+
     private:
       int      myRank;
       int      totalRanks;
