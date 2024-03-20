@@ -41,13 +41,13 @@ namespace dftfe
     {}
 
     void
-    DeviceCCLWrapper::init(const MPI_Comm &mpiComm)
+    DeviceCCLWrapper::init(const MPI_Comm &mpiComm, const bool useDCCL)
     {
       MPICHECK(MPI_Comm_dup(mpiComm, &d_mpiComm));
       MPICHECK(MPI_Comm_size(mpiComm, &totalRanks));
       MPICHECK(MPI_Comm_rank(mpiComm, &myRank));
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (!ncclCommInit)
+      if (!ncclCommInit && useDCCL)
         {
           ncclIdPtr   = new ncclUniqueId;
           ncclCommPtr = new ncclComm_t;

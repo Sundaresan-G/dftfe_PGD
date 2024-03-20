@@ -197,8 +197,8 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     d_devicecclMpiCommDomainPtr = new utils::DeviceCCLWrapper;
     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-      if (d_dftParamsPtr->useDCCL)
-        d_devicecclMpiCommDomainPtr->init(mpi_comm_domain);
+      d_devicecclMpiCommDomainPtr->init(mpi_comm_domain,
+                                        d_dftParamsPtr->useDCCL);
 #endif
     d_pspCutOff =
       d_dftParamsPtr->reproducible_output ?
