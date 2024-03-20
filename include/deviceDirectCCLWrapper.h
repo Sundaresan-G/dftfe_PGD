@@ -70,7 +70,7 @@ namespace dftfe
       DeviceCCLWrapper();
 
       void
-      init(const MPI_Comm &mpiComm);
+      init(const MPI_Comm &mpiComm, const bool useDCCL);
 
       ~DeviceCCLWrapper();
 
