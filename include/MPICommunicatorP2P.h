@@ -81,6 +81,8 @@ namespace dftfe
           std::shared_ptr<const MPIPatternP2P<memorySpace>> mpiPatternP2P,
           const size_type                                   blockSize);
 
+        ~MPICommunicatorP2P();
+
         void
         updateGhostValues(MemoryStorage<ValueType, memorySpace> &dataArray,
                           const size_type communicationChannel = 0);
@@ -160,8 +162,8 @@ namespace dftfe
         std::vector<MPI_Request> d_requestsUpdateGhostValues;
         std::vector<MPI_Request> d_requestsAccumulateAddLocallyOwned;
         MPI_Comm                 d_mpiCommunicator;
-#if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-        dftfe::utils::deviceStream_t ncclCommStream;
+#ifdef DFTFE_WITH_DEVICE
+        dftfe::utils::deviceStream_t d_deviceCommStream;
 #endif
         communicationProtocol  d_commProtocol;
         communicationPrecision d_commPrecision;

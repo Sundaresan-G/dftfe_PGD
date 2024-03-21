@@ -351,8 +351,6 @@ namespace dftfe
       const double                                                          b,
       const double                                                          a0)
     {
-      // dftfe::linearAlgebraOperations::chebyshevFilter(operatorMatrix,X1,Y1,m,a,b,a0);
-      // dftfe::linearAlgebraOperations::chebyshevFilter(operatorMatrix,X2,Y2,m,a,b,a0);
       double e, c, sigma, sigma1, sigma2, gamma, alpha1Old, alpha2Old;
       e      = (b - a) / 2.0;
       c      = (b + a) / 2.0;
