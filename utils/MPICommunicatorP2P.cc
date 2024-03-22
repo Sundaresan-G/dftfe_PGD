@@ -251,6 +251,8 @@ namespace dftfe
 #ifdef DFTFE_WITH_DEVICE
             if constexpr (memorySpace == MemorySpace::DEVICE)
               {
+                if (d_commProtocol != communicationProtocol::nccl)
+                  dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
                 if (d_commProtocol == communicationProtocol::mpiHost)
                   {
                     MemoryTransfer<MemorySpace::HOST_PINNED, memorySpace>
@@ -264,8 +266,6 @@ namespace dftfe
 
                     sendArrayStartPtr = d_sendRecvBufferHostPinnedPtr->begin();
                   }
-                else if (d_commProtocol == communicationProtocol::mpiDevice)
-                  dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
               }
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
             if constexpr (memorySpace == MemorySpace::DEVICE)
@@ -423,6 +423,8 @@ namespace dftfe
 #ifdef DFTFE_WITH_DEVICE
             if constexpr (memorySpace == MemorySpace::DEVICE)
               {
+                if (d_commProtocol != communicationProtocol::nccl)
+                  dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
                 if (d_commProtocol == communicationProtocol::mpiHost)
                   {
                     MemoryTransfer<MemorySpace::HOST_PINNED, memorySpace>
@@ -437,8 +439,6 @@ namespace dftfe
                     sendArrayStartPtr =
                       d_sendRecvBufferSinglePrecHostPinnedPtr->begin();
                   }
-                else if (d_commProtocol == communicationProtocol::mpiDevice)
-                  dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
               }
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
             if constexpr (memorySpace == MemorySpace::DEVICE)
@@ -843,21 +843,23 @@ namespace dftfe
 
 #ifdef DFTFE_WITH_DEVICE
             if constexpr (memorySpace == MemorySpace::DEVICE)
-              if (d_commProtocol == communicationProtocol::mpiHost)
-                {
-                  MemoryTransfer<MemorySpace::HOST_PINNED, memorySpace>
-                    memoryTransfer;
-                  if (d_ghostDataCopyHostPinnedPtr->size() > 0)
-                    memoryTransfer.copy(
-                      d_ghostDataCopySinglePrecHostPinnedPtr->size(),
-                      d_ghostDataCopySinglePrecHostPinnedPtr->begin(),
-                      d_ghostDataCopySinglePrec.data());
+              {
+                if (d_commProtocol != communicationProtocol::nccl)
+                  dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
+                if (d_commProtocol == communicationProtocol::mpiHost)
+                  {
+                    MemoryTransfer<MemorySpace::HOST_PINNED, memorySpace>
+                      memoryTransfer;
+                    if (d_ghostDataCopyHostPinnedPtr->size() > 0)
+                      memoryTransfer.copy(
+                        d_ghostDataCopySinglePrecHostPinnedPtr->size(),
+                        d_ghostDataCopySinglePrecHostPinnedPtr->begin(),
+                        d_ghostDataCopySinglePrec.data());
 
-                  sendArrayStartPtr =
-                    d_ghostDataCopySinglePrecHostPinnedPtr->begin();
-                }
-              else if (d_commProtocol == communicationProtocol::mpiDevice)
-                dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
+                    sendArrayStartPtr =
+                      d_ghostDataCopySinglePrecHostPinnedPtr->begin();
+                  }
+              }
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
             if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)

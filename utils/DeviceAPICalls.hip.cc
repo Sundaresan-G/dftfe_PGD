@@ -300,9 +300,10 @@ namespace dftfe
       else
         {
           int priority;
-          hipDeviceGetStreamPriorityRange(NULL,&priority);
-          deviceError_t err =
-            hipStreamCreateWithPriority(pStream, hipStreamNonBlocking, priority);
+          hipDeviceGetStreamPriorityRange(NULL, &priority);
+          deviceError_t err = hipStreamCreateWithPriority(pStream,
+                                                          hipStreamNonBlocking,
+                                                          priority);
           DEVICE_API_CHECK(err);
           return err;
         }

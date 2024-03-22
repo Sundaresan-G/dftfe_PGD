@@ -22,7 +22,6 @@
 #  include <DeviceDataTypeOverloads.h>
 #  include <DeviceKernelLauncherConstants.h>
 #  include <Exceptions.h>
-#include<iostream>
 namespace dftfe
 {
   namespace utils
@@ -287,9 +286,11 @@ namespace dftfe
       else
         {
           int priority;
-          cudaDeviceGetStreamPriorityRange(NULL,&priority);
+          cudaDeviceGetStreamPriorityRange(NULL, &priority);
           deviceError_t err =
-            cudaStreamCreateWithPriority(pStream, cudaStreamNonBlocking, priority);
+            cudaStreamCreateWithPriority(pStream,
+                                         cudaStreamNonBlocking,
+                                         priority);
           DEVICE_API_CHECK(err);
           return err;
         }
