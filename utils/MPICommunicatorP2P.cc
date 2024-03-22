@@ -539,7 +539,8 @@ namespace dftfe
 #if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
         if constexpr (memorySpace == MemorySpace::DEVICE)
           if (d_commProtocol == communicationProtocol::nccl)
-            NCCLCHECKASYNC(dftfe::utils::DeviceCCLWrapper::ncclCommPtr);
+            NCCLCHECKASYNC(d_deviceCommStream,
+                           dftfe::utils::DeviceCCLWrapper::ncclCommPtr);
 #endif
         if (d_requestsUpdateGhostValues.size() > 0)
           {
@@ -963,7 +964,8 @@ namespace dftfe
 #if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
         if constexpr (memorySpace == MemorySpace::DEVICE)
           if (d_commProtocol == communicationProtocol::nccl)
-            NCCLCHECKASYNC(dftfe::utils::DeviceCCLWrapper::ncclCommPtr);
+            NCCLCHECKASYNC(d_deviceCommStream,
+                           dftfe::utils::DeviceCCLWrapper::ncclCommPtr);
 #endif
         if (d_requestsAccumulateAddLocallyOwned.size() > 0)
           {

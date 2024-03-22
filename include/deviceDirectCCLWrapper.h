@@ -36,25 +36,26 @@ namespace dftfe
   namespace utils
   {
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-#      define NCCLCHECKASYNC(commPtr)                     \
-        do                                                \
-          {                                               \
-            ncclResult_t state;                           \
-            do                                            \
-              {                                           \
-                ncclCommGetAsyncError(*commPtr, &state);  \
-              }                                           \
-            while (state == ncclInProgress);              \
-            ncclCommGetAsyncError(*commPtr, &state);      \
-            if (state != ncclSuccess)                     \
-              {                                           \
-                printf("Failed, NCCL error %s:%d '%s'\n", \
-                       __FILE__,                          \
-                       __LINE__,                          \
-                       ncclGetErrorString(state));        \
-                exit(EXIT_FAILURE);                       \
-              }                                           \
-          }                                               \
+#      define NCCLCHECKASYNC(stream, commPtr)              \
+        do                                                 \
+          {                                                \
+            dftfe::utils::deviceStreamSynchronize(stream); \
+            ncclResult_t state;                            \
+            do                                             \
+              {                                            \
+                ncclCommGetAsyncError(*commPtr, &state);   \
+              }                                            \
+            while (state == ncclInProgress);               \
+            ncclCommGetAsyncError(*commPtr, &state);       \
+            if (state != ncclSuccess)                      \
+              {                                            \
+                printf("Failed, NCCL error %s:%d '%s'\n",  \
+                       __FILE__,                           \
+                       __LINE__,                           \
+                       ncclGetErrorString(state));         \
+                exit(EXIT_FAILURE);                        \
+              }                                            \
+          }                                                \
         while (0)
 #    endif
     /**

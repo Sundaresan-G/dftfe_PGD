@@ -59,7 +59,7 @@ namespace dftfe
           // config.blocking     = 0;
           ncclCommInitRankConfig(
             ncclCommPtr, totalRanks, *ncclIdPtr, myRank, &config);
-          NCCLCHECKASYNC(ncclCommPtr);
+          NCCLCHECKASYNC(0, ncclCommPtr);
           ncclCommInit = true;
         }
 #  endif
@@ -95,7 +95,7 @@ namespace dftfe
                         ncclSum,
                         *ncclCommPtr,
                         stream);
-          NCCLCHECKASYNC(ncclCommPtr);
+          NCCLCHECKASYNC(stream, ncclCommPtr);
         }
 #  endif
 #  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
@@ -137,7 +137,7 @@ namespace dftfe
                         ncclSum,
                         *ncclCommPtr,
                         stream);
-          NCCLCHECKASYNC(ncclCommPtr);
+          NCCLCHECKASYNC(stream, ncclCommPtr);
         }
 #  endif
 #  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
@@ -196,7 +196,7 @@ namespace dftfe
                         *ncclCommPtr,
                         stream);
           ncclGroupEnd();
-          NCCLCHECKASYNC(ncclCommPtr);
+          NCCLCHECKASYNC(stream, ncclCommPtr);
 
           deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size,
                                                                tempReal,
@@ -261,7 +261,7 @@ namespace dftfe
                         *ncclCommPtr,
                         stream);
           ncclGroupEnd();
-          NCCLCHECKASYNC(ncclCommPtr);
+          NCCLCHECKASYNC(stream, ncclCommPtr);
           deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size,
                                                                tempReal,
                                                                tempImag,
@@ -322,7 +322,7 @@ namespace dftfe
                         *ncclCommPtr,
                         stream);
           ncclGroupEnd();
-          NCCLCHECKASYNC(ncclCommPtr);
+          NCCLCHECKASYNC(stream, ncclCommPtr);
         }
 #  endif
 #  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
@@ -423,7 +423,7 @@ namespace dftfe
                         *ncclCommPtr,
                         stream);
           ncclGroupEnd();
-          NCCLCHECKASYNC(ncclCommPtr);
+          NCCLCHECKASYNC(stream, ncclCommPtr);
 
           deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size1,
                                                                tempReal1,
