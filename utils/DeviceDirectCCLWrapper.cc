@@ -56,7 +56,7 @@ namespace dftfe
           MPICHECK(
             MPI_Bcast(ncclIdPtr, sizeof(*ncclIdPtr), MPI_BYTE, 0, d_mpiComm));
           ncclConfig_t config = NCCL_CONFIG_INITIALIZER;
-          config.blocking     = 0;
+          // config.blocking     = 0;
           ncclCommInitRankConfig(
             ncclCommPtr, totalRanks, *ncclIdPtr, myRank, &config);
           NCCLCHECKASYNC(ncclCommPtr);
