@@ -602,11 +602,11 @@ namespace dftfe
                   d_ghostDataCopySinglePrec.data(),
                   dataArray.begin() +
                     d_mpiPatternP2P->localOwnedSize() * d_blockSize);
-          }
 #ifdef DFTFE_WITH_DEVICE
-        if constexpr (memorySpace == MemorySpace::DEVICE)
-          dftfe::utils::deviceSynchronize();
+            if constexpr (memorySpace == MemorySpace::DEVICE)
+              dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
 #endif
+          }
       }
 
 
@@ -1059,7 +1059,7 @@ namespace dftfe
           }
 #ifdef DFTFE_WITH_DEVICE
         if constexpr (memorySpace == MemorySpace::DEVICE)
-          dftfe::utils::deviceSynchronize();
+          dftfe::utils::deviceStreamSynchronize(d_deviceCommStream);
 #endif
       }
 
