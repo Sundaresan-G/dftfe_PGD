@@ -51,7 +51,6 @@ namespace dftfe
     , d_basisOperationsPtr(basisOperationsPtr)
     , d_basisOperationsPtrHost(basisOperationsPtrHost)
     , d_oncvClassPtr(oncvClassPtr)
-    , d_ONCVnonLocalOperator(oncvClassPtr->getNonLocalOperator())
     , d_excManagerPtr(excManagerPtr)
     , d_dftParamsPtr(dftParamsPtr)
     , d_densityQuadratureID(densityQuadratureID)
@@ -70,6 +69,8 @@ namespace dftfe
                       dealii::TimerOutput::never,
                       dealii::TimerOutput::wall_times)
   {
+    if (d_dftParamsPtr->isPseudopotential)
+      d_ONCVnonLocalOperator = oncvClassPtr->getNonLocalOperator();
     d_cellsBlockSizeHamiltonianConstruction =
       memorySpace == dftfe::utils::MemorySpace::HOST ? 1 : 50;
     d_cellsBlockSizeHX = memorySpace == dftfe::utils::MemorySpace::HOST ?
@@ -622,7 +623,8 @@ namespace dftfe
         0 :
         kPointIndex * (d_dftParamsPtr->spinPolarized + 1) + spinIndex;
     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-      d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+      if (d_dftParamsPtr->isPseudopotential)
+        d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
   }
 
 
@@ -643,8 +645,7 @@ namespace dftfe
       d_cellWaveFunctionMatrixDst.resize(d_cellsBlockSizeHX * nDofsPerCell *
                                          numWaveFunctions);
 
-    if (d_dftParamsPtr->isPseudopotential &&
-        !d_dftParamsPtr->pawPseudoPotential)
+    if (d_dftParamsPtr->isPseudopotential)
       {
         if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
           {
@@ -880,7 +881,8 @@ namespace dftfe
                             scalarCoeffBeta  = dataTypes::number(0.0);
 
     if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
-      d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+      if (d_dftParamsPtr->isPseudopotential)
+        d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
     const bool hasNonlocalComponents =
       d_dftParamsPtr->isPseudopotential &&
       (d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor() >
@@ -1011,7 +1013,8 @@ namespace dftfe
       {
         d_basisOperationsPtr->distribute(src);
         if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
-          d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+          if (d_dftParamsPtr->isPseudopotential)
+            d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
         for (unsigned int iCell = 0; iCell < numCells;
              iCell += d_cellsBlockSizeHX)
           {
