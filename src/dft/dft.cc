@@ -2550,6 +2550,17 @@ namespace dftfe
 
         if (!(norm > d_dftParamsPtr->selfConsistentSolverTolerance))
           scfConverged = true;
+
+        if (d_dftParamsPtr->multipoleBoundaryConditions)
+          {
+            computing_timer.enter_subsection("Update inhomogenous BC");
+            computeMultipoleMoments(d_matrixFreeDataPRefined,
+                                    rhoInValues,
+                                    &d_bQuadValuesAllAtoms);
+            updatePRefinedConstraints();
+            computing_timer.leave_subsection("Update inhomogenous BC");
+          }
+
         //
         // phiTot with rhoIn
         //

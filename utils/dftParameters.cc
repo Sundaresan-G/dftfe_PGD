@@ -409,6 +409,12 @@ namespace dftfe
           "[Developer] Flag to set point wise dirichlet constraints to eliminate null-space associated with the discretized Poisson operator subject to periodic BCs.");
 
         prm.declare_entry(
+          "MULTIPOLE BOUNDARY CONDITIONS",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Flag to set point wise multipole boundary conditions (upto quadrupole term) for non-periodic systems.");
+
+        prm.declare_entry(
           "CONSTRAINTS PARALLEL CHECK",
           "false",
           dealii::Patterns::Bool(),
@@ -1282,6 +1288,7 @@ namespace dftfe
     useDensityMatrixPerturbationRankUpdates        = false;
     smearedNuclearCharges                          = false;
     floatingNuclearCharges                         = false;
+    multipoleBoundaryConditions                    = false;
     nonLinearCoreCorrection                        = false;
     maxLineSearchIterCGPRP                         = 5;
     atomicMassesFile                               = "";
@@ -1459,6 +1466,8 @@ namespace dftfe
       pinnedNodeForPBC       = prm.get_bool("POINT WISE DIRICHLET CONSTRAINT");
       smearedNuclearCharges  = prm.get_bool("SMEARED NUCLEAR CHARGES");
       floatingNuclearCharges = prm.get_bool("FLOATING NUCLEAR CHARGES");
+      multipoleBoundaryConditions =
+        prm.get_bool("MULTIPOLE BOUNDARY CONDITIONS");      
     }
     prm.leave_subsection();
 

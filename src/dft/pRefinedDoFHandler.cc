@@ -200,7 +200,8 @@ namespace dftfe
     typename dealii::MatrixFree<3>::AdditionalData additional_data;
     additional_data.tasks_parallel_scheme =
       dealii::MatrixFree<3>::AdditionalData::partition_partition;
-    if (d_dftParamsPtr->isCellStress)
+    if (d_dftParamsPtr->isCellStress ||
+        d_dftParamsPtr->multipoleBoundaryConditions)
       additional_data.mapping_update_flags =
         dealii::update_values | dealii::update_gradients |
         dealii::update_JxW_values | dealii::update_quadrature_points;
@@ -473,6 +474,28 @@ namespace dftfe
       d_matrixFreeDataPRefined.get_vector_partitioner(
         d_densityDofHandlerIndexElectro),
       d_constraintsRhoNodal);
+  }
+
+
+  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  void
+  dftClass<FEOrder, FEOrderElectro>::updatePRefinedConstraints()
+  {
+    d_constraintsForTotalPotentialElectro.clear();
+    d_constraintsForTotalPotentialElectro.reinit(d_locallyRelevantDofsPRefined);
+    if (d_dftParamsPtr->pinnedNodeForPBC)
+      locatePeriodicPinnedNodes(d_dofHandlerPRefined,
+                                d_constraintsPRefined,
+                                d_constraintsForTotalPotentialElectro);
+    applyMultipoleDirichletBC(d_dofHandlerPRefined,
+                              d_constraintsPRefinedOnlyHanging,
+                              d_constraintsForTotalPotentialElectro);
+    d_constraintsForTotalPotentialElectro.close();
+    d_constraintsForTotalPotentialElectro.merge(
+      d_constraintsPRefined,
+      dealii::AffineConstraints<
+        double>::MergeConflictBehavior::right_object_wins);
+    d_constraintsForTotalPotentialElectro.close();
   }
 #include "dft.inst.cc"
 } // namespace dftfe

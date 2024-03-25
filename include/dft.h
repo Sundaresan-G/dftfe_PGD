@@ -557,6 +557,37 @@ namespace dftfe
                         const bool meshOnlyDeformed,
                         const bool vselfPerturbationUpdateForStress = false);
 
+
+    void
+    updatePRefinedConstraints();
+
+    /**
+     *@brief Sets inhomegeneous dirichlet boundary conditions upto quadrupole for total potential constraints on
+     * non-periodic boundary (boundary id==0).
+     *
+     * @param[in] dofHandler
+     * @param[out] constraintMatrix dealii::AffineConstraints<double> object
+     *with inhomogeneous Dirichlet boundary condition entries added
+     */
+    void
+    applyMultipoleDirichletBC(
+      const dealii::DoFHandler<3> &            _dofHandler,
+      const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
+      dealii::AffineConstraints<double> &      constraintMatrix);
+
+
+    void
+    computeMultipoleMoments(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                              basisOperationsPtr,
+      const unsigned int               quadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        & rhoQuadValues,
+      const std::map<dealii::CellId, std::vector<double>> *bQuadValues);
+
+
     /**
      *@brief interpolate rho nodal data to quadrature data using FEEvaluation
      *
