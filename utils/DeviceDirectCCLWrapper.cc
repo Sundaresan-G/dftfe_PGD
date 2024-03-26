@@ -60,6 +60,11 @@ namespace dftfe
           ncclCommInit = true;
         }
 #  endif
+      if (!commStreamCreated)
+        {
+          dftfe::utils::deviceStreamCreate(&d_deviceCommStream, true);
+          commStreamCreated = true;
+        }
     }
 
     DeviceCCLWrapper::~DeviceCCLWrapper()
@@ -74,6 +79,8 @@ namespace dftfe
           delete ncclIdPtr;
         }
 #  endif
+      if (commStreamCreated)
+        dftfe::utils::deviceStreamDestroy(d_deviceCommStream);
     }
 
     int
