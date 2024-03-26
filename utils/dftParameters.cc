@@ -51,9 +51,10 @@ namespace dftfe
 
       prm.declare_entry(
         "MEM OPT MODE",
-        "true",
+        "false",
         dealii::Patterns::Bool(),
-        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.");
+        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.",
+        true);
 
 
       prm.enter_subsection("GPU");
@@ -1338,7 +1339,11 @@ namespace dftfe
     reproducible_output = prm.get_bool("REPRODUCIBLE OUTPUT");
     keepScratchFolder   = prm.get_bool("KEEP SCRATCH FOLDER");
     restartFolder       = restartFilesPath;
-    memOptMode          = prm.get_bool("MEM OPT MODE");
+    auto entriesNotSet  = prm.get_entries_wrongly_not_set();
+    if (auto memOptSet = entriesNotSet.find("MEM_20OPT_20MODE");
+        memOptSet != entriesNotSet.end())
+      prm.set("MEM OPT MODE", solverMode == "NSCF");
+    memOptMode = prm.get_bool("MEM OPT MODE");
     writeStructreEnergyForcesFileForPostProcess =
       prm.get_bool("WRITE STRUCTURE ENERGY FORCES DATA POST PROCESS");
 
