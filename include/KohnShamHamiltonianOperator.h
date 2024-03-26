@@ -64,17 +64,11 @@ namespace dftfe
       const MPI_Comm &            mpi_comm_domain);
 
     void
-    init();
-
-    void
-    reinit(const std::vector<double> &kPointCoordinates,
-           const std::vector<double> &kPointWeights);
+    init(const std::vector<double> &kPointCoordinates,
+         const std::vector<double> &kPointWeights);
 
     void
     resetExtPotHamFlag();
-
-    dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &
-    getParallelProjectorKetTimesBlockVector();
 
     const MPI_Comm &
     getMPICommunicatorDomain();

@@ -79,20 +79,12 @@ namespace dftfe
     d_numVectorsInternal = 0;
   }
 
-  template <dftfe::utils::MemorySpace memorySpace>
-  void
-  KohnShamHamiltonianOperator<memorySpace>::init()
-  {
-    // FIXMENOW
-  }
-
-
   //
   // initialize KohnShamHamiltonianOperator object
   //
   template <dftfe::utils::MemorySpace memorySpace>
   void
-  KohnShamHamiltonianOperator<memorySpace>::reinit(
+  KohnShamHamiltonianOperator<memorySpace>::init(
     const std::vector<double> &kPointCoordinates,
     const std::vector<double> &kPointWeights)
   {
@@ -633,7 +625,6 @@ namespace dftfe
   KohnShamHamiltonianOperator<memorySpace>::reinitNumberWavefunctions(
     const unsigned int numWaveFunctions)
   {
-    // FIXMENOW
     const unsigned int nCells       = d_basisOperationsPtr->nCells();
     const unsigned int nDofsPerCell = d_basisOperationsPtr->nDofsPerCell();
     if (d_cellWaveFunctionMatrixSrc.size() <
@@ -694,14 +685,6 @@ namespace dftfe
   KohnShamHamiltonianOperator<memorySpace>::getSqrtMassVector()
   {
     return d_basisOperationsPtr->sqrtMassVectorBasisData();
-  }
-
-  template <dftfe::utils::MemorySpace memorySpace>
-  dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &
-  KohnShamHamiltonianOperator<
-    memorySpace>::getParallelProjectorKetTimesBlockVector()
-  {
-    return d_ONCVNonLocalProjectorTimesVectorBlock;
   }
 
   template <dftfe::utils::MemorySpace memorySpace>

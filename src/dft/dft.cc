@@ -806,7 +806,6 @@ namespace dftfe
       }
 
     int              nlccFlag = 0;
-    int              pawFlag  = 0;
     std::vector<int> pspFlags(2, 0);
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
         d_dftParamsPtr->isPseudopotential == true)
@@ -817,15 +816,10 @@ namespace dftfe
                                       d_dftParamsPtr->pseudoTestsFlag);
 
     nlccFlag = pspFlags[0];
-    pawFlag  = pspFlags[1];
     nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
-    pawFlag  = dealii::Utilities::MPI::sum(pawFlag, d_mpiCommParent);
     if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
       d_dftParamsPtr->nonLinearCoreCorrection = true;
-    if (pawFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
-      d_dftParamsPtr->pawPseudoPotential = true;
-    if (d_dftParamsPtr->isPseudopotential == true &&
-        d_dftParamsPtr->pawPseudoPotential == false)
+    if (d_dftParamsPtr->isPseudopotential == true)
       {
         // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
         // "<<basisOperationsPtrHost->nCells()<<std::endl;
@@ -840,14 +834,6 @@ namespace dftfe
             d_dftParamsPtr->reproducible_output,
             d_dftParamsPtr->verbosity,
             d_dftParamsPtr->useDevice);
-      }
-    else if (d_dftParamsPtr->isPseudopotential == true &&
-             d_dftParamsPtr->pawPseudoPotential == true)
-      {
-        AssertThrow(
-          false,
-          dealii::ExcMessage(std::string(
-            "DFT-FE Error: PAW is not yet implemented in thie release.")));
       }
 
     if (d_dftParamsPtr->verbosity >= 1)
@@ -892,8 +878,7 @@ namespace dftfe
             << init_core << std::endl;
         determineAtomsOfInterstPseudopotential(atomLocations);
         MPI_Barrier(d_mpiCommParent);
-        if (d_dftParamsPtr->isPseudopotential == true &&
-            d_dftParamsPtr->pawPseudoPotential == false)
+        if (d_dftParamsPtr->isPseudopotential == true)
           {
             d_oncvClassPtr->initialiseNonLocalContribution(
               d_atomLocationsInterestPseudopotential,
@@ -1176,8 +1161,7 @@ namespace dftfe
     //
     // initialize pseudopotential data for both local and nonlocal part
     //
-    if (d_dftParamsPtr->isPseudopotential == true &&
-        d_dftParamsPtr->pawPseudoPotential == false)
+    if (d_dftParamsPtr->isPseudopotential == true)
       d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
 #if defined(DFTFE_WITH_DEVICE)
                                  d_basisOperationsPtrDevice,
@@ -1916,7 +1900,7 @@ namespace dftfe
     KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
       *d_kohnShamDFTOperatorPtr;
 
-    kohnShamDFTEigenOperator.reinit(d_kPointCoordinates, d_kPointWeights);
+    kohnShamDFTEigenOperator.init(d_kPointCoordinates, d_kPointWeights);
 
 #ifdef DFTFE_WITH_DEVICE
     if (d_dftParamsPtr->useDevice)
@@ -2002,15 +1986,6 @@ namespace dftfe
     reInitializeKohnShamDFTOperator()
   {
     d_kohnShamDFTOperatorPtr->resetExtPotHamFlag();
-
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      {
-        // d_kohnShamDFTOperatorPtr->reinit(
-        //   std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues),
-        //   true);
-      }
-#endif
   }
 
   //

@@ -56,7 +56,6 @@ namespace dftfe
       timeReversal, pseudoTestsFlag, constraintMagnetization, writeDosFile,
       writeLdosFile, writeBandsFile, writeLocalizationLengths, pinnedNodeForPBC,
       writePdosFile;
-    bool pawPseudoPotential = false;
 
 
     /** parameters for LRD preconditioner **/
@@ -168,7 +167,6 @@ namespace dftfe
     bool         allowMultipleFilteringPassesAfterFirstScf;
     unsigned int highestStateOfInterestForChebFiltering;
     bool         useELPADeviceKernel;
-    bool         deviceMemOptMode;
     bool         memOptMode;
 
 
