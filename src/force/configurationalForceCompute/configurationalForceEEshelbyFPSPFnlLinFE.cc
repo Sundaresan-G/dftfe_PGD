@@ -264,9 +264,11 @@ namespace dftfe
               numQuadPoints,
               numQuadPointsNLP,
               elocWfcEshelbyTensorQuadValuesH.data(),
-              projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened.data(),
+              projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                .data(),
 #  ifdef USE_COMPLEX
-              projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened.data(),
+              projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                .data(),
 #  endif
               d_mpiCommParent,
               dftPtr->interBandGroupComm,
@@ -305,9 +307,11 @@ namespace dftfe
               numQuadPoints,
               numQuadPointsNLP,
               elocWfcEshelbyTensorQuadValuesH.data(),
-              projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened.data(),
+              projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
+                .data(),
 #ifdef USE_COMPLEX
-              projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened.data(),
+              projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
+                .data(),
 #endif
               d_mpiCommParent,
               dftPtr->interBandGroupComm,

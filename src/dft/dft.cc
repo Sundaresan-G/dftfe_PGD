@@ -2900,11 +2900,11 @@ namespace dftfe
                               pcout << "Beginning Chebyshev filter pass "
                                     << 1 + count << " for spin " << s + 1
                                     << std::endl;
-                            ;
 
                             kohnShamDFTEigenOperator.reinitkPointSpinIndex(
                               kPoint, s);
-                            if (d_dftParamsPtr->memOptMode)
+                            if (d_dftParamsPtr->memOptMode &&
+                                d_kPointWeights.size() > 0)
                               {
                                 computing_timer.enter_subsection(
                                   "Hamiltonian Matrix Computation");
@@ -3148,7 +3148,8 @@ namespace dftfe
 
                         kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint,
                                                                        0);
-                        if (d_dftParamsPtr->memOptMode)
+                        if (d_dftParamsPtr->memOptMode &&
+                            d_kPointWeights.size() > 0)
                           {
                             computing_timer.enter_subsection(
                               "Hamiltonian Matrix Computation");
