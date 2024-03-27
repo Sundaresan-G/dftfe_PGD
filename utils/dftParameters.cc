@@ -1962,7 +1962,7 @@ namespace dftfe
       }
 
 #if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL) && \
-             !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+  !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
     useDeviceDirectAllReduce = false;
 #endif
 #if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
