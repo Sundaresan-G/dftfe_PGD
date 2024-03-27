@@ -1427,6 +1427,14 @@ namespace dftfe
       d_densityTotalOutValuesLpspQuad, d_densityTotalInValuesLpspQuad,
       d_gradDensityTotalOutValuesLpspQuad, d_gradDensityTotalInValuesLpspQuad;
 
+    // For multipole boundary conditions
+    double              d_monopole;
+    std::vector<double> d_dipole;
+    std::vector<double> d_quadrupole;
+    std::vector<double> d_smearedChargeMoments;
+    bool                d_smearedChargeMomentsComputed;
+
+
     /// for low rank jacobian inverse approximation
     std::deque<distributedCPUVec<double>> d_vcontainerVals;
     std::deque<distributedCPUVec<double>> d_fvcontainerVals;
