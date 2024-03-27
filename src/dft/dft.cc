@@ -1159,7 +1159,7 @@ namespace dftfe
     // initialize dirichlet BCs for total potential and vSelf poisson solutions
     //
     initBoundaryConditions();
-
+    d_smearedChargeMomentsComputed = false;
 
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
@@ -1337,7 +1337,7 @@ namespace dftfe
     const bool updateOnlyBinsBc = !updateImagesAndKPointsAndVselfBins;
     initBoundaryConditions(isMeshDeformed || d_dftParamsPtr->isCellStress,
                            updateOnlyBinsBc);
-
+    d_smearedChargeMomentsComputed = false;
     MPI_Barrier(d_mpiCommParent);
     init_bc = MPI_Wtime() - init_bc;
     if (d_dftParamsPtr->verbosity >= 2)
@@ -1666,7 +1666,7 @@ namespace dftfe
         // first true option only updates the boundary conditions
         // second true option signals update is only for vself perturbation
         initBoundaryConditions(true, true, true);
-
+        d_smearedChargeMomentsComputed = false;
         MPI_Barrier(d_mpiCommParent);
         init_bc = MPI_Wtime() - init_bc;
         if (d_dftParamsPtr->verbosity >= 2)
@@ -1745,6 +1745,7 @@ namespace dftfe
         initUnmovedTriangulation(triangulationPar);
         moveMeshToAtoms(triangulationPar, d_mesh.getSerialMeshUnmoved());
         initBoundaryConditions();
+        d_smearedChargeMomentsComputed = false;
         initElectronicFields();
         initPseudoPotentialAll();
 
