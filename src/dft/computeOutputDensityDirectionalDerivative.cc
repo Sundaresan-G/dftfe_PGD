@@ -90,11 +90,11 @@ namespace dftfe
         d_dftParamsPtr->poissonGPU and not d_dftParamsPtr->pinnedNodeForPBC)
       {
 #ifdef DFTFE_WITH_DEVICE
-        d_phiTotalSolverProblemDevice.reinit(
+        d_phiPrimeSolverProblemDevice.reinit(
           d_basisOperationsPtrElectroHost,
-          electrostaticPotPrime,
-          *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-          d_phiTotDofHandlerIndexElectro,
+          d_phiPrime,
+          *d_constraintsVectorElectro[d_phiPrimeDofHandlerIndexElectro],
+          d_phiPrimeDofHandlerIndexElectro,
           d_densityQuadratureIdElectro,
           d_phiTotAXQuadratureIdElectro,
           std::map<dealii::types::global_dof_index, double>(),
@@ -102,25 +102,43 @@ namespace dftfe
           d_smearedChargeQuadratureIdElectro,
           charge,
           d_BLASWrapperPtr,
-          false,
-          false);
+                  true,
+                  d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                    d_dftParamsPtr->periodicZ &&
+                    !d_dftParamsPtr->pinnedNodeForPBC,
+                  false,
+                  true,
+                  false,
+                  0,
+                  true,
+                  false,
+                  d_dftParamsPtr->multipoleBoundaryConditions);
 #endif
       }
     else
       {
-        d_phiTotalSolverProblem.reinit(
+        d_phiPrimeSolverProblem.reinit(
           d_basisOperationsPtrElectroHost,
-          electrostaticPotPrime,
-          *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-          d_phiTotDofHandlerIndexElectro,
+          d_phiPrime,
+          *d_constraintsVectorElectro[d_phiPrimeDofHandlerIndexElectro],
+          d_phiPrimeDofHandlerIndexElectro,
           d_densityQuadratureIdElectro,
           d_phiTotAXQuadratureIdElectro,
           std::map<dealii::types::global_dof_index, double>(),
           dummyMap,
           d_smearedChargeQuadratureIdElectro,
           charge,
-          false,
-          false);
+                true,
+                d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                  d_dftParamsPtr->periodicZ &&
+                  !d_dftParamsPtr->pinnedNodeForPBC,
+                false,
+                true,
+                false,
+                0,
+                true,
+                false,
+                d_dftParamsPtr->multipoleBoundaryConditions);
       }
 
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
@@ -128,7 +146,7 @@ namespace dftfe
         not d_dftParamsPtr->pinnedNodeForPBC)
       {
 #ifdef DFTFE_WITH_DEVICE
-        CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
+        CGSolverDevice.solve(d_phiPrimeSolverProblemDevice,
                              d_dftParamsPtr->absPoissonSolverToleranceLRD,
                              d_dftParamsPtr->maxLinearSolverIterations,
                              d_dftParamsPtr->verbosity);
@@ -136,7 +154,7 @@ namespace dftfe
       }
     else
       {
-        CGSolver.solve(d_phiTotalSolverProblem,
+        CGSolver.solve(d_phiPrimeSolverProblem,
                        d_dftParamsPtr->absPoissonSolverToleranceLRD,
                        d_dftParamsPtr->maxLinearSolverIterations,
                        d_dftParamsPtr->verbosity);
@@ -146,9 +164,9 @@ namespace dftfe
       electrostaticPotPrimeValues;
     interpolateElectroNodalDataToQuadratureDataGeneral(
       d_basisOperationsPtrElectroHost,
-      d_phiTotDofHandlerIndexElectro,
+      d_phiPrimeDofHandlerIndexElectro,
       d_densityQuadratureIdElectro,
-      electrostaticPotPrime,
+      d_phiPrime,
       electrostaticPotPrimeValues,
       dummy,
       false);

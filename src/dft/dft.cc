@@ -489,8 +489,7 @@ namespace dftfe
           numElectrons += Z;
       }
 
-    numElectronsNetCharge = numElectrons + d_dftParamsPtr->netCharge;
-    numElectrons          = numElectronsNetCharge;
+    numElectrons = numElectrons + d_dftParamsPtr->netCharge;
     if (d_dftParamsPtr->verbosity >= 1 and std::abs(d_dftParamsPtr->netCharge)>1e-6)
        pcout << "SETTING netcharge " << d_dftParamsPtr->netCharge << std::endl;
 
@@ -523,11 +522,11 @@ namespace dftfe
               << std::endl;
           }
         d_numEigenValues =
-          (numElectronsNetCharge / 2.0) +
+          (numElectrons / 2.0) +
           std::max((d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND" ?
                       0.22 :
                       0.2) *
-                     (numElectronsNetCharge / 2.0),
+                     (numElectrons / 2.0),
                    20.0);
 
         // start with 17-20% buffer to leave room for additional modifications
@@ -535,11 +534,11 @@ namespace dftfe
 #ifdef DFTFE_WITH_DEVICE
         if (d_dftParamsPtr->useDevice && d_dftParamsPtr->autoDeviceBlockSizes)
           d_numEigenValues =
-            (numElectronsNetCharge / 2.0) + std::max((d_dftParamsPtr->mixingMethod ==
+            (numElectrons / 2.0) + std::max((d_dftParamsPtr->mixingMethod ==
                                                  "LOW_RANK_DIELECM_PRECOND" ?
                                                0.2 :
                                                0.17) *
-                                              (numElectronsNetCharge / 2.0),
+                                              (numElectrons / 2.0),
                                             20.0);
 #endif
 
@@ -2627,7 +2626,8 @@ namespace dftfe
                 false,
                 0,
                 false,
-                true);
+                true,
+                d_dftParamsPtr->multipoleBoundaryConditions);
             else
               d_phiTotalSolverProblem.reinit(
                 d_basisOperationsPtrElectroHost,
@@ -2649,7 +2649,8 @@ namespace dftfe
                 false,
                 0,
                 true,
-                false);
+                false,
+                d_dftParamsPtr->multipoleBoundaryConditions);
           }
 
         computing_timer.enter_subsection("phiTot solve");
@@ -2853,7 +2854,7 @@ namespace dftfe
                 if (d_dftParamsPtr->verbosity >= 2)
                   {
                     pcout
-                      << "Maximum residual norm of the state closest to and below Fermi level: "
+                      << "Maximum residual norm among all states with occupation number greater than 1e-3: "
                       << maxRes << std::endl;
                   }
 
@@ -2984,7 +2985,7 @@ namespace dftfe
                                  fermiEnergy));
                     if (d_dftParamsPtr->verbosity >= 2)
                       pcout
-                        << "Maximum residual norm of the state closest to and below Fermi level: "
+                        << "Maximum residual norm among all states with occupation number greater than 1e-3: "
                         << maxRes << std::endl;
                     count++;
                   }
@@ -3116,7 +3117,7 @@ namespace dftfe
                   fermiEnergy);
                 if (d_dftParamsPtr->verbosity >= 2)
                   pcout
-                    << "Maximum residual norm of the state closest to and below Fermi level: "
+                    << "Maximum residual norm among all states with occupation number greater than 1e-3: "
                     << maxRes << std::endl;
 
                 // if the residual norm is greater than
@@ -3208,7 +3209,7 @@ namespace dftfe
                       fermiEnergy);
                     if (d_dftParamsPtr->verbosity >= 2)
                       pcout
-                        << "Maximum residual norm of the state closest to and below Fermi level: "
+                        << "Maximum residual norm among all states with occupation number greater than 1e-3: "
                         << maxRes << std::endl;
 
                     count++;
@@ -3352,7 +3353,8 @@ namespace dftfe
                   false,
                   0,
                   false,
-                  true);
+                  true,
+                  d_dftParamsPtr->multipoleBoundaryConditions);
 
                 CGSolver.solve(d_phiTotalSolverProblem,
                                d_dftParamsPtr->absLinearSolverTolerance,
@@ -3580,7 +3582,8 @@ namespace dftfe
               false,
               0,
               false,
-              true);
+              true,
+              d_dftParamsPtr->multipoleBoundaryConditions);
 
             CGSolver.solve(d_phiTotalSolverProblem,
                            d_dftParamsPtr->absLinearSolverTolerance,

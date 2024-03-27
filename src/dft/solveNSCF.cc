@@ -251,7 +251,8 @@ namespace dftfe
           false,
           0,
           true,
-          false);
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
       }
 
     computing_timer.enter_subsection("phiTot solve");
@@ -894,7 +895,8 @@ namespace dftfe
           false,
           0,
           false,
-          true);
+          true,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 
         CGSolver.solve(d_phiTotalSolverProblem,
                        d_dftParamsPtr->absLinearSolverTolerance,

@@ -1017,7 +1017,7 @@ namespace dftfe
     /**
      * stores required data for Kohn-Sham problem
      */
-    unsigned int numElectrons, numElectronsNetCharge, numElectronsUp, numElectronsDown, numLevels;
+    unsigned int numElectrons, numElectronsUp, numElectronsDown, numLevels;
     std::set<unsigned int> atomTypes;
 
     /// FIXME: eventually it should be a map of atomic number to struct-
