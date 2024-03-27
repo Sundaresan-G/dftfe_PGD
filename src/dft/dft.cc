@@ -2535,8 +2535,9 @@ namespace dftfe
         if (d_dftParamsPtr->multipoleBoundaryConditions)
           {
             computing_timer.enter_subsection("Update inhomogenous BC");
-            computeMultipoleMoments(d_matrixFreeDataPRefined,
-                                    rhoInValues,
+            computeMultipoleMoments(d_basisOperationsPtrElectroHost,
+                                    d_densityQuadratureIdElectro,
+                                    d_densityInQuadValues[0],
                                     &d_bQuadValuesAllAtoms);
             updatePRefinedConstraints();
             computing_timer.leave_subsection("Update inhomogenous BC");
@@ -3293,9 +3294,10 @@ namespace dftfe
             if (d_dftParamsPtr->multipoleBoundaryConditions)
               {
                 computing_timer.enter_subsection("Update inhomogenous BC");
-                computeMultipoleMoments(d_matrixFreeDataPRefined,
-                                        d_densityOutQuadValues[0],
-                                        &d_bQuadValuesAllAtoms);
+                computeMultipoleMoments(d_basisOperationsPtrElectroHost,
+                                    d_densityQuadratureIdElectro,
+                                    d_densityInQuadValues[0],
+                                    &d_bQuadValuesAllAtoms);
                 updatePRefinedConstraints();
                 computing_timer.leave_subsection("Update inhomogenous BC");
               }
@@ -3522,8 +3524,9 @@ namespace dftfe
         if (d_dftParamsPtr->multipoleBoundaryConditions)
           {
             computing_timer.enter_subsection("Update inhomogenous BC");
-            computeMultipoleMoments(d_matrixFreeDataPRefined,
-                                    d_densityOutQuadValues[0],
+            computeMultipoleMoments(d_basisOperationsPtrElectroHost,
+                                    d_densityQuadratureIdElectro,
+                                    d_densityInQuadValues[0],
                                     &d_bQuadValuesAllAtoms);
             updatePRefinedConstraints();
             computing_timer.leave_subsection("Update inhomogenous BC");

@@ -582,7 +582,7 @@ namespace dftfe
         dftfe::basis::
           FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
         &                              basisOperationsPtr,
-      const unsigned int               quadratureId,
+      const unsigned int               densityQuadratureId,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         & rhoQuadValues,
       const std::map<dealii::CellId, std::vector<double>> *bQuadValues);
