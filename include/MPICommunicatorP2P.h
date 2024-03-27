@@ -28,12 +28,13 @@
 #include <MemoryStorage.h>
 #include <DataTypeOverloads.h>
 #include <dftfeDataTypes.h>
-#if defined(DFTFE_WITH_CUDA_NCCL)
-#  include <nccl.h>
+#ifdef DFTFE_WITH_DEVICE
 #  include <DeviceTypeConfig.h>
-#elif defined(DFTFE_WITH_HIP_RCCL)
-#  include <rccl.h>
-#  include <DeviceTypeConfig.h>
+#  if defined(DFTFE_WITH_CUDA_NCCL)
+#    include <nccl.h>
+#  elif defined(DFTFE_WITH_HIP_RCCL)
+#    include <rccl.h>
+#  endif
 #endif
 
 
@@ -80,8 +81,6 @@ namespace dftfe
         MPICommunicatorP2P(
           std::shared_ptr<const MPIPatternP2P<memorySpace>> mpiPatternP2P,
           const size_type                                   blockSize);
-
-        ~MPICommunicatorP2P();
 
         void
         updateGhostValues(MemoryStorage<ValueType, memorySpace> &dataArray,

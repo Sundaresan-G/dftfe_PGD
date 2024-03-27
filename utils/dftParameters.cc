@@ -51,9 +51,10 @@ namespace dftfe
 
       prm.declare_entry(
         "MEM OPT MODE",
-        "true",
+        "false",
         dealii::Patterns::Bool(),
-        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.");
+        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.",
+        true);
 
 
       prm.enter_subsection("GPU");
@@ -101,12 +102,6 @@ namespace dftfe
           "false",
           dealii::Patterns::Bool(),
           "[Advanced] If DFT-FE is linked to ELPA eigensolver library configured to run on GPUs, this parameter toggles the use of ELPA GPU kernels for dense symmetric matrix diagonalization calls in DFT-FE. ELPA version>=2020.11.001 is required for this feature. Default: false.");
-
-        prm.declare_entry(
-          "GPU MEM OPT MODE",
-          "true",
-          dealii::Patterns::Bool(),
-          "[Adavanced] Uses algorithms which have lower peak memory on GPUs but with a marginal performance degradation. Recommended when using more than 100k degrees of freedom per GPU. Default: true.");
       }
       prm.leave_subsection();
 
@@ -896,13 +891,6 @@ namespace dftfe
             "[Advanced] Parameter specifying the accuracy of the occupied eigenvectors close to the Fermi-energy computed using Chebyshev filtering subspace iteration procedure. For default value of 0.0, we heuristically set the value between 1e-3 and 5e-2 depending on the MIXING METHOD used.");
 
           prm.declare_entry(
-            "ENABLE HAMILTONIAN TIMES VECTOR OPTIM",
-            "false",
-            dealii::Patterns::Bool(),
-            "[Advanced] Turns on optimization for hamiltonian times vector multiplication. Operations involving data movement from global vector to finite-element cell level and vice versa are done by employing different data structures for interior nodes and surfaces nodes of a given cell and this allows reduction of memory access costs");
-
-
-          prm.declare_entry(
             "ORTHOGONALIZATION TYPE",
             "Auto",
             dealii::Patterns::Selection("GS|CGS|Auto"),
@@ -1297,7 +1285,6 @@ namespace dftfe
     reuseLanczosUpperBoundFromFirstCall            = false;
     allowMultipleFilteringPassesAfterFirstScf      = true;
     useELPADeviceKernel                            = false;
-    deviceMemOptMode                               = false;
     // New Paramters for moleculardyynamics class
     startingTempBOMD           = 300;
     thermostatTimeConstantBOMD = 100;
@@ -1359,7 +1346,11 @@ namespace dftfe
     reproducible_output = prm.get_bool("REPRODUCIBLE OUTPUT");
     keepScratchFolder   = prm.get_bool("KEEP SCRATCH FOLDER");
     restartFolder       = restartFilesPath;
-    memOptMode          = prm.get_bool("MEM OPT MODE");
+    auto entriesNotSet  = prm.get_entries_wrongly_not_set();
+    if (auto memOptSet = entriesNotSet.find("MEM_20OPT_20MODE");
+        memOptSet != entriesNotSet.end())
+      prm.set("MEM OPT MODE", solverMode == "NSCF");
+    memOptMode = prm.get_bool("MEM OPT MODE");
     writeStructreEnergyForcesFileForPostProcess =
       prm.get_bool("WRITE STRUCTURE ENERGY FORCES DATA POST PROCESS");
 
@@ -1375,7 +1366,6 @@ namespace dftfe
         useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
       useDCCL             = useDevice && prm.get_bool("USE DCCL");
       useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
-      deviceMemOptMode    = prm.get_bool("GPU MEM OPT MODE");
     }
     prm.leave_subsection();
 
@@ -1955,8 +1945,12 @@ namespace dftfe
           scalapackBlockSize = 32;
       }
 
-#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL) && \
+             !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
     useDeviceDirectAllReduce = false;
+#endif
+#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
+    useDCCL = false;
 #endif
 
     if (useMixedPrecCheby)
