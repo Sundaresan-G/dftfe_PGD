@@ -225,7 +225,8 @@ namespace dftfe
           false,
           0,
           true,
-          false);
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 
 #endif
       }
@@ -864,7 +865,8 @@ namespace dftfe
           false,
           0,
           false,
-          true);
+          true,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 
         CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
                              d_dftParamsPtr->absLinearSolverTolerance,

@@ -41,6 +41,7 @@ namespace dftfe
     d_isStoreSmearedChargeRhs       = false;
     d_isReuseSmearedChargeRhs       = false;
     d_isFastConstraintsInitialized  = false;
+    d_isHomogenousConstraintsInitialized = false;
     d_rhoValuesPtr                  = NULL;
     d_atomsPtr                      = NULL;
     d_smearedChargeValuesPtr        = NULL;
@@ -59,6 +60,7 @@ namespace dftfe
     d_isStoreSmearedChargeRhs       = false;
     d_isReuseSmearedChargeRhs       = false;
     d_isFastConstraintsInitialized  = false;
+    d_isHomogenousConstraintsInitialized = false;
     d_rhoValuesPtr                  = NULL;
     d_atomsPtr                      = NULL;
     d_smearedChargeValuesPtr        = NULL;
@@ -160,6 +162,7 @@ namespace dftfe
         setupconstraints();
 
         d_isFastConstraintsInitialized = true;
+        d_isHomogenousConstraintsInitialized = true;
       }
   }
 
@@ -178,7 +181,7 @@ namespace dftfe
   void
   poissonSolverProblemDevice<FEOrder, FEOrderElectro>::distributeX()
   {
-    d_constraintsTotalPotentialInfo.distribute(d_xDevice);
+    d_inhomogenousConstraintsTotalPotentialInfo.distribute(d_xDevice, 1);
 
     if (d_isMeanValueConstraintComputed)
       meanValueConstraintDistribute(d_xDevice);
@@ -807,9 +810,15 @@ namespace dftfe
   void
   poissonSolverProblemDevice<FEOrder, FEOrderElectro>::setupconstraints()
   {
-    d_constraintsTotalPotentialInfo.initialize(
+   if (!d_isHomogenousConstraintsInitialized)
+      d_constraintsTotalPotentialInfo.initialize(
+        d_matrixFreeDataPtr->get_vector_partitioner(
+          d_matrixFreeVectorComponent),
+        *d_constraintMatrixPtr,
+        false);
+    d_inhomogenousConstraintsTotalPotentialInfo.initialize(
       d_matrixFreeDataPtr->get_vector_partitioner(d_matrixFreeVectorComponent),
-      *d_constraintMatrixPtr);
+      *d_constraintMatrixPtr);    
   }
 
 
