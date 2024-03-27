@@ -649,6 +649,12 @@ namespace dftfe
 
 
         prm.declare_entry(
+          "NET CHARGE",
+          "0.0",
+          dealii::Patterns::Double(),
+          "[Standard] Net charge of the system in Hartree units, positive quantity implies addition of electrons. Currently, this capability is only implemented for non-periodic systems using multipole Dirichlet inhomogeneous boundary conditions for the electrostatics.");
+
+        prm.declare_entry(
           "SPIN POLARIZATION",
           "0",
           dealii::Patterns::Integer(0, 1),
@@ -1282,6 +1288,7 @@ namespace dftfe
     atomicMassesFile                               = "";
     useDeviceDirectAllReduce                       = false;
     pspCutoffImageCharges                          = 15.0;
+    netCharge                                      = 0;
     reuseLanczosUpperBoundFromFirstCall            = false;
     allowMultipleFilteringPassesAfterFirstScf      = true;
     useELPADeviceKernel                            = false;
@@ -1537,6 +1544,7 @@ namespace dftfe
       modelXCInputFile      = prm.get("MODEL XC INPUT FILE");
       start_magnetization   = prm.get_double("START MAGNETIZATION");
       pspCutoffImageCharges = prm.get_double("PSP CUTOFF IMAGE CHARGES");
+      netCharge             = prm.get_double("NET CHARGE");
     }
     prm.leave_subsection();
 
@@ -1687,6 +1695,14 @@ namespace dftfe
         (writeLdosFile || writePdosFile)),
       dealii::ExcMessage(
         "DFT-FE Error: LOCAL DENSITY OF STATES and PROJECTED DENSITY OF STATES are currently not implemented in the case of periodic and semi-periodic boundary conditions."));
+
+
+    AssertThrow(
+      !((periodicX || periodicY || periodicZ) &&
+        (std::fabs(netCharge - 0.0) > 1.0e-12)),
+      dealii::ExcMessage(
+        "DFT-FE Error: non-zero net charge is not implemented for periodic and semi-periodic systems."));
+
 
     if (floatingNuclearCharges)
       AssertThrow(
@@ -1984,6 +2000,11 @@ namespace dftfe
           mixingParameter = 0.5;
         else
           mixingParameter = 0.2;
+      }
+
+    if (std::fabs(netCharge - 0.0) > 1.0e-12)
+      {
+        multipoleBoundaryConditions = true;
       }
   }
 

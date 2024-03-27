@@ -189,6 +189,16 @@ namespace dftfe
       pcout << std::endl
             << "Poisson solve for total electrostatic potential (rhoIn+b): ";
 
+    if (d_dftParamsPtr->multipoleBoundaryConditions)
+      {
+        computing_timer.enter_subsection("Update inhomogenous BC");
+        computeMultipoleMoments(d_matrixFreeDataPRefined,
+                                d_densityInQuadValues[0],
+                                &d_bQuadValuesAllAtoms);
+        updatePRefinedConstraints();
+        computing_timer.leave_subsection("Update inhomogenous BC");
+      }
+
 
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
         d_dftParamsPtr->floatingNuclearCharges and
@@ -819,6 +829,16 @@ namespace dftfe
             << "Poisson solve for total electrostatic potential (rhoOut+b): ";
 
     computing_timer.enter_subsection("phiTot solve");
+
+    if (d_dftParamsPtr->multipoleBoundaryConditions)
+      {
+        computing_timer.enter_subsection("Update inhomogenous BC");
+        computeMultipoleMoments(d_matrixFreeDataPRefined,
+                                d_densityOutQuadValues[0],
+                                &d_bQuadValuesAllAtoms);
+        updatePRefinedConstraints();
+        computing_timer.leave_subsection("Update inhomogenous BC");
+      }
 
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
         d_dftParamsPtr->floatingNuclearCharges and
