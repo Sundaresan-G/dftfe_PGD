@@ -102,17 +102,16 @@ namespace dftfe
           d_smearedChargeQuadratureIdElectro,
           charge,
           d_BLASWrapperPtr,
-                  true,
-                  d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                    d_dftParamsPtr->periodicZ &&
-                    !d_dftParamsPtr->pinnedNodeForPBC,
-                  false,
-                  true,
-                  false,
-                  0,
-                  true,
-                  false,
-                  d_dftParamsPtr->multipoleBoundaryConditions);
+          true,
+          d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+            d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
+          false,
+          true,
+          false,
+          0,
+          true,
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 #endif
       }
     else
@@ -128,17 +127,16 @@ namespace dftfe
           dummyMap,
           d_smearedChargeQuadratureIdElectro,
           charge,
-                true,
-                d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                  d_dftParamsPtr->periodicZ &&
-                  !d_dftParamsPtr->pinnedNodeForPBC,
-                false,
-                true,
-                false,
-                0,
-                true,
-                false,
-                d_dftParamsPtr->multipoleBoundaryConditions);
+          true,
+          d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+            d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
+          false,
+          true,
+          false,
+          0,
+          true,
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
       }
 
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and

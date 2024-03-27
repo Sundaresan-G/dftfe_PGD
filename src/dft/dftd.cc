@@ -291,10 +291,10 @@ namespace dftfe
             case 2:
               {
 #ifdef DFTFE_WITH_DFTD4
-                dftd4_error     error = dftd4_new_error();
-                dftd4_structure mol   = NULL;
-                dftd4_model     disp  = NULL;
-                dftd4_param     param = NULL;
+                dftd4_error     error  = dftd4_new_error();
+                dftd4_structure mol    = NULL;
+                dftd4_model     disp   = NULL;
+                dftd4_param     param  = NULL;
                 const double    charge = -d_dftParams.netCharge;
 
                 mol = dftd4_new_structure(error,

@@ -36,15 +36,15 @@ namespace dftfe
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm) == 0))
   {
-    d_isMeanValueConstraintComputed = false;
-    d_isGradSmearedChargeRhs        = false;
-    d_isStoreSmearedChargeRhs       = false;
-    d_isReuseSmearedChargeRhs       = false;
-    d_isFastConstraintsInitialized  = false;
+    d_isMeanValueConstraintComputed      = false;
+    d_isGradSmearedChargeRhs             = false;
+    d_isStoreSmearedChargeRhs            = false;
+    d_isReuseSmearedChargeRhs            = false;
+    d_isFastConstraintsInitialized       = false;
     d_isHomogenousConstraintsInitialized = false;
-    d_rhoValuesPtr                  = NULL;
-    d_atomsPtr                      = NULL;
-    d_smearedChargeValuesPtr        = NULL;
+    d_rhoValuesPtr                       = NULL;
+    d_atomsPtr                           = NULL;
+    d_smearedChargeValuesPtr             = NULL;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -55,15 +55,15 @@ namespace dftfe
     d_rhsSmearedCharge.reinit(0);
     d_meanValueConstraintVec.reinit(0);
     d_cellShapeFunctionGradientIntegralFlattened.clear();
-    d_isMeanValueConstraintComputed = false;
-    d_isGradSmearedChargeRhs        = false;
-    d_isStoreSmearedChargeRhs       = false;
-    d_isReuseSmearedChargeRhs       = false;
-    d_isFastConstraintsInitialized  = false;
+    d_isMeanValueConstraintComputed      = false;
+    d_isGradSmearedChargeRhs             = false;
+    d_isStoreSmearedChargeRhs            = false;
+    d_isReuseSmearedChargeRhs            = false;
+    d_isFastConstraintsInitialized       = false;
     d_isHomogenousConstraintsInitialized = false;
-    d_rhoValuesPtr                  = NULL;
-    d_atomsPtr                      = NULL;
-    d_smearedChargeValuesPtr        = NULL;
+    d_rhoValuesPtr                       = NULL;
+    d_atomsPtr                           = NULL;
+    d_smearedChargeValuesPtr             = NULL;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -161,7 +161,7 @@ namespace dftfe
         // Setup MatrixFree Constraints
         setupconstraints();
 
-        d_isFastConstraintsInitialized = true;
+        d_isFastConstraintsInitialized       = true;
         d_isHomogenousConstraintsInitialized = true;
       }
   }
@@ -810,7 +810,7 @@ namespace dftfe
   void
   poissonSolverProblemDevice<FEOrder, FEOrderElectro>::setupconstraints()
   {
-   if (!d_isHomogenousConstraintsInitialized)
+    if (!d_isHomogenousConstraintsInitialized)
       d_constraintsTotalPotentialInfo.initialize(
         d_matrixFreeDataPtr->get_vector_partitioner(
           d_matrixFreeVectorComponent),
@@ -818,7 +818,7 @@ namespace dftfe
         false);
     d_inhomogenousConstraintsTotalPotentialInfo.initialize(
       d_matrixFreeDataPtr->get_vector_partitioner(d_matrixFreeVectorComponent),
-      *d_constraintMatrixPtr);    
+      *d_constraintMatrixPtr);
   }
 
 

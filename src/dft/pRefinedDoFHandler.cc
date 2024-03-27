@@ -335,7 +335,7 @@ namespace dftfe
     d_constraintsForPhiPrimeElectro.close();
     d_constraintsVectorElectro.push_back(&d_constraintsForPhiPrimeElectro);
     d_phiPrimeDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
-                  
+
 
     if (d_dftParamsPtr->constraintsParallelCheck)
       {

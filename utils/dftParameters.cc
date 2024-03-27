@@ -1464,7 +1464,7 @@ namespace dftfe
       smearedNuclearCharges  = prm.get_bool("SMEARED NUCLEAR CHARGES");
       floatingNuclearCharges = prm.get_bool("FLOATING NUCLEAR CHARGES");
       multipoleBoundaryConditions =
-        prm.get_bool("MULTIPOLE BOUNDARY CONDITIONS");      
+        prm.get_bool("MULTIPOLE BOUNDARY CONDITIONS");
     }
     prm.leave_subsection();
 

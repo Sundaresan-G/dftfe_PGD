@@ -250,7 +250,9 @@ namespace dftfe
 
 
     // constraints
-    dftUtils::constraintMatrixInfoDevice d_constraintsTotalPotentialInfo, d_inhomogenousConstraintsTotalPotentialInfo;;
+    dftUtils::constraintMatrixInfoDevice d_constraintsTotalPotentialInfo,
+      d_inhomogenousConstraintsTotalPotentialInfo;
+    ;
 
     /// pointer to dealii dealii::AffineConstraints<double> object
     const dealii::AffineConstraints<double> *d_constraintMatrixPtr;

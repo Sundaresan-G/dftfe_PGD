@@ -490,8 +490,9 @@ namespace dftfe
       }
 
     numElectrons = numElectrons + d_dftParamsPtr->netCharge;
-    if (d_dftParamsPtr->verbosity >= 1 and std::abs(d_dftParamsPtr->netCharge)>1e-6)
-       pcout << "SETTING netcharge " << d_dftParamsPtr->netCharge << std::endl;
+    if (d_dftParamsPtr->verbosity >= 1 and
+        std::abs(d_dftParamsPtr->netCharge) > 1e-6)
+      pcout << "SETTING netcharge " << d_dftParamsPtr->netCharge << std::endl;
 
     if (d_dftParamsPtr->solverMode == "NSCF" &&
         d_dftParamsPtr->numberEigenValues == 0 &&
@@ -3295,9 +3296,9 @@ namespace dftfe
               {
                 computing_timer.enter_subsection("Update inhomogenous BC");
                 computeMultipoleMoments(d_basisOperationsPtrElectroHost,
-                                    d_densityQuadratureIdElectro,
-                                    d_densityInQuadValues[0],
-                                    &d_bQuadValuesAllAtoms);
+                                        d_densityQuadratureIdElectro,
+                                        d_densityInQuadValues[0],
+                                        &d_bQuadValuesAllAtoms);
                 updatePRefinedConstraints();
                 computing_timer.leave_subsection("Update inhomogenous BC");
               }

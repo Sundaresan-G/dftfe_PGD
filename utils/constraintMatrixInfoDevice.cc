@@ -508,7 +508,7 @@ namespace dftfe
               d_rowIdsLocal.push_back(partitioner->global_to_local(lineDof));
               if (useInhomogeneties)
                 d_inhomogenities.push_back(
-                constraintMatrixData.get_inhomogeneity(lineDof));
+                  constraintMatrixData.get_inhomogeneity(lineDof));
               else
                 d_inhomogenities.push_back(0.0);
               const std::vector<
@@ -543,8 +543,8 @@ namespace dftfe
               d_rowIdsLocal.push_back(partitioner->global_to_local(lineDof));
               if (useInhomogeneties)
                 d_inhomogenities.push_back(
-                constraintMatrixData.get_inhomogeneity(lineDof));
-              else 
+                  constraintMatrixData.get_inhomogeneity(lineDof));
+              else
                 d_inhomogenities.push_back(0.0);
               const std::vector<
                 std::pair<dealii::types::global_dof_index, double>> *rowData =

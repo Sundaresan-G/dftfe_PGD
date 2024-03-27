@@ -378,17 +378,18 @@ namespace dftfe
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
   void
   dftClass<FEOrder, FEOrderElectro>::computeMultipoleMoments(
-      const std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                              basisOperationsPtr,
-      const unsigned int               densityQuadratureId,
-      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        & rhoQuadValues,
-      const std::map<dealii::CellId, std::vector<double>> *bQuadValues)
+    const std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+      &                basisOperationsPtr,
+    const unsigned int densityQuadratureId,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &                                                  rhoQuadValues,
+    const std::map<dealii::CellId, std::vector<double>> *bQuadValues)
   {
     basisOperationsPtr->reinit(0, 0, densityQuadratureId, false);
-    const unsigned int nQuadsPerCellDensity = basisOperationsPtr->nQuadsPerCell();
+    const unsigned int nQuadsPerCellDensity =
+      basisOperationsPtr->nQuadsPerCell();
     auto matrixFreeDataObject = basisOperationsPtr->matrixFreeData();
 
     std::vector<std::function<dealii::VectorizedArray<double>(
@@ -567,9 +568,10 @@ namespace dftfe
                                    iSubCell,
                                    d_densityDofHandlerIndexElectro)
                 ->id();
-            const unsigned int   cellIndex = basisOperationsPtr->cellIndex(subCellId);
+            const unsigned int cellIndex =
+              basisOperationsPtr->cellIndex(subCellId);
             double *tempVec =
-              rhoQuadValues.data() + cellIndex * FEEvalRho.n_q_points;            
+              rhoQuadValues.data() + cellIndex * FEEvalRho.n_q_points;
             for (unsigned int iQuad = 0; iQuad < FEEvalRho.n_q_points; ++iQuad)
               {
                 rhoVec[iQuad][iSubCell] = tempVec[iQuad];

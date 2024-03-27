@@ -193,9 +193,9 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Update inhomogenous BC");
         computeMultipoleMoments(d_basisOperationsPtrElectroHost,
-                                    d_densityQuadratureIdElectro,
-                                    d_densityInQuadValues[0],
-                                    &d_bQuadValuesAllAtoms);
+                                d_densityQuadratureIdElectro,
+                                d_densityInQuadValues[0],
+                                &d_bQuadValuesAllAtoms);
         updatePRefinedConstraints();
         computing_timer.leave_subsection("Update inhomogenous BC");
       }
@@ -837,9 +837,9 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Update inhomogenous BC");
         computeMultipoleMoments(d_basisOperationsPtrElectroHost,
-                                    d_densityQuadratureIdElectro,
-                                    d_densityOutQuadValues[0],
-                                    &d_bQuadValuesAllAtoms);
+                                d_densityQuadratureIdElectro,
+                                d_densityOutQuadValues[0],
+                                &d_bQuadValuesAllAtoms);
         updatePRefinedConstraints();
         computing_timer.leave_subsection("Update inhomogenous BC");
       }

@@ -581,10 +581,10 @@ namespace dftfe
       const std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                              basisOperationsPtr,
-      const unsigned int               densityQuadratureId,
+        &                basisOperationsPtr,
+      const unsigned int densityQuadratureId,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        & rhoQuadValues,
+        &                                                  rhoQuadValues,
       const std::map<dealii::CellId, std::vector<double>> *bQuadValues);
 
 
