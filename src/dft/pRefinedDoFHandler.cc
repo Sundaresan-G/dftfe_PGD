@@ -496,9 +496,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::updatePRefinedConstraints()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::updatePRefinedConstraints()
   {
     d_constraintsForTotalPotentialElectro.clear();
     d_constraintsForTotalPotentialElectro.reinit(d_locallyRelevantDofsPRefined);

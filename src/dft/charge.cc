@@ -375,9 +375,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeMultipoleMoments(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeMultipoleMoments(
     const std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
@@ -570,7 +572,7 @@ namespace dftfe
                 ->id();
             const unsigned int cellIndex =
               basisOperationsPtr->cellIndex(subCellId);
-            double *tempVec =
+            const double *tempVec =
               rhoQuadValues.data() + cellIndex * FEEvalRho.n_q_points;
             for (unsigned int iQuad = 0; iQuad < FEEvalRho.n_q_points; ++iQuad)
               {
