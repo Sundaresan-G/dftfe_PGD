@@ -200,6 +200,16 @@ namespace dftfe
         computing_timer.leave_subsection("Update inhomogenous BC");
       }
 
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      densityInQuadValuesCopy = d_densityInQuadValues[0];
+    if (std::abs(d_dftParamsPtr->netCharge) > 1e-12)
+      {
+        double *tempvec = densityInQuadValuesCopy.data();
+        for (unsigned int iquad = 0; iquad < densityInQuadValuesCopy.size();
+             iquad++)
+          tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
+      }
+
 
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
         d_dftParamsPtr->floatingNuclearCharges and
@@ -216,7 +226,7 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          d_densityInQuadValues[0],
+          densityInQuadValuesCopy,
           d_BLASWrapperPtr,
           true,
           d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
@@ -243,7 +253,7 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          d_densityInQuadValues[0],
+          densityInQuadValuesCopy,
           true,
           d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
             d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
@@ -844,6 +854,17 @@ namespace dftfe
         computing_timer.leave_subsection("Update inhomogenous BC");
       }
 
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      densityOutQuadValuesCopy = d_densityOutQuadValues[0];
+    if (std::abs(d_dftParamsPtr->netCharge) > 1e-12)
+      {
+        double *tempvec = densityOutQuadValuesCopy.data();
+        for (unsigned int iquad = 0; iquad < densityOutQuadValuesCopy.size();
+             iquad++)
+          tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
+      }
+
+
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
         d_dftParamsPtr->floatingNuclearCharges and
         not d_dftParamsPtr->pinnedNodeForPBC)
@@ -859,7 +880,7 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          d_densityOutQuadValues[0],
+          densityOutQuadValuesCopy,
           d_BLASWrapperPtr,
           false,
           false,
@@ -889,7 +910,7 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          d_densityOutQuadValues[0],
+          densityOutQuadValuesCopy,
           false,
           false,
           d_dftParamsPtr->smearedNuclearCharges,

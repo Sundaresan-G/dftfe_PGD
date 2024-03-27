@@ -652,7 +652,7 @@ namespace dftfe
           "NET CHARGE",
           "0.0",
           dealii::Patterns::Double(),
-          "[Standard] Net charge of the system in Hartree units, positive quantity implies addition of electrons. Currently, this capability is only implemented for non-periodic systems using multipole Dirichlet inhomogeneous boundary conditions for the electrostatics.");
+          "[Standard] Net charge of the system in Hartree units, positive quantity implies addition of electrons. In case of non-periodic boundary conditions, this capability is implemented using multipole Dirichlet inhomogeneous boundary conditions for the electrostatics. In case of periodic and semi-periodic conditions a uniform background charge is used to create a neutral system.");
 
         prm.declare_entry(
           "SPIN POLARIZATION",
@@ -1697,13 +1697,6 @@ namespace dftfe
         "DFT-FE Error: LOCAL DENSITY OF STATES and PROJECTED DENSITY OF STATES are currently not implemented in the case of periodic and semi-periodic boundary conditions."));
 
 
-    AssertThrow(
-      !((periodicX || periodicY || periodicZ) &&
-        (std::fabs(netCharge - 0.0) > 1.0e-12)),
-      dealii::ExcMessage(
-        "DFT-FE Error: non-zero net charge is not implemented for periodic and semi-periodic systems."));
-
-
     if (floatingNuclearCharges)
       AssertThrow(
         smearedNuclearCharges,
@@ -2002,7 +1995,8 @@ namespace dftfe
           mixingParameter = 0.2;
       }
 
-    if (std::fabs(netCharge - 0.0) > 1.0e-12)
+    if (std::fabs(netCharge - 0.0) > 1.0e-12 &&
+        !(periodicX || periodicY || periodicZ))
       {
         multipoleBoundaryConditions = true;
       }
