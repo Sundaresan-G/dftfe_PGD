@@ -318,6 +318,25 @@ namespace dftfe
     d_constraintsVectorElectro.push_back(&d_constraintsPRefinedOnlyHanging);
     d_phiExtDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
 
+    d_constraintsForPhiPrimeElectro.clear();
+    d_constraintsForPhiPrimeElectro.reinit(d_locallyRelevantDofsPRefined);
+    if (d_dftParamsPtr->pinnedNodeForPBC)
+      locatePeriodicPinnedNodes(d_dofHandlerPRefined,
+                                d_constraintsPRefined,
+                                d_constraintsForPhiPrimeElectro);
+    applyHomogeneousDirichletBC(d_dofHandlerPRefined,
+                                d_constraintsPRefinedOnlyHanging,
+                                d_constraintsForPhiPrimeElectro);
+    d_constraintsForPhiPrimeElectro.close();
+    d_constraintsForPhiPrimeElectro.merge(
+      d_constraintsPRefined,
+      dealii::AffineConstraints<
+        double>::MergeConflictBehavior::right_object_wins);
+    d_constraintsForPhiPrimeElectro.close();
+    d_constraintsVectorElectro.push_back(&d_constraintsForPhiPrimeElectro);
+    d_phiPrimeDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
+                  
+
     if (d_dftParamsPtr->constraintsParallelCheck)
       {
         dealii::IndexSet locally_active_dofs_debug;

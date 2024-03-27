@@ -1017,7 +1017,7 @@ namespace dftfe
     /**
      * stores required data for Kohn-Sham problem
      */
-    unsigned int numElectrons, numElectronsUp, numElectronsDown, numLevels;
+    unsigned int numElectrons, numElectronsNetCharge, numElectronsUp, numElectronsDown, numLevels;
     std::set<unsigned int> atomTypes;
 
     /// FIXME: eventually it should be a map of atomic number to struct-
@@ -1207,6 +1207,7 @@ namespace dftfe
     unsigned int                  d_lpspQuadratureIdElectro;
     unsigned int                  d_gllQuadratureId;
     unsigned int                  d_phiTotDofHandlerIndexElectro;
+    unsigned int                  d_phiPrimeDofHandlerIndexElectro;
     unsigned int                  d_phiTotAXQuadratureIdElectro;
     unsigned int                  d_helmholtzDofHandlerIndexElectro;
     unsigned int                  d_binsStartDofHandlerIndexElectro;
@@ -1285,9 +1286,14 @@ namespace dftfe
     elpaScalaManager *d_elpaScala;
 
     poissonSolverProblem<FEOrder, FEOrderElectro> d_phiTotalSolverProblem;
+
+    poissonSolverProblem<FEOrder, FEOrderElectro> d_phiPrimeSolverProblem;
 #ifdef DFTFE_WITH_DEVICE
     poissonSolverProblemDevice<FEOrder, FEOrderElectro>
       d_phiTotalSolverProblemDevice;
+
+    poissonSolverProblemDevice<FEOrder, FEOrderElectro>
+      d_phiPrimeSolverProblemDevice;
 #endif
 
     bool d_kohnShamDFTOperatorsInitialized;
@@ -1337,6 +1343,8 @@ namespace dftfe
       d_noConstraints;
 
     dealii::AffineConstraints<double> d_constraintsForTotalPotentialElectro;
+
+    dealii::AffineConstraints<double> d_constraintsForPhiPrimeElectro;
 
     dealii::AffineConstraints<double> d_constraintsForHelmholtzRhoNodal;
 
@@ -1467,6 +1475,11 @@ namespace dftfe
     // storage for total electrostatic potential solution vector corresponding
     // to output scf electron density
     distributedCPUVec<double> d_phiTotRhoOut;
+
+    // storage for electrostatic potential Gateaux derivate corresponding
+    // to electron number preserving electron-density peturbation (required for
+    // LRDM)
+    distributedCPUVec<double> d_phiPrime;
 
     // storage for sum of nuclear electrostatic potential
     distributedCPUVec<double> d_phiExt;

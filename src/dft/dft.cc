@@ -153,8 +153,10 @@ namespace dftfe
                                       0.0,
                                       dftParams)
     , d_phiTotalSolverProblemDevice(mpi_comm_domain)
+    , d_phiPrimeSolverProblemDevice(mpi_comm_domain)
 #endif
     , d_phiTotalSolverProblem(mpi_comm_domain)
+    , d_phiPrimeSolverProblem(mpi_comm_domain)
     , d_mixingScheme(mpi_comm_parent, mpi_comm_domain, dftParams.verbosity)
   {
     d_nOMPThreads = 1;
@@ -487,6 +489,11 @@ namespace dftfe
           numElectrons += Z;
       }
 
+    numElectronsNetCharge = numElectrons + d_dftParamsPtr->netCharge;
+    numElectrons          = numElectronsNetCharge;
+    if (d_dftParamsPtr->verbosity >= 1 and std::abs(d_dftParamsPtr->netCharge)>1e-6)
+       pcout << "SETTING netcharge " << d_dftParamsPtr->netCharge << std::endl;
+
     if (d_dftParamsPtr->solverMode == "NSCF" &&
         d_dftParamsPtr->numberEigenValues == 0 &&
         d_dftParamsPtr->highestStateOfInterestForChebFiltering != 0)
@@ -516,11 +523,11 @@ namespace dftfe
               << std::endl;
           }
         d_numEigenValues =
-          (numElectrons / 2.0) +
+          (numElectronsNetCharge / 2.0) +
           std::max((d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND" ?
                       0.22 :
                       0.2) *
-                     (numElectrons / 2.0),
+                     (numElectronsNetCharge / 2.0),
                    20.0);
 
         // start with 17-20% buffer to leave room for additional modifications
@@ -528,11 +535,11 @@ namespace dftfe
 #ifdef DFTFE_WITH_DEVICE
         if (d_dftParamsPtr->useDevice && d_dftParamsPtr->autoDeviceBlockSizes)
           d_numEigenValues =
-            (numElectrons / 2.0) + std::max((d_dftParamsPtr->mixingMethod ==
+            (numElectronsNetCharge / 2.0) + std::max((d_dftParamsPtr->mixingMethod ==
                                                  "LOW_RANK_DIELECM_PRECOND" ?
                                                0.2 :
                                                0.17) *
-                                              (numElectrons / 2.0),
+                                              (numElectronsNetCharge / 2.0),
                                             20.0);
 #endif
 

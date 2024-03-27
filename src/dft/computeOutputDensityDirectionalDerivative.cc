@@ -83,9 +83,7 @@ namespace dftfe
       false,
       false);
 
-    distributedCPUVec<double> electrostaticPotPrime;
-    electrostaticPotPrime.reinit(d_phiTotRhoIn);
-    electrostaticPotPrime = 0;
+    d_phiPrime = 0;
 
     // Reuses diagonalA and mean value constraints
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->floatingNuclearCharges and
