@@ -1040,6 +1040,11 @@ namespace dftfe
                           "false",
                           dealii::Patterns::Bool(),
                           "[Advanced] Toggle GPU MODE in Poisson solve.");
+
+        prm.declare_entry("VSELF GPU MODE",
+                          "false",
+                          dealii::Patterns::Bool(),
+                          "[Advanced] Toggle GPU MODE in vself Poisson solve.");
       }
       prm.leave_subsection();
 
@@ -1345,14 +1350,17 @@ namespace dftfe
 
     prm.enter_subsection("GPU");
     {
-      useDevice                  = prm.get_bool("USE GPU"); 
-      useTF32Device              = useDevice && prm.get_bool("USE TF32 OP");
-      deviceFineGrainedTimings   = useDevice && prm.get_bool("FINE GRAINED GPU TIMINGS");
-      allowFullCPUMemSubspaceRot = useDevice && prm.get_bool("SUBSPACE ROT FULL CPU MEM");
-      autoDeviceBlockSizes       = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
-      useDeviceDirectAllReduce   = useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
-      useELPADeviceKernel        = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
-      deviceMemOptMode           = prm.get_bool("GPU MEM OPT MODE");
+      useDevice     = prm.get_bool("USE GPU");
+      useTF32Device = useDevice && prm.get_bool("USE TF32 OP");
+      deviceFineGrainedTimings =
+        useDevice && prm.get_bool("FINE GRAINED GPU TIMINGS");
+      allowFullCPUMemSubspaceRot =
+        useDevice && prm.get_bool("SUBSPACE ROT FULL CPU MEM");
+      autoDeviceBlockSizes = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
+      useDeviceDirectAllReduce =
+        useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
+      useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
+      deviceMemOptMode    = prm.get_bool("GPU MEM OPT MODE");
     }
     prm.leave_subsection();
 
@@ -1610,6 +1618,7 @@ namespace dftfe
       maxLinearSolverIterations = prm.get_integer("MAXIMUM ITERATIONS");
       absLinearSolverTolerance  = prm.get_double("TOLERANCE");
       poissonGPU                = prm.get_bool("GPU MODE");
+      vselfGPU                  = prm.get_bool("VSELF GPU MODE");
     }
     prm.leave_subsection();
 
