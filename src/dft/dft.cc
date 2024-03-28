@@ -2878,8 +2878,7 @@ namespace dftfe
 
                             kohnShamDFTEigenOperator.reinitkPointSpinIndex(
                               kPoint, s);
-                            if (d_dftParamsPtr->memOptMode &&
-                                d_kPointWeights.size() > 0)
+                            if (d_dftParamsPtr->memOptMode)
                               {
                                 computing_timer.enter_subsection(
                                   "Hamiltonian Matrix Computation");
