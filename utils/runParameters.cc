@@ -190,7 +190,7 @@ namespace dftfe
       ionRelaxFlagsFile         = prm.get("ION RELAX FLAGS FILE");
     }
 #ifndef DFTFE_WITH_DEVICE
-    useDevice           = false;
+    useDevice = false;
 #endif
   }
 
