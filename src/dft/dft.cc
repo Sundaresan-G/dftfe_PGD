@@ -2241,7 +2241,8 @@ namespace dftfe
             mixingVariable::magZ,
             rhoNodalMassVec,
             true, // call MPI REDUCE while computing dot products
-            d_dftParamsPtr->mixingParameter,
+            d_dftParamsPtr->mixingParameter *
+              d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
       }
     else if (d_dftParamsPtr->mixingMethod == "ANDERSON")
@@ -2261,7 +2262,8 @@ namespace dftfe
             mixingVariable::magZ,
             d_basisOperationsPtrElectroHost->JxWBasisData(),
             true, // call MPI REDUCE while computing dot products
-            d_dftParamsPtr->mixingParameter,
+            d_dftParamsPtr->mixingParameter *
+              d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
@@ -2281,7 +2283,8 @@ namespace dftfe
                 mixingVariable::gradMagZ,
                 gradRhoJxW,
                 false, // call MPI REDUCE while computing dot products
-                d_dftParamsPtr->mixingParameter,
+                d_dftParamsPtr->mixingParameter *
+                  d_dftParamsPtr->spinMixingEnhancementFactor,
                 d_dftParamsPtr->adaptAndersonMixingParameter);
           }
       }
@@ -2911,8 +2914,7 @@ namespace dftfe
 
                             kohnShamDFTEigenOperator.reinitkPointSpinIndex(
                               kPoint, s);
-                            if (d_dftParamsPtr->memOptMode &&
-                                d_kPointWeights.size() > 0)
+                            if (d_dftParamsPtr->memOptMode)
                               {
                                 computing_timer.enter_subsection(
                                   "Hamiltonian Matrix Computation");

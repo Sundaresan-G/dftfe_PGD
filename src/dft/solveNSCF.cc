@@ -346,15 +346,11 @@ namespace dftfe
                 kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
 
 
-
-                if (!d_dftParamsPtr->useDevice)
-                  {
-                    computing_timer.enter_subsection(
-                      "Hamiltonian Matrix Computation");
-                    kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
-                    computing_timer.leave_subsection(
-                      "Hamiltonian Matrix Computation");
-                  }
+                computing_timer.enter_subsection(
+                  "Hamiltonian Matrix Computation");
+                kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                computing_timer.leave_subsection(
+                  "Hamiltonian Matrix Computation");
 
 
                 for (unsigned int j = 0; j < 1; ++j)
@@ -473,13 +469,24 @@ namespace dftfe
           {
             for (unsigned int s = 0; s < 2; ++s)
               {
+                if (d_dftParamsPtr->memOptMode)
+                  {
+                    computing_timer.enter_subsection("VEff Computation");
+                    kohnShamDFTEigenOperator.computeVEff(
+                      d_densityInQuadValues,
+                      d_gradDensityInQuadValues,
+                      d_phiInQuadValues,
+                      d_rhoCore,
+                      d_gradRhoCore,
+                      s);
+                    computing_timer.leave_subsection("VEff Computation");
+                  }
                 for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                      ++kPoint)
                   {
                     if (d_dftParamsPtr->verbosity >= 2)
                       pcout << "Beginning Chebyshev filter pass " << 1 + count
                             << " for spin " << s + 1 << std::endl;
-                    ;
 
                     kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
                     if (d_dftParamsPtr->memOptMode)
@@ -715,7 +722,7 @@ namespace dftfe
                         << std::endl;
 
                 kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
-                if (d_dftParamsPtr->memOptMode)
+                if (d_dftParamsPtr->memOptMode && d_kPointWeights.size() > 0)
                   {
                     computing_timer.enter_subsection(
                       "Hamiltonian Matrix Computation");

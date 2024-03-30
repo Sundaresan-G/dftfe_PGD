@@ -347,6 +347,7 @@ namespace dftfe
       const unsigned int                                   M,
       const unsigned int                                   N,
       const std::vector<double> &                          eigenValues,
+      const MPI_Comm &                                     mpiCommParent,
       const MPI_Comm &                                     mpiCommDomain,
       const MPI_Comm &                                     interBandGroupComm,
       dftfe::utils::deviceBlasHandle_t &                   handle,
