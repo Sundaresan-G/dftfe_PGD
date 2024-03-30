@@ -116,7 +116,7 @@ namespace dftfe
   void
   kerkerSolverProblemDevice<FEOrderElectro>::distributeX()
   {
-    d_constraintsTotalPotentialInfo.distribute(d_xDevice, 1);
+    d_constraintsTotalPotentialInfo.distribute(d_xDevice);
   }
 
 
@@ -816,7 +816,7 @@ namespace dftfe
 
     x.updateGhostValues();
 
-    d_constraintsTotalPotentialInfo.distribute(x, 1);
+    d_constraintsTotalPotentialInfo.distribute(x);
 
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
     computeAXKernel<double, p * p, q, p, dim>
@@ -842,9 +842,9 @@ namespace dftfe
                        coeffHelmholtz);
 #endif
 
-    d_constraintsTotalPotentialInfo.set_zero(x, 1);
+    d_constraintsTotalPotentialInfo.set_zero(x);
 
-    d_constraintsTotalPotentialInfo.distribute_slave_to_master(Ax, 1);
+    d_constraintsTotalPotentialInfo.distribute_slave_to_master(Ax);
 
     Ax.accumulateAddLocallyOwned();
   }

@@ -23,9 +23,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initBoundaryConditions(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initBoundaryConditions(
     const bool recomputeBasisData,
     const bool meshOnlyDeformed,
     const bool vselfPerturbationUpdateForStress)
@@ -224,12 +226,14 @@ namespace dftfe
       dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
                            C_numCopies1DQuadLPSP()));
     quadratureVector.push_back(dealii::QGauss<1>(C_num1DQuad<FEOrder>()));
-
-    d_densityQuadratureId        = 0;
-    d_nlpspQuadratureId          = 1;
-    d_gllQuadratureId            = 2;
-    d_lpspQuadratureId           = 3;
-    d_feOrderPlusOneQuadratureId = 4;
+    // SparsityPattern VEctor
+    quadratureVector.push_back(dealii::QGauss<1>(8));
+    d_densityQuadratureId         = 0;
+    d_nlpspQuadratureId           = 1;
+    d_gllQuadratureId             = 2;
+    d_lpspQuadratureId            = 3;
+    d_feOrderPlusOneQuadratureId  = 4;
+    d_sparsityPatternQuadratureId = 5;
 
     double init_force;
     MPI_Barrier(d_mpiCommParent);
@@ -281,8 +285,10 @@ namespace dftfe
               d_nlpspQuadratureId,
               d_gllQuadratureId,
               d_lpspQuadratureId,
-              d_feOrderPlusOneQuadratureId};
+              d_feOrderPlusOneQuadratureId,
+              d_sparsityPatternQuadratureId};
             std::vector<dftfe::basis::UpdateFlags> updateFlags{updateFlagsAll,
+                                                               updateFlagsAll,
                                                                updateFlagsAll,
                                                                updateFlagsAll,
                                                                updateFlagsAll,
@@ -294,6 +300,9 @@ namespace dftfe
                                            updateFlags);
             d_basisOperationsPtrHost->computeCellStiffnessMatrix(
               d_feOrderPlusOneQuadratureId, 1, true, false);
+            d_basisOperationsPtrHost->computeCellMassMatrix(
+              d_feOrderPlusOneQuadratureId, 1, true, false);
+            d_basisOperationsPtrHost->computeInverseSqrtMassVector(true, false);
           }
       }
     if (!d_dftParamsPtr->useDevice && recomputeBasisData)
@@ -305,15 +314,38 @@ namespace dftfe
         unsigned int BVec = std::min(d_dftParamsPtr->chebyWfcBlockSize,
                                      bandGroupLowHighPlusOneIndices[1]);
 
-        d_basisOperationsPtrHost->createScratchMultiVectors(
-          BVec, (d_dftParamsPtr->spinPolarized + 1) * 2);
+
+        d_basisOperationsPtrHost->createScratchMultiVectors(1, 3);
+        d_basisOperationsPtrHost->createScratchMultiVectors(BVec, 2);
         if (d_numEigenValues % BVec != 0)
-          d_basisOperationsPtrHost->createScratchMultiVectors(
-            d_numEigenValues % BVec, (d_dftParamsPtr->spinPolarized + 1) * 2);
+          d_basisOperationsPtrHost->createScratchMultiVectors(d_numEigenValues %
+                                                                BVec,
+                                                              2);
         if (d_numEigenValues != d_numEigenValuesRR &&
             d_numEigenValuesRR % BVec != 0)
           d_basisOperationsPtrHost->createScratchMultiVectors(
-            d_numEigenValuesRR % BVec, (d_dftParamsPtr->spinPolarized + 1) * 2);
+            d_numEigenValuesRR % BVec, 2);
+        unsigned int BVec2 = std::min(d_dftParamsPtr->wfcBlockSize,
+                                      bandGroupLowHighPlusOneIndices[1]);
+        if (BVec != BVec2)
+          {
+            d_basisOperationsPtrHost->createScratchMultiVectors(BVec2, 2);
+            if (d_numEigenValues % BVec2 != 0)
+              d_basisOperationsPtrHost->createScratchMultiVectors(
+                d_numEigenValues % BVec2, 2);
+          }
+        if (d_numEigenValues != d_numEigenValuesRR)
+          {
+            dftUtils::createBandParallelizationIndices(
+              interBandGroupComm,
+              d_numEigenValuesRR,
+              bandGroupLowHighPlusOneIndices);
+            unsigned int BVec2 = std::min(d_dftParamsPtr->wfcBlockSize,
+                                          bandGroupLowHighPlusOneIndices[1]);
+            d_basisOperationsPtrHost->createScratchMultiVectors(BVec2, 2);
+            d_basisOperationsPtrHost->createScratchMultiVectors(
+              d_numEigenValuesRR % BVec2, 2);
+          }
       }
 #if defined(DFTFE_WITH_DEVICE)
     if (d_dftParamsPtr->useDevice && recomputeBasisData)
@@ -325,10 +357,16 @@ namespace dftfe
             const unsigned int BVec =
               std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues);
 
+            d_basisOperationsPtrDevice->createScratchMultiVectors(1, 3);
             d_basisOperationsPtrDevice->createScratchMultiVectors(
-              BVec, (d_dftParamsPtr->spinPolarized + 1) * 2);
+              BVec, d_dftParamsPtr->overlapComputeCommunCheby ? 4 : 2);
             d_basisOperationsPtrDevice->computeCellStiffnessMatrix(
               d_feOrderPlusOneQuadratureId, 50, true, false);
+            if (std::is_same<dataTypes::number, std::complex<double>>::value)
+              d_basisOperationsPtrDevice->computeCellMassMatrix(
+                d_feOrderPlusOneQuadratureId, 50, true, false);
+            d_basisOperationsPtrDevice->computeInverseSqrtMassVector(true,
+                                                                     false);
           }
         else
           {
@@ -348,7 +386,7 @@ namespace dftfe
               d_densityQuadratureId,
               d_feOrderPlusOneQuadratureId};
             std::vector<dftfe::basis::UpdateFlags> updateFlags{
-              updateFlagsValuesGradients,
+              updateFlagsAll,
               updateFlagsAll,
               updateFlagsGradientsAndInvJacobians};
             d_basisOperationsPtrDevice->init(matrix_free_data,
@@ -367,8 +405,8 @@ namespace dftfe
         const unsigned int BVec =
           std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues);
 
-        d_basisOperationsPtrDevice->createScratchMultiVectors(
-          BVec, (d_dftParamsPtr->spinPolarized + 1) * 2);
+        d_basisOperationsPtrDevice->createScratchMultiVectors(1, 3);
+        d_basisOperationsPtrDevice->createScratchMultiVectors(BVec, 2);
       }
 #endif
 

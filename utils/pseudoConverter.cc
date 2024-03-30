@@ -53,7 +53,7 @@ namespace dftfe
     }
 
 
-    int
+    std::vector<int>
     convert(const std::string &fileName,
             const std::string &dftfeScratchFolderName,
             const int          verbosity,
@@ -153,7 +153,12 @@ namespace dftfe
         dealii::ExcMessage(
           "Number of atom types in your pseudopotential file does not match with that given in the parameter file"));
 
-      return nlccSum;
+      std::vector<int> pspFlags(2, 0);
+      pspFlags[0] = nlccSum;
+      pspFlags[1] = 0;
+
+
+      return pspFlags;
     }
 
   } // namespace pseudoUtils

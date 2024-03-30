@@ -43,7 +43,8 @@ namespace dftfe
     const std::string restartFilesPath,
     const MPI_Comm &  mpi_comm_parent,
     const bool        restart,
-    const int         verbosity)
+    const int         verbosity,
+    const bool        useDevice)
     : d_mpiCommParent(mpi_comm_parent)
     , d_this_mpi_process(
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
@@ -71,7 +72,8 @@ namespace dftfe
                                                 true,
                                                 "MD",
                                                 d_restartFilesPath,
-                                                d_verbosity);
+                                                d_verbosity,
+                                                useDevice);
       }
     else
       {
@@ -90,6 +92,7 @@ namespace dftfe
                                                 "MD",
                                                 d_restartFilesPath,
                                                 d_verbosity,
+                                                useDevice,
                                                 scfRestart);
       }
 

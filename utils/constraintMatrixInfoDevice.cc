@@ -124,6 +124,43 @@ namespace dftfe
           }
       }
 
+      __global__ void
+      scaleConstraintsKernel(
+        const double *      xVec,
+        const unsigned int *constraintLocalRowIdsUnflattened,
+        const unsigned int  numConstraints,
+        const unsigned int *constraintRowSizes,
+        const unsigned int *constraintRowSizesAccumulated,
+        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
+        double *            constraintColumnValuesAllRowsUnflattened)
+      {
+        const dealii::types::global_dof_index globalThreadId =
+          blockIdx.x * blockDim.x + threadIdx.x;
+        const dealii::types::global_dof_index numberEntries = numConstraints;
+
+        for (dealii::types::global_dof_index index = globalThreadId;
+             index < numberEntries;
+             index += blockDim.x * gridDim.x)
+          {
+            const unsigned int constrainedRowId =
+              constraintLocalRowIdsUnflattened[index];
+            const unsigned int numberColumns = constraintRowSizes[index];
+            const unsigned int startingColumnNumber =
+              constraintRowSizesAccumulated[index];
+            const dealii::types::global_dof_index xVecStartingIdRow =
+              constrainedRowId;
+            for (unsigned int i = 0; i < numberColumns; ++i)
+              {
+                const unsigned int constrainedColumnId =
+                  constraintLocalColumnIdsAllRowsUnflattened
+                    [startingColumnNumber + i];
+                constraintColumnValuesAllRowsUnflattened[startingColumnNumber +
+                                                         i] *=
+                  xVec[constrainedColumnId];
+              }
+          }
+      }
+
 
       __global__ void
       distributeKernel(
@@ -282,12 +319,12 @@ namespace dftfe
 
       __global__ void
       distributeSlaveToMasterKernelAtomicAdd(
-        const unsigned int  contiguousBlockSize,
-        float *             xVec,
-        const unsigned int *constraintLocalRowIdsUnflattened,
-        const unsigned int  numConstraints,
-        const unsigned int *constraintRowSizes,
-        const unsigned int *constraintRowSizesAccumulated,
+        const unsigned int                 contiguousBlockSize,
+        dftfe::utils::deviceDoubleComplex *xVec,
+        const unsigned int *               constraintLocalRowIdsUnflattened,
+        const unsigned int                 numConstraints,
+        const unsigned int *               constraintRowSizes,
+        const unsigned int *               constraintRowSizesAccumulated,
         const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
         const double *      constraintColumnValuesAllRowsUnflattened)
       {
@@ -316,14 +353,17 @@ namespace dftfe
                     [startingColumnNumber + i];
                 const dealii::types::global_dof_index xVecStartingIdColumn =
                   constrainedColumnId * contiguousBlockSize;
-                const float tempfloatval =
-                  constraintColumnValuesAllRowsUnflattened
-                    [startingColumnNumber + i] *
-                  xVec[xVecStartingIdRow + intraBlockIndex];
-                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex]),
-                          tempfloatval);
+                const dftfe::utils::deviceDoubleComplex tempComplval =
+                  dftfe::utils::mult(constraintColumnValuesAllRowsUnflattened
+                                       [startingColumnNumber + i],
+                                     xVec[xVecStartingIdRow + intraBlockIndex]);
+                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex].x),
+                          tempComplval.x);
+                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex].y),
+                          tempComplval.y);
               }
-            xVec[xVecStartingIdRow + intraBlockIndex] = 0.0;
+            xVec[xVecStartingIdRow + intraBlockIndex].x = 0.0;
+            xVec[xVecStartingIdRow + intraBlockIndex].y = 0.0;
           }
       }
 
@@ -544,19 +584,18 @@ namespace dftfe
     template <typename NumberType>
     void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<NumberType> &fieldVector,
-      const unsigned int                blockSize) const
+      distributedDeviceVec<NumberType> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
-        // fieldVector.update_ghost_values();
 
+      const unsigned int blockSize = fieldVector.numVectors();
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      distributeKernel<<<
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+      distributeKernel<<<min((blockSize * d_numConstrainedDofs +
+                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                               dftfe::utils::DEVICE_BLOCK_SIZE,
+                             30000),
+                         dftfe::utils::DEVICE_BLOCK_SIZE>>>(
         blockSize,
         dftfe::utils::makeDataTypeDeviceCompatible(fieldVector.begin()),
         d_rowIdsLocalDevice.begin(),
@@ -567,44 +606,84 @@ namespace dftfe
         d_columnValuesDevice.begin(),
         d_inhomogenitiesDevice.begin());
 #elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(
-        distributeKernel,
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
-        blockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(fieldVector.begin()),
+      hipLaunchKernelGGL(distributeKernel,
+                         min((blockSize * d_numConstrainedDofs +
+                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                               dftfe::utils::DEVICE_BLOCK_SIZE,
+                             30000),
+                         dftfe::utils::DEVICE_BLOCK_SIZE,
+                         0,
+                         0,
+                         blockSize,
+                         dftfe::utils::makeDataTypeDeviceCompatible(
+                           fieldVector.begin()),
+                         d_rowIdsLocalDevice.begin(),
+                         d_numConstrainedDofs,
+                         d_rowSizesDevice.begin(),
+                         d_rowSizesAccumulatedDevice.begin(),
+                         d_columnIdsLocalDevice.begin(),
+                         d_columnValuesDevice.begin(),
+                         d_inhomogenitiesDevice.begin());
+#endif
+    }
+
+
+    void
+    constraintMatrixInfoDevice::initializeScaledConstraints(
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &invSqrtMassVec)
+    {
+      if (d_numConstrainedDofs == 0)
+        return;
+#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+      scaleConstraintsKernel<<<min((d_numConstrainedDofs +
+                                    (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                                     dftfe::utils::DEVICE_BLOCK_SIZE,
+                                   30000),
+                               dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+        dftfe::utils::makeDataTypeDeviceCompatible(invSqrtMassVec.data()),
         d_rowIdsLocalDevice.begin(),
         d_numConstrainedDofs,
         d_rowSizesDevice.begin(),
         d_rowSizesAccumulatedDevice.begin(),
         d_columnIdsLocalDevice.begin(),
-        d_columnValuesDevice.begin(),
-        d_inhomogenitiesDevice.begin());
+        d_columnValuesDevice.begin());
+#elif DFTFE_WITH_DEVICE_LANG_HIP
+      hipLaunchKernelGGL(
+        scaleConstraintsKernel,
+        min((d_numConstrainedDofs + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+              dftfe::utils::DEVICE_BLOCK_SIZE,
+            30000),
+        dftfe::utils::DEVICE_BLOCK_SIZE,
+        0,
+        0,
+        dftfe::utils::makeDataTypeDeviceCompatible(invSqrtMassVec.data()),
+        d_rowIdsLocalDevice.begin(),
+        d_numConstrainedDofs,
+        d_rowSizesDevice.begin(),
+        d_rowSizesAccumulatedDevice.begin(),
+        d_columnIdsLocalDevice.begin(),
+        d_columnValuesDevice.begin());
 #endif
     }
-
-
-
     //
     // set the constrained degrees of freedom to values so that constraints
     // are satisfied for flattened array
     //
     void
     constraintMatrixInfoDevice::distribute_slave_to_master(
-      distributedDeviceVec<double> &fieldVector,
-      const unsigned int            blockSize) const
+      distributedDeviceVec<double> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
 
+      const unsigned int blockSize = fieldVector.numVectors();
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
       distributeSlaveToMasterKernelAtomicAdd<<<
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
+        min((blockSize * d_numConstrainedDofs +
+             (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+              dftfe::utils::DEVICE_BLOCK_SIZE,
             30000),
         dftfe::utils::DEVICE_BLOCK_SIZE>>>(
         blockSize,
@@ -616,14 +695,42 @@ namespace dftfe
         d_columnIdsLocalDevice.begin(),
         d_columnValuesDevice.begin());
 #elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(
-        distributeSlaveToMasterKernelAtomicAdd,
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
+      hipLaunchKernelGGL(distributeSlaveToMasterKernelAtomicAdd,
+                         min((blockSize * d_numConstrainedDofs +
+                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                               dftfe::utils::DEVICE_BLOCK_SIZE,
+                             30000),
+                         dftfe::utils::DEVICE_BLOCK_SIZE,
+                         0,
+                         0,
+                         blockSize,
+                         dftfe::utils::makeDataTypeDeviceCompatible(
+                           fieldVector.begin()),
+                         d_rowIdsLocalDevice.begin(),
+                         d_numConstrainedDofs,
+                         d_rowSizesDevice.begin(),
+                         d_rowSizesAccumulatedDevice.begin(),
+                         d_columnIdsLocalDevice.begin(),
+                         d_columnValuesDevice.begin());
+#endif
+    }
+
+
+    void
+    constraintMatrixInfoDevice::distribute_slave_to_master(
+      distributedDeviceVec<std::complex<double>> &fieldVector) const
+    {
+      if (d_numConstrainedDofs == 0)
+        return;
+
+      const unsigned int blockSize = fieldVector.numVectors();
+#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+      distributeSlaveToMasterKernelAtomicAdd<<<
+        min((blockSize * d_numConstrainedDofs +
+             (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+              dftfe::utils::DEVICE_BLOCK_SIZE,
             30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
+        dftfe::utils::DEVICE_BLOCK_SIZE>>>(
         blockSize,
         dftfe::utils::makeDataTypeDeviceCompatible(fieldVector.begin()),
         d_rowIdsLocalDevice.begin(),
@@ -632,202 +739,42 @@ namespace dftfe
         d_rowSizesAccumulatedDevice.begin(),
         d_columnIdsLocalDevice.begin(),
         d_columnValuesDevice.begin());
-#endif
-    }
-
-    //
-    // set the constrained degrees of freedom to values so that constraints
-    // are satisfied for flattened array
-    //
-    void
-    constraintMatrixInfoDevice::distribute_slave_to_master(
-      distributedDeviceVec<std::complex<double>> &fieldVector,
-      double *                                    tempReal,
-      double *                                    tempImag,
-      const unsigned int                          blockSize) const
-    {
-      if (d_numConstrainedDofs == 0)
-        return;
-
-      dftfe::utils::deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
-        (fieldVector.localSize() * fieldVector.numVectors()),
-        fieldVector.begin(),
-        tempReal,
-        tempImag);
-
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      distributeSlaveToMasterKernelAtomicAdd<<<
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(blockSize,
-                                           tempReal,
-                                           d_rowIdsLocalDevice.begin(),
-                                           d_numConstrainedDofs,
-                                           d_rowSizesDevice.begin(),
-                                           d_rowSizesAccumulatedDevice.begin(),
-                                           d_columnIdsLocalDevice.begin(),
-                                           d_columnValuesDevice.begin());
-
-      distributeSlaveToMasterKernelAtomicAdd<<<
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(blockSize,
-                                           tempImag,
-                                           d_rowIdsLocalDevice.begin(),
-                                           d_numConstrainedDofs,
-                                           d_rowSizesDevice.begin(),
-                                           d_rowSizesAccumulatedDevice.begin(),
-                                           d_columnIdsLocalDevice.begin(),
-                                           d_columnValuesDevice.begin());
 #elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(
-        distributeSlaveToMasterKernelAtomicAdd,
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
-        blockSize,
-        tempReal,
-        d_rowIdsLocalDevice.begin(),
-        d_numConstrainedDofs,
-        d_rowSizesDevice.begin(),
-        d_rowSizesAccumulatedDevice.begin(),
-        d_columnIdsLocalDevice.begin(),
-        d_columnValuesDevice.begin());
-
-      hipLaunchKernelGGL(
-        distributeSlaveToMasterKernelAtomicAdd,
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
-        blockSize,
-        tempImag,
-        d_rowIdsLocalDevice.begin(),
-        d_numConstrainedDofs,
-        d_rowSizesDevice.begin(),
-        d_rowSizesAccumulatedDevice.begin(),
-        d_columnIdsLocalDevice.begin(),
-        d_columnValuesDevice.begin());
+      hipLaunchKernelGGL(distributeSlaveToMasterKernelAtomicAdd,
+                         min((blockSize * d_numConstrainedDofs +
+                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                               dftfe::utils::DEVICE_BLOCK_SIZE,
+                             30000),
+                         dftfe::utils::DEVICE_BLOCK_SIZE,
+                         0,
+                         0,
+                         blockSize,
+                         dftfe::utils::makeDataTypeDeviceCompatible(
+                           fieldVector.begin()),
+                         d_rowIdsLocalDevice.begin(),
+                         d_numConstrainedDofs,
+                         d_rowSizesDevice.begin(),
+                         d_rowSizesAccumulatedDevice.begin(),
+                         d_columnIdsLocalDevice.begin(),
+                         d_columnValuesDevice.begin());
 #endif
-
-      dftfe::utils::deviceKernelsGeneric::copyRealArrsToComplexArrDevice(
-        (fieldVector.localSize() * fieldVector.numVectors()),
-        tempReal,
-        tempImag,
-        fieldVector.begin());
-    }
-
-    //
-    // set the constrained degrees of freedom to values so that constraints
-    // are satisfied for flattened array
-    //
-    void
-    constraintMatrixInfoDevice::distribute_slave_to_master(
-      distributedDeviceVec<std::complex<float>> &fieldVector,
-      float *                                    tempReal,
-      float *                                    tempImag,
-      const unsigned int                         blockSize) const
-    {
-      if (d_numConstrainedDofs == 0)
-        return;
-
-      dftfe::utils::deviceKernelsGeneric::copyComplexArrToRealArrsDevice(
-        (fieldVector.localSize() * fieldVector.numVectors()),
-        fieldVector.begin(),
-        tempReal,
-        tempImag);
-
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      distributeSlaveToMasterKernelAtomicAdd<<<
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(blockSize,
-                                           tempReal,
-                                           d_rowIdsLocalDevice.begin(),
-                                           d_numConstrainedDofs,
-                                           d_rowSizesDevice.begin(),
-                                           d_rowSizesAccumulatedDevice.begin(),
-                                           d_columnIdsLocalDevice.begin(),
-                                           d_columnValuesDevice.begin());
-
-      distributeSlaveToMasterKernelAtomicAdd<<<
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(blockSize,
-                                           tempImag,
-                                           d_rowIdsLocalDevice.begin(),
-                                           d_numConstrainedDofs,
-                                           d_rowSizesDevice.begin(),
-                                           d_rowSizesAccumulatedDevice.begin(),
-                                           d_columnIdsLocalDevice.begin(),
-                                           d_columnValuesDevice.begin());
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(
-        distributeSlaveToMasterKernelAtomicAdd,
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
-        blockSize,
-        tempReal,
-        d_rowIdsLocalDevice.begin(),
-        d_numConstrainedDofs,
-        d_rowSizesDevice.begin(),
-        d_rowSizesAccumulatedDevice.begin(),
-        d_columnIdsLocalDevice.begin(),
-        d_columnValuesDevice.begin());
-
-      hipLaunchKernelGGL(
-        distributeSlaveToMasterKernelAtomicAdd,
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * d_numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
-        blockSize,
-        tempImag,
-        d_rowIdsLocalDevice.begin(),
-        d_numConstrainedDofs,
-        d_rowSizesDevice.begin(),
-        d_rowSizesAccumulatedDevice.begin(),
-        d_columnIdsLocalDevice.begin(),
-        d_columnValuesDevice.begin());
-#endif
-
-      dftfe::utils::deviceKernelsGeneric::copyRealArrsToComplexArrDevice(
-        (fieldVector.localSize() * fieldVector.numVectors()),
-        tempReal,
-        tempImag,
-        fieldVector.begin());
     }
 
 
     template <typename NumberType>
     void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<NumberType> &fieldVector,
-      const unsigned int                blockSize) const
+      distributedDeviceVec<NumberType> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
 
+      const unsigned int blockSize          = fieldVector.numVectors();
       const unsigned int numConstrainedDofs = d_rowIdsLocal.size();
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      setzeroKernel<<<min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                            dftfe::utils::DEVICE_BLOCK_SIZE *
-                            numConstrainedDofs,
+      setzeroKernel<<<min((blockSize * numConstrainedDofs +
+                           (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                            dftfe::utils::DEVICE_BLOCK_SIZE,
                           30000),
                       dftfe::utils::DEVICE_BLOCK_SIZE>>>(
         blockSize,
@@ -835,18 +782,19 @@ namespace dftfe
         d_rowIdsLocalDevice.begin(),
         numConstrainedDofs);
 #elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(
-        setzeroKernel,
-        min((blockSize + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE * numConstrainedDofs,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        0,
-        0,
-        blockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(fieldVector.begin()),
-        d_rowIdsLocalDevice.begin(),
-        numConstrainedDofs);
+      hipLaunchKernelGGL(setzeroKernel,
+                         min((blockSize * numConstrainedDofs +
+                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                               dftfe::utils::DEVICE_BLOCK_SIZE,
+                             30000),
+                         dftfe::utils::DEVICE_BLOCK_SIZE,
+                         0,
+                         0,
+                         blockSize,
+                         dftfe::utils::makeDataTypeDeviceCompatible(
+                           fieldVector.begin()),
+                         d_rowIdsLocalDevice.begin(),
+                         numConstrainedDofs);
 #endif
     }
 
@@ -882,43 +830,35 @@ namespace dftfe
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<double> &fieldVector,
-      const unsigned int            blockSize) const;
+      distributedDeviceVec<double> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<std::complex<double>> &fieldVector,
-      const unsigned int                          blockSize) const;
+      distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<float> &fieldVector,
-      const unsigned int           blockSize) const;
+      distributedDeviceVec<float> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::distribute(
-      distributedDeviceVec<std::complex<float>> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedDeviceVec<std::complex<float>> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<double> &fieldVector,
-      const unsigned int            blockSize) const;
+      distributedDeviceVec<double> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<std::complex<double>> &fieldVector,
-      const unsigned int                          blockSize) const;
+      distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<float> &fieldVector,
-      const unsigned int           blockSize) const;
+      distributedDeviceVec<float> &fieldVector) const;
 
     template void
     constraintMatrixInfoDevice::set_zero(
-      distributedDeviceVec<std::complex<float>> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedDeviceVec<std::complex<float>> &fieldVector) const;
 
 
   } // namespace dftUtils

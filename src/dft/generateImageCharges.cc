@@ -338,9 +338,11 @@ namespace dftfe
     }
   } // namespace internaldft
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::generateImageCharges(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::generateImageCharges(
     const double                      pspCutOff,
     std::vector<int> &                imageIds,
     std::vector<double> &             imageCharges,
@@ -635,13 +637,16 @@ namespace dftfe
     MPI_Barrier(interpoolcomm);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::createMasterChargeIdToImageIdMaps(
-    const double                            pspCutOff,
-    const std::vector<int> &                imageIds,
-    const std::vector<std::vector<double>> &imagePositions,
-    std::vector<std::vector<int>> &         globalChargeIdToImageIdMap)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    createMasterChargeIdToImageIdMaps(
+      const double                            pspCutOff,
+      const std::vector<int> &                imageIds,
+      const std::vector<std::vector<double>> &imagePositions,
+      std::vector<std::vector<int>> &         globalChargeIdToImageIdMap)
   {
     const unsigned int numImageCharges     = imageIds.size();
     const unsigned int numberGlobalCharges = atomLocations.size();

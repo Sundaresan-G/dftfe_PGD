@@ -49,14 +49,16 @@ namespace dftfe
         dealii::Patterns::Bool(),
         "[Advanced] If set to true this option does not delete the dftfeScratch folder when the dftfe object is destroyed. This is useful for debugging and code development. Default: false.");
 
+      prm.declare_entry(
+        "MEM OPT MODE",
+        "false",
+        dealii::Patterns::Bool(),
+        "[Adavanced] Uses algorithms which have lower peak memory but with a marginal performance degradation. Default: true.",
+        true);
+
 
       prm.enter_subsection("GPU");
       {
-        prm.declare_entry("USE GPU",
-                          "false",
-                          dealii::Patterns::Bool(),
-                          "[Standard] Use GPU for compute.");
-
         prm.declare_entry(
           "USE TF32 OP",
           "false",
@@ -90,16 +92,16 @@ namespace dftfe
           R"([Adavanced] Use GPUDIRECT MPI\_Allreduce. This route will only work if DFT-FE is either compiled with NVIDIA NCCL library or withGPUAwareMPI=ON. Both these routes require GPU Aware MPI library to be available as well relevant hardware. If both NVIDIA NCCL library and withGPUAwareMPI modes are toggled on, the NCCL mode takes precedence. Also note that one MPI rank per GPU can be used when using this option. Default: false.)");
 
         prm.declare_entry(
+          "USE DCCL",
+          "false",
+          dealii::Patterns::Bool(),
+          R"([Adavanced] Use NCCL/RCCL for GPUDIRECT communications. Default: false.)");
+
+        prm.declare_entry(
           "USE ELPA GPU KERNEL",
           "false",
           dealii::Patterns::Bool(),
           "[Advanced] If DFT-FE is linked to ELPA eigensolver library configured to run on GPUs, this parameter toggles the use of ELPA GPU kernels for dense symmetric matrix diagonalization calls in DFT-FE. ELPA version>=2020.11.001 is required for this feature. Default: false.");
-
-        prm.declare_entry(
-          "GPU MEM OPT MODE",
-          "true",
-          dealii::Patterns::Bool(),
-          "[Adavanced] Uses algorithms which have lower peak memory on GPUs but with a marginal performance degradation. Recommended when using more than 100k degrees of freedom per GPU. Default: true.");
       }
       prm.leave_subsection();
 
@@ -740,6 +742,12 @@ namespace dftfe
           "[Standard] Mixing parameter to be used in density mixing schemes. For default value of 0.0, it is heuristically set for different mixing schemes (0.2 for Anderson, and 0.5 for Kerker and LRD.");
 
         prm.declare_entry(
+          "SPIN MIXING ENHANCEMENT FACTOR",
+          "4.0",
+          dealii::Patterns::Double(-1e-12, 10.0),
+          "[Standard] Scales the mixing parameter for the spin densities as SPIN MIXING ENHANCEMENT FACTOR times MIXING PARAMETER. This parameter is not used for LOW\_RANK\_DIELECM\_PRECOND mixing method.");
+
+        prm.declare_entry(
           "ADAPT ANDERSON MIXING PARAMETER",
           "false",
           dealii::Patterns::Bool(),
@@ -881,13 +889,6 @@ namespace dftfe
             "0.0",
             dealii::Patterns::Double(-1.0e-12),
             "[Advanced] Parameter specifying the accuracy of the occupied eigenvectors close to the Fermi-energy computed using Chebyshev filtering subspace iteration procedure. For default value of 0.0, we heuristically set the value between 1e-3 and 5e-2 depending on the MIXING METHOD used.");
-
-          prm.declare_entry(
-            "ENABLE HAMILTONIAN TIMES VECTOR OPTIM",
-            "true",
-            dealii::Patterns::Bool(),
-            "[Advanced] Turns on optimization for hamiltonian times vector multiplication. Operations involving data movement from global vector to finite-element cell level and vice versa are done by employing different data structures for interior nodes and surfaces nodes of a given cell and this allows reduction of memory access costs");
-
 
           prm.declare_entry(
             "ORTHOGONALIZATION TYPE",
@@ -1159,6 +1160,7 @@ namespace dftfe
 
     radiusAtomBall                    = 0.0;
     mixingParameter                   = 0.5;
+    spinMixingEnhancementFactor       = 4.0;
     absLinearSolverTolerance          = 1e-10;
     selfConsistentSolverTolerance     = 1e-10;
     TVal                              = 500;
@@ -1212,17 +1214,15 @@ namespace dftfe
     toleranceKinetic       = 1e-03;
     cellConstraintType     = 12; // all cell components to be relaxed
 
-    verbosity             = 0;
-    keepScratchFolder     = false;
-    restartFolder         = ".";
-    saveRhoData           = false;
-    loadRhoData           = false;
-    restartSpinFromNoSpin = false;
-    reproducible_output   = false;
-    meshAdaption          = false;
-    pinnedNodeForPBC      = true;
-    HXOptimFlag           = false;
-
+    verbosity                                      = 0;
+    keepScratchFolder                              = false;
+    restartFolder                                  = ".";
+    saveRhoData                                    = false;
+    loadRhoData                                    = false;
+    restartSpinFromNoSpin                          = false;
+    reproducible_output                            = false;
+    meshAdaption                                   = false;
+    pinnedNodeForPBC                               = true;
     startingWFCType                                = "";
     restrictToOnePass                              = false;
     writeWfcSolutionFields                         = false;
@@ -1285,7 +1285,6 @@ namespace dftfe
     reuseLanczosUpperBoundFromFirstCall            = false;
     allowMultipleFilteringPassesAfterFirstScf      = true;
     useELPADeviceKernel                            = false;
-    deviceMemOptMode                               = false;
     // New Paramters for moleculardyynamics class
     startingTempBOMD           = 300;
     thermostatTimeConstantBOMD = 100;
@@ -1334,7 +1333,8 @@ namespace dftfe
                                   const bool         printParams,
                                   const std::string  mode,
                                   const std::string  restartFilesPath,
-                                  const int          _verbosity)
+                                  const int          _verbosity,
+                                  const bool         _useDevice)
   {
     dealii::ParameterHandler prm;
     internalDftParameters::declare_parameters(prm);
@@ -1342,15 +1342,20 @@ namespace dftfe
     prm.parse_input(parameter_file, "", true);
     solverMode          = mode;
     verbosity           = _verbosity;
+    useDevice           = _useDevice;
     reproducible_output = prm.get_bool("REPRODUCIBLE OUTPUT");
     keepScratchFolder   = prm.get_bool("KEEP SCRATCH FOLDER");
     restartFolder       = restartFilesPath;
+    auto entriesNotSet  = prm.get_entries_wrongly_not_set();
+    if (auto memOptSet = entriesNotSet.find("MEM_20OPT_20MODE");
+        memOptSet != entriesNotSet.end())
+      prm.set("MEM OPT MODE", solverMode == "NSCF");
+    memOptMode = prm.get_bool("MEM OPT MODE");
     writeStructreEnergyForcesFileForPostProcess =
       prm.get_bool("WRITE STRUCTURE ENERGY FORCES DATA POST PROCESS");
 
     prm.enter_subsection("GPU");
     {
-      useDevice     = prm.get_bool("USE GPU");
       useTF32Device = useDevice && prm.get_bool("USE TF32 OP");
       deviceFineGrainedTimings =
         useDevice && prm.get_bool("FINE GRAINED GPU TIMINGS");
@@ -1359,8 +1364,8 @@ namespace dftfe
       autoDeviceBlockSizes = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
       useDeviceDirectAllReduce =
         useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
+      useDCCL             = useDevice && prm.get_bool("USE DCCL");
       useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
-      deviceMemOptMode    = prm.get_bool("GPU MEM OPT MODE");
     }
     prm.leave_subsection();
 
@@ -1540,6 +1545,8 @@ namespace dftfe
       selfConsistentSolverTolerance = prm.get_double("TOLERANCE");
       mixingHistory                 = prm.get_integer("MIXING HISTORY");
       mixingParameter               = prm.get_double("MIXING PARAMETER");
+      spinMixingEnhancementFactor =
+        prm.get_double("SPIN MIXING ENHANCEMENT FACTOR");
       adaptAndersonMixingParameter =
         prm.get_bool("ADAPT ANDERSON MIXING PARAMETER");
       kerkerParameter         = prm.get_double("KERKER MIXING PARAMETER");
@@ -1572,10 +1579,9 @@ namespace dftfe
         numCoreWfcXtHX = prm.get_integer("XTHX CORE EIGENSTATES");
         spectrumSplitStartingScfIter =
           prm.get_integer("SPECTRUM SPLIT STARTING SCF ITER");
-        chebyshevOrder = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
-        useELPA        = prm.get_bool("USE ELPA");
-        HXOptimFlag    = prm.get_bool("ENABLE HAMILTONIAN TIMES VECTOR OPTIM");
-        orthogType     = prm.get("ORTHOGONALIZATION TYPE");
+        chebyshevOrder     = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
+        useELPA            = prm.get_bool("USE ELPA");
+        orthogType         = prm.get("ORTHOGONALIZATION TYPE");
         chebyshevTolerance = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
         wfcBlockSize       = prm.get_integer("WFC BLOCK SIZE");
         chebyWfcBlockSize  = prm.get_integer("CHEBY WFC BLOCK SIZE");
@@ -1917,10 +1923,6 @@ namespace dftfe
         useMixedPrecCheby                   = true;
         reuseLanczosUpperBoundFromFirstCall = true;
       }
-#ifdef USE_COMPLEX
-    HXOptimFlag = false;
-#endif
-
 
 #ifdef DFTFE_WITH_DEVICE
     if (!isPseudopotential && useDevice)
@@ -1943,8 +1945,12 @@ namespace dftfe
           scalapackBlockSize = 32;
       }
 
-#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL) && \
+  !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
     useDeviceDirectAllReduce = false;
+#endif
+#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
+    useDCCL = false;
 #endif
 
     if (useMixedPrecCheby)
@@ -1978,6 +1984,11 @@ namespace dftfe
           mixingParameter = 0.5;
         else
           mixingParameter = 0.2;
+      }
+
+    if (reproducible_output)
+      {
+        spinMixingEnhancementFactor = 1.0;
       }
   }
 

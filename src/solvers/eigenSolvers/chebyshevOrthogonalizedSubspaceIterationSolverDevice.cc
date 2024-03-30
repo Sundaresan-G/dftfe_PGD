@@ -120,7 +120,6 @@ namespace dftfe
     : d_lowerBoundWantedSpectrum(lowerBoundWantedSpectrum)
     , d_lowerBoundUnWantedSpectrum(lowerBoundUnWantedSpectrum)
     , d_upperBoundUnWantedSpectrum(upperBoundUnWantedSpectrum)
-    , d_isTemporaryParallelVectorsCreated(false)
     , d_mpiCommParent(mpi_comm_parent)
     , d_dftParams(dftParams)
     , pcout(std::cout,
@@ -154,7 +153,7 @@ namespace dftfe
   //
   double
   chebyshevOrthogonalizedSubspaceIterationSolverDevice::solve(
-    operatorDFTDeviceClass &operatorMatrix,
+    operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
     const std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
       &                      BLASWrapperPtr,
@@ -173,7 +172,7 @@ namespace dftfe
     const bool               isFirstScf)
   {
     dealii::TimerOutput computingTimerStandard(
-      operatorMatrix.getMPICommunicator(),
+      operatorMatrix.getMPICommunicatorDomain(),
       pcout,
       d_dftParams.reproducible_output || d_dftParams.verbosity < 2 ?
         dealii::TimerOutput::never :
@@ -205,38 +204,19 @@ namespace dftfe
     const unsigned int vectorsBlockSize =
       std::min(d_dftParams.chebyWfcBlockSize, totalNumberWaveFunctions);
 
-    distributedDeviceVec<dataTypes::number> &deviceFlattenedArrayBlock =
-      operatorMatrix.getParallelChebyBlockVectorDevice();
-
-    distributedDeviceVec<dataTypes::number> &projectorKetTimesVector =
-      operatorMatrix.getParallelProjectorKetTimesBlockVectorDevice();
-
-
-    if (isFirstFilteringCall || !d_isTemporaryParallelVectorsCreated)
-      {
-        d_YArray.reinit(deviceFlattenedArrayBlock);
-
-        d_deviceFlattenedFloatArrayBlock.reinit(
-          deviceFlattenedArrayBlock.getMPIPatternP2P(), vectorsBlockSize);
-
-
-        if (d_dftParams.isPseudopotential)
-          {
-            if (d_dftParams.overlapComputeCommunCheby)
-              d_projectorKetTimesVector2.reinit(projectorKetTimesVector);
-          }
-
-
-        if (d_dftParams.overlapComputeCommunCheby)
-          d_deviceFlattenedArrayBlock2.reinit(deviceFlattenedArrayBlock);
-
-
-        if (d_dftParams.overlapComputeCommunCheby)
-          d_YArray2.reinit(d_deviceFlattenedArrayBlock2);
-
-
-        d_isTemporaryParallelVectorsCreated = true;
-      }
+    distributedDeviceVec<dataTypes::number> *XBlock =
+      &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 0);
+    distributedDeviceVec<dataTypes::number> *HXBlock =
+      &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 1);
+    distributedDeviceVec<dataTypes::number> *XBlock2 =
+      d_dftParams.overlapComputeCommunCheby ?
+        &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 2) :
+        NULL;
+    distributedDeviceVec<dataTypes::number> *HXBlock2 =
+      d_dftParams.overlapComputeCommunCheby ?
+        &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 3) :
+        NULL;
+    operatorMatrix.reinitNumberWavefunctions(vectorsBlockSize);
 
     if (isFirstFilteringCall)
       {
@@ -247,12 +227,12 @@ namespace dftfe
           }
 
         const std::pair<double, double> bounds =
-          linearAlgebraOperationsDevice::lanczosLowerUpperBoundEigenSpectrum(
+          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+            BLASWrapperPtr,
             operatorMatrix,
-            deviceFlattenedArrayBlock,
-            d_YArray,
-            projectorKetTimesVector,
-            vectorsBlockSize,
+            operatorMatrix.getScratchFEMultivector(1, 0),
+            operatorMatrix.getScratchFEMultivector(1, 1),
+            operatorMatrix.getScratchFEMultivector(1, 2),
             d_dftParams);
 
         if (d_dftParams.deviceFineGrainedTimings)
@@ -267,7 +247,7 @@ namespace dftfe
           d_lowerBoundWantedSpectrum +
           (d_upperBoundUnWantedSpectrum - d_lowerBoundWantedSpectrum) *
             totalNumberWaveFunctions /
-            operatorMatrix.getParallelVecSingleComponent().size() *
+            operatorMatrix.getScratchFEMultivector(1, 0).globalSize() *
             (d_dftParams.reproducible_output ? 10.0 : 200.0);
       }
     else if (!d_dftParams.reuseLanczosUpperBoundFromFirstCall)
@@ -279,12 +259,12 @@ namespace dftfe
           }
 
         const std::pair<double, double> bounds =
-          linearAlgebraOperationsDevice::lanczosLowerUpperBoundEigenSpectrum(
+          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+            BLASWrapperPtr,
             operatorMatrix,
-            deviceFlattenedArrayBlock,
-            d_YArray,
-            projectorKetTimesVector,
-            vectorsBlockSize,
+            operatorMatrix.getScratchFEMultivector(1, 0),
+            operatorMatrix.getScratchFEMultivector(1, 1),
+            operatorMatrix.getScratchFEMultivector(1, 2),
             d_dftParams);
 
         if (d_dftParams.deviceFineGrainedTimings)
@@ -351,17 +331,6 @@ namespace dftfe
       }
 
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis
-    // multiply by M^{1/2}
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getSqrtMassVec(),
-      eigenVectorsFlattenedDevice);
-
 
     // two blocks of wavefunctions are filtered simultaneously when overlap
     // compute communication in chebyshev filtering is toggled on
@@ -406,24 +375,22 @@ namespace dftfe
             // copy from vector containg all wavefunction vectors to current
             // wavefunction vectors block
             dftfe::utils::deviceKernelsGeneric::
-              stridedCopyToBlockConstantStride(
-                BVec,
-                totalNumberWaveFunctions,
-                localVectorSize,
-                jvec,
-                eigenVectorsFlattenedDevice,
-                deviceFlattenedArrayBlock.begin());
+              stridedCopyToBlockConstantStride(BVec,
+                                               totalNumberWaveFunctions,
+                                               localVectorSize,
+                                               jvec,
+                                               eigenVectorsFlattenedDevice,
+                                               (*XBlock).begin());
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
               dftfe::utils::deviceKernelsGeneric::
-                stridedCopyToBlockConstantStride(
-                  BVec,
-                  totalNumberWaveFunctions,
-                  localVectorSize,
-                  jvec + BVec,
-                  eigenVectorsFlattenedDevice,
-                  d_deviceFlattenedArrayBlock2.begin());
+                stridedCopyToBlockConstantStride(BVec,
+                                                 totalNumberWaveFunctions,
+                                                 localVectorSize,
+                                                 jvec + BVec,
+                                                 eigenVectorsFlattenedDevice,
+                                                 (*XBlock2).begin());
 
             //
             // call Chebyshev filtering function only for the current block
@@ -432,63 +399,85 @@ namespace dftfe
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
               {
-                linearAlgebraOperationsDevice::chebyshevFilter(
-                  operatorMatrix,
-                  deviceFlattenedArrayBlock,
-                  d_YArray,
-                  d_deviceFlattenedFloatArrayBlock,
-                  projectorKetTimesVector,
-                  d_deviceFlattenedArrayBlock2,
-                  d_YArray2,
-                  d_projectorKetTimesVector2,
-                  localVectorSize,
-                  BVec,
-                  chebyshevOrder,
-                  d_lowerBoundUnWantedSpectrum,
-                  d_upperBoundUnWantedSpectrum,
-                  d_lowerBoundWantedSpectrum,
-                  useMixedPrecOverall,
-                  d_dftParams);
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    (*XBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                    (*HXBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                    (*XBlock2).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                    (*HXBlock2).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                  }
+                linearAlgebraOperationsDevice::
+                  chebyshevFilterOverlapComputeCommunication(
+                    operatorMatrix,
+                    (*XBlock),
+                    (*HXBlock),
+                    (*XBlock2),
+                    (*HXBlock2),
+                    chebyshevOrder,
+                    d_lowerBoundUnWantedSpectrum,
+                    d_upperBoundUnWantedSpectrum,
+                    d_lowerBoundWantedSpectrum);
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    (*XBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                    (*HXBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                    (*XBlock2).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                    (*HXBlock2).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                  }
               }
             else
               {
-                linearAlgebraOperationsDevice::chebyshevFilter(
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    (*XBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                    (*HXBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::single);
+                  }
+                linearAlgebraOperations::chebyshevFilter(
                   operatorMatrix,
-                  deviceFlattenedArrayBlock,
-                  d_YArray,
-                  d_deviceFlattenedFloatArrayBlock,
-                  projectorKetTimesVector,
-                  localVectorSize,
-                  BVec,
+                  (*XBlock),
+                  (*HXBlock),
                   chebyshevOrder,
                   d_lowerBoundUnWantedSpectrum,
                   d_upperBoundUnWantedSpectrum,
-                  d_lowerBoundWantedSpectrum,
-                  useMixedPrecOverall,
-                  d_dftParams);
+                  d_lowerBoundWantedSpectrum);
+                if (useMixedPrecOverall && d_dftParams.useMixedPrecCheby)
+                  {
+                    (*XBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                    (*HXBlock).setCommunicationPrecision(
+                      dftfe::utils::mpi::communicationPrecision::full);
+                  }
               }
 
             // copy current wavefunction vectors block to vector containing
             // all wavefunction vectors
             dftfe::utils::deviceKernelsGeneric::
-              stridedCopyFromBlockConstantStride(
-                totalNumberWaveFunctions,
-                BVec,
-                localVectorSize,
-                jvec,
-                deviceFlattenedArrayBlock.begin(),
-                eigenVectorsFlattenedDevice);
+              stridedCopyFromBlockConstantStride(totalNumberWaveFunctions,
+                                                 BVec,
+                                                 localVectorSize,
+                                                 jvec,
+                                                 (*XBlock).begin(),
+                                                 eigenVectorsFlattenedDevice);
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
               dftfe::utils::deviceKernelsGeneric::
-                stridedCopyFromBlockConstantStride(
-                  totalNumberWaveFunctions,
-                  BVec,
-                  localVectorSize,
-                  jvec + BVec,
-                  d_deviceFlattenedArrayBlock2.begin(),
-                  eigenVectorsFlattenedDevice);
+                stridedCopyFromBlockConstantStride(totalNumberWaveFunctions,
+                                                   BVec,
+                                                   localVectorSize,
+                                                   jvec + BVec,
+                                                   (*XBlock2).begin(),
+                                                   eigenVectorsFlattenedDevice);
           }
         else
           {
@@ -569,6 +558,16 @@ namespace dftfe
     // if (d_dftParams.measureOnlyChebyTime)
     //  exit(0);
 
+    //
+    // scale the eigenVectors (initial guess of single atom wavefunctions or
+    // previous guess) to convert into Lowden Orthonormalized FE basis
+    // multiply by M^{1/2}
+    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
+      totalNumberWaveFunctions,
+      localVectorSize,
+      1.0,
+      operatorMatrix.getSqrtMassVector().data(),
+      eigenVectorsFlattenedDevice);
 
 
     if (d_dftParams.orthogType.compare("GS") == 0)
@@ -588,15 +587,13 @@ namespace dftfe
           elpaScala,
           eigenVectorsFlattenedDevice,
           eigenVectorsRotFracDensityFlattenedDevice,
-          deviceFlattenedArrayBlock,
-          d_deviceFlattenedFloatArrayBlock,
-          d_YArray,
-          projectorKetTimesVector,
+          (*XBlock),
+          (*HXBlock),
           localVectorSize,
           totalNumberWaveFunctions,
           totalNumberWaveFunctions - eigenValues.size(),
           d_mpiCommParent,
-          operatorMatrix.getMPICommunicator(),
+          operatorMatrix.getMPICommunicatorDomain(),
           devicecclMpiCommDomain,
           interBandGroupComm,
           eigenValues,
@@ -614,7 +611,7 @@ namespace dftfe
               localVectorSize,
               totalNumberWaveFunctions,
               d_mpiCommParent,
-              operatorMatrix.getMPICommunicator(),
+              operatorMatrix.getMPICommunicatorDomain(),
               devicecclMpiCommDomain,
               interBandGroupComm,
               deviceBlasHandle,
@@ -626,14 +623,12 @@ namespace dftfe
               operatorMatrix,
               elpaScala,
               eigenVectorsFlattenedDevice,
-              deviceFlattenedArrayBlock,
-              d_deviceFlattenedFloatArrayBlock,
-              d_YArray,
-              projectorKetTimesVector,
+              (*XBlock),
+              (*HXBlock),
               localVectorSize,
               totalNumberWaveFunctions,
               d_mpiCommParent,
-              operatorMatrix.getMPICommunicator(),
+              operatorMatrix.getMPICommunicatorDomain(),
               devicecclMpiCommDomain,
               interBandGroupComm,
               eigenValues,
@@ -647,14 +642,12 @@ namespace dftfe
               operatorMatrix,
               elpaScala,
               eigenVectorsFlattenedDevice,
-              deviceFlattenedArrayBlock,
-              d_deviceFlattenedFloatArrayBlock,
-              d_YArray,
-              projectorKetTimesVector,
+              (*XBlock),
+              (*HXBlock),
               localVectorSize,
               totalNumberWaveFunctions,
               d_mpiCommParent,
-              operatorMatrix.getMPICommunicator(),
+              operatorMatrix.getMPICommunicatorDomain(),
               devicecclMpiCommDomain,
               interBandGroupComm,
               eigenValues,
@@ -677,13 +670,13 @@ namespace dftfe
           linearAlgebraOperationsDevice::computeEigenResidualNorm(
             operatorMatrix,
             eigenVectorsRotFracDensityFlattenedDevice,
-            deviceFlattenedArrayBlock,
-            d_YArray,
-            projectorKetTimesVector,
+            (*XBlock),
+            (*HXBlock),
             localVectorSize,
             eigenValues.size(),
             eigenValues,
-            operatorMatrix.getMPICommunicator(),
+            d_mpiCommParent,
+            operatorMatrix.getMPICommunicatorDomain(),
             interBandGroupComm,
             deviceBlasHandle,
             residualNorms,
@@ -692,13 +685,13 @@ namespace dftfe
           linearAlgebraOperationsDevice::computeEigenResidualNorm(
             operatorMatrix,
             eigenVectorsFlattenedDevice,
-            deviceFlattenedArrayBlock,
-            d_YArray,
-            projectorKetTimesVector,
+            (*XBlock),
+            (*HXBlock),
             localVectorSize,
             totalNumberWaveFunctions,
             eigenValues,
-            operatorMatrix.getMPICommunicator(),
+            d_mpiCommParent,
+            operatorMatrix.getMPICommunicatorDomain(),
             interBandGroupComm,
             deviceBlasHandle,
             residualNorms,
@@ -720,7 +713,7 @@ namespace dftfe
       totalNumberWaveFunctions,
       localVectorSize,
       1.0,
-      operatorMatrix.getInvSqrtMassVec(),
+      operatorMatrix.getInverseSqrtMassVector().data(),
       eigenVectorsFlattenedDevice);
 
 
@@ -729,7 +722,7 @@ namespace dftfe
         eigenValues.size(),
         localVectorSize,
         1.0,
-        operatorMatrix.getInvSqrtMassVec(),
+        operatorMatrix.getInverseSqrtMassVector().data(),
         eigenVectorsRotFracDensityFlattenedDevice);
 
     return d_upperBoundUnWantedSpectrum;
@@ -740,7 +733,7 @@ namespace dftfe
   //
   void
   chebyshevOrthogonalizedSubspaceIterationSolverDevice::solveNoRR(
-    operatorDFTDeviceClass &operatorMatrix,
+    operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
     const std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
       &                      BLASWrapperPtr,
@@ -783,42 +776,30 @@ namespace dftfe
     const unsigned int chebyBlockSize =
       std::min(d_dftParams.chebyWfcBlockSize, totalNumberWaveFunctions);
 
-    distributedDeviceVec<dataTypes::number> &deviceFlattenedArrayBlock =
-      operatorMatrix.getParallelChebyBlockVectorDevice();
-
-    distributedDeviceVec<dataTypes::number> &projectorKetTimesVector =
-      operatorMatrix.getParallelProjectorKetTimesBlockVectorDevice();
-
-
-    if (!d_isTemporaryParallelVectorsCreated)
-      {
-        d_YArray.reinit(deviceFlattenedArrayBlock);
-
-        d_deviceFlattenedFloatArrayBlock.reinit(
-          deviceFlattenedArrayBlock.getMPIPatternP2P(), chebyBlockSize);
-
-
-        if (d_dftParams.overlapComputeCommunCheby)
-          d_deviceFlattenedArrayBlock2.reinit(deviceFlattenedArrayBlock);
+    distributedDeviceVec<dataTypes::number> *XBlock =
+      &operatorMatrix.getScratchFEMultivector(chebyBlockSize, 0);
+    distributedDeviceVec<dataTypes::number> *HXBlock =
+      &operatorMatrix.getScratchFEMultivector(chebyBlockSize, 1);
+    distributedDeviceVec<dataTypes::number> *XBlock2 =
+      d_dftParams.overlapComputeCommunCheby ?
+        &operatorMatrix.getScratchFEMultivector(chebyBlockSize, 2) :
+        NULL;
+    distributedDeviceVec<dataTypes::number> *HXBlock2 =
+      d_dftParams.overlapComputeCommunCheby ?
+        &operatorMatrix.getScratchFEMultivector(chebyBlockSize, 3) :
+        NULL;
 
 
-        if (d_dftParams.overlapComputeCommunCheby)
-          d_YArray2.reinit(d_deviceFlattenedArrayBlock2);
-
-
-        if (d_dftParams.overlapComputeCommunCheby)
-          d_projectorKetTimesVector2.reinit(projectorKetTimesVector);
-      }
 
     if (!d_dftParams.reuseLanczosUpperBoundFromFirstCall)
       {
         const std::pair<double, double> bounds =
-          linearAlgebraOperationsDevice::lanczosLowerUpperBoundEigenSpectrum(
+          linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
+            BLASWrapperPtr,
             operatorMatrix,
-            deviceFlattenedArrayBlock,
-            d_YArray,
-            projectorKetTimesVector,
-            chebyBlockSize,
+            operatorMatrix.getScratchFEMultivector(1, 0),
+            operatorMatrix.getScratchFEMultivector(1, 1),
+            operatorMatrix.getScratchFEMultivector(1, 2),
             d_dftParams);
 
         d_upperBoundUnWantedSpectrum = bounds.second;
@@ -863,18 +844,6 @@ namespace dftfe
                 chebyshevOrder);
         pcout << buffer;
       }
-
-
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getSqrtMassVec(),
-      eigenVectorsFlattenedDevice);
 
 
     for (unsigned int ipass = 0; ipass < numberPasses; ipass++)
@@ -929,7 +898,7 @@ namespace dftfe
                         localVectorSize,
                         jvec,
                         eigenVectorsFlattenedDevice,
-                        deviceFlattenedArrayBlock.begin());
+                        (*XBlock).begin());
 
                     if (d_dftParams.overlapComputeCommunCheby &&
                         numSimultaneousBlocksCurrent == 2)
@@ -940,7 +909,7 @@ namespace dftfe
                           localVectorSize,
                           jvec + BVec,
                           eigenVectorsFlattenedDevice,
-                          d_deviceFlattenedArrayBlock2.begin());
+                          (*XBlock2).begin());
 
                     //
                     // call Chebyshev filtering function only for the current
@@ -950,41 +919,77 @@ namespace dftfe
                     if (d_dftParams.overlapComputeCommunCheby &&
                         numSimultaneousBlocksCurrent == 2)
                       {
-                        linearAlgebraOperationsDevice::chebyshevFilter(
-                          operatorMatrix,
-                          deviceFlattenedArrayBlock,
-                          d_YArray,
-                          d_deviceFlattenedFloatArrayBlock,
-                          projectorKetTimesVector,
-                          d_deviceFlattenedArrayBlock2,
-                          d_YArray2,
-                          d_projectorKetTimesVector2,
-                          localVectorSize,
-                          BVec,
-                          chebyshevOrder,
-                          d_lowerBoundUnWantedSpectrum,
-                          d_upperBoundUnWantedSpectrum,
-                          d_lowerBoundWantedSpectrum,
-                          useMixedPrecOverall,
-                          d_dftParams);
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            (*XBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                            (*HXBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                            (*XBlock2).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                            (*HXBlock2).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                          }
+
+                        linearAlgebraOperationsDevice::
+                          chebyshevFilterOverlapComputeCommunication(
+                            operatorMatrix,
+                            (*XBlock),
+                            (*HXBlock),
+                            (*XBlock2),
+                            (*HXBlock2),
+                            chebyshevOrder,
+                            d_lowerBoundUnWantedSpectrum,
+                            d_upperBoundUnWantedSpectrum,
+                            d_lowerBoundWantedSpectrum);
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            (*XBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                            (*HXBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                            (*XBlock2).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                            (*HXBlock2).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                          }
                       }
                     else
                       {
-                        linearAlgebraOperationsDevice::chebyshevFilter(
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            (*XBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                            (*HXBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::
+                                single);
+                          }
+                        linearAlgebraOperations::chebyshevFilter(
                           operatorMatrix,
-                          deviceFlattenedArrayBlock,
-                          d_YArray,
-                          d_deviceFlattenedFloatArrayBlock,
-                          projectorKetTimesVector,
-                          localVectorSize,
-                          BVec,
+                          (*XBlock),
+                          (*HXBlock),
                           chebyshevOrder,
                           d_lowerBoundUnWantedSpectrum,
                           d_upperBoundUnWantedSpectrum,
-                          d_lowerBoundWantedSpectrum,
-                          useMixedPrecOverall,
-                          d_dftParams);
+                          d_lowerBoundWantedSpectrum);
+                        if (useMixedPrecOverall &&
+                            d_dftParams.useMixedPrecCheby)
+                          {
+                            (*XBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                            (*HXBlock).setCommunicationPrecision(
+                              dftfe::utils::mpi::communicationPrecision::full);
+                          }
                       }
+
 
                     // copy current wavefunction vectors block to vector
                     // containing all wavefunction vectors
@@ -994,7 +999,7 @@ namespace dftfe
                         BVec,
                         localVectorSize,
                         jvec,
-                        deviceFlattenedArrayBlock.begin(),
+                        (*XBlock).begin(),
                         eigenVectorsFlattenedDevice);
 
                     if (d_dftParams.overlapComputeCommunCheby &&
@@ -1005,7 +1010,7 @@ namespace dftfe
                           BVec,
                           localVectorSize,
                           jvec + BVec,
-                          d_deviceFlattenedArrayBlock2.begin(),
+                          (*XBlock2).begin(),
                           eigenVectorsFlattenedDevice);
                   }
                 else
@@ -1055,24 +1060,13 @@ namespace dftfe
           localVectorSize,
           totalNumberWaveFunctions,
           d_mpiCommParent,
-          operatorMatrix.getMPICommunicator(),
+          operatorMatrix.getMPICommunicatorDomain(),
           devicecclMpiCommDomain,
           interBandGroupComm,
           deviceBlasHandle,
           d_dftParams,
           useMixedPrecOverall);
       }
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getInvSqrtMassVec(),
-      eigenVectorsFlattenedDevice);
   }
 
 
@@ -1082,7 +1076,7 @@ namespace dftfe
   void
   chebyshevOrthogonalizedSubspaceIterationSolverDevice::
     densityMatrixEigenBasisFirstOrderResponse(
-      operatorDFTDeviceClass &operatorMatrix,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
         &                        BLASWrapperPtr,
@@ -1097,7 +1091,7 @@ namespace dftfe
       dftfe::elpaScalaManager &  elpaScala)
   {
     dealii::TimerOutput computingTimerStandard(
-      operatorMatrix.getMPICommunicator(),
+      operatorMatrix.getMPICommunicatorDomain(),
       pcout,
       d_dftParams.reproducible_output || d_dftParams.verbosity < 2 ?
         dealii::TimerOutput::never :
@@ -1121,19 +1115,10 @@ namespace dftfe
     const unsigned int vectorsBlockSize =
       std::min(d_dftParams.chebyWfcBlockSize, totalNumberWaveFunctions);
 
-    distributedDeviceVec<dataTypes::number> &deviceFlattenedArrayBlock =
-      operatorMatrix.getParallelChebyBlockVectorDevice();
-
-    distributedDeviceVec<dataTypes::number> &projectorKetTimesVector =
-      operatorMatrix.getParallelProjectorKetTimesBlockVectorDevice();
-
-    if (!d_isTemporaryParallelVectorsCreated)
-      {
-        d_YArray.reinit(deviceFlattenedArrayBlock);
-
-        d_deviceFlattenedFloatArrayBlock.reinit(
-          deviceFlattenedArrayBlock.getMPIPatternP2P(), vectorsBlockSize);
-      }
+    distributedDeviceVec<dataTypes::number> *XBlock =
+      &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 0);
+    distributedDeviceVec<dataTypes::number> *HXBlock =
+      &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 1);
 
     //
     // scale the eigenVectors (initial guess of single atom wavefunctions or
@@ -1143,7 +1128,7 @@ namespace dftfe
       totalNumberWaveFunctions,
       localVectorSize,
       1.0,
-      operatorMatrix.getSqrtMassVec(),
+      operatorMatrix.getSqrtMassVector().data(),
       eigenVectorsFlattenedDevice);
 
 
@@ -1151,14 +1136,12 @@ namespace dftfe
     linearAlgebraOperationsDevice::densityMatrixEigenBasisFirstOrderResponse(
       operatorMatrix,
       eigenVectorsFlattenedDevice,
-      deviceFlattenedArrayBlock,
-      d_deviceFlattenedFloatArrayBlock,
-      d_YArray,
-      projectorKetTimesVector,
+      (*XBlock),
+      (*HXBlock),
       localVectorSize,
       totalNumberWaveFunctions,
       d_mpiCommParent,
-      operatorMatrix.getMPICommunicator(),
+      operatorMatrix.getMPICommunicatorDomain(),
       devicecclMpiCommDomain,
       interBandGroupComm,
       eigenValues,
@@ -1178,7 +1161,7 @@ namespace dftfe
       totalNumberWaveFunctions,
       localVectorSize,
       1.0,
-      operatorMatrix.getInvSqrtMassVec(),
+      operatorMatrix.getInverseSqrtMassVector().data(),
       eigenVectorsFlattenedDevice);
 
     dftfe::utils::deviceSynchronize();

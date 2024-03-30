@@ -1,6 +1,7 @@
 set VERBOSITY = 0
 set REPRODUCIBLE OUTPUT = true
 set SOLVER MODE              = MD
+    set USE GPU                         = true
 subsection Geometry
   set NATOMS=32
   set NATOM TYPES=1
@@ -51,9 +52,7 @@ subsection Molecular Dynamics
     set NUMBER OF STEPS                 = 4
     set THERMOSTAT TIME CONSTANT        = 10
 end 
-subsection GPU
-    set USE GPU                         = true
-end  
+
 
 
 subsection Poisson problem parameters

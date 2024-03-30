@@ -25,13 +25,16 @@ namespace dftfe
 {
   // compute configurational force contribution from nuclear self energy on the
   // mesh nodes using linear shape function generators
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeConfigurationalForceEselfLinFE(
-    const dealii::DoFHandler<3> &                    dofHandlerElectro,
-    const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro,
-    const dealii::MatrixFree<3, double> &            matrixFreeDataElectro,
-    const unsigned int                               smearedChargeQuadratureId)
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeConfigurationalForceEselfLinFE(
+      const dealii::DoFHandler<3> &                    dofHandlerElectro,
+      const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro,
+      const dealii::MatrixFree<3, double> &            matrixFreeDataElectro,
+      const unsigned int smearedChargeQuadratureId)
   {
     const std::vector<std::vector<double>> &atomLocations =
       dftPtr->atomLocations;
@@ -486,9 +489,12 @@ namespace dftfe
 
   // compute configurational force on the mesh nodes using linear shape function
   // generators
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeConfigurationalForcePhiExtLinFE()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeConfigurationalForcePhiExtLinFE()
   {
     dealii::FEEvaluation<
       3,
@@ -529,10 +535,12 @@ namespace dftfe
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder,
-             FEOrderElectro>::computeConfigurationalForceEselfNoSurfaceLinFE()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeConfigurationalForceEselfNoSurfaceLinFE()
   {
     dealii::FEEvaluation<
       3,

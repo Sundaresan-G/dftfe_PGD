@@ -19,9 +19,6 @@
 #include "constraintMatrixInfo.h"
 #include "dftParameters.h"
 #include "FEBasisOperations.h"
-#if defined(DFTFE_WITH_DEVICE)
-#  include <operatorDevice.h>
-#endif
 
 #ifndef vselfBinsManager_H_
 #  define vselfBinsManager_H_

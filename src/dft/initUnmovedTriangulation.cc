@@ -32,8 +32,10 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void dftClass<FEOrder, FEOrderElectro>::initUnmovedTriangulation(
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void dftClass<FEOrder, FEOrderElectro, memorySpace>::initUnmovedTriangulation(
     dealii::parallel::distributed::Triangulation<3> &triangulation)
   {
     computing_timer.enter_subsection("unmoved setup");

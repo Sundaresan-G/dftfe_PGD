@@ -20,9 +20,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     interpolateDensityNodalDataToQuadratureDataGeneral(
       const std::shared_ptr<
         dftfe::basis::
@@ -148,9 +150,11 @@ namespace dftfe
   //
   // interpolate nodal data to quadrature values using FEEvaluation
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     interpolateElectroNodalDataToQuadratureDataGeneral(
       const std::shared_ptr<
         dftfe::basis::
@@ -244,9 +248,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     interpolateDensityNodalDataToQuadratureDataLpsp(
       const std::shared_ptr<
         dftfe::basis::
@@ -345,9 +351,11 @@ namespace dftfe
   //
   // compute field l2 norm
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::fieldGradl2Norm(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::fieldGradl2Norm(
     const dealii::MatrixFree<3, double> &matrixFreeDataObject,
     const distributedCPUVec<double> &    nodalField)
 
@@ -399,9 +407,11 @@ namespace dftfe
     return dealii::Utilities::MPI::sum(value, mpi_communicator);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::l2ProjectionQuadToNodal(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::l2ProjectionQuadToNodal(
     const std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
@@ -438,9 +448,11 @@ namespace dftfe
   //
   // compute mass Vector
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeRhoNodalMassVector(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeRhoNodalMassVector(
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       &massVec)
   {

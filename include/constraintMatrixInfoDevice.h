@@ -69,52 +69,19 @@ namespace dftfe
        */
       template <typename NumberType>
       void
-      distribute(distributedDeviceVec<NumberType> &fieldVector,
-                 const unsigned int                blockSize) const;
+      distribute(distributedDeviceVec<NumberType> &fieldVector) const;
+
 
       /**
-       * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
-       * slave nodes are the nodes which are to the right of the constraint
-       * equation and master nodes are the nodes which are left of the
-       * constraint equation.
+       * @brief Scales the constraints with the inverse diagonal mass matrix so that the scaling of the vector can be done at the cell level
        *
-       * @param fieldVector parallel dealii vector which is the result of matrix-vector product(vmult) withot taking
-       * care of constraints
-       * @param blockSize number of components for a given node
+       * @param invSqrtMassVec the inverse diagonal mass matrix
        */
       void
-      distribute_slave_to_master(distributedDeviceVec<double> &fieldVector,
-                                 const unsigned int            blockSize) const;
-
-      inline void
-      distribute_slave_to_master(
-        distributedDeviceVec<std::complex<double>> &fieldVector,
-        const unsigned int                          blockSize) const
-      {}
-
-      /**
-       * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
-       * slave nodes are the nodes which are to the right of the constraint
-       * equation and master nodes are the nodes which are left of the
-       * constraint equation.
-       *
-       * @param fieldVector parallel dealii vector which is the result of matrix-vector product(vmult) withot taking
-       * care of constraints
-       * @param blockSize number of components for a given node
-       */
-      void
-      distribute_slave_to_master(
-        distributedDeviceVec<std::complex<double>> &fieldVector,
-        double *                                    tempReal,
-        double *                                    tempImag,
-        const unsigned int                          blockSize) const;
-
-      inline void
-      distribute_slave_to_master(distributedDeviceVec<double> &fieldVector,
-                                 double *                      tempReal,
-                                 double *                      tempImag,
-                                 const unsigned int            blockSize) const
-      {}
+      initializeScaledConstraints(
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::DEVICE>
+          &invSqrtMassVec);
 
 
       /**
@@ -129,10 +96,11 @@ namespace dftfe
        */
       void
       distribute_slave_to_master(
-        distributedDeviceVec<std::complex<float>> &fieldVector,
-        float *                                    tempReal,
-        float *                                    tempImag,
-        const unsigned int                         blockSize) const;
+        distributedDeviceVec<double> &fieldVector) const;
+
+      void
+      distribute_slave_to_master(
+        distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
 
       /**
@@ -143,8 +111,7 @@ namespace dftfe
        */
       template <typename NumberType>
       void
-      set_zero(distributedDeviceVec<NumberType> &fieldVector,
-               const unsigned int                blockSize) const;
+      set_zero(distributedDeviceVec<NumberType> &fieldVector) const;
 
       /**
        * clear data members

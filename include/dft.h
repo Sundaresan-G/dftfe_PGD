@@ -36,7 +36,6 @@
 #ifdef DFTFE_WITH_DEVICE
 #  include <chebyshevOrthogonalizedSubspaceIterationSolverDevice.h>
 #  include <constraintMatrixInfoDevice.h>
-#  include <kohnShamDFTOperatorDevice.h>
 #  include "deviceKernelsGeneric.h"
 #  include <poissonSolverProblemDevice.h>
 #  include <kerkerSolverProblemDevice.h>
@@ -50,7 +49,7 @@
 #include <eigenSolver.h>
 #include <interpolation.h>
 #include <kerkerSolverProblem.h>
-#include <kohnShamDFTOperator.h>
+#include <KohnShamHamiltonianOperator.h>
 #include <meshMovementAffineTransform.h>
 #include <meshMovementGaussian.h>
 #include <poissonSolverProblem.h>
@@ -67,7 +66,7 @@
 #endif
 
 #include <mixingClass.h>
-
+#include <oncvClass.h>
 
 namespace dftfe
 {
@@ -90,11 +89,10 @@ namespace dftfe
 
   /* code that must be skipped by Doxygen */
   // forward declarations
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class symmetryClass;
-  template <unsigned int T1, unsigned int T2>
+  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
   class forceClass;
-
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   /**
@@ -104,18 +102,14 @@ namespace dftfe
    *
    * @author Shiva Rudraraju, Phani Motamarri, Sambit Das
    */
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   class dftClass : public dftBase
   {
-    friend class kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>;
+    friend class forceClass<FEOrder, FEOrderElectro, memorySpace>;
 
-#ifdef DFTFE_WITH_DEVICE
-    friend class kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>;
-#endif
-
-    friend class forceClass<FEOrder, FEOrderElectro>;
-
-    friend class symmetryClass<FEOrder, FEOrderElectro>;
+    friend class symmetryClass<FEOrder, FEOrderElectro, memorySpace>;
 
   public:
     /**
@@ -455,6 +449,10 @@ namespace dftfe
     void
     initImageChargesUpdateKPoints(bool flag = true);
 
+    void
+    determineAtomsOfInterstPseudopotential(
+      const std::vector<std::vector<double>> &atomCoordinates);
+
 
     /**
      *@brief project ground state electron density from previous mesh into
@@ -699,24 +697,11 @@ namespace dftfe
      *@brief computes density nodal data from wavefunctions
      */
     void
-    computeRhoNodalFromPSI(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-        &kohnShamDFTEigenOperator,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-        &  kohnShamDFTEigenOperatorCPU,
-      bool isConsiderSpectrumSplitting);
+    computeRhoNodalFromPSI(bool isConsiderSpectrumSplitting);
 
 
     void
     computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-        &kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-        &                        kohnShamDFTEigenOperatorCPU,
       distributedCPUVec<double> &fv,
       distributedCPUVec<double> &fvSpin0,
       distributedCPUVec<double> &fvSpin1);
@@ -746,10 +731,7 @@ namespace dftfe
       std::map<dealii::CellId, std::vector<double>> &  _pseudoValues,
       std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
         &_pseudoValuesAtoms);
-    void
-    initNonLocalPseudoPotential_OV();
-    void
-    computeSparseStructureNonLocalProjectors_OV();
+
 
 
     /**
@@ -766,8 +748,7 @@ namespace dftfe
       const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
       dealii::AffineConstraints<double> &      constraintMatrix);
 
-    void
-    computeElementalOVProjectorKets();
+
 
     /**
      *@brief Computes total charge by integrating the electron-density
@@ -876,15 +857,8 @@ namespace dftfe
      *@brief Computes output electron-density from wavefunctions
      */
     void
-    compute_rhoOut(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-        &kohnShamDFTEigenOperator,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-        &        kohnShamDFTEigenOperatorCPU,
-      const bool isConsiderSpectrumSplitting,
-      const bool isGroundState = false);
+    compute_rhoOut(const bool isConsiderSpectrumSplitting,
+                   const bool isGroundState = false);
 
     /**
      *@brief Mixing schemes for mixing electron-density
@@ -1006,8 +980,8 @@ namespace dftfe
 
 
 
-    excManager *         d_excManagerPtr;
-    dispersionCorrection d_dispersionCorr;
+    std::shared_ptr<excManager> d_excManagerPtr;
+    dispersionCorrection        d_dispersionCorr;
 
     /**
      * stores required data for Kohn-Sham problem
@@ -1022,6 +996,9 @@ namespace dftfe
     /// FIXME: remove atom type atributes from atomLocations
     std::vector<std::vector<double>> atomLocations, atomLocationsFractional,
       d_reciprocalLatticeVectors, d_domainBoundingVectors;
+    std::vector<std::vector<double>> d_atomLocationsInterestPseudopotential;
+    std::map<unsigned int, unsigned int>
+                                     d_atomIdPseudopotentialInterestToGlobalId;
     std::vector<std::vector<double>> d_atomLocationsAutoMesh;
     std::vector<std::vector<double>> d_imagePositionsAutoMesh;
 
@@ -1204,6 +1181,7 @@ namespace dftfe
     unsigned int                  d_binsStartDofHandlerIndexElectro;
     unsigned int                  d_densityQuadratureId;
     unsigned int                  d_densityQuadratureIdElectro;
+    unsigned int                  d_sparsityPatternQuadratureId;
     unsigned int                  d_nOMPThreads;
     dealii::MatrixFree<3, double> matrix_free_data, d_matrixFreeDataPRefined;
     std::shared_ptr<
@@ -1230,6 +1208,9 @@ namespace dftfe
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       d_BLASWrapperPtrHost;
+
+    std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
+      d_oncvClassPtr;
 
 
     std::shared_ptr<
@@ -1267,8 +1248,8 @@ namespace dftfe
       localProc_dof_indicesImag;
     std::vector<bool> selectedDofsHanging;
 
-    forceClass<FEOrder, FEOrderElectro> *   forcePtr;
-    symmetryClass<FEOrder, FEOrderElectro> *symmetryPtr;
+    forceClass<FEOrder, FEOrderElectro, memorySpace> *   forcePtr;
+    symmetryClass<FEOrder, FEOrderElectro, memorySpace> *symmetryPtr;
 
     elpaScalaManager *d_elpaScala;
 
@@ -1280,11 +1261,7 @@ namespace dftfe
 
     bool d_kohnShamDFTOperatorsInitialized;
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> *d_kohnShamDFTOperatorPtr;
 
     const std::string d_dftfeScratchFolderName;
 
@@ -1482,146 +1459,7 @@ namespace dftfe
     std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
       d_hessianRhoCoreAtoms;
 
-    //
-    // Store the map between the "pseudo" wave function Id and the function Id
-    // details (i.e., global splineId, l quantum number, m quantum number)
-    //
-    std::vector<std::vector<int>> d_pseudoWaveFunctionIdToFunctionIdDetails;
 
-    //
-    // Store the map between the "pseudo" potential Id and the function Id
-    // details (i.e., global splineId, l quantum number)
-    //
-    std::vector<std::vector<int>> d_deltaVlIdToFunctionIdDetails;
-
-    //
-    // vector to store the number of pseudowave functions/pseudo potentials
-    // associated with an atom (global nonlocal psp atom id)
-    //
-    std::vector<int> d_numberPseudoAtomicWaveFunctions;
-    std::vector<int> d_numberPseudoPotentials;
-    std::vector<int> d_nonLocalAtomGlobalChargeIds;
-
-    //
-    // matrices denoting the sparsity of nonlocal projectors and elemental
-    // projector matrices
-    //
-    std::map<unsigned int, std::vector<int>> d_sparsityPattern;
-    std::vector<std::vector<dealii::DoFHandler<3>::active_cell_iterator>>
-                                           d_elementIteratorsInAtomCompactSupport;
-    std::vector<std::vector<unsigned int>> d_elementIdsInAtomCompactSupport;
-    std::vector<std::vector<dealii::DoFHandler<3>::active_cell_iterator>>
-                                  d_elementOneFieldIteratorsInAtomCompactSupport;
-    std::vector<std::vector<int>> d_nonLocalAtomIdsInElement;
-    std::vector<unsigned int>     d_nonLocalAtomIdsInCurrentProcess;
-    dealii::IndexSet              d_locallyOwnedProjectorIdsCurrentProcess;
-    dealii::IndexSet              d_ghostProjectorIdsCurrentProcess;
-    std::map<std::pair<unsigned int, unsigned int>, unsigned int>
-      d_projectorIdsNumberingMapCurrentProcess;
-#ifdef USE_COMPLEX
-    std::vector<std::vector<std::vector<std::complex<double>>>>
-      d_nonLocalProjectorElementMatricesConjugate,
-      d_nonLocalProjectorElementMatricesTranspose;
-
-
-    std::vector<distributedCPUVec<std::complex<double>>>
-      d_projectorKetTimesVectorPar;
-
-    /// parallel vector used in nonLocalHamiltionian times wavefunction vector
-    /// computation pre-initialization of the parallel layout is more efficient
-    /// than creating the parallel layout for every nonLocalHamiltionan times
-    /// wavefunction computation
-    distributedCPUMultiVec<std::complex<double>>
-      d_projectorKetTimesVectorParFlattened;
-#else
-    std::vector<std::vector<std::vector<double>>>
-      d_nonLocalProjectorElementMatricesConjugate,
-      d_nonLocalProjectorElementMatricesTranspose;
-
-
-    std::vector<distributedCPUVec<double>> d_projectorKetTimesVectorPar;
-
-    /// parallel vector used in nonLocalHamiltionian times wavefunction vector
-    /// computation pre-initialization of the parallel layout is more efficient
-    /// than creating the parallel layout for every nonLocalHamiltionan times
-    /// wavefunction computation
-    distributedCPUMultiVec<double> d_projectorKetTimesVectorParFlattened;
-#endif
-
-    //
-    // storage for nonlocal pseudopotential constants
-    //
-    std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
-
-    //
-    // spline vector for data corresponding to each spline of pseudo
-    // wavefunctions
-    //
-    std::vector<alglib::spline1dinterpolant> d_pseudoWaveFunctionSplines;
-
-    //
-    // spline vector for data corresponding to each spline of delta Vl
-    //
-    std::vector<alglib::spline1dinterpolant> d_deltaVlSplines;
-
-    /* Flattened Storage for precomputed nonlocal pseudopotential quadrature
-     * data. This is to speedup the configurational force computation. Data
-     * format: vector(numNonLocalAtomsCurrentProcess with non-zero compact
-     * support, vector(number pseudo wave
-     * functions,map<cellid,num_quad_points*2>)). Refer to
-     * (https://link.aps.org/doi/10.1103/PhysRevB.97.165132) for details of the
-     * expression of the configurational force terms for the norm-conserving
-     * Troullier-Martins pseudopotential in the Kleinman-Bylander form. The same
-     * expressions also extend to the Optimized Norm-Conserving Vanderbilt
-     * (ONCV) pseudopotentials.
-     */
-    std::vector<dataTypes::number> d_nonLocalPSP_ZetalmDeltaVl;
-
-
-    /* Flattened Storage for precomputed nonlocal pseudopotential quadrature
-     * data. This is to speedup the configurational stress computation. Data
-     * format: vector(numNonLocalAtomsCurrentProcess with non-zero compact
-     * support, vector(number pseudo wave
-     * functions,map<cellid,num_quad_points*num_k_points*3*2>)). Refer to
-     * (https://link.aps.org/doi/10.1103/PhysRevB.97.165132) for details of the
-     * expression of the configurational force terms for the norm-conserving
-     * Troullier-Martins pseudopotential in the Kleinman-Bylander form. The same
-     * expressions also extend to the Optimized Norm-Conserving Vanderbilt
-     * (ONCV) pseudopotentials.
-     */
-    std::vector<dataTypes::number>
-      d_nonLocalPSP_zetalmDeltaVlProductDistImageAtoms;
-
-
-    /// map from cell number to set of non local atom ids (local numbering)
-    std::map<unsigned int, std::vector<unsigned int>>
-      d_cellIdToNonlocalAtomIdsLocalCompactSupportMap;
-
-    /// vector of size num physical cells
-    std::vector<unsigned int> d_nonTrivialPseudoWfcsPerCellZetaDeltaVQuads;
-
-    /// vector of size num physical cell with starting index for each cell for
-    /// the above array
-    std::vector<unsigned int>
-      d_nonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads;
-
-    std::vector<unsigned int> d_nonTrivialAllCellsPseudoWfcIdToElemIdMap;
-
-    /// map from local nonlocal atomid to vector over cells
-    std::map<unsigned int, std::vector<unsigned int>>
-      d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads;
-
-    unsigned int d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads;
-
-
-    std::vector<unsigned int> d_projecterKetTimesFlattenedVectorLocalIds;
-    std::vector<std::vector<unsigned int>> d_projectorKetTimesVectorLocalIds;
-    //
-    // vector of outermost Points for various radial Data
-    //
-    std::vector<double> d_outerMostPointPseudoWaveFunctionsData;
-    std::vector<double> d_outerMostPointPseudoPotData;
-    std::vector<double> d_outerMostPointPseudoProjectorData;
 
     /// map of atom node number and atomic weight
     std::map<dealii::types::global_dof_index, double> d_atomNodeIdToChargeMap;
@@ -1637,12 +1475,7 @@ namespace dftfe
     /// Compute Gateaux derivative of vself field in bins with respect to affine
     /// strain tensor components
     void
-    computeVselfFieldGateauxDerFD(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-        &kohnShamDFTEigenOperatorDevice
-#endif
-    );
+    computeVselfFieldGateauxDerFD();
 
     /// dftParameters object
     dftParameters *d_dftParamsPtr;
@@ -1702,13 +1535,11 @@ namespace dftfe
     bool scfConverged;
     void
     nscf(
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-        &                                             kohnShamDFTEigenOperator,
+      KohnShamHamiltonianOperator<memorySpace> &      kohnShamDFTEigenOperator,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver);
     void
     initnscf(
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-        &                                            kohnShamDFTEigenOperator,
+      KohnShamHamiltonianOperator<memorySpace> &     kohnShamDFTEigenOperator,
       poissonSolverProblem<FEOrder, FEOrderElectro> &phiTotalSolverProblem,
       dealiiLinearSolver &                           CGSolver);
 
@@ -1738,7 +1569,7 @@ namespace dftfe
     kohnShamEigenSpaceCompute(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
         &                                             kohnShamDFTEigenOperator,
       elpaScalaManager &                              elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
@@ -1754,7 +1585,7 @@ namespace dftfe
     kohnShamEigenSpaceCompute(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -1773,7 +1604,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -1785,7 +1616,7 @@ namespace dftfe
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int s,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala);
 
@@ -1793,7 +1624,7 @@ namespace dftfe
     kohnShamEigenSpaceComputeNSCF(
       const unsigned int spinType,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
         &                                             kohnShamDFTEigenOperator,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
       std::vector<double> &                           residualNormWaveFunctions,

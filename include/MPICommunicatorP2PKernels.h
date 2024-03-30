@@ -26,7 +26,9 @@
 #include <MemoryStorage.h>
 #include <TypeConfig.h>
 #include <DataTypeOverloads.h>
-
+#ifdef DFTFE_WITH_DEVICE
+#  include <DeviceTypeConfig.h>
+#endif
 namespace dftfe
 {
   namespace utils
@@ -46,12 +48,13 @@ namespace dftfe
        * @param[in] blockSize
        * @param[out] sendBuffer
        */
+      template <typename ValueTypeComm>
       static void
       gatherLocallyOwnedEntriesSendBufferToTargetProcs(
         const MemoryStorage<ValueType, memorySpace> &dataArray,
-        const SizeTypeVector &                 ownedLocalIndicesForTargetProcs,
-        const size_type                        blockSize,
-        MemoryStorage<ValueType, memorySpace> &sendBuffer);
+        const SizeTypeVector &ownedLocalIndicesForTargetProcs,
+        const size_type       blockSize,
+        MemoryStorage<ValueTypeComm, memorySpace> &sendBuffer);
 
       /**
        * @brief Function template for architecture adaptable accumlate kernel from recv buffer
@@ -62,18 +65,27 @@ namespace dftfe
        * @param[in] blockSize
        * @param[out] dataArray
        */
+      template <typename ValueTypeComm>
       static void
       accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
-        const MemoryStorage<ValueType, memorySpace> &recvBuffer,
+        const MemoryStorage<ValueTypeComm, memorySpace> &recvBuffer,
         const SizeTypeVector &                 ownedLocalIndicesForTargetProcs,
         const size_type                        blockSize,
         const size_type                        locallyOwnedSize,
         const size_type                        ghostSize,
-        MemoryStorage<double, memorySpace> &   tempDoubleRealDataArray,
-        MemoryStorage<double, memorySpace> &   tempDoubleImagDataArray,
-        MemoryStorage<float, memorySpace> &    tempFloatRealDataArray,
-        MemoryStorage<float, memorySpace> &    tempFloatImagDataArray,
         MemoryStorage<ValueType, memorySpace> &dataArray);
+
+      /**
+       * @brief Function template for copying type1 to type2
+       * @param[in] blockSize
+       * @param[in] type1Array
+       * @param[out] type2Array
+       */
+      template <typename ValueType1, typename ValueType2>
+      static void
+      copyValueType1ArrToValueType2Arr(const size_type   blockSize,
+                                       const ValueType1 *type1Array,
+                                       ValueType2 *      type2Array);
     };
 
 #ifdef DFTFE_WITH_DEVICE
@@ -82,6 +94,7 @@ namespace dftfe
                                     dftfe::utils::MemorySpace::DEVICE>
     {
     public:
+      template <typename ValueTypeComm>
       static void
       gatherLocallyOwnedEntriesSendBufferToTargetProcs(
         const MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
@@ -89,27 +102,36 @@ namespace dftfe
         const MemoryStorage<size_type, dftfe::utils::MemorySpace::DEVICE>
           &             ownedLocalIndicesForTargetProcs,
         const size_type blockSize,
-        MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
-          &sendBuffer);
+        MemoryStorage<ValueTypeComm, dftfe::utils::MemorySpace::DEVICE>
+          &                          sendBuffer,
+        dftfe::utils::deviceStream_t deviceCommStream);
 
+      template <typename ValueTypeComm>
       static void
       accumAddLocallyOwnedContrRecvBufferFromTargetProcs(
-        const MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE>
+        const MemoryStorage<ValueTypeComm, dftfe::utils::MemorySpace::DEVICE>
           &recvBuffer,
         const MemoryStorage<size_type, dftfe::utils::MemorySpace::DEVICE>
           &             ownedLocalIndicesForTargetProcs,
         const size_type blockSize,
         const size_type locallyOwnedSize,
         const size_type ghostSize,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleRealDataArray,
-        MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-          &tempDoubleImagDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatRealDataArray,
-        MemoryStorage<float, dftfe::utils::MemorySpace::DEVICE>
-          &tempFloatImagDataArray,
-        MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE> &dataArray);
+        MemoryStorage<ValueType, dftfe::utils::MemorySpace::DEVICE> &dataArray,
+        dftfe::utils::deviceStream_t deviceCommStream);
+
+      /**
+       * @brief Function template for copying type1 to type2
+       * @param[in] blockSize
+       * @param[in] type1Array
+       * @param[out] type2Array
+       */
+      template <typename ValueType1, typename ValueType2>
+      static void
+      copyValueType1ArrToValueType2Arr(
+        const size_type              blockSize,
+        const ValueType1 *           type1Array,
+        ValueType2 *                 type2Array,
+        dftfe::utils::deviceStream_t deviceCommStream);
     };
 #endif
   } // namespace utils

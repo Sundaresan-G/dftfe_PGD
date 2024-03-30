@@ -85,8 +85,7 @@ namespace dftfe
 
       template <typename T>
       void
-      distribute(distributedCPUMultiVec<T> &fieldVector,
-                 const unsigned int         blockSize) const;
+      distribute(distributedCPUMultiVec<T> &fieldVector) const;
 
       /**
        * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
@@ -105,8 +104,22 @@ namespace dftfe
 
       template <typename T>
       void
-      distribute_slave_to_master(distributedCPUMultiVec<T> &fieldVector,
-                                 const unsigned int         blockSize) const;
+      distribute_slave_to_master(distributedCPUMultiVec<T> &fieldVector) const;
+
+      /**
+       * @brief Scales the constraints with the inverse diagonal mass matrix so that the scaling of the vector can be done at the cell level
+       *
+       * @param invSqrtMassVec the inverse diagonal mass matrix
+       */
+      void
+      initializeScaledConstraints(
+        const distributedCPUVec<double> &invSqrtMassVec);
+
+      void
+      initializeScaledConstraints(
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::HOST>
+          &invSqrtMassVec);
 
 
       /**
@@ -121,8 +134,7 @@ namespace dftfe
                const unsigned int    blockSize) const;
       template <typename T>
       void
-      set_zero(distributedCPUMultiVec<T> &fieldVector,
-               const unsigned int         blockSize) const;
+      set_zero(distributedCPUMultiVec<T> &fieldVector) const;
 
       /**
        * clear data members

@@ -24,24 +24,29 @@ namespace dftfe
   //(locally used function) compute Fnl contibution due to Gamma(Rj) for given
   // set
   // of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::FnlGammaAtomsElementalContribution(
-    std::map<unsigned int, std::vector<double>> &forceContributionFnlGammaAtoms,
-    const dealii::MatrixFree<3, double> &        matrixFreeData,
-    dealii::FEEvaluation<3,
-                         1,
-                         C_num1DQuadNLPSP<FEOrder>() * C_numCopies1DQuadNLPSP(),
-                         3> &                    forceEvalNLP,
-    const unsigned int                           cell,
-    const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    FnlGammaAtomsElementalContribution(
+      std::map<unsigned int, std::vector<double>>
+        &                                  forceContributionFnlGammaAtoms,
+      const dealii::MatrixFree<3, double> &matrixFreeData,
+      dealii::FEEvaluation<3,
+                           1,
+                           C_num1DQuadNLPSP<FEOrder>() *
+                             C_numCopies1DQuadNLPSP(),
+                           3> &            forceEvalNLP,
+      const unsigned int                   cell,
+      const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
 #ifdef USE_COMPLEX
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
 #endif
-    const std::vector<dataTypes::number> &zetaDeltaVQuadsFlattened,
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
+      const std::vector<dataTypes::number> &zetaDeltaVQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
   {
     const unsigned int numberGlobalAtoms = dftPtr->atomLocations.size();
     const unsigned int numSubCells =
@@ -49,7 +54,7 @@ namespace dftfe
     const unsigned int numQuadPoints = forceEvalNLP.n_q_points;
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      (dftPtr->d_oncvClassPtr->getTotalNumberOfAtomsInCurrentProcessor());
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;
@@ -67,10 +72,14 @@ namespace dftfe
         // get the global charge Id of the current nonlocal atom
         //
         const int nonLocalAtomId =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-        const int globalChargeIdNonLocalAtom =
-          dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
+          dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
 
+        // FIXME should use the appropriate map from oncvClassPtr
+        // instead of assuming all atoms are nonlocal atoms
+        const int globalChargeIdNonLocalAtom =
+          dftPtr->d_atomIdPseudopotentialInterestToGlobalId
+            .find(nonLocalAtomId)
+            ->second;
 
         // if map entry corresponding to current nonlocal atom id is empty,
         // initialize it to zero
@@ -89,15 +98,15 @@ namespace dftfe
             const unsigned int elementId =
               cellIdToCellNumberMap.find(subCellPtr->id())->second;
             for (unsigned int i = 0;
-                 i <
-                 dftPtr
-                   ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                   .size();
+                 i < (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                        ->getCellIdToAtomIdsLocalCompactSupportMap())
+                       .find(elementId)
+                       ->second.size();
                  i++)
-              if (dftPtr
-                    ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                                                                     [i] ==
-                  iAtom)
+              if ((dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                     ->getCellIdToAtomIdsLocalCompactSupportMap())
+                    .find(elementId)
+                    ->second[i] == iAtom)
                 {
                   isPseudoWfcsAtomInCell      = true;
                   isPseudoWfcsAtomInMacroCell = true;
@@ -117,20 +126,23 @@ namespace dftfe
 
                     const unsigned int startingPseudoWfcIdFlattened =
                       kPoint *
-                        dftPtr
-                          ->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+                        dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                          ->getTotalNonTrivialSphericalFnsOverAllCells() *
                         numQuadPoints +
-                      dftPtr
-                          ->d_nonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                         ->getNonTrivialSphericalFnsCellStartIndex())
+                          [elementId] *
                         numQuadPoints +
-                      dftPtr
-                          ->d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [iAtom][elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                         ->getAtomIdToNonTrivialSphericalFnCellStartIndex())
+                          .find(iAtom)
+                          ->second[elementId] *
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
-                      dftPtr->d_numberPseudoAtomicWaveFunctions[nonLocalAtomId];
+                      dftPtr->d_oncvClassPtr
+                        ->getTotalNumberOfSphericalFunctionsForAtomId(
+                          nonLocalAtomId);
                     // std::cout<<startingPseudoWfcIdFlattened <<std::endl;
                     std::vector<dataTypes::number> temp2(3);
                     for (unsigned int q = 0; q < numQuadPoints; ++q)
@@ -149,15 +161,17 @@ namespace dftfe
                             temp2[0] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 0];
+                                 iPseudoWave * 3 * numQuadPoints + q];
                             temp2[1] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 1];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 numQuadPoints + q];
                             temp2[2] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 2];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 2 * numQuadPoints + q];
 #ifdef USE_COMPLEX
                             const dataTypes::number temp3 =
                               projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened
@@ -219,24 +233,29 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::FnlGammaxElementalContribution(
-    dealii::AlignedVector<dealii::Tensor<1, 3, dealii::VectorizedArray<double>>>
-      &                                           FVectQuads,
-    const dealii::MatrixFree<3, double> &         matrixFreeData,
-    const unsigned int                            numQuadPoints,
-    const unsigned int                            cell,
-    const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
-    const std::vector<dataTypes::number> &        zetaDeltaVQuadsFlattened,
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    FnlGammaxElementalContribution(
+      dealii::AlignedVector<
+        dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &FVectQuads,
+      const dealii::MatrixFree<3, double> &                     matrixFreeData,
+      const unsigned int                                        numQuadPoints,
+      const unsigned int                                        cell,
+      const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
+      const std::vector<dataTypes::number> &        zetaDeltaVQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened)
   {
     const unsigned int numberGlobalAtoms = dftPtr->atomLocations.size();
     const unsigned int numSubCells =
       matrixFreeData.n_active_entries_per_cell_batch(cell);
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+         ->getTotalAtomInCurrentProcessor());
+
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;
@@ -251,10 +270,13 @@ namespace dftfe
         //
         // get the global charge Id of the current nonlocal atom
         //
+        // FIX ME with correct call from ONCV
         const int nonLocalAtomId =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
+          dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
         const int globalChargeIdNonLocalAtom =
-          dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
+          dftPtr->d_atomIdPseudopotentialInterestToGlobalId
+            .find(nonLocalAtomId)
+            ->second;
 
 
 
@@ -265,15 +287,15 @@ namespace dftfe
             const unsigned int elementId =
               cellIdToCellNumberMap.find(subCellPtr->id())->second;
             for (unsigned int i = 0;
-                 i <
-                 dftPtr
-                   ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                   .size();
+                 i < (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                        ->getCellIdToAtomIdsLocalCompactSupportMap())
+                       .find(elementId)
+                       ->second.size();
                  i++)
-              if (dftPtr
-                    ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                                                                     [i] ==
-                  iAtom)
+              if ((dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                     ->getCellIdToAtomIdsLocalCompactSupportMap())
+                    .find(elementId)
+                    ->second[i] == iAtom)
                 {
                   isPseudoWfcsAtomInCell = true;
                   break;
@@ -287,20 +309,23 @@ namespace dftfe
                   {
                     const unsigned int startingPseudoWfcIdFlattened =
                       kPoint *
-                        dftPtr
-                          ->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+                        (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                           ->getTotalNonTrivialSphericalFnsOverAllCells()) *
                         numQuadPoints +
-                      dftPtr
-                          ->d_nonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                         ->getNonTrivialSphericalFnsCellStartIndex())
+                          [elementId] *
                         numQuadPoints +
-                      dftPtr
-                          ->d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [iAtom][elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                         ->getAtomIdToNonTrivialSphericalFnCellStartIndex())
+                          .find(iAtom)
+                          ->second[elementId] *
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
-                      dftPtr->d_numberPseudoAtomicWaveFunctions[nonLocalAtomId];
+                      dftPtr->d_oncvClassPtr
+                        ->getTotalNumberOfSphericalFunctionsForAtomId(
+                          nonLocalAtomId);
                     std::vector<dataTypes::number> temp2(3);
                     for (unsigned int q = 0; q < numQuadPoints; ++q)
                       {
@@ -318,15 +343,17 @@ namespace dftfe
                             temp2[0] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 0];
+                                 iPseudoWave * 3 * numQuadPoints + q];
                             temp2[1] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 1];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 numQuadPoints + q];
                             temp2[2] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 2];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 2 * numQuadPoints + q];
                             F[0] -= 2.0 * (temp1 * temp2[0]);
                             F[1] -= 2.0 * (temp1 * temp2[1]);
                             F[2] -= 2.0 * (temp1 * temp2[2]);
@@ -350,11 +377,14 @@ namespace dftfe
 
   //(locally used function) accumulate and distribute Fnl contibution due to
   // Gamma(Rj)
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::distributeForceContributionFnlGammaAtoms(
-    const std::map<unsigned int, std::vector<double>>
-      &forceContributionFnlGammaAtoms)
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    distributeForceContributionFnlGammaAtoms(
+      const std::map<unsigned int, std::vector<double>>
+        &forceContributionFnlGammaAtoms)
   {
     for (unsigned int iAtom = 0; iAtom < dftPtr->atomLocations.size(); iAtom++)
       {

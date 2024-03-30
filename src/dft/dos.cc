@@ -141,9 +141,11 @@ namespace dftfe
 
 
   // compute tdos
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::compute_tdos(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_tdos(
     const std::vector<std::vector<double>> &eigenValuesInput,
     const unsigned int                      highestStateOfInterest,
     const std::string &                     dosFileName)
@@ -351,9 +353,11 @@ namespace dftfe
 
 
   // compute local density of states
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::compute_ldos(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_ldos(
     const std::vector<std::vector<double>> &eigenValuesInput,
     const std::string &                     ldosFileName)
   {
@@ -507,6 +511,7 @@ namespace dftfe
                                               iNode * d_numEigenValues + ivec +
                                               iWave];
 
+            eigenVectorsFlattenedBlock[kPoint].update_ghost_values();
             constraintsNoneDataInfo.distribute(
               eigenVectorsFlattenedBlock[kPoint], currentBlockSize);
             eigenVectorsFlattenedBlock[kPoint].update_ghost_values();
@@ -752,9 +757,11 @@ namespace dftfe
     computing_timer.leave_subsection("LDOS computation");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::compute_pdos(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_pdos(
     const std::vector<std::vector<double>> &eigenValuesInput,
     const std::string &                     pdosFileName)
   {
@@ -1053,6 +1060,7 @@ namespace dftfe
                                               iNode * d_numEigenValues + ivec +
                                               iWave];
 
+            eigenVectorsFlattenedBlock[kPoint].update_ghost_values();
             constraintsNoneDataInfo.distribute(
               eigenVectorsFlattenedBlock[kPoint], currentBlockSize);
             eigenVectorsFlattenedBlock[kPoint].update_ghost_values();

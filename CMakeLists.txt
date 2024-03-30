@@ -61,8 +61,8 @@ SET(TARGET_SRC
   ./src/excManager/NNLDA.cc
   ./src/poisson/poissonSolverProblem.cc
   ./src/helmholtz/kerkerSolverProblem.cc
-  ./src/dftOperator/kohnShamDFTOperator.cc
-  ./src/dftOperator/operator.cc
+  ./src/dftOperator/KohnShamHamiltonianOperator.cc
+  ./src/dftOperator/veffPrimeForLRDM.cc
   ./src/force/force.cc
   ./src/force/forceWfcContractions.cc  
   ./src/force/eshelbyTensor/eshelbyTensor.cc
@@ -122,7 +122,6 @@ SET(TARGET_SRC
   ./src/dft/initBoundaryConditions.cc
   ./src/dft/initCoreRho.cc
   ./src/dft/initElectronicFields.cc
-  ./src/dft/initPseudo-OV.cc
   ./src/dft/initPseudoLocal.cc
   ./src/dft/initRho.cc
   ./src/dft/initUnmovedTriangulation.cc
@@ -159,7 +158,19 @@ SET(TARGET_SRC
   ./src/force/locateAtomCoreNodesForce.cc  
   ./utils/FEBasisOperationsKernelsInternalHost.cc
   ./utils/FEBasisOperations.cc
-  ./utils/FEBasisOperationsKernels.cc)
+  ./utils/FEBasisOperationsKernels.cc
+  ./src/force/locateAtomCoreNodesForce.cc
+  ./src/atom/AtomPseudoWavefunctions.cc
+  ./src/atom/AtomCenteredSphericalFunctionContainer.cc
+  ./src/atom/AtomCenteredSphericalFunctionBase.cc
+  ./src/atom/AtomCenteredSphericalFunctionSinc.cc
+  ./src/atom/AtomCenteredSphericalFunctionBessel.cc
+  ./src/atom/AtomCenteredSphericalFunctionGaussian.cc
+  ./src/atom/AtomCenteredSphericalFunctionSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionValenceDensitySpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 
@@ -169,14 +180,12 @@ SET(DEVICE_SRC
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
-  ./src/dftOperator/operatorDevice.cc
-  ./src/dftOperator/kohnShamDFTOperatorDevice.cc
   ./src/dft/solveVselfInBinsDevice.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
   ./src/linAlg/rayleighRitzDevice.cc
-  ./src/force/forceWfcContractionsDevice.cc
+  ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.cu.cc
   ./utils/DeviceBlasWrapper.cu.cc
@@ -188,6 +197,7 @@ SET(DEVICE_SRC
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
   ./utils/FEBasisOperationsKernelsInternalDevice.cc
+  ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 
 ELSEIF ("${GPU_LANG}" STREQUAL "hip")
@@ -198,14 +208,12 @@ SET(DEVICE_SRC
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
-  ./src/dftOperator/operatorDevice.cc
-  ./src/dftOperator/kohnShamDFTOperatorDevice.cc
   ./src/dft/solveVselfInBinsDevice.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
   ./src/linAlg/rayleighRitzDevice.cc
-  ./src/force/forceWfcContractionsDevice.cc
+  ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.hip.cc
   ./utils/DeviceBlasWrapper.hip.cc
@@ -217,6 +225,7 @@ SET(DEVICE_SRC
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
   ./utils/FEBasisOperationsKernelsInternalDevice.cc
+  ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 
 ENDIF()

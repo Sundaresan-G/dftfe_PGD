@@ -64,6 +64,16 @@ namespace dftfe
 
       d_cellStiffnessMatrixBasisType.clear();
       d_cellStiffnessMatrixCoeffType.clear();
+      d_cellMassMatrixBasisType.clear();
+      d_cellMassMatrixCoeffType.clear();
+      d_cellInverseMassVectorBasisType.clear();
+      d_cellInverseMassVectorCoeffType.clear();
+      d_cellInverseSqrtMassVectorBasisType.clear();
+      d_cellInverseSqrtMassVectorCoeffType.clear();
+      d_inverseSqrtMassVectorBasisType.clear();
+      d_inverseSqrtMassVectorCoeffType.clear();
+      d_sqrtMassVectorBasisType.clear();
+      d_sqrtMassVectorCoeffType.clear();
       scratchMultiVectors.clear();
       tempCellNodalData.clear();
       tempQuadratureGradientsData.clear();
@@ -314,7 +324,8 @@ namespace dftfe
       reinit(const unsigned int &vecBlockSize,
              const unsigned int &cellsBlockSize,
              const unsigned int &quadratureID,
-             const bool          isResizeTempStorage)
+             const bool          isResizeTempStorageForInerpolation,
+             const bool          isResizeTempStorageForCellMatrices)
     {
       d_quadratureID = quadratureID;
       auto itr       = std::find(d_quadratureIDsVector.begin(),
@@ -332,8 +343,8 @@ namespace dftfe
           d_nVectors = vecBlockSize;
           initializeFlattenedIndexMaps();
         }
-      if (isResizeTempStorage)
-        resizeTempStorage();
+      resizeTempStorage(isResizeTempStorageForInerpolation,
+                        isResizeTempStorageForCellMatrices);
     }
 
     template <typename ValueTypeBasisCoeff,
@@ -457,6 +468,96 @@ namespace dftfe
       return d_cellStiffnessMatrixBasisType;
     }
 
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellMassMatrixBasisData() const
+    {
+      return d_cellMassMatrixBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellInverseSqrtMassVectorBasisData() const
+    {
+      return d_cellInverseSqrtMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellInverseMassVectorBasisData() const
+    {
+      return d_cellInverseMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellSqrtMassVectorBasisData() const
+    {
+      return d_cellSqrtMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      cellMassVectorBasisData() const
+    {
+      return d_cellMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      inverseSqrtMassVectorBasisData() const
+    {
+      return d_inverseSqrtMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      sqrtMassVectorBasisData() const
+    {
+      return d_sqrtMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      inverseMassVectorBasisData() const
+    {
+      return d_inverseMassVectorBasisType;
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    const dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      massVectorBasisData() const
+    {
+      return d_massVectorBasisType;
+    }
+
 
     template <typename ValueTypeBasisCoeff,
               typename ValueTypeBasisData,
@@ -517,21 +618,52 @@ namespace dftfe
               dftfe::utils::MemorySpace memorySpace>
     void
     FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
-      resizeTempStorage()
+      resizeTempStorage(const bool isResizeTempStorageForInerpolation,
+                        const bool isResizeTempStorageForCellMatrices)
     {
-      tempCellNodalData.resize(d_nVectors * d_nDofsPerCell * d_cellsBlockSize);
-      if (d_updateFlags[d_quadratureIndex] & update_gradients)
-        tempQuadratureGradientsData.resize(
-          areAllCellsCartesian ?
-            0 :
-            (d_nVectors * d_nQuadsPerCell[d_quadratureIndex] * 3 *
-             d_cellsBlockSize));
+      if (isResizeTempStorageForInerpolation)
+        {
+          tempCellNodalData.resize(d_nVectors * d_nDofsPerCell *
+                                   d_cellsBlockSize);
+          if (d_updateFlags[d_quadratureIndex] & update_gradients)
+            tempQuadratureGradientsData.resize(
+              areAllCellsCartesian ?
+                0 :
+                (d_nVectors * d_nQuadsPerCell[d_quadratureIndex] * 3 *
+                 d_cellsBlockSize));
 
-      if (d_updateFlags[d_quadratureIndex] & update_gradients)
-        tempQuadratureGradientsDataNonAffine.resize(
-          areAllCellsAffine ? 0 :
-                              (d_nVectors * d_nQuadsPerCell[d_quadratureIndex] *
-                               3 * d_cellsBlockSize));
+          if (d_updateFlags[d_quadratureIndex] & update_gradients)
+            tempQuadratureGradientsDataNonAffine.resize(
+              areAllCellsAffine ?
+                0 :
+                (d_nVectors * d_nQuadsPerCell[d_quadratureIndex] * 3 *
+                 d_cellsBlockSize));
+        }
+      if (isResizeTempStorageForCellMatrices)
+        {
+          if (tempCellMatrixBlock.size() !=
+              d_nDofsPerCell * d_nDofsPerCell * d_cellsBlockSize)
+            tempCellMatrixBlock.resize(d_nDofsPerCell * d_nDofsPerCell *
+                                       d_cellsBlockSize);
+          if (tempCellValuesBlock.size() != d_nQuadsPerCell[d_quadratureIndex] *
+                                              d_nDofsPerCell * d_cellsBlockSize)
+            tempCellValuesBlock.resize(d_nQuadsPerCell[d_quadratureIndex] *
+                                       d_nDofsPerCell * d_cellsBlockSize);
+          if (tempCellGradientsBlock.size() !=
+              d_nQuadsPerCell[d_quadratureIndex] * d_nDofsPerCell *
+                d_cellsBlockSize * 3)
+            tempCellGradientsBlock.resize(d_nQuadsPerCell[d_quadratureIndex] *
+                                          d_nDofsPerCell * d_cellsBlockSize *
+                                          3);
+          if (tempCellGradientsBlock2.size() !=
+              d_nQuadsPerCell[d_quadratureIndex] * d_nDofsPerCell *
+                d_cellsBlockSize * 3)
+            tempCellGradientsBlock2.resize(d_nQuadsPerCell[d_quadratureIndex] *
+                                           d_nDofsPerCell * d_cellsBlockSize *
+                                           3);
+          if (zeroIndexVec.size() != d_cellsBlockSize)
+            zeroIndexVec.resize(d_cellsBlockSize, 0);
+        }
     }
 
     template <typename ValueTypeBasisCoeff,
@@ -1137,14 +1269,7 @@ namespace dftfe
                                  const bool         basisType,
                                  const bool         ceoffType)
     {
-      auto itr = std::find(d_quadratureIDsVector.begin(),
-                           d_quadratureIDsVector.end(),
-                           quadratureID);
-      AssertThrow(
-        itr != d_quadratureIDsVector.end(),
-        dealii::ExcMessage(
-          "DFT-FE Error: FEBasisOperations Class not initialized with this quadrature Index."));
-
+      reinit(0, cellsBlockSize, quadratureID, false, true);
       if (basisType)
         d_cellStiffnessMatrixBasisType.resize(d_nDofsPerCell * d_nDofsPerCell *
                                               d_nCells);
@@ -1160,9 +1285,7 @@ namespace dftfe
           d_cellStiffnessMatrixCoeffType.resize(d_nDofsPerCell *
                                                 d_nDofsPerCell * d_nCells);
 
-      unsigned int quadratureIndex =
-        std::distance(d_quadratureIDsVector.begin(), itr);
-      unsigned int nQuadsPerCell = d_nQuadsPerCell[quadratureIndex];
+      unsigned int nQuadsPerCell = this->nQuadsPerCell();
       dftfe::utils::MemoryStorage<ValueTypeBasisData,
                                   dftfe::utils::MemorySpace::HOST>
         d_jacobianFactorHost;
@@ -1209,56 +1332,25 @@ namespace dftfe
       d_jacobianFactor.resize(d_jacobianFactorHost.size());
       d_jacobianFactor.copyFrom(d_jacobianFactorHost);
 #endif
-      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
-        tempStiffnessMatrixBlock(d_nDofsPerCell * d_nDofsPerCell *
-                                 cellsBlockSize);
-      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
-        tempCellGradientsBlock(nQuadsPerCell * d_nDofsPerCell * cellsBlockSize *
-                               3);
-      dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
-        tempCellGradientsBlock2(nQuadsPerCell * d_nDofsPerCell *
-                                cellsBlockSize * 3);
-      dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
-        zeroIndexVec(cellsBlockSize - 1, 0);
       if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
         {
-          if constexpr (std::is_same<ValueTypeBasisCoeff,
-                                     ValueTypeBasisData>::value)
-            dftfe::basis::FEBasisOperationsKernelsInternal::
-              reshapeToNonAffineLayoutHost(
-                d_nDofsPerCell,
-                nQuadsPerCell,
-                1,
-                d_shapeFunctionGradientData[quadratureID].data(),
-                tempCellGradientsBlock.data());
-          else
-            dftfe::basis::FEBasisOperationsKernelsInternal::
-              reshapeToNonAffineLayoutHost(
-                d_nDofsPerCell,
-                nQuadsPerCell,
-                1,
-                d_shapeFunctionGradientBasisData[quadratureID].data(),
-                tempCellGradientsBlock.data());
+          dftfe::basis::FEBasisOperationsKernelsInternal::
+            reshapeToNonAffineLayoutHost(
+              d_nDofsPerCell,
+              nQuadsPerCell,
+              1,
+              shapeFunctionGradientBasisData().data(),
+              tempCellGradientsBlock.data());
         }
       else
         {
-          if constexpr (std::is_same<ValueTypeBasisCoeff,
-                                     ValueTypeBasisData>::value)
-            dftfe::basis::FEBasisOperationsKernelsInternal::
-              reshapeToNonAffineLayoutDevice(
-                d_nDofsPerCell,
-                nQuadsPerCell,
-                1,
-                d_shapeFunctionGradientData[quadratureID].data(),
-                tempCellGradientsBlock.data());
-          else
-            dftfe::basis::FEBasisOperationsKernelsInternal::
-              reshapeToNonAffineLayoutDevice(
-                d_nDofsPerCell,
-                nQuadsPerCell,
-                1,
-                d_shapeFunctionGradientBasisData[quadratureID].data(),
-                tempCellGradientsBlock.data());
+          dftfe::basis::FEBasisOperationsKernelsInternal::
+            reshapeToNonAffineLayoutDevice(
+              d_nDofsPerCell,
+              nQuadsPerCell,
+              1,
+              shapeFunctionGradientBasisData().data(),
+              tempCellGradientsBlock.data());
         }
       if (cellsBlockSize > 1)
         d_BLASWrapperPtr->stridedCopyToBlock(nQuadsPerCell * d_nDofsPerCell * 3,
@@ -1307,14 +1399,14 @@ namespace dftfe
                                                 d_nDofsPerCell,
                                                 0,
                                                 &scalarCoeffBeta,
-                                                tempStiffnessMatrixBlock.data(),
+                                                tempCellMatrixBlock.data(),
                                                 d_nDofsPerCell,
                                                 d_nDofsPerCell * d_nDofsPerCell,
                                                 cellRange.second -
                                                   cellRange.first);
           if (basisType)
             d_cellStiffnessMatrixBasisType.copyFrom(
-              tempStiffnessMatrixBlock,
+              tempCellMatrixBlock,
               d_nDofsPerCell * d_nDofsPerCell *
                 (cellRange.second - cellRange.first),
               0,
@@ -1325,7 +1417,7 @@ namespace dftfe
               {
                 if (!basisType)
                   d_cellStiffnessMatrixBasisType.copyFrom(
-                    tempStiffnessMatrixBlock,
+                    tempCellMatrixBlock,
                     d_nDofsPerCell * d_nDofsPerCell *
                       (cellRange.second - cellRange.first),
                     0,
@@ -1335,9 +1427,652 @@ namespace dftfe
               d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
                 d_nDofsPerCell * d_nDofsPerCell *
                   (cellRange.second - cellRange.first),
-                tempStiffnessMatrixBlock.data(),
+                tempCellMatrixBlock.data(),
                 d_cellStiffnessMatrixCoeffType.data() +
                   cellRange.first * d_nDofsPerCell * d_nDofsPerCell);
+        }
+    }
+
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    void
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      computeWeightedCellMassMatrix(
+        const std::pair<unsigned int, unsigned int> cellRangeTotal,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+          &weightedCellMassMatrix) const
+    {
+      const unsigned int nCells        = this->nCells();
+      const unsigned int nQuadsPerCell = this->nQuadsPerCell();
+      const unsigned int nDofsPerCell  = this->nDofsPerCell();
+
+      const double scalarCoeffAlpha = 1.0, scalarCoeffBeta = 0.0;
+
+      for (unsigned int iCell = cellRangeTotal.first;
+           iCell < cellRangeTotal.second;
+           iCell += d_cellsBlockSize)
+        {
+          std::pair<unsigned int, unsigned int> cellRange(
+            iCell, std::min(iCell + d_cellsBlockSize, cellRangeTotal.second));
+          d_BLASWrapperPtr->stridedCopyToBlock(nQuadsPerCell * nDofsPerCell,
+                                               (cellRange.second -
+                                                cellRange.first),
+                                               shapeFunctionBasisData().data(),
+                                               tempCellValuesBlock.data(),
+                                               zeroIndexVec.data());
+          d_BLASWrapperPtr->stridedBlockScale(
+            nDofsPerCell,
+            nQuadsPerCell * (cellRange.second - cellRange.first),
+            scalarCoeffAlpha,
+            weights.data() + cellRange.first * nQuadsPerCell,
+            tempCellValuesBlock.data());
+          d_BLASWrapperPtr->xgemmStridedBatched(
+            'N',
+            'T',
+            nDofsPerCell,
+            nDofsPerCell,
+            nQuadsPerCell,
+            &scalarCoeffAlpha,
+            tempCellValuesBlock.data(),
+            nDofsPerCell,
+            nDofsPerCell * nQuadsPerCell,
+            shapeFunctionBasisData().data(),
+            nDofsPerCell,
+            0,
+            &scalarCoeffAlpha,
+            weightedCellMassMatrix.data() +
+              (cellRange.first - cellRangeTotal.first) * nDofsPerCell *
+                nDofsPerCell,
+
+            nDofsPerCell,
+            nDofsPerCell * nDofsPerCell,
+            cellRange.second - cellRange.first);
+        }
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    void
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      computeWeightedCellNjGradNiMatrix(
+        const std::pair<unsigned int, unsigned int> cellRangeTotal,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+          &weightedCellNjGradNiMatrix) const
+    {
+      const unsigned int nCells        = this->nCells();
+      const unsigned int nQuadsPerCell = this->nQuadsPerCell();
+      const unsigned int nDofsPerCell  = this->nDofsPerCell();
+
+      if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
+        {
+          dftfe::basis::FEBasisOperationsKernelsInternal::
+            reshapeToNonAffineLayoutHost(
+              nDofsPerCell,
+              nQuadsPerCell,
+              1,
+              shapeFunctionGradientBasisData().data(),
+              tempCellGradientsBlock.data());
+        }
+      else
+        {
+          dftfe::basis::FEBasisOperationsKernelsInternal::
+            reshapeToNonAffineLayoutDevice(
+              nDofsPerCell,
+              nQuadsPerCell,
+              1,
+              shapeFunctionGradientBasisData().data(),
+              tempCellGradientsBlock.data());
+        }
+      if (d_cellsBlockSize > 1)
+        d_BLASWrapperPtr->stridedCopyToBlock(nQuadsPerCell * nDofsPerCell * 3,
+                                             d_cellsBlockSize - 1,
+                                             tempCellGradientsBlock.data(),
+                                             tempCellGradientsBlock.data() +
+                                               nQuadsPerCell * nDofsPerCell * 3,
+                                             zeroIndexVec.data());
+      const ValueTypeBasisData scalarCoeffAlpha = ValueTypeBasisData(1.0),
+                               scalarCoeffBeta  = ValueTypeBasisData(0.0);
+
+      for (unsigned int iCell = cellRangeTotal.first;
+           iCell < cellRangeTotal.second;
+           iCell += d_cellsBlockSize)
+        {
+          std::pair<unsigned int, unsigned int> cellRange(
+            iCell, std::min(iCell + d_cellsBlockSize, cellRangeTotal.second));
+          d_BLASWrapperPtr->xgemmStridedBatched(
+            'N',
+            'N',
+            d_nDofsPerCell,
+            1,
+            3,
+            &scalarCoeffAlpha,
+            tempCellGradientsBlock.data(),
+            d_nDofsPerCell,
+            d_nDofsPerCell * 3,
+            weights.data() + 3 * cellRange.first * nQuadsPerCell,
+            3,
+            3,
+            &scalarCoeffBeta,
+            tempCellValuesBlock.data(),
+            d_nDofsPerCell,
+            d_nDofsPerCell,
+            (cellRange.second - cellRange.first) * nQuadsPerCell);
+          d_BLASWrapperPtr->xgemmStridedBatched(
+            'N',
+            'T',
+            nDofsPerCell,
+            nDofsPerCell,
+            nQuadsPerCell,
+            &scalarCoeffAlpha,
+            tempCellValuesBlock.data(),
+            nDofsPerCell,
+            nDofsPerCell * nQuadsPerCell,
+            shapeFunctionBasisData().data(),
+            nDofsPerCell,
+            0,
+            &scalarCoeffAlpha,
+            weightedCellNjGradNiMatrix.data() +
+              (cellRange.first - cellRangeTotal.first) * nDofsPerCell *
+                nDofsPerCell,
+            nDofsPerCell,
+            nDofsPerCell * nDofsPerCell,
+            cellRange.second - cellRange.first);
+        }
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    void
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      computeWeightedCellNjGradNiPlusNiGradNjMatrix(
+        const std::pair<unsigned int, unsigned int> cellRangeTotal,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+          &weightedCellNjGradNiPlusNiGradNjMatrix) const
+    {
+      const unsigned int nCells        = this->nCells();
+      const unsigned int nQuadsPerCell = this->nQuadsPerCell();
+      const unsigned int nDofsPerCell  = this->nDofsPerCell();
+
+      if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
+        {
+          dftfe::basis::FEBasisOperationsKernelsInternal::
+            reshapeToNonAffineLayoutHost(
+              nDofsPerCell,
+              nQuadsPerCell,
+              1,
+              shapeFunctionGradientBasisData().data(),
+              tempCellGradientsBlock.data());
+        }
+      else
+        {
+          dftfe::basis::FEBasisOperationsKernelsInternal::
+            reshapeToNonAffineLayoutDevice(
+              nDofsPerCell,
+              nQuadsPerCell,
+              1,
+              shapeFunctionGradientBasisData().data(),
+              tempCellGradientsBlock.data());
+        }
+      if (d_cellsBlockSize > 1)
+        d_BLASWrapperPtr->stridedCopyToBlock(nQuadsPerCell * nDofsPerCell * 3,
+                                             d_cellsBlockSize - 1,
+                                             tempCellGradientsBlock.data(),
+                                             tempCellGradientsBlock.data() +
+                                               nQuadsPerCell * nDofsPerCell * 3,
+                                             zeroIndexVec.data());
+      const ValueTypeBasisData scalarCoeffAlpha = ValueTypeBasisData(1.0),
+                               scalarCoeffBeta  = ValueTypeBasisData(0.0);
+
+      for (unsigned int iCell = cellRangeTotal.first;
+           iCell < cellRangeTotal.second;
+           iCell += d_cellsBlockSize)
+        {
+          std::pair<unsigned int, unsigned int> cellRange(
+            iCell, std::min(iCell + d_cellsBlockSize, cellRangeTotal.second));
+          d_BLASWrapperPtr->xgemmStridedBatched(
+            'N',
+            'N',
+            d_nDofsPerCell,
+            1,
+            3,
+            &scalarCoeffAlpha,
+            tempCellGradientsBlock.data(),
+            d_nDofsPerCell,
+            d_nDofsPerCell * 3,
+            weights.data() + 3 * cellRange.first * nQuadsPerCell,
+            3,
+            3,
+            &scalarCoeffBeta,
+            tempCellValuesBlock.data(),
+            d_nDofsPerCell,
+            d_nDofsPerCell,
+            (cellRange.second - cellRange.first) * nQuadsPerCell);
+          d_BLASWrapperPtr->xgemmStridedBatched(
+            'N',
+            'T',
+            nDofsPerCell,
+            nDofsPerCell,
+            nQuadsPerCell,
+            &scalarCoeffAlpha,
+            tempCellValuesBlock.data(),
+            nDofsPerCell,
+            nDofsPerCell * nQuadsPerCell,
+            shapeFunctionBasisData().data(),
+            nDofsPerCell,
+            0,
+            &scalarCoeffAlpha,
+            weightedCellNjGradNiPlusNiGradNjMatrix.data() +
+              (cellRange.first - cellRangeTotal.first) * nDofsPerCell *
+                nDofsPerCell,
+            nDofsPerCell,
+            nDofsPerCell * nDofsPerCell,
+            cellRange.second - cellRange.first);
+          // FIXME : Can be optimized further, this is just the transpose of the
+          // earlier gemm
+          d_BLASWrapperPtr->xgemmStridedBatched(
+            'N',
+            'T',
+            nDofsPerCell,
+            nDofsPerCell,
+            nQuadsPerCell,
+            &scalarCoeffAlpha,
+            shapeFunctionBasisData().data(),
+            nDofsPerCell,
+            0,
+            tempCellValuesBlock.data(),
+            nDofsPerCell,
+            nDofsPerCell * nQuadsPerCell,
+            &scalarCoeffAlpha,
+            weightedCellNjGradNiPlusNiGradNjMatrix.data() +
+              (cellRange.first - cellRangeTotal.first) * nDofsPerCell *
+                nDofsPerCell,
+            nDofsPerCell,
+            nDofsPerCell * nDofsPerCell,
+            cellRange.second - cellRange.first);
+        }
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    void
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      computeCellMassMatrix(const unsigned int quadratureID,
+                            const unsigned int cellsBlockSize,
+                            const bool         basisType,
+                            const bool         ceoffType)
+    {
+      reinit(0, cellsBlockSize, quadratureID, false, true);
+      if (basisType)
+        d_cellMassMatrixBasisType.resize(d_nDofsPerCell * d_nDofsPerCell *
+                                         d_nCells);
+      if (ceoffType)
+        if constexpr (std::is_same<ValueTypeBasisCoeff,
+                                   ValueTypeBasisData>::value)
+          {
+            if (!basisType)
+              d_cellMassMatrixBasisType.resize(d_nDofsPerCell * d_nDofsPerCell *
+                                               d_nCells);
+          }
+        else
+          d_cellMassMatrixCoeffType.resize(d_nDofsPerCell * d_nDofsPerCell *
+                                           d_nCells);
+
+      unsigned int nQuadsPerCell = this->nQuadsPerCell();
+
+
+      const ValueTypeBasisData scalarCoeffAlpha = ValueTypeBasisData(1.0),
+                               scalarCoeffBeta  = ValueTypeBasisData(0.0);
+
+      for (unsigned int iCell = 0; iCell < d_nCells; iCell += cellsBlockSize)
+        {
+          std::pair<unsigned int, unsigned int> cellRange(
+            iCell, std::min(iCell + cellsBlockSize, d_nCells));
+          d_BLASWrapperPtr->stridedCopyToBlock(nQuadsPerCell * d_nDofsPerCell,
+                                               (cellRange.second -
+                                                cellRange.first),
+                                               shapeFunctionBasisData().data(),
+                                               tempCellValuesBlock.data(),
+                                               zeroIndexVec.data());
+          d_BLASWrapperPtr->stridedBlockScale(
+            d_nDofsPerCell,
+            nQuadsPerCell * (cellRange.second - cellRange.first),
+            scalarCoeffAlpha,
+            JxWBasisData().data() + cellRange.first * nQuadsPerCell,
+            tempCellValuesBlock.data());
+          d_BLASWrapperPtr->xgemmStridedBatched('N',
+                                                'T',
+                                                d_nDofsPerCell,
+                                                d_nDofsPerCell,
+                                                nQuadsPerCell,
+                                                &scalarCoeffAlpha,
+                                                tempCellValuesBlock.data(),
+                                                d_nDofsPerCell,
+                                                d_nDofsPerCell * nQuadsPerCell,
+                                                shapeFunctionBasisData().data(),
+                                                d_nDofsPerCell,
+                                                0,
+                                                &scalarCoeffBeta,
+                                                tempCellMatrixBlock.data(),
+                                                d_nDofsPerCell,
+                                                d_nDofsPerCell * d_nDofsPerCell,
+                                                cellRange.second -
+                                                  cellRange.first);
+
+          if (basisType)
+            d_cellMassMatrixBasisType.copyFrom(
+              tempCellMatrixBlock,
+              d_nDofsPerCell * d_nDofsPerCell *
+                (cellRange.second - cellRange.first),
+              0,
+              cellRange.first * d_nDofsPerCell * d_nDofsPerCell);
+          if (ceoffType)
+            if constexpr (std::is_same<ValueTypeBasisCoeff,
+                                       ValueTypeBasisData>::value)
+              {
+                if (!basisType)
+                  d_cellMassMatrixBasisType.copyFrom(
+                    tempCellMatrixBlock,
+                    d_nDofsPerCell * d_nDofsPerCell *
+                      (cellRange.second - cellRange.first),
+                    0,
+                    cellRange.first * d_nDofsPerCell * d_nDofsPerCell);
+              }
+            else
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nDofsPerCell *
+                  (cellRange.second - cellRange.first),
+                tempCellMatrixBlock.data(),
+                d_cellMassMatrixCoeffType.data() +
+                  cellRange.first * d_nDofsPerCell * d_nDofsPerCell);
+        }
+    }
+
+    template <typename ValueTypeBasisCoeff,
+              typename ValueTypeBasisData,
+              dftfe::utils::MemorySpace memorySpace>
+    void
+    FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
+      computeInverseSqrtMassVector(const bool basisType, const bool ceoffType)
+    {
+      distributedCPUVec<double> massVector, sqrtMassVector, invMassVector,
+        invSqrtMassVector;
+      d_matrixFreeDataPtr->initialize_dof_vector(massVector, d_dofHandlerID);
+      sqrtMassVector.reinit(massVector);
+      invMassVector.reinit(massVector);
+      invSqrtMassVector.reinit(massVector);
+      massVector        = 0.0;
+      sqrtMassVector    = 0.0;
+      invMassVector     = 0.0;
+      invSqrtMassVector = 0.0;
+
+      // FIXME : check for roundoff errors
+      dealii::QGaussLobatto<3> quadrature(std::cbrt(d_nDofsPerCell));
+      unsigned int             nQuadsPerCell = quadrature.size();
+      dealii::FEValues<3>      fe_values(
+        d_matrixFreeDataPtr->get_dof_handler(d_dofHandlerID).get_fe(),
+        quadrature,
+        dealii::update_values | dealii::update_JxW_values);
+
+      dealii::Vector<double> massVectorLocal(d_nDofsPerCell);
+      std::vector<dealii::types::global_dof_index> local_dof_indices(
+        d_nDofsPerCell);
+
+
+      //
+      // parallel loop over all elements
+      //
+      typename dealii::DoFHandler<3>::active_cell_iterator
+        cell =
+          d_matrixFreeDataPtr->get_dof_handler(d_dofHandlerID).begin_active(),
+        endc = d_matrixFreeDataPtr->get_dof_handler(d_dofHandlerID).end();
+      for (; cell != endc; ++cell)
+        if (cell->is_locally_owned())
+          {
+            // compute values for the current element
+            fe_values.reinit(cell);
+            massVectorLocal = 0.0;
+            for (unsigned int iDoF = 0; iDoF < d_nDofsPerCell; ++iDoF)
+              for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+                massVectorLocal(iDoF) += fe_values.shape_value(iDoF, iQuad) *
+                                         fe_values.shape_value(iDoF, iQuad) *
+                                         fe_values.JxW(iQuad);
+
+            cell->get_dof_indices(local_dof_indices);
+            (*d_constraintsVector)[d_dofHandlerID]->distribute_local_to_global(
+              massVectorLocal, local_dof_indices, massVector);
+          }
+
+      massVector.compress(dealii::VectorOperation::add);
+      massVector.update_ghost_values();
+
+
+      for (dealii::types::global_dof_index i = 0; i < massVector.size(); ++i)
+        if (massVector.in_local_range(i) &&
+            !((*d_constraintsVector)[d_dofHandlerID]->is_constrained(i)))
+          {
+            sqrtMassVector(i) = std::sqrt(massVector(i));
+            if (std::abs(massVector(i)) > 1.0e-15)
+              {
+                invSqrtMassVector(i) = 1.0 / std::sqrt(massVector(i));
+                invMassVector(i)     = 1.0 / massVector(i);
+              }
+
+            AssertThrow(
+              !std::isnan(invMassVector(i)),
+              dealii::ExcMessage(
+                "Value of inverse square root of mass matrix on the unconstrained node is undefined"));
+          }
+
+      invMassVector.compress(dealii::VectorOperation::insert);
+      invMassVector.update_ghost_values();
+      sqrtMassVector.compress(dealii::VectorOperation::insert);
+      sqrtMassVector.update_ghost_values();
+      invSqrtMassVector.compress(dealii::VectorOperation::insert);
+      invSqrtMassVector.update_ghost_values();
+
+      cell =
+        d_matrixFreeDataPtr->get_dof_handler(d_dofHandlerID).begin_active();
+      std::vector<dealii::types::global_dof_index> cell_dof_indices(
+        d_nDofsPerCell);
+
+      dftfe::utils::MemoryStorage<ValueTypeBasisData,
+                                  dftfe::utils::MemorySpace::HOST>
+        cellMassVectorHost, cellInvMassVectorHost, cellInvSqrtMassVectorHost,
+        cellSqrtMassVectorHost;
+      cellMassVectorHost.resize(d_nCells * d_nDofsPerCell);
+      cellInvMassVectorHost.resize(d_nCells * d_nDofsPerCell);
+      cellSqrtMassVectorHost.resize(d_nCells * d_nDofsPerCell);
+      cellInvSqrtMassVectorHost.resize(d_nCells * d_nDofsPerCell);
+      unsigned int iElemCount = 0;
+      for (; cell != endc; ++cell)
+        {
+          if (cell->is_locally_owned())
+            {
+              cell->get_dof_indices(cell_dof_indices);
+              for (unsigned int iNode = 0; iNode < d_nDofsPerCell; ++iNode)
+                {
+                  dealii::types::global_dof_index globalIndex =
+                    cell_dof_indices[iNode];
+                  if ((*d_constraintsVector)[d_dofHandlerID]->is_constrained(
+                        globalIndex))
+                    {
+                      cellMassVectorHost[iElemCount * d_nDofsPerCell + iNode] =
+                        1.0;
+                      cellInvMassVectorHost[iElemCount * d_nDofsPerCell +
+                                            iNode]     = 1.0;
+                      cellSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
+                                             iNode]    = 1.0;
+                      cellInvSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
+                                                iNode] = 1.0;
+                    }
+                  else
+                    {
+                      ValueTypeBasisData massVecValue = massVector(globalIndex);
+                      cellMassVectorHost[iElemCount * d_nDofsPerCell + iNode] =
+                        massVecValue;
+                      cellSqrtMassVectorHost[iElemCount * d_nDofsPerCell +
+                                             iNode] = std::sqrt(massVecValue);
+                      if (std::abs(massVecValue) > 1.0e-15)
+                        {
+                          cellInvMassVectorHost[iElemCount * d_nDofsPerCell +
+                                                iNode] = 1.0 / massVecValue;
+                          cellInvSqrtMassVectorHost[iElemCount *
+                                                      d_nDofsPerCell +
+                                                    iNode] =
+                            1.0 / std::sqrt(massVecValue);
+                        }
+                    }
+                }
+              ++iElemCount;
+            }
+        }
+      if (basisType)
+        {
+          d_cellMassVectorBasisType.resize(cellMassVectorHost.size());
+          d_cellMassVectorBasisType.copyFrom(cellMassVectorHost);
+          d_cellInverseMassVectorBasisType.resize(cellInvMassVectorHost.size());
+          d_cellInverseMassVectorBasisType.copyFrom(cellInvMassVectorHost);
+          d_cellSqrtMassVectorBasisType.resize(cellSqrtMassVectorHost.size());
+          d_cellSqrtMassVectorBasisType.copyFrom(cellSqrtMassVectorHost);
+          d_cellInverseSqrtMassVectorBasisType.resize(
+            cellInvSqrtMassVectorHost.size());
+          d_cellInverseSqrtMassVectorBasisType.copyFrom(
+            cellInvSqrtMassVectorHost);
+
+          d_inverseSqrtMassVectorBasisType.resize(
+            mpiPatternP2P->localOwnedSize() + mpiPatternP2P->localGhostSize());
+          d_inverseSqrtMassVectorBasisType
+            .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+              invSqrtMassVector.begin(),
+              d_inverseSqrtMassVectorBasisType.size(),
+              0,
+              0);
+          d_sqrtMassVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                           mpiPatternP2P->localGhostSize());
+          d_sqrtMassVectorBasisType
+            .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+              sqrtMassVector.begin(), d_sqrtMassVectorBasisType.size(), 0, 0);
+          d_inverseMassVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                              mpiPatternP2P->localGhostSize());
+          d_inverseMassVectorBasisType
+            .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+              invMassVector.begin(), d_inverseMassVectorBasisType.size(), 0, 0);
+          d_massVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                       mpiPatternP2P->localGhostSize());
+          d_massVectorBasisType
+            .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+              massVector.begin(), d_massVectorBasisType.size(), 0, 0);
+        }
+      if (ceoffType)
+        {
+          if (!basisType)
+            {
+              d_cellMassVectorBasisType.resize(cellMassVectorHost.size());
+              d_cellMassVectorBasisType.copyFrom(cellMassVectorHost);
+              d_cellInverseMassVectorBasisType.resize(
+                cellInvMassVectorHost.size());
+              d_cellInverseMassVectorBasisType.copyFrom(cellInvMassVectorHost);
+              d_cellSqrtMassVectorBasisType.resize(
+                cellSqrtMassVectorHost.size());
+              d_cellSqrtMassVectorBasisType.copyFrom(cellSqrtMassVectorHost);
+              d_cellInverseSqrtMassVectorBasisType.resize(
+                cellInvSqrtMassVectorHost.size());
+              d_cellInverseSqrtMassVectorBasisType.copyFrom(
+                cellInvSqrtMassVectorHost);
+
+              d_inverseSqrtMassVectorBasisType.resize(
+                mpiPatternP2P->localOwnedSize() +
+                mpiPatternP2P->localGhostSize());
+              d_inverseSqrtMassVectorBasisType
+                .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+                  invSqrtMassVector.begin(),
+                  d_inverseSqrtMassVectorBasisType.size(),
+                  0,
+                  0);
+              d_sqrtMassVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                               mpiPatternP2P->localGhostSize());
+              d_sqrtMassVectorBasisType
+                .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+                  sqrtMassVector.begin(),
+                  d_sqrtMassVectorBasisType.size(),
+                  0,
+                  0);
+              d_inverseMassVectorBasisType.resize(
+                mpiPatternP2P->localOwnedSize() +
+                mpiPatternP2P->localGhostSize());
+              d_inverseMassVectorBasisType
+                .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+                  invMassVector.begin(),
+                  d_inverseMassVectorBasisType.size(),
+                  0,
+                  0);
+              d_massVectorBasisType.resize(mpiPatternP2P->localOwnedSize() +
+                                           mpiPatternP2P->localGhostSize());
+              d_massVectorBasisType
+                .template copyFrom<dftfe::utils::MemorySpace::HOST>(
+                  massVector.begin(), d_massVectorBasisType.size(), 0, 0);
+            }
+          if constexpr (!std::is_same<ValueTypeBasisCoeff,
+                                      ValueTypeBasisData>::value)
+            {
+              d_cellInverseMassVectorCoeffType.resize(
+                cellInvMassVectorHost.size());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nCells,
+                d_cellInverseMassVectorBasisType.data(),
+                d_cellInverseMassVectorCoeffType.data());
+              d_cellInverseSqrtMassVectorCoeffType.resize(
+                cellInvSqrtMassVectorHost.size());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nCells,
+                d_cellInverseSqrtMassVectorBasisType.data(),
+                d_cellInverseSqrtMassVectorCoeffType.data());
+              d_cellMassVectorCoeffType.resize(cellMassVectorHost.size());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nCells,
+                d_cellMassVectorBasisType.data(),
+                d_cellMassVectorCoeffType.data());
+              d_cellSqrtMassVectorCoeffType.resize(
+                cellSqrtMassVectorHost.size());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_nDofsPerCell * d_nCells,
+                d_cellSqrtMassVectorBasisType.data(),
+                d_cellSqrtMassVectorCoeffType.data());
+              d_inverseSqrtMassVectorCoeffType.resize(
+                mpiPatternP2P->localOwnedSize() +
+                mpiPatternP2P->localOwnedSize());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_inverseSqrtMassVectorCoeffType.size(),
+                d_inverseSqrtMassVectorBasisType.data(),
+                d_inverseSqrtMassVectorCoeffType.data());
+              d_sqrtMassVectorCoeffType.resize(mpiPatternP2P->localOwnedSize() +
+                                               mpiPatternP2P->localOwnedSize());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_sqrtMassVectorCoeffType.size(),
+                d_sqrtMassVectorBasisType.data(),
+                d_sqrtMassVectorCoeffType.data());
+              d_massVectorCoeffType.resize(mpiPatternP2P->localOwnedSize() +
+                                           mpiPatternP2P->localOwnedSize());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_massVectorCoeffType.size(),
+                d_massVectorBasisType.data(),
+                d_massVectorCoeffType.data());
+              d_inverseMassVectorCoeffType.resize(
+                mpiPatternP2P->localOwnedSize() +
+                mpiPatternP2P->localOwnedSize());
+              d_BLASWrapperPtr->copyValueType1ArrToValueType2Arr(
+                d_inverseMassVectorCoeffType.size(),
+                d_inverseMassVectorBasisType.data(),
+                d_inverseMassVectorCoeffType.data());
+            }
         }
     }
 
@@ -1424,7 +2159,7 @@ namespace dftfe
                            std::numeric_limits<unsigned int>::max() ?
                          d_dofHandlerID :
                          constraintIndex]
-        .distribute(multiVector, multiVector.numVectors());
+        .distribute(multiVector);
     }
 
     template class FEBasisOperations<double,

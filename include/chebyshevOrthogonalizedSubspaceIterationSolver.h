@@ -64,8 +64,8 @@ namespace dftfe
      * @brief Solve a generalized eigen problem.
      */
     void
-    solve(operatorDFTClass &   operatorMatrix,
-          elpaScalaManager &   elpaScala,
+    solve(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+          elpaScalaManager &                                 elpaScala,
           dataTypes::number *  eigenVectorsFlattened,
           dataTypes::number *  eigenVectorsRotFracDensityFlattened,
           const unsigned int   totalNumberWaveFunctions,
@@ -73,6 +73,7 @@ namespace dftfe
           std::vector<double> &eigenValues,
           std::vector<double> &residuals,
           const MPI_Comm &     interBandGroupComm,
+          const MPI_Comm &     mpiCommDomain,
           const bool           computeResidual,
           const bool           useMixedPrec = false,
           const bool           isFirstScf   = false);
@@ -81,10 +82,10 @@ namespace dftfe
      * @brief Solve a generalized eigen problem.
      */
     void
-    solve(operatorDFTClass &                      operatorMatrix,
-          std::vector<distributedCPUVec<double>> &eigenVectors,
-          std::vector<double> &                   eigenValues,
-          std::vector<double> &                   residuals);
+    solve(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+          std::vector<distributedCPUVec<double>> &           eigenVectors,
+          std::vector<double> &                              eigenValues,
+          std::vector<double> &                              residuals);
 
     /**
      * @brief reinit spectrum bounds

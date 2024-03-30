@@ -27,7 +27,6 @@
 #include <energyCalculator.h>
 #include <fileReaders.h>
 #include <force.h>
-#include <kohnShamDFTOperator.h>
 #include <linalg.h>
 #include <linearAlgebraOperations.h>
 #include <linearAlgebraOperationsInternal.h>
@@ -75,8 +74,10 @@ namespace dftfe
   //
   // dft constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dftClass<FEOrder, FEOrderElectro>::dftClass(
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::dftClass(
     const MPI_Comm &   mpi_comm_parent,
     const MPI_Comm &   mpi_comm_domain,
     const MPI_Comm &   _interpoolcomm,
@@ -185,22 +186,20 @@ namespace dftfe
       pcout << "Threads per MPI task: " << d_nOMPThreads << std::endl;
     d_elpaScala = new dftfe::elpaScalaManager(mpi_comm_domain);
 
-    forcePtr    = new forceClass<FEOrder, FEOrderElectro>(this,
-                                                       mpi_comm_parent,
-                                                       mpi_comm_domain,
-                                                       dftParams);
-    symmetryPtr = new symmetryClass<FEOrder, FEOrderElectro>(this,
-                                                             mpi_comm_parent,
-                                                             mpi_comm_domain,
-                                                             _interpoolcomm);
+    forcePtr = new forceClass<FEOrder, FEOrderElectro, memorySpace>(
+      this, mpi_comm_parent, mpi_comm_domain, dftParams);
+    symmetryPtr = new symmetryClass<FEOrder, FEOrderElectro, memorySpace>(
+      this, mpi_comm_parent, mpi_comm_domain, _interpoolcomm);
 
-    d_excManagerPtr                   = new excManager;
+    d_excManagerPtr                   = std::make_shared<excManager>();
     d_isRestartGroundStateCalcFromChk = false;
 
 #if defined(DFTFE_WITH_DEVICE)
     d_devicecclMpiCommDomainPtr = new utils::DeviceCCLWrapper;
-    if (d_dftParamsPtr->useDeviceDirectAllReduce)
-      d_devicecclMpiCommDomainPtr->init(mpi_comm_domain);
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+
+      d_devicecclMpiCommDomainPtr->init(mpi_comm_domain,
+                                        d_dftParamsPtr->useDCCL);
 #endif
     d_pspCutOff =
       d_dftParamsPtr->reproducible_output ?
@@ -208,8 +207,10 @@ namespace dftfe
         (std::max(d_dftParamsPtr->pspCutoffImageCharges, d_pspCutOffTrunc));
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  dftClass<FEOrder, FEOrderElectro>::~dftClass()
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::~dftClass()
   {
     finalizeKohnShamDFTOperator();
     delete symmetryPtr;
@@ -221,7 +222,6 @@ namespace dftfe
 
     d_elpaScala->elpaDeallocateHandles(*d_dftParamsPtr);
     delete d_elpaScala;
-    delete d_excManagerPtr;
   }
 
   namespace internaldft
@@ -274,9 +274,11 @@ namespace dftfe
     }
   } // namespace internaldft
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeVolume(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeVolume(
     const dealii::DoFHandler<3> &_dofHandler)
   {
     double                       domainVolume = 0;
@@ -303,9 +305,11 @@ namespace dftfe
     return domainVolume;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::set()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::set()
   {
     computingTimerStandard.enter_subsection("Atomic system initialization");
     if (d_dftParamsPtr->verbosity >= 4)
@@ -801,19 +805,36 @@ namespace dftfe
           << d_dftParamsPtr->pseudoPotentialFile << std::endl;
       }
 
-    int nlccFlag = 0;
+    int              nlccFlag = 0;
+    std::vector<int> pspFlags(2, 0);
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
         d_dftParamsPtr->isPseudopotential == true)
-      nlccFlag = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
+      pspFlags = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
                                       d_dftfeScratchFolderName,
                                       d_dftParamsPtr->verbosity,
                                       d_dftParamsPtr->natomTypes,
                                       d_dftParamsPtr->pseudoTestsFlag);
 
+    nlccFlag = pspFlags[0];
     nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
-
     if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
       d_dftParamsPtr->nonLinearCoreCorrection = true;
+    if (d_dftParamsPtr->isPseudopotential == true)
+      {
+        // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
+        // "<<basisOperationsPtrHost->nCells()<<std::endl;
+        d_oncvClassPtr =
+          std::make_shared<dftfe::oncvClass<dataTypes::number, memorySpace>>(
+            mpi_communicator, // domain decomposition communicator
+            d_dftfeScratchFolderName,
+            atomTypes,
+            d_dftParamsPtr->floatingNuclearCharges,
+            d_nOMPThreads,
+            d_atomTypeAtributes,
+            d_dftParamsPtr->reproducible_output,
+            d_dftParamsPtr->verbosity,
+            d_dftParamsPtr->useDevice);
+      }
 
     if (d_dftParamsPtr->verbosity >= 1)
       if (d_dftParamsPtr->nonLinearCoreCorrection == true)
@@ -830,9 +851,11 @@ namespace dftfe
   }
 
   // dft pseudopotential init
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initPseudoPotentialAll(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initPseudoPotentialAll(
     const bool updateNonlocalSparsity)
   {
     if (d_dftParamsPtr->isPseudopotential)
@@ -853,47 +876,30 @@ namespace dftfe
           pcout
             << "initPseudoPotentialAll: Time taken for initializing core density for non-linear core correction: "
             << init_core << std::endl;
-
-
-        if (updateNonlocalSparsity)
+        determineAtomsOfInterstPseudopotential(atomLocations);
+        MPI_Barrier(d_mpiCommParent);
+        if (d_dftParamsPtr->isPseudopotential == true)
           {
-            double init_nonlocal1;
-            MPI_Barrier(d_mpiCommParent);
-            init_nonlocal1 = MPI_Wtime();
-
-            computeSparseStructureNonLocalProjectors_OV();
-
-            MPI_Barrier(d_mpiCommParent);
-            init_nonlocal1 = MPI_Wtime() - init_nonlocal1;
-            if (d_dftParamsPtr->verbosity >= 2)
-              pcout
-                << "initPseudoPotentialAll: Time taken for computeSparseStructureNonLocalProjectors_OV: "
-                << init_nonlocal1 << std::endl;
+            d_oncvClassPtr->initialiseNonLocalContribution(
+              d_atomLocationsInterestPseudopotential,
+              d_imageIdsTrunc,
+              d_imagePositionsTrunc,
+              d_kPointWeights,     // accounts for interpool
+              d_kPointCoordinates, // accounts for interpool
+              updateNonlocalSparsity);
           }
-
-        double init_nonlocal2;
-        MPI_Barrier(d_mpiCommParent);
-        init_nonlocal2 = MPI_Wtime();
-
-
-        computeElementalOVProjectorKets();
-
-        // forcePtr->initPseudoData();
-
-        MPI_Barrier(d_mpiCommParent);
-        init_nonlocal2 = MPI_Wtime() - init_nonlocal2;
-        if (d_dftParamsPtr->verbosity >= 2)
-          pcout << "initPseudoPotentialAll: Time taken for non local psp init: "
-                << init_nonlocal2 << std::endl;
       }
   }
 
 
   // generate image charges and update k point cartesian coordinates based on
   // current lattice vectors
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initImageChargesUpdateKPoints(bool flag)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initImageChargesUpdateKPoints(
+    bool flag)
   {
     dealii::TimerOutput::Scope scope(computing_timer,
                                      "image charges and k point generation");
@@ -1027,9 +1033,11 @@ namespace dftfe
   }
 
   // dft init
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::init()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::init()
   {
     computingTimerStandard.enter_subsection("KSDFT problem initialization");
 
@@ -1149,6 +1157,29 @@ namespace dftfe
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
                                         "initBoundaryConditions completed");
+
+    //
+    // initialize pseudopotential data for both local and nonlocal part
+    //
+    if (d_dftParamsPtr->isPseudopotential == true)
+      d_oncvClassPtr->initialise(d_basisOperationsPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+                                 d_basisOperationsPtrDevice,
+#endif
+                                 d_BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+                                 d_BLASWrapperPtr,
+#endif
+                                 d_densityQuadratureId,
+                                 d_lpspQuadratureId,
+                                 d_sparsityPatternQuadratureId,
+                                 d_nlpspQuadratureId,
+                                 d_densityQuadratureIdElectro,
+                                 d_excManagerPtr,
+                                 atomLocations,
+                                 d_numEigenValues);
+
+
     //
     // initialize guesses for electron-density and wavefunctions
     //
@@ -1157,9 +1188,8 @@ namespace dftfe
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(mpi_communicator,
                                         "initElectronicFields completed");
-    //
-    // initialize pseudopotential data for both local and nonlocal part
-    //
+
+
     initPseudoPotentialAll();
 
     if (d_dftParamsPtr->verbosity >= 4)
@@ -1258,9 +1288,11 @@ namespace dftfe
     computingTimerStandard.leave_subsection("KSDFT problem initialization");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initNoRemesh(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initNoRemesh(
     const bool updateImagesAndKPointsAndVselfBins,
     const bool checkSmearedChargeWidthsForOverlap,
     const bool useSingleAtomSolutionOverride,
@@ -1476,9 +1508,11 @@ namespace dftfe
   //
   // deform domain and call appropriate reinits
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::deformDomain(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::deformDomain(
     const dealii::Tensor<2, 3, double> &deformationGradient,
     const bool                          vselfPerturbationUpdateForStress,
     const bool                          useSingleAtomSolutionsOverride,
@@ -1643,9 +1677,11 @@ namespace dftfe
   //
   // generate a-posteriori mesh
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::aposterioriMeshGenerate()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::aposterioriMeshGenerate()
   {
     //
     // get access to triangulation objects from meshGenerator class
@@ -1741,9 +1777,11 @@ namespace dftfe
   //
   // dft run
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::run()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::run()
   {
     if (d_dftParamsPtr->meshAdaption)
       aposterioriMeshGenerate();
@@ -1798,9 +1836,11 @@ namespace dftfe
         << std::endl;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::trivialSolveForStress()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::trivialSolveForStress()
   {
     initBoundaryConditions();
     noRemeshRhoDataInit();
@@ -1811,9 +1851,11 @@ namespace dftfe
   //
   // initialize
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initializeKohnShamDFTOperator(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initializeKohnShamDFTOperator(
     const bool initializeCublas)
   {
     dealii::TimerOutput::Scope scope(computing_timer,
@@ -1825,39 +1867,44 @@ namespace dftfe
     if (d_kohnShamDFTOperatorsInitialized)
       finalizeKohnShamDFTOperator();
 
-    d_kohnShamDFTOperatorPtr =
-      new kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>(this,
-                                                            d_mpiCommParent,
-                                                            mpi_communicator);
-
 #ifdef DFTFE_WITH_DEVICE
-    d_kohnShamDFTOperatorDevicePtr =
-      new kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>(
-        this, d_mpiCommParent, mpi_communicator);
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+      d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
+        d_BLASWrapperPtr,
+        d_basisOperationsPtrDevice,
+        d_basisOperationsPtrHost,
+        d_oncvClassPtr,
+        d_excManagerPtr,
+        d_dftParamsPtr,
+        d_densityQuadratureId,
+        d_lpspQuadratureId,
+        d_feOrderPlusOneQuadratureId,
+        d_mpiCommParent,
+        mpi_communicator);
+    else
 #endif
+      d_kohnShamDFTOperatorPtr = new KohnShamHamiltonianOperator<memorySpace>(
+        d_BLASWrapperPtrHost,
+        d_basisOperationsPtrHost,
+        d_basisOperationsPtrHost,
+        d_oncvClassPtr,
+        d_excManagerPtr,
+        d_dftParamsPtr,
+        d_densityQuadratureId,
+        d_lpspQuadratureId,
+        d_feOrderPlusOneQuadratureId,
+        d_mpiCommParent,
+        mpi_communicator);
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
 
-    if (!d_dftParamsPtr->useDevice)
-      {
-        kohnShamDFTEigenOperator.init();
-      }
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
+
+    kohnShamDFTEigenOperator.init(d_kPointCoordinates, d_kPointWeights);
 
 #ifdef DFTFE_WITH_DEVICE
     if (d_dftParamsPtr->useDevice)
       {
-        kohnShamDFTEigenOperatorDevice.init();
-
-        if (initializeCublas)
-          {
-            kohnShamDFTEigenOperatorDevice.createDeviceBlasHandle();
-          }
-
         AssertThrow(
           (d_numEigenValues % d_dftParamsPtr->chebyWfcBlockSize == 0 ||
            d_numEigenValues / d_dftParamsPtr->chebyWfcBlockSize == 0),
@@ -1914,20 +1961,9 @@ namespace dftfe
            0),
           dealii::ExcMessage(
             "DFT-FE Error: band parallelization group size must be exactly divisible by WFC BLOCK SIZE for Device run."));
-
-        kohnShamDFTEigenOperatorDevice.reinit(
-          std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues), true);
       }
 #endif
 
-    if (!d_dftParamsPtr->useDevice)
-      kohnShamDFTEigenOperator.preComputeShapeFunctionGradientIntegrals(
-        d_lpspQuadratureId);
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      kohnShamDFTEigenOperatorDevice.preComputeShapeFunctionGradientIntegrals(
-        d_lpspQuadratureId);
-#endif
 
     d_kohnShamDFTOperatorsInitialized = true;
 
@@ -1942,61 +1978,45 @@ namespace dftfe
   //
   // re-initialize (significantly cheaper than initialize)
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::reInitializeKohnShamDFTOperator()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    reInitializeKohnShamDFTOperator()
   {
-    if (!d_dftParamsPtr->useDevice)
-      d_kohnShamDFTOperatorPtr->resetExtPotHamFlag();
-
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      {
-        d_kohnShamDFTOperatorDevicePtr->resetExtPotHamFlag();
-
-        d_kohnShamDFTOperatorDevicePtr->reinit(
-          std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues), true);
-      }
-#endif
+    d_kohnShamDFTOperatorPtr->resetExtPotHamFlag();
   }
 
   //
   // finalize
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::finalizeKohnShamDFTOperator()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::finalizeKohnShamDFTOperator()
   {
     if (d_kohnShamDFTOperatorsInitialized)
       {
-#ifdef DFTFE_WITH_DEVICE
-        if (d_dftParamsPtr->useDevice)
-          d_kohnShamDFTOperatorDevicePtr->destroyDeviceBlasHandle();
-#endif
-
         delete d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-        delete d_kohnShamDFTOperatorDevicePtr;
-#endif
       }
   }
 
   //
   // dft solve
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::tuple<bool, double>
-  dftClass<FEOrder, FEOrderElectro>::solve(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::solve(
     const bool computeForces,
     const bool computestress,
     const bool isRestartGroundStateCalcFromChk)
   {
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
     const dealii::Quadrature<3> &quadrature =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
@@ -2163,6 +2183,7 @@ namespace dftfe
                                  d_pseudoVLoc,
                                  d_pseudoVLocAtoms);
 
+        kohnShamDFTEigenOperator.computeVEffExternalPotCorr(d_pseudoVLoc);
         computingTimerStandard.leave_subsection("Init local PSP");
       }
 
@@ -2212,7 +2233,8 @@ namespace dftfe
             mixingVariable::magZ,
             rhoNodalMassVec,
             true, // call MPI REDUCE while computing dot products
-            d_dftParamsPtr->mixingParameter,
+            d_dftParamsPtr->mixingParameter *
+              d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
       }
     else if (d_dftParamsPtr->mixingMethod == "ANDERSON")
@@ -2232,7 +2254,8 @@ namespace dftfe
             mixingVariable::magZ,
             d_basisOperationsPtrElectroHost->JxWBasisData(),
             true, // call MPI REDUCE while computing dot products
-            d_dftParamsPtr->mixingParameter,
+            d_dftParamsPtr->mixingParameter *
+              d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
@@ -2252,7 +2275,8 @@ namespace dftfe
                 mixingVariable::gradMagZ,
                 gradRhoJxW,
                 false, // call MPI REDUCE while computing dot products
-                d_dftParamsPtr->mixingParameter,
+                d_dftParamsPtr->mixingParameter *
+                  d_dftParamsPtr->spinMixingEnhancementFactor,
                 d_dftParamsPtr->adaptAndersonMixingParameter);
           }
       }
@@ -2686,94 +2710,28 @@ namespace dftfe
 
             for (unsigned int s = 0; s < 2; ++s)
               {
-                if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                    densityFamilyType::LDA)
-                  {
-                    computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperatorDevice.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_lpspQuadratureId);
-#endif
-                    if (!d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperator.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_lpspQuadratureId);
-                    computing_timer.leave_subsection("VEff Computation");
-                  }
-                else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                         densityFamilyType::GGA)
-                  {
-                    computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperatorDevice.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_gradDensityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_gradRhoCore,
-                        d_lpspQuadratureId);
-#endif
-                    if (!d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperator.computeVEffSpinPolarized(
-                        d_densityInQuadValues,
-                        d_gradDensityInQuadValues,
-                        d_phiInQuadValues,
-                        s,
-                        d_pseudoVLoc,
-                        d_rhoCore,
-                        d_gradRhoCore,
-                        d_lpspQuadratureId);
-                    computing_timer.leave_subsection("VEff Computation");
-                  }
-
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  {
-                    computing_timer.enter_subsection(
-                      "Hamiltonian Matrix Computation");
-                    kohnShamDFTEigenOperatorDevice
-                      .computeHamiltonianMatricesAllkpt(s);
-                    computing_timer.leave_subsection(
-                      "Hamiltonian Matrix Computation");
-                  }
-#endif
+                computing_timer.enter_subsection("VEff Computation");
+                kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+                                                     d_gradDensityInQuadValues,
+                                                     d_phiInQuadValues,
+                                                     d_rhoCore,
+                                                     d_gradRhoCore,
+                                                     s);
+                computing_timer.leave_subsection("VEff Computation");
 
 
                 for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                      ++kPoint)
                   {
-#ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(
-                        kPoint, s);
-#endif
-                    if (!d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
+                    kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
 
 
 
-                    if (!d_dftParamsPtr->useDevice)
-                      {
-                        computing_timer.enter_subsection(
-                          "Hamiltonian Matrix Computation");
-                        kohnShamDFTEigenOperator.computeHamiltonianMatrix(
-                          kPoint, s);
-                        computing_timer.leave_subsection(
-                          "Hamiltonian Matrix Computation");
-                      }
+                    computing_timer.enter_subsection(
+                      "Hamiltonian Matrix Computation");
+                    kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                    computing_timer.leave_subsection(
+                      "Hamiltonian Matrix Computation");
 
 
                     for (unsigned int j = 0; j < 1; ++j)
@@ -2785,11 +2743,12 @@ namespace dftfe
                           }
 
 #ifdef DFTFE_WITH_DEVICE
-                        if (d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             s,
                             kPoint,
-                            kohnShamDFTEigenOperatorDevice,
+                            kohnShamDFTEigenOperator,
                             *d_elpaScala,
                             d_subspaceIterationSolverDevice,
                             residualNormWaveFunctionsAllkPointsSpins[s][kPoint],
@@ -2807,7 +2766,8 @@ namespace dftfe
                             scfConverged ? false : true,
                             scfIter == 0);
 #endif
-                        if (!d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             s,
                             kPoint,
@@ -2896,6 +2856,20 @@ namespace dftfe
                   {
                     for (unsigned int s = 0; s < 2; ++s)
                       {
+                        if (d_dftParamsPtr->memOptMode)
+                          {
+                            computing_timer.enter_subsection(
+                              "VEff Computation");
+                            kohnShamDFTEigenOperator.computeVEff(
+                              d_densityInQuadValues,
+                              d_gradDensityInQuadValues,
+                              d_phiInQuadValues,
+                              d_rhoCore,
+                              d_gradRhoCore,
+                              s);
+                            computing_timer.leave_subsection(
+                              "VEff Computation");
+                          }
                         for (unsigned int kPoint = 0;
                              kPoint < d_kPointWeights.size();
                              ++kPoint)
@@ -2904,23 +2878,26 @@ namespace dftfe
                               pcout << "Beginning Chebyshev filter pass "
                                     << 1 + count << " for spin " << s + 1
                                     << std::endl;
-                            ;
+
+                            kohnShamDFTEigenOperator.reinitkPointSpinIndex(
+                              kPoint, s);
+                            if (d_dftParamsPtr->memOptMode)
+                              {
+                                computing_timer.enter_subsection(
+                                  "Hamiltonian Matrix Computation");
+                                kohnShamDFTEigenOperator
+                                  .computeCellHamiltonianMatrix();
+                                computing_timer.leave_subsection(
+                                  "Hamiltonian Matrix Computation");
+                              }
 
 #ifdef DFTFE_WITH_DEVICE
-                            if (d_dftParamsPtr->useDevice)
-                              kohnShamDFTEigenOperatorDevice
-                                .reinitkPointSpinIndex(kPoint, s);
-#endif
-                            if (!d_dftParamsPtr->useDevice)
-                              kohnShamDFTEigenOperator.reinitkPointSpinIndex(
-                                kPoint, s);
-
-#ifdef DFTFE_WITH_DEVICE
-                            if (d_dftParamsPtr->useDevice)
+                            if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                          memorySpace)
                               kohnShamEigenSpaceCompute(
                                 s,
                                 kPoint,
-                                kohnShamDFTEigenOperatorDevice,
+                                kohnShamDFTEigenOperator,
                                 *d_elpaScala,
                                 d_subspaceIterationSolverDevice,
                                 residualNormWaveFunctionsAllkPointsSpins
@@ -2934,7 +2911,8 @@ namespace dftfe
                                 true,
                                 scfIter == 0);
 #endif
-                            if (!d_dftParamsPtr->useDevice)
+                            if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                          memorySpace)
                               kohnShamEigenSpaceCompute(
                                 s,
                                 kPoint,
@@ -3014,87 +2992,26 @@ namespace dftfe
                   d_numEigenValues :
                   d_numEigenValuesRR);
 
-            if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                densityFamilyType::LDA)
-              {
-                computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.computeVEff(
-                    d_densityInQuadValues,
-                    d_phiInQuadValues,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_lpspQuadratureId);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
-                                                       d_phiInQuadValues,
-                                                       d_pseudoVLoc,
-                                                       d_rhoCore,
-                                                       d_lpspQuadratureId);
-                computing_timer.leave_subsection("VEff Computation");
-              }
-            else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                     densityFamilyType::GGA)
-              {
-                computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.computeVEff(
-                    d_densityInQuadValues,
-                    d_gradDensityInQuadValues,
-                    d_phiInQuadValues,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_gradRhoCore,
-                    d_lpspQuadratureId);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeVEff(
-                    d_densityInQuadValues,
-                    d_gradDensityInQuadValues,
-                    d_phiInQuadValues,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_gradRhoCore,
-                    d_lpspQuadratureId);
-                computing_timer.leave_subsection("VEff Computation");
-              }
+            computing_timer.enter_subsection("VEff Computation");
+            kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+                                                 d_gradDensityInQuadValues,
+                                                 d_phiInQuadValues,
+                                                 d_rhoCore,
+                                                 d_gradRhoCore);
+            computing_timer.leave_subsection("VEff Computation");
 
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              {
-                computing_timer.enter_subsection(
-                  "Hamiltonian Matrix Computation");
-                kohnShamDFTEigenOperatorDevice.computeHamiltonianMatricesAllkpt(
-                  0);
-                computing_timer.leave_subsection(
-                  "Hamiltonian Matrix Computation");
-              }
-#endif
 
             for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                  ++kPoint)
               {
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(kPoint,
-                                                                       0);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
+                kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
 
 
-                if (!d_dftParamsPtr->useDevice)
-                  {
-                    computing_timer.enter_subsection(
-                      "Hamiltonian Matrix Computation");
-                    kohnShamDFTEigenOperator.computeHamiltonianMatrix(kPoint,
-                                                                      0);
-                    computing_timer.leave_subsection(
-                      "Hamiltonian Matrix Computation");
-                  }
+                computing_timer.enter_subsection(
+                  "Hamiltonian Matrix Computation");
+                kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                computing_timer.leave_subsection(
+                  "Hamiltonian Matrix Computation");
 
 
                 for (unsigned int j = 0; j < 1; ++j)
@@ -3107,11 +3024,12 @@ namespace dftfe
 
 
 #ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         0,
                         kPoint,
-                        kohnShamDFTEigenOperatorDevice,
+                        kohnShamDFTEigenOperator,
                         *d_elpaScala,
                         d_subspaceIterationSolverDevice,
                         residualNormWaveFunctionsAllkPoints[kPoint],
@@ -3129,7 +3047,8 @@ namespace dftfe
                         scfConverged ? false : true,
                         scfIter == 0);
 #endif
-                    if (!d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         0,
                         kPoint,
@@ -3204,21 +3123,27 @@ namespace dftfe
                           pcout << "Beginning Chebyshev filter pass "
                                 << 1 + count << std::endl;
 
-#ifdef DFTFE_WITH_DEVICE
-                        if (d_dftParamsPtr->useDevice)
-                          kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(
-                            kPoint, 0);
-#endif
-                        if (!d_dftParamsPtr->useDevice)
-                          kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint,
-                                                                         0);
+                        kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint,
+                                                                       0);
+                        if (d_dftParamsPtr->memOptMode &&
+                            d_kPointWeights.size() > 0)
+                          {
+                            computing_timer.enter_subsection(
+                              "Hamiltonian Matrix Computation");
+                            kohnShamDFTEigenOperator
+                              .computeCellHamiltonianMatrix();
+                            computing_timer.leave_subsection(
+                              "Hamiltonian Matrix Computation");
+                          }
+
 
 #ifdef DFTFE_WITH_DEVICE
-                        if (d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             0,
                             kPoint,
-                            kohnShamDFTEigenOperatorDevice,
+                            kohnShamDFTEigenOperator,
                             *d_elpaScala,
                             d_subspaceIterationSolverDevice,
                             residualNormWaveFunctionsAllkPoints[kPoint],
@@ -3232,7 +3157,8 @@ namespace dftfe
                             scfIter == 0);
 
 #endif
-                        if (!d_dftParamsPtr->useDevice)
+                        if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                      memorySpace)
                           kohnShamEigenSpaceCompute(
                             0,
                             kPoint,
@@ -3304,28 +3230,13 @@ namespace dftfe
           }
         else
           {
-#ifdef DFTFE_WITH_DEVICE
-
             compute_rhoOut(
-              kohnShamDFTEigenOperatorDevice,
-              kohnShamDFTEigenOperator,
               (scfIter < d_dftParamsPtr->spectrumSplitStartingScfIter ||
                scfConverged) ?
                 false :
                 true,
               scfConverged ||
                 (scfIter == (d_dftParamsPtr->numSCFIterations - 1)));
-#else
-            compute_rhoOut(
-              kohnShamDFTEigenOperator,
-              (scfIter < d_dftParamsPtr->spectrumSplitStartingScfIter ||
-               scfConverged) ?
-                false :
-                true,
-              scfConverged ||
-                (scfIter == (d_dftParamsPtr->numSCFIterations - 1)));
-
-#endif
           }
         computing_timer.leave_subsection("compute rho");
 
@@ -3744,10 +3655,6 @@ namespace dftfe
             computing_timer.enter_subsection("Ion force computation");
             computingTimerStandard.enter_subsection("Ion force computation");
             forcePtr->computeAtomsForces(matrix_free_data,
-#ifdef DFTFE_WITH_DEVICE
-                                         kohnShamDFTEigenOperatorDevice,
-#endif
-                                         kohnShamDFTEigenOperator,
                                          d_dispersionCorr,
                                          d_eigenDofHandlerIndex,
                                          d_smearedChargeQuadratureIdElectro,
@@ -3797,32 +3704,22 @@ namespace dftfe
   } // namespace dftfe
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeStress()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeStress()
   {
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
     if (d_dftParamsPtr->isPseudopotential ||
         d_dftParamsPtr->smearedNuclearCharges)
       {
-        computeVselfFieldGateauxDerFD(
-#ifdef DFTFE_WITH_DEVICE
-          kohnShamDFTEigenOperatorDevice
-#endif
-        );
+        computeVselfFieldGateauxDerFD();
       }
 
     forcePtr->computeStress(matrix_free_data,
-#ifdef DFTFE_WITH_DEVICE
-                            kohnShamDFTEigenOperatorDevice,
-#endif
-                            kohnShamDFTEigenOperator,
                             d_dispersionCorr,
                             d_eigenDofHandlerIndex,
                             d_smearedChargeQuadratureIdElectro,
@@ -3847,14 +3744,12 @@ namespace dftfe
       forcePtr->printStress();
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeVselfFieldGateauxDerFD(
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice
-#endif
-  )
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeVselfFieldGateauxDerFD()
   {
     d_vselfFieldGateauxDerStrainFDBins.clear();
     d_vselfFieldGateauxDerStrainFDBins.resize(
@@ -4002,9 +3897,11 @@ namespace dftfe
   }
 
   // Output wfc
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::outputWfc()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::outputWfc()
   {
     //
     // identify the index which is close to Fermi Energy
@@ -4103,7 +4000,7 @@ namespace dftfe
               std::make_pair(i, i + 1),
               tempVec);
 #endif
-
+            tempVec[0].update_ghost_values();
             constraintsNoneEigenDataInfo.distribute(tempVec[0]);
             visualizeWaveFunctions[count] = tempVec[0];
 
@@ -4146,9 +4043,11 @@ namespace dftfe
 
 
   // Output density
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::outputDensity()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::outputDensity()
   {
     //
     // compute nodal electron-density from quad data
@@ -4210,9 +4109,11 @@ namespace dftfe
                                                "densityOutput");
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeBands()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::writeBands()
   {
     int numkPoints =
       (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
@@ -4428,101 +4329,129 @@ namespace dftfe
     //
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<std::vector<double>>
-  dftClass<FEOrder, FEOrderElectro>::getAtomLocationsCart() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomLocationsCart() const
   {
     return atomLocations;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<std::vector<double>>
-  dftClass<FEOrder, FEOrderElectro>::getAtomLocationsFrac() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomLocationsFrac() const
   {
     return atomLocationsFractional;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<std::vector<double>>
-  dftClass<FEOrder, FEOrderElectro>::getCell() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getCell() const
   {
     return d_domainBoundingVectors;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getCellVolume() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getCellVolume() const
   {
     return d_domainVolume;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::set<unsigned int>
-  dftClass<FEOrder, FEOrderElectro>::getAtomTypes() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomTypes() const
   {
     return atomTypes;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<double>
-  dftClass<FEOrder, FEOrderElectro>::getForceonAtoms() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getForceonAtoms() const
   {
     return (forcePtr->getAtomsForces());
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dealii::Tensor<2, 3, double>
-  dftClass<FEOrder, FEOrderElectro>::getCellStress() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getCellStress() const
   {
     return (forcePtr->getStress());
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dftParameters &
-  dftClass<FEOrder, FEOrderElectro>::getParametersObject() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getParametersObject() const
   {
     return (*d_dftParamsPtr);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getInternalEnergy() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getInternalEnergy() const
   {
     return d_groundStateEnergy;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getEntropicEnergy() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getEntropicEnergy() const
   {
     return d_entropicEnergy;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getFreeEnergy() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getFreeEnergy() const
   {
     return d_freeEnergy;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<double>
-  dftClass<FEOrder, FEOrderElectro>::getRhoNodalOut() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getRhoNodalOut() const
   {
     return d_densityOutNodalValues[0];
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   distributedCPUVec<double>
-  dftClass<FEOrder, FEOrderElectro>::getRhoNodalSplitOut() const
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getRhoNodalSplitOut() const
   {
     return d_rhoOutNodalValuesSplit;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::getTotalChargeforRhoSplit()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getTotalChargeforRhoSplit()
   {
     double temp =
       (-totalCharge(d_matrixFreeDataPRefined, d_rhoOutNodalValuesSplit) /
@@ -4532,26 +4461,32 @@ namespace dftfe
 
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::resetRhoNodalIn(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::resetRhoNodalIn(
     distributedCPUVec<double> &OutDensity)
   {
     d_densityOutNodalValues[0] = OutDensity;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::resetRhoNodalSplitIn(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::resetRhoNodalSplitIn(
     distributedCPUVec<double> &OutDensity)
   {
     d_rhoOutNodalValuesSplit = OutDensity;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeGSElectronDensity(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::writeGSElectronDensity(
     const std::string Path) const
   {
     const unsigned int poolId =
@@ -4629,9 +4564,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::writeMesh()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::writeMesh()
   {
     //
     // compute nodal electron-density from quad data
@@ -4685,9 +4622,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeResidualQuadData(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeResidualQuadData(
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       &outValues,
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
@@ -4715,9 +4654,11 @@ namespace dftfe
     return std::sqrt(normValue);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeResidualNodalData(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeResidualNodalData(
     const distributedCPUVec<double> &outValues,
     const distributedCPUVec<double> &inValues,
     distributedCPUVec<double> &      residualValues)
@@ -4736,6 +4677,36 @@ namespace dftfe
                                       d_densityQuadratureIdElectro);
     return normValue;
   }
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    determineAtomsOfInterstPseudopotential(
+      const std::vector<std::vector<double>> &atomCoordinates)
+  {
+    d_atomLocationsInterestPseudopotential.clear();
+    d_atomIdPseudopotentialInterestToGlobalId.clear();
+    unsigned atomIdPseudo = 0;
+    // pcout<<"Atoms of interest: "<<std::endl;
+    for (unsigned int iAtom = 0; iAtom < atomCoordinates.size(); iAtom++)
+      {
+        if (true)
+          {
+            d_atomLocationsInterestPseudopotential.push_back(
+              atomCoordinates[iAtom]);
+            d_atomIdPseudopotentialInterestToGlobalId[atomIdPseudo] = iAtom;
+            // pcout<<iAtom<<" "<<atomIdPseudo<<" ";
+            // for(int i = 0; i <
+            // d_atomLocationsInterestPseudopotential[atomIdPseudo].size(); i++)
+            //   pcout<<d_atomLocationsInterestPseudopotential[atomIdPseudo][i]<<"
+            //   ";
+            // pcout<<std::endl;
+            atomIdPseudo++;
+          }
+      }
+  }
+
 
 
 #include "dft.inst.cc"

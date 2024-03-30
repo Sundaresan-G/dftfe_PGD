@@ -171,6 +171,40 @@ namespace dftfe
         }
     }
 
+
+    void
+    constraintMatrixInfo::initializeScaledConstraints(
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &invSqrtMassVec)
+    {
+      unsigned int count = 0;
+      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+        {
+          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+            {
+              d_columnValues[count] *= invSqrtMassVec[d_columnIdsLocal[count]];
+              count++;
+            }
+        }
+    }
+
+
+    void
+    constraintMatrixInfo::initializeScaledConstraints(
+      const distributedCPUVec<double> &invSqrtMassVec)
+    {
+      unsigned int count = 0;
+      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+        {
+          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+            {
+              d_columnValues[count] *=
+                invSqrtMassVec.local_element(d_columnIdsLocal[count]);
+              count++;
+            }
+        }
+    }
+
     //
     // set the constrained degrees of freedom to values so that constraints
     // are satisfied
@@ -200,9 +234,6 @@ namespace dftfe
     constraintMatrixInfo::distribute(distributedCPUVec<T> &fieldVector,
                                      const unsigned int    blockSize) const
     {
-      fieldVector.update_ghost_values();
-
-
       unsigned int       count = 0;
       const unsigned int inc   = 1;
       std::vector<T>     newValuesBlock(blockSize, 0.0);
@@ -246,14 +277,12 @@ namespace dftfe
 
     template <typename T>
     void
-    constraintMatrixInfo::distribute(distributedCPUMultiVec<T> &fieldVector,
-                                     const unsigned int         blockSize) const
+    constraintMatrixInfo::distribute(
+      distributedCPUMultiVec<T> &fieldVector) const
     {
-      fieldVector.updateGhostValues();
-
-
-      unsigned int       count = 0;
-      const unsigned int inc   = 1;
+      const unsigned int blockSize = fieldVector.numVectors();
+      unsigned int       count     = 0;
+      const unsigned int inc       = 1;
       std::vector<T>     newValuesBlock(blockSize, 0.0);
       for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
         {
@@ -340,11 +369,11 @@ namespace dftfe
     template <typename T>
     void
     constraintMatrixInfo::distribute_slave_to_master(
-      distributedCPUMultiVec<T> &fieldVector,
-      const unsigned int         blockSize) const
+      distributedCPUMultiVec<T> &fieldVector) const
     {
-      unsigned int       count = 0;
-      const unsigned int inc   = 1;
+      const unsigned int blockSize = fieldVector.numVectors();
+      unsigned int       count     = 0;
+      const unsigned int inc       = 1;
       for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
@@ -395,9 +424,9 @@ namespace dftfe
 
     template <typename T>
     void
-    constraintMatrixInfo::set_zero(distributedCPUMultiVec<T> &fieldVector,
-                                   const unsigned int         blockSize) const
+    constraintMatrixInfo::set_zero(distributedCPUMultiVec<T> &fieldVector) const
     {
+      const unsigned int blockSize = fieldVector.numVectors();
       for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
@@ -444,23 +473,19 @@ namespace dftfe
 
     template void
     constraintMatrixInfo::distribute(
-      distributedCPUMultiVec<double> &fieldVector,
-      const unsigned int              blockSize) const;
+      distributedCPUMultiVec<double> &fieldVector) const;
 
     template void
     constraintMatrixInfo::distribute(
-      distributedCPUMultiVec<std::complex<double>> &fieldVector,
-      const unsigned int                            blockSize) const;
+      distributedCPUMultiVec<std::complex<double>> &fieldVector) const;
 
     template void
     constraintMatrixInfo::distribute_slave_to_master(
-      distributedCPUMultiVec<dataTypes::number> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedCPUMultiVec<dataTypes::number> &fieldVector) const;
 
     template void
     constraintMatrixInfo::set_zero(
-      distributedCPUMultiVec<dataTypes::number> &fieldVector,
-      const unsigned int                         blockSize) const;
+      distributedCPUMultiVec<dataTypes::number> &fieldVector) const;
 
   } // namespace dftUtils
 

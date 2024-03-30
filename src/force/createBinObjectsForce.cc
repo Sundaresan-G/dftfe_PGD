@@ -22,9 +22,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::createBinObjectsForce(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::createBinObjectsForce(
     const dealii::DoFHandler<3> &                    dofHandler,
     const dealii::DoFHandler<3> &                    dofHandlerForce,
     const dealii::AffineConstraints<double> &        hangingPlusPBCConstraints,

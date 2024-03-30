@@ -1083,7 +1083,7 @@ namespace dftfe
           matrix_free_data.get_vector_partitioner(4 * iBin + offset),
           d_vselfBinConstraintMatrices[4 * iBin]);
 
-        // update_ghost_values is called inside distribute
+        tempvec.update_ghost_values();
         constraintsMatrixDataInfo.distribute(tempvec);
 
         std::map<dealii::CellId, std::vector<double>> &bQuadValuesBin =
@@ -1205,7 +1205,7 @@ namespace dftfe
                                                         offset),
                 d_vselfBinConstraintMatrices[4 * iBin + idim + 1]);
 
-              // update_ghost_values is called inside distribute
+              tempvec.update_ghost_values();
               constraintsMatrixDataInfo2.distribute(tempvec);
 
               dealii::FEEvaluation<3, FEOrderElectro, FEOrderElectro + 1>
@@ -1454,6 +1454,7 @@ namespace dftfe
               matrix_free_data.get_vector_partitioner(constraintMatrixId),
               d_vselfBinConstraintMatrices[4 * iBin]);
 
+            d_vselfFieldBins[iBin].update_ghost_values();
             constraintsMatrixDataInfo.distribute(d_vselfFieldBins[iBin]);
 
             if (useSmearedCharges)
@@ -1476,7 +1477,7 @@ namespace dftfe
                       constraintMatrixId2),
                     d_vselfBinConstraintMatrices[4 * iBin + idim + 1]);
 
-
+                  d_vselfFieldDerRBins[3 * iBin + idim].update_ghost_values();
                   constraintsMatrixDataInfo2.distribute(
                     d_vselfFieldDerRBins[3 * iBin + idim]);
                 }
@@ -1616,6 +1617,7 @@ namespace dftfe
               matrix_free_data.get_vector_partitioner(constraintMatrixId),
               d_vselfBinConstraintMatrices[4 * iBin]);
 
+            d_vselfFieldPerturbedBins[iBin].update_ghost_values();
             constraintsMatrixDataInfo.distribute(
               d_vselfFieldPerturbedBins[iBin]);
           }

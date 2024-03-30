@@ -46,9 +46,12 @@ namespace dftfe
   //				Following routine computes total density by summing over all the
   // symmetry transformed points
   //=============================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  symmetryClass<FEOrder, FEOrderElectro>::computeAndSymmetrize_rhoOut()
+  symmetryClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeAndSymmetrize_rhoOut()
   {
     const dealii::Quadrature<3> &quadrature =
       dftPtr->matrix_free_data.get_quadrature(dftPtr->d_densityQuadratureId);
@@ -205,9 +208,11 @@ namespace dftfe
   // back to the corresponding processors
   //=============================================================================================================================================
   //=============================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  symmetryClass<FEOrder, FEOrderElectro>::computeLocalrhoOut()
+  symmetryClass<FEOrder, FEOrderElectro, memorySpace>::computeLocalrhoOut()
   {
     std::vector<std::vector<distributedCPUVec<double>>> eigenVectors(
       (1 + dftPtr->getParametersObject().spinPolarized) *
@@ -239,7 +244,7 @@ namespace dftfe
               dftPtr->d_eigenVectorsFlattenedHost
                 [kPoint * localVectorSize * dftPtr->d_numEigenValues +
                  iNode * dftPtr->d_numEigenValues + iWave];
-
+        eigenVectorsFlattenedArrayFullBlock.update_ghost_values();
         dftPtr->constraintsNoneDataInfo.distribute(
           eigenVectorsFlattenedArrayFullBlock, dftPtr->d_numEigenValues);
 

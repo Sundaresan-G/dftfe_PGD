@@ -26,8 +26,10 @@ namespace dftfe
   //
   // compute total charge using quad point values
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void dftClass<FEOrder, FEOrderElectro>::createpRefinedDofHandler(
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void dftClass<FEOrder, FEOrderElectro, memorySpace>::createpRefinedDofHandler(
     dealii::parallel::distributed::Triangulation<3> &triaObject)
   {
     //
@@ -177,9 +179,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initpRefinedObjects(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initpRefinedObjects(
     const bool recomputeBasisData,
     const bool meshOnlyDeformed,
     const bool vselfPerturbationUpdateForStress)

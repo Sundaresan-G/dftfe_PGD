@@ -63,7 +63,8 @@ namespace dftfe
                  const bool        setDeviceToMPITaskBindingInternally = false,
                  const std::string solverMode                          = "GS",
                  const std::string restartFilesPath                    = ".",
-                 const int         _verbosity                          = 1);
+                 const int         _verbosity                          = 1,
+                 const bool        useDevice                           = false);
 
     /**
      * @brief constructor based on input parameter_file and restart
@@ -78,6 +79,7 @@ namespace dftfe
                  const std::string solverMode                          = "GS",
                  const std::string restartFilesPath                    = ".",
                  const int         _verbosity                          = 1,
+                 const bool        useDevice                           = false,
                  const bool        isScfRestart                        = true);
 
 
@@ -169,7 +171,8 @@ namespace dftfe
            const bool        setDeviceToMPITaskBindingInternally = false,
            const std::string solverMode                          = "GS",
            const std::string restartFilesPath                    = ".",
-           const int         _verbosity                          = 1);
+           const int         _verbosity                          = 1,
+           const bool        useDevice                           = false);
 
     /**
      * @brief clear and reinitialize based on input parameter_file and restart
@@ -185,6 +188,7 @@ namespace dftfe
            const std::string solverMode                          = "GS",
            const std::string restartFilesPath                    = ".",
            const int         _verbosity                          = 1,
+           const bool        useDevice                           = false,
            const bool        isScfRestart                        = true);
 
     void
@@ -373,7 +377,8 @@ namespace dftfe
     createScratchFolder();
 
     void
-    initialize(const bool setDeviceToMPITaskBindingInternally);
+    initialize(const bool setDeviceToMPITaskBindingInternally,
+               const bool useDevice);
 
     MPI_Comm       d_mpi_comm_parent;
     dftBase *      d_dftfeBasePtr;
