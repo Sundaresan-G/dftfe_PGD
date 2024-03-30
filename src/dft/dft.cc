@@ -2550,7 +2550,9 @@ namespace dftfe
 
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
           densityInQuadValuesCopy = d_densityInQuadValues[0];
-        if (std::abs(d_dftParamsPtr->netCharge) > 1e-12)
+        if (std::abs(d_dftParamsPtr->netCharge) > 1e-12 and
+            (d_dftParamsPtr->periodicX || d_dftParamsPtr->periodicY ||
+             d_dftParamsPtr->periodicZ))
           {
             double *tempvec = densityInQuadValuesCopy.data();
             for (unsigned int iquad = 0; iquad < densityInQuadValuesCopy.size();
@@ -3317,7 +3319,9 @@ namespace dftfe
 
             dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
               densityOutQuadValuesCopy = d_densityOutQuadValues[0];
-            if (std::abs(d_dftParamsPtr->netCharge) > 1e-12)
+            if (std::abs(d_dftParamsPtr->netCharge) > 1e-12 and
+                (d_dftParamsPtr->periodicX || d_dftParamsPtr->periodicY ||
+                 d_dftParamsPtr->periodicZ))
               {
                 double *tempvec = densityOutQuadValuesCopy.data();
                 for (unsigned int iquad = 0;
@@ -3558,7 +3562,9 @@ namespace dftfe
 
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
           densityOutQuadValuesCopy = d_densityOutQuadValues[0];
-        if (std::abs(d_dftParamsPtr->netCharge) > 1e-12)
+        if (std::abs(d_dftParamsPtr->netCharge) > 1e-12 and
+            (d_dftParamsPtr->periodicX || d_dftParamsPtr->periodicY ||
+             d_dftParamsPtr->periodicZ))
           {
             double *tempvec = densityOutQuadValuesCopy.data();
             for (unsigned int iquad = 0;
