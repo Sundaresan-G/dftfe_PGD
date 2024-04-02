@@ -13,8 +13,13 @@ import xml.etree.ElementTree as ET
 from yattag import Doc, indent
 from scipy.integrate import simps
 
+import os
+os.environ['PYTHONDONTWRITEBYTECODE'] = '1'
+
 class Plotters:
-    def __init__(self, filesPath, bandsDatFile, kptsFile, coordinatesFile, latticeVecFile,pseudoPotFile, dosDataFile, eLimit, isPeriodic):
+    def __init__(self, filesPath = None, bandsDatFile = None, kptsFile = None, 
+                 coordinatesFile = None, latticeVecFile = None,pseudoPotFile = None, 
+                 dosDataFile= None, eLimit = None, isPeriodic= None):
         self.filesPath = filesPath
         self.bandsDatFile = bandsDatFile
         self.kptsFile = kptsFile
@@ -27,6 +32,23 @@ class Plotters:
         self.outdir = filesPath + "outfiles/"
         self.scaleFactor = 0.5291772105638411 # scale factor (bohr to angstrom)
         self.hartreeToEv = 27.211386024367243
+
+        '''
+        filesPath: str: path to the directory where the input files are stored,
+        bandsDatFile: str: name of the file containing the bandstructure data,
+        kptsFile: str: name of the file containing the kpoints data,
+        coordinatesFile: str: name of the file containing the coordinates data,
+        latticeVecFile: str: name of the file containing the lattice vectors data,
+        pseudoPotFile: str: name of the file containing the pseudopotential data,
+        dosDataFile: str: name of the file containing the DOS data,
+        eLimit: list: energy limits for the bandstructure and DOS plots,
+        isPeriodic: bool: True if the system is periodic, False otherwise
+        '''
+
+        with open(filesPath+"fermiEnergy.out") as f:
+            for line in f:
+                if (len(line) != 0):
+                    self.eFermi = float(line.strip())
 
         if self.isPeriodic:
             self.ionPosVecType = "Direct"
@@ -122,7 +144,7 @@ class Plotters:
             with open(self.filesPath+ self.bandsDatFile) as f1:
                 line = f1.readline()
                 numKpts, self.numBandsPerKpt = list(map(int,line.strip().split()[:2]))
-                self.eFermi  = float(line.strip().split()[-1])  
+  
                 f.write("# of k-points:  {}         # of bands:   {}         # of ions:    {}\n\n".format( numKpts,self.numBandsPerKpt,self.numIons))
                 
                 for line in f1:
@@ -355,4 +377,5 @@ class Plotters:
                         show = False,
                         elimit = self.eLimit,
                         dirname = self.outdir)
+        gph[1].grid(True)
         gph[0].savefig(self.outdir+'dosplot.png', dpi = 500)
