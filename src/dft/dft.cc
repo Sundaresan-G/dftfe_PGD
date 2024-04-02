@@ -4325,10 +4325,16 @@ namespace dftfe
         std::min(d_numEigenValues, maxeigenIndex + 10) :
         d_dftParamsPtr->highestStateOfInterestForChebFiltering;
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
-      {
+      { 
+        if (d_dftParamsPtr->kPointDataFile == ""){
+          FILE *fermiFile;
+          fermiFile = fopen("fermiEnergy.out", "w");
+          fprintf(fermiFile,"%.14g\n", FE);
+          fclose(fermiFile);
+        }
         FILE *pFile;
         pFile = fopen("bands.out", "w");
-        fprintf(pFile, "%d %d %.14g\n", totkPoints, numberEigenValues, FE);
+        fprintf(pFile, "%d %d \n", totkPoints, numberEigenValues);
         for (unsigned int kPoint = 0;
              kPoint < totkPoints / (1 + d_dftParamsPtr->spinPolarized);
              ++kPoint)
