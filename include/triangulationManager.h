@@ -75,6 +75,7 @@ namespace dftfe
     generateSerialUnmovedAndParallelMovedUnmovedMesh(
       const std::vector<std::vector<double>> &atomLocations,
       const std::vector<std::vector<double>> &imageAtomLocations,
+      const std::vector<std::vector<double>> &meshSizes,
       const std::vector<int> &                imageIds,
       const std::vector<double> &             nearestAtomDistances,
       const std::vector<std::vector<double>> &domainBoundingVectors,
@@ -96,6 +97,7 @@ namespace dftfe
     generateCoarseMeshesForRestart(
       const std::vector<std::vector<double>> &atomLocations,
       const std::vector<std::vector<double>> &imageAtomLocations,
+      const std::vector<std::vector<double>> &meshSizes,
       const std::vector<int> &                imageIds,
       const std::vector<double> &             nearestAtomDistances,
       const std::vector<std::vector<double>> &domainBoundingVectors,
@@ -300,6 +302,7 @@ namespace dftfe
 
     std::vector<std::vector<double>> d_atomPositions;
     std::vector<std::vector<double>> d_imageAtomPositions;
+    std::vector<std::vector<double>> d_meshSizes;
     std::vector<int>                 d_imageIds;
     std::vector<double>              d_nearestAtomDistances;
     std::vector<std::vector<double>> d_domainBoundingVectors;

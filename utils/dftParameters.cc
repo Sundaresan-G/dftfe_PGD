@@ -537,11 +537,10 @@ namespace dftfe
             dealii::Patterns::Bool(),
             "[Developer] Use a composite generator flat top and Gaussian generator for mesh movement and configurational force computation.");
 
-          prm.declare_entry(
-            "USE MESH SIZES FROM ATOM LOCATIONS FILE",
-            "false",
-            dealii::Patterns::Bool(),
-            "[Developer] Use mesh sizes from atom locations file.");
+          prm.declare_entry("MESH SIZES FILE",
+                            "",
+                            dealii::Patterns::Anything(),
+                            "[Developer] Use mesh sizes from this file.");
         }
         prm.leave_subsection();
       }
@@ -1192,6 +1191,7 @@ namespace dftfe
     orthogType                  = "";
     algoType                    = "";
     pseudoPotentialFile         = "";
+    meshSizesFile               = "";
 
     std::string coordinatesGaussianDispFile = "";
 
@@ -1272,7 +1272,6 @@ namespace dftfe
     gaussianOrderMoveMeshToAtoms                   = 4.0;
     useFlatTopGenerator                            = false;
     diracDeltaKernelScalingConstant                = 0.1;
-    useMeshSizesFromAtomsFile                      = false;
     chebyshevFilterPolyDegreeFirstScfScalingFactor = 1.34;
     useDensityMatrixPerturbationRankUpdates        = false;
     smearedNuclearCharges                          = false;
@@ -1486,8 +1485,7 @@ namespace dftfe
         gaussianOrderMoveMeshToAtoms =
           prm.get_double("GAUSSIAN ORDER MOVE MESH TO ATOMS");
         useFlatTopGenerator = prm.get_bool("USE FLAT TOP GENERATOR");
-        useMeshSizesFromAtomsFile =
-          prm.get_bool("USE MESH SIZES FROM ATOM LOCATIONS FILE");
+        meshSizesFile       = prm.get("MESH SIZES FILE");
       }
       prm.leave_subsection();
     }

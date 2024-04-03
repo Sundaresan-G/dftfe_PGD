@@ -76,6 +76,7 @@ namespace dftfe
   triangulationManager::generateSerialUnmovedAndParallelMovedUnmovedMesh(
     const std::vector<std::vector<double>> &atomLocations,
     const std::vector<std::vector<double>> &imageAtomLocations,
+    const std::vector<std::vector<double>> &meshSizes,
     const std::vector<int> &                imageIds,
     const std::vector<double> &             nearestAtomDistances,
     const std::vector<std::vector<double>> &domainBoundingVectors,
@@ -86,6 +87,7 @@ namespace dftfe
     //
     d_atomPositions         = atomLocations;
     d_imageAtomPositions    = imageAtomLocations;
+    d_meshSizes             = meshSizes;
     d_imageIds              = imageIds;
     d_nearestAtomDistances  = nearestAtomDistances;
     d_domainBoundingVectors = domainBoundingVectors;
@@ -159,6 +161,7 @@ namespace dftfe
   triangulationManager::generateCoarseMeshesForRestart(
     const std::vector<std::vector<double>> &atomLocations,
     const std::vector<std::vector<double>> &imageAtomLocations,
+    const std::vector<std::vector<double>> &meshSizes,
     const std::vector<int> &                imageIds,
     const std::vector<double> &             nearestAtomDistances,
     const std::vector<std::vector<double>> &domainBoundingVectors,
@@ -169,6 +172,7 @@ namespace dftfe
     //
     d_atomPositions         = atomLocations;
     d_imageAtomPositions    = imageAtomLocations;
+    d_meshSizes             = meshSizes;
     d_imageIds              = imageIds;
     d_nearestAtomDistances  = nearestAtomDistances;
     d_domainBoundingVectors = domainBoundingVectors;

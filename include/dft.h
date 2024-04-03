@@ -995,7 +995,7 @@ namespace dftfe
 
     /// FIXME: remove atom type atributes from atomLocations
     std::vector<std::vector<double>> atomLocations, atomLocationsFractional,
-      d_reciprocalLatticeVectors, d_domainBoundingVectors;
+      d_reciprocalLatticeVectors, d_domainBoundingVectors, d_meshSizes;
     std::vector<std::vector<double>> d_atomLocationsInterestPseudopotential;
     std::map<unsigned int, unsigned int>
                                      d_atomIdPseudopotentialInterestToGlobalId;

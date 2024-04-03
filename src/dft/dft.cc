@@ -321,18 +321,15 @@ namespace dftfe
     //
     // read coordinates
     //
-    unsigned int numberColumnsCoordinatesFile =
-      d_dftParamsPtr->useMeshSizesFromAtomsFile ? 7 : 5;
-
+    if (d_dftParamsPtr->meshSizesFile != "")
+      dftUtils::readFile(d_meshSizes, d_dftParamsPtr->meshSizesFile);
     if (d_dftParamsPtr->periodicX || d_dftParamsPtr->periodicY ||
         d_dftParamsPtr->periodicZ)
       {
         //
         // read fractionalCoordinates of atoms in periodic case
         //
-        dftUtils::readFile(numberColumnsCoordinatesFile,
-                           atomLocations,
-                           d_dftParamsPtr->coordinatesFile);
+        dftUtils::readFile(atomLocations, d_dftParamsPtr->coordinatesFile);
         AssertThrow(
           d_dftParamsPtr->natoms == atomLocations.size(),
           dealii::ExcMessage(
@@ -376,9 +373,7 @@ namespace dftfe
       }
     else
       {
-        dftUtils::readFile(numberColumnsCoordinatesFile,
-                           atomLocations,
-                           d_dftParamsPtr->coordinatesFile);
+        dftUtils::readFile(atomLocations, d_dftParamsPtr->coordinatesFile);
 
         AssertThrow(
           d_dftParamsPtr->natoms == atomLocations.size(),
@@ -718,9 +713,8 @@ namespace dftfe
         numElectronsUp   = std::ceil(static_cast<double>(numElectrons) / 2.0);
         numElectronsDown = numElectrons - numElectronsUp;
         //
-        int netMagnetization =
-          std::round(2.0 * static_cast<double>(numElectrons) *
-                     d_dftParamsPtr->start_magnetization);
+        int netMagnetization = std::round(static_cast<double>(numElectrons) *
+                                          d_dftParamsPtr->start_magnetization);
         //
         while ((numElectronsUp - numElectronsDown) < std::abs(netMagnetization))
           {
@@ -1089,6 +1083,7 @@ namespace dftfe
         d_mesh.generateCoarseMeshesForRestart(
           atomLocations,
           d_imagePositionsTrunc,
+          d_meshSizes,
           d_imageIdsTrunc,
           d_nearestAtomDistances,
           d_domainBoundingVectors,
@@ -1102,6 +1097,7 @@ namespace dftfe
         d_mesh.generateSerialUnmovedAndParallelMovedUnmovedMesh(
           atomLocations,
           d_imagePositionsTrunc,
+          d_meshSizes,
           d_imageIdsTrunc,
           d_nearestAtomDistances,
           d_domainBoundingVectors,
