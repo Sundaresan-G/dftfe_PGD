@@ -3444,6 +3444,17 @@ namespace dftfe
       pcout << "SCF iterations converged to the specified tolerance after: "
             << scfIter << " iterations." << std::endl;
 
+      if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
+        {
+          if (d_dftParamsPtr->solverMode == "GS")
+            {
+              FILE *fermiFile;
+              fermiFile = fopen("fermiEnergy.out", "w");
+              fprintf(fermiFile,"%.14g\n", fermiEnergy);
+              fclose(fermiFile);
+            }
+        }
+
     const unsigned int numberBandGroups =
       dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
@@ -4227,12 +4238,6 @@ namespace dftfe
         d_dftParamsPtr->highestStateOfInterestForChebFiltering;
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       { 
-        if (d_dftParamsPtr->kPointDataFile == ""){
-          FILE *fermiFile;
-          fermiFile = fopen("fermiEnergy.out", "w");
-          fprintf(fermiFile,"%.14g\n", FE);
-          fclose(fermiFile);
-        }
         FILE *pFile;
         pFile = fopen("bands.out", "w");
         fprintf(pFile, "%d %d \n", totkPoints, numberEigenValues);
