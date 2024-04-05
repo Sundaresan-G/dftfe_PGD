@@ -55,6 +55,16 @@ namespace dftfe
                                        ValueType2 *           valueType2Arr,
                                        const deviceStream_t   streamId = 0);
 
+      template <typename ValueType1, typename ValueType2>
+      void
+      convertLayout(
+        ValueType2 *                   copyTo,
+        const ValueType1 *             copyFromVec,
+        const dftfe::size_type         blockSize,
+        const dftfe::size_type         initBlockRows,
+        const dftfe::size_type         initBlockCols,
+        const dftfe::utils::deviceStream_t   streamId = 0);
+
 
       template <typename ValueType1, typename ValueType2>
       void
@@ -83,7 +93,8 @@ namespace dftfe
                                        const dftfe::size_type numBlocks,
                                        const dftfe::size_type startingId,
                                        const ValueType1 *     copyFromVec,
-                                       ValueType2 *           copyToVec);
+                                       ValueType2 *           copyToVec,
+                                       const dftfe::utils::deviceStream_t   streamId = 0);
 
 
       template <typename ValueType1, typename ValueType2>
@@ -105,7 +116,8 @@ namespace dftfe
                                          const dftfe::size_type numBlocks,
                                          const dftfe::size_type startingId,
                                          const ValueType1 *     copyFromVec,
-                                         ValueType2 *           copyToVec);
+                                         ValueType2 *           copyToVec,
+                                         const dftfe::utils::deviceStream_t   streamId = 0);
 
 
       template <typename ValueType1, typename ValueType2>

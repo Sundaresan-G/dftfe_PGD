@@ -136,22 +136,31 @@ namespace dftfe
       dftUtils::printCurrentMemoryUsage(mpi_communicator, "initRho called");
 
 #ifdef DFTFE_WITH_DEVICE
+
+    const unsigned int numberBandGroups =
+          dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
     if (d_dftParamsPtr->useDevice)
       {
         d_eigenVectorsFlattenedDevice.resize(
-          d_eigenVectorsFlattenedHost.size());
+          d_eigenVectorsFlattenedHost.size()/numberBandGroups);
 
         if (d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND")
           d_eigenVectorsDensityMatrixPrimeFlattenedDevice.resize(
-            d_eigenVectorsFlattenedHost.size());
+            d_eigenVectorsFlattenedHost.size()/numberBandGroups);
 
         if (d_numEigenValuesRR != d_numEigenValues)
           d_eigenVectorsRotFracFlattenedDevice.resize(
-            d_eigenVectorsRotFracDensityFlattenedHost.size());
+            d_eigenVectorsRotFracDensityFlattenedHost.size()/numberBandGroups);
         else
           d_eigenVectorsRotFracFlattenedDevice.resize(1);
 
-        d_eigenVectorsFlattenedDevice.copyFrom(d_eigenVectorsFlattenedHost);
+        // d_eigenVectorsFlattenedDevice.copyFrom(d_eigenVectorsFlattenedHost);
+
+        d_eigenVectorsFlattenedDevice.copyFrom(
+          d_eigenVectorsFlattenedHost, 
+          d_eigenVectorsFlattenedHost.size()/numberBandGroups,
+          dealii::Utilities::MPI::this_mpi_process(interBandGroupComm) * d_eigenVectorsFlattenedHost.size()/numberBandGroups,
+          0);
       }
 #endif
 

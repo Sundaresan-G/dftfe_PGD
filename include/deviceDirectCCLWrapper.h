@@ -81,6 +81,14 @@ namespace dftfe
                                    int             size,
                                    deviceStream_t &stream);
 
+      template <typename NumberType>
+      int 
+      deviceDirectAllToAllWrapper(const NumberType *  send,
+                                  unsigned long int            sendCount,
+                                  NumberType *       recv,
+                                  unsigned long int            recvCount,
+                                  deviceStream_t stream = 0);
+
 
       int
       deviceDirectAllReduceWrapper(const std::complex<double> *send,
