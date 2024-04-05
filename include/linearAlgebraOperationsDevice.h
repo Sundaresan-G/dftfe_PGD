@@ -98,6 +98,23 @@ namespace dftfe
      *
      *
      */
+
+    void
+    XtXAndXtHX(
+      const dataTypes::number *                        X,
+      const dataTypes::number *                        HX,
+      const unsigned int                               M,
+      const unsigned int                               N,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const MPI_Comm &                                 mpiCommDomain,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommIntraPool,
+      const MPI_Comm &                                 interBandGroupComm,
+      const MPI_Comm &                                 intrapoolcomm,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      overlapMatPar,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      const dftParameters &                            dftParams);
+      
     void
     fillParallelOverlapMatScalapack(
       const dataTypes::number *                        X,
@@ -293,6 +310,33 @@ namespace dftfe
       const MPI_Comm &                                     mpiCommDomain,
       utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
       const MPI_Comm &                  interBandGroupComm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall = false);
+
+    void
+    rayleighRitzGEP(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      dataTypes::number *                                  XDevice,
+      dataTypes::number *                                  HXDevice,
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::HOST_PINNED> &XHost,
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::HOST_PINNED> &HXHost,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiInterBand,
+      utils::DeviceCCLWrapper &         devicecclMpiCommIntraPool,
+      const MPI_Comm &                  interBandGroupComm,
+      const MPI_Comm &                  intrapoolcomm,
       std::vector<double> &             eigenValues,
       dftfe::utils::deviceBlasHandle_t &handle,
       const dftParameters &             dftParams,

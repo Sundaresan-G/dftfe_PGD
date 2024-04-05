@@ -82,6 +82,7 @@ namespace dftfe
     const MPI_Comm &   mpi_comm_domain,
     const MPI_Comm &   _interpoolcomm,
     const MPI_Comm &   _interBandGroupComm,
+    const MPI_Comm &   _intrapoolcomm,
     const std::string &scratchFolderName,
     dftParameters &    dftParams)
     : FE(dealii::FE_Q<3>(dealii::QGaussLobatto<1>(FEOrder + 1)), 1)
@@ -97,6 +98,7 @@ namespace dftfe
     , d_mpiCommParent(mpi_comm_parent)
     , interpoolcomm(_interpoolcomm)
     , interBandGroupComm(_interBandGroupComm)
+    , intrapoolcomm(_intrapoolcomm)
     , d_dftfeScratchFolderName(scratchFolderName)
     , d_dftParamsPtr(&dftParams)
     , n_mpi_processes(dealii::Utilities::MPI::n_mpi_processes(mpi_comm_domain))
@@ -184,7 +186,7 @@ namespace dftfe
       }
     if (d_dftParamsPtr->verbosity > 0)
       pcout << "Threads per MPI task: " << d_nOMPThreads << std::endl;
-    d_elpaScala = new dftfe::elpaScalaManager(mpi_comm_domain);
+    d_elpaScala = new dftfe::elpaScalaManager(_intrapoolcomm);
 
     forcePtr = new forceClass<FEOrder, FEOrderElectro, memorySpace>(
       this, mpi_comm_parent, mpi_comm_domain, dftParams);
@@ -196,10 +198,13 @@ namespace dftfe
 
 #if defined(DFTFE_WITH_DEVICE)
     d_devicecclMpiCommDomainPtr = new utils::DeviceCCLWrapper;
-    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-
+    d_devicecclMpiCommPoolPtr   = new utils::DeviceCCLWrapper;
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace){
       d_devicecclMpiCommDomainPtr->init(mpi_comm_domain,
                                         d_dftParamsPtr->useDCCL);
+      d_devicecclMpiCommPoolPtr->init(_intrapoolcomm,
+                                        d_dftParamsPtr->useDCCL);
+    }
 #endif
     d_pspCutOff =
       d_dftParamsPtr->reproducible_output ?
@@ -317,6 +322,8 @@ namespace dftfe
                                         "Entered call to set");
 
     d_numEigenValues = d_dftParamsPtr->numberEigenValues;
+
+    d_numEigenValuesPerBandGroup = d_numEigenValues/ (dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm));
 
     //
     // read coordinates
@@ -565,6 +572,8 @@ namespace dftfe
           std::ceil(d_numEigenValues / (numberBandGroups * 1.0)) *
           numberBandGroups;
 
+        d_numEigenValuesPerBandGroup = d_numEigenValues/ numberBandGroups;
+
         AssertThrow(
           (d_numEigenValues % numberBandGroups == 0 ||
            d_numEigenValues / numberBandGroups == 0),
@@ -746,6 +755,8 @@ namespace dftfe
       dealii::ExcMessage(
         "DFT-FE Error: Incorrect input value used- SPECTRUM SPLIT CORE EIGENSTATES should be less than the total number of wavefunctions."));
     d_numEigenValuesRR = d_numEigenValues - d_dftParamsPtr->numCoreWfcRR;
+
+    d_numEigenValuesRRPerBandGroup = d_numEigenValuesRR/(dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm));
 
 
 #ifdef USE_COMPLEX

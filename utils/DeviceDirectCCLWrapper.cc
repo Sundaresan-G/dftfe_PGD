@@ -124,6 +124,100 @@ namespace dftfe
       return 0;
     }
 
+    template <typename NumberType>
+    int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const NumberType *        send,
+                                                  unsigned long int         sendCount,
+                                                  NumberType *              recv,
+                                                  unsigned long int         recvCount,
+                                                  deviceStream_t stream /*= 0*/)
+    {
+      unsigned int sendTo = myRank;
+      unsigned int recvFrom = myRank;
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      // select ncclDouble or ncclFloat based on NumberType
+      if (ncclCommInit)
+        {
+          ncclDataType_t ncclType = ncclDouble;
+          if (std::is_same<NumberType, float>::value)
+            ncclType = ncclFloat;
+          
+          NCCLCHECK(ncclGroupStart());
+          for (unsigned int i = 0; i < totalRanks; i++)
+            {
+              sendTo += i;
+              sendTo %= totalRanks;
+              recvFrom += (totalRanks - i);
+              recvFrom %= totalRanks;
+
+              unsigned long int sendOffset = sendTo * sendCount;
+              unsigned long int recvOffset = recvFrom * recvCount;
+
+              // if (sendOffset + sendCount > totalNumRows * totalNumCols){
+              //   sendCount = totalNumRows * totalNumCols - sendOffset;
+              // }
+              // if (recvOffset + recvCount > totalNumRows * totalNumCols)
+              //   recvCount = totalNumRows * totalNumCols - recvOffset;
+
+              // NCCLCHECK(ncclGroupStart());
+              
+                NCCLCHECK(ncclSend((const void *)(send + sendOffset),
+                                  sendCount,
+                                  ncclType,
+                                  sendTo,
+                                  *((ncclComm_t *)ncclCommPtr),
+                                  stream));
+                NCCLCHECK(ncclRecv((void *)(recv + recvOffset),
+                                    recvCount,
+                                    ncclType,
+                                    recvFrom,
+                                    *((ncclComm_t *)ncclCommPtr),
+                                    stream));
+
+              // NCCLCHECK(ncclGroupEnd());
+            }
+          NCCLCHECK(ncclGroupEnd());
+        }
+#  elif DFTFE_WITH_DEVICE_AWARE_MPI
+      dftfe::utils::deviceStreamSynchronize(stream);
+      for (unsigned int i = 0; i < totalRanks; i++)
+        {
+          sendTo += i;
+          sendTo %= totalRanks;
+          recvFrom += (totalRanks - i);
+          recvFrom %= totalRanks;
+
+          unsigned long int sendOffset = sendTo * sendCount;
+          unsigned long int recvOffset = recvFrom * recvCount;
+
+          // if (sendOffset + sendCount > totalNumRows * totalNumCols)
+          //   sendCount = totalNumRows * totalNumCols - sendOffset;
+          // if (recvOffset + recvCount > totalNumRows * totalNumCols)
+          //   recvCount = totalNumRows * totalNumCols - recvOffset;
+
+          MPICHECK(MPI_Sendrecv(send + sendOffset,
+                                sendCount,
+                                dataTypes::mpi_type_id(send),
+                                sendTo,
+                                0,
+                                recv + recvOffset,
+                                recvCount,
+                                dataTypes::mpi_type_id(recv),
+                                recvFrom,
+                                0,
+                                d_mpiComm,
+                                MPI_STATUS_IGNORE));
+        }
+#  endif
+      return 0;
+    }
+
+  // initialize alltoall templates
+  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, unsigned long int sendCount, double * recv, unsigned long int recvCount, deviceStream_t stream);
+
+  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, unsigned long int sendCount, float * recv, unsigned long int recvCount, deviceStream_t stream);
+
+
     int
     DeviceCCLWrapper::deviceDirectAllReduceWrapper(const double *  send,
                                                    double *        recv,

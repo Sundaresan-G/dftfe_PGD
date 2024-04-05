@@ -240,10 +240,10 @@ namespace dftfe
                     dftfe::utils::deviceKernelsGeneric::
                       stridedCopyToBlockConstantStride(
                         currentBlockSize,
-                        totalNumWaveFunctions,
+                        totalNumWaveFunctions/numberBandGroups,
                         numLocalDofs,
-                        jvec,
-                        X->data() + numLocalDofs * totalNumWaveFunctions *
+                        jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                        X->data() + numLocalDofs * totalNumWaveFunctions/numberBandGroups *
                                       (numSpinComponents * kPoint + spinIndex),
                         flattenedArrayBlock->data());
 #endif
