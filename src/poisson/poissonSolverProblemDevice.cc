@@ -181,7 +181,7 @@ namespace dftfe
   void
   poissonSolverProblemDevice<FEOrder, FEOrderElectro>::distributeX()
   {
-    d_inhomogenousConstraintsTotalPotentialInfo.distribute(d_xDevice, 1);
+    d_inhomogenousConstraintsTotalPotentialInfo.distribute(d_xDevice);
 
     if (d_isMeanValueConstraintComputed)
       meanValueConstraintDistribute(d_xDevice);
