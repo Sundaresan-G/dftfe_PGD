@@ -2249,13 +2249,22 @@ namespace dftfe
           true, // call MPI REDUCE while computing dot products
           d_dftParamsPtr->mixingParameter,
           d_dftParamsPtr->adaptAndersonMixingParameter);
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> gradPhiWeights;
+        gradPhiWeights.resize(d_basisOperationsPtrElectroHost->JxWBasisData().size()*3);
+        for(unsigned int i=0;i<gradPhiWeights.size();++i)
+          gradPhiWeights[i]=d_basisOperationsPtrElectroHost->JxWBasisData()[i/3];
+        d_mixingScheme.addMixingVariable(
+          mixingVariable::gradPhi,
+          gradPhiWeights,
+          true, // call MPI REDUCE while computing dot products
+          d_dftParamsPtr->mixingParameter,
+          d_dftParamsPtr->adaptAndersonMixingParameter);
         if (d_dftParamsPtr->spinPolarized == 1)
           d_mixingScheme.addMixingVariable(
             mixingVariable::magZ,
             d_basisOperationsPtrElectroHost->JxWBasisData(),
             true, // call MPI REDUCE while computing dot products
-            d_dftParamsPtr->mixingParameter *
-              d_dftParamsPtr->spinMixingEnhancementFactor,
+            d_dftParamsPtr->mixingParameter*d_dftParamsPtr->spinMixingEnhancementFactor,
             d_dftParamsPtr->adaptAndersonMixingParameter);
         if (d_excManagerPtr->getDensityBasedFamilyType() ==
             densityFamilyType::GGA)
@@ -2275,8 +2284,7 @@ namespace dftfe
                 mixingVariable::gradMagZ,
                 gradRhoJxW,
                 false, // call MPI REDUCE while computing dot products
-                d_dftParamsPtr->mixingParameter *
-                  d_dftParamsPtr->spinMixingEnhancementFactor,
+                d_dftParamsPtr->mixingParameter*d_dftParamsPtr->spinMixingEnhancementFactor,
                 d_dftParamsPtr->adaptAndersonMixingParameter);
           }
       }
@@ -2446,6 +2454,26 @@ namespace dftfe
                       d_densityResidualQuadValues[iComp].data(),
                       d_densityResidualQuadValues[iComp].size());
                   }
+                    if (scfIter == 1)
+                      d_gradPhiResQuadValues.resize(
+                        d_gradPhiInQuadValues.size());
+                    d_basisOperationsPtrElectroHost->reinit(
+                      0, 0, d_densityQuadratureIdElectro, false);
+                    computeResidualQuadData(
+                      d_gradPhiOutQuadValues,
+                      d_gradPhiInQuadValues,
+                      d_gradPhiResQuadValues,
+                      d_basisOperationsPtrElectroHost->JxWBasisData(),
+                      false);
+                    d_mixingScheme.addVariableToInHist(
+                      mixingVariable::gradPhi,
+                      d_gradPhiInQuadValues.data(),
+                      d_gradPhiInQuadValues.size());
+                    d_mixingScheme.addVariableToResidualHist(
+                      mixingVariable::gradPhi,
+                      d_gradPhiResQuadValues.data(),
+                      d_gradPhiResQuadValues.size());
+
                 if (d_excManagerPtr->getDensityBasedFamilyType() ==
                     densityFamilyType::GGA)
                   {
@@ -2485,9 +2513,8 @@ namespace dftfe
                 // Compute the mixing coefficients
                 d_mixingScheme.computeAndersonMixingCoeff(
                   d_dftParamsPtr->spinPolarized == 1 ?
-                    std::vector<mixingVariable>{mixingVariable::rho,
-                                                mixingVariable::magZ} :
-                    std::vector<mixingVariable>{mixingVariable::rho});
+                    std::vector<mixingVariable>{mixingVariable::gradPhi,mixingVariable::rho,mixingVariable::magZ} :
+                    std::vector<mixingVariable>{mixingVariable::gradPhi});
 
                 // update the mixing variables
                 for (unsigned int iComp = 0; iComp < norms.size(); ++iComp)
@@ -2671,7 +2698,7 @@ namespace dftfe
           d_densityQuadratureIdElectro,
           d_phiTotRhoIn,
           d_phiInQuadValues,
-          dummy);
+          d_gradPhiInQuadValues,true);
 
         //
         // impose integral phi equals 0
@@ -3345,7 +3372,7 @@ namespace dftfe
               d_densityQuadratureIdElectro,
               d_phiTotRhoOut,
               d_phiOutQuadValues,
-              dummy);
+              d_gradPhiOutQuadValues,true);
             computing_timer.leave_subsection("phiTot solve");
           }
         if (d_dftParamsPtr->useEnergyResidualTolerance)
