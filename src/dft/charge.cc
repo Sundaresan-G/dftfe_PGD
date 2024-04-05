@@ -606,14 +606,19 @@ namespace dftfe
       {
         moments[iMomentComponent] += d_smearedChargeMoments[iMomentComponent];
       }
-    pcout << "Monopole Moment        : " << moments[0] << std::endl;
-    pcout << "Dipole Moment          : " << moments[1] << " " << moments[2]
-          << " " << moments[3] << std::endl;
-    pcout << "Quadrupole Moment      : " << std::endl
-          << moments[4] << " " << moments[5] << " " << moments[6] << std::endl
-          << moments[7] << " " << moments[8] << " " << moments[9] << std::endl
-          << moments[10] << " " << moments[11] << " " << moments[12]
-          << std::endl;
+    if (d_dftParamsPtr->verbosity >= 2)
+      {
+        pcout << "Monopole Moment        : " << moments[0] << std::endl;
+        pcout << "Dipole Moment          : " << moments[1] << " " << moments[2]
+              << " " << moments[3] << std::endl;
+        pcout << "Quadrupole Moment      : " << std::endl
+              << moments[4] << " " << moments[5] << " " << moments[6]
+              << std::endl
+              << moments[7] << " " << moments[8] << " " << moments[9]
+              << std::endl
+              << moments[10] << " " << moments[11] << " " << moments[12]
+              << std::endl;
+      }
     d_monopole = moments[0];
     d_dipole.clear();
     d_dipole.resize(3);
