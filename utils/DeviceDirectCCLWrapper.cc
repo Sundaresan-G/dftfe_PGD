@@ -127,31 +127,102 @@ namespace dftfe
     template <typename NumberType>
     int
     DeviceCCLWrapper::deviceDirectAllToAllWrapper(const NumberType *        send,
-                                                  unsigned long int         sendCount,
+                                                  size_t         sendCount,
                                                   NumberType *              recv,
-                                                  unsigned long int         recvCount,
+                                                  size_t         recvCount,
                                                   deviceStream_t stream /*= 0*/)
     {
       unsigned int sendTo = myRank;
       unsigned int recvFrom = myRank;
+
+      size_t sendOffset = (size_t)sendTo * sendCount;
+      size_t recvOffset = (size_t)recvFrom * recvCount;
+
+      // use D2D copy for the first one
+      dftfe::utils::deviceMemcpyAsyncD2D(
+        recv + recvOffset,
+        send + sendOffset,
+        sendCount * sizeof(NumberType),
+        stream);
+
+      // Printing line and file to show no error
+      // dftfe::utils::deviceSynchronize();
+      // MPI_Barrier(MPI_COMM_WORLD);
+      // fflush(stdout);
+      // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+      //   {
+      //     std::cout << "No error in file " << __FILE__ << " at line " << __LINE__
+      //           << std::endl;
+      //   }
+      // fflush(stdout);
+
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      // Printing line and file to show no error
+      // dftfe::utils::deviceSynchronize();
+      // MPI_Barrier(MPI_COMM_WORLD);
+      // fflush(stdout);
+      // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+      //   {
+      //     std::cout << "No error in file " << __FILE__ << " at line " << __LINE__
+      //           << std::endl;
+      //     // print parameter values
+      //     std::cout << "sendCount: " << sendCount << std::endl;
+      //     std::cout << "recvCount: " << recvCount << std::endl;
+      //     std::cout << "sendTo: " << sendTo << std::endl;
+      //     std::cout << "recvFrom: " << recvFrom << std::endl;
+
+      //     // print NumberType
+      //     if (std::is_same<NumberType, float>::value)
+      //       std::cout << "NumberType: float" << std::endl;
+      //     else if (std::is_same<NumberType, double>::value)
+      //       std::cout << "NumberType: double" << std::endl;
+      //   }
+      // fflush(stdout);
+
       // select ncclDouble or ncclFloat based on NumberType
       if (ncclCommInit)
         {
+          // Printing line and file to show no error
+          // dftfe::utils::deviceSynchronize();
+          // MPI_Barrier(MPI_COMM_WORLD);
+          // fflush(stdout);
+          // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+          //   {
+          //     std::cout << "No error in file " << __FILE__ << " at line " << __LINE__
+          //           << std::endl;
+          //   }
+          // fflush(stdout);
+
           ncclDataType_t ncclType = ncclDouble;
           if (std::is_same<NumberType, float>::value)
             ncclType = ncclFloat;
           
           NCCLCHECK(ncclGroupStart());
-          for (unsigned int i = 0; i < totalRanks; i++)
+          for (unsigned int i = 1; i < totalRanks; i++)
             {
+              // Printing line and file to show no error
+              // dftfe::utils::deviceSynchronize();
+              // MPI_Barrier(MPI_COMM_WORLD);
+              // fflush(stdout);
+              // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+              //   {
+              //     std::cout << "No error in file " << __FILE__ << " at line " << __LINE__
+              //           << std::endl;
+              //     // print parameter values
+              //     std::cout << "sendCount: " << sendCount << std::endl;
+              //     std::cout << "recvCount: " << recvCount << std::endl;
+              //     std::cout << "sendTo: " << sendTo << std::endl;
+              //     std::cout << "recvFrom: " << recvFrom << std::endl;
+              //   }
+              // fflush(stdout);
+
               sendTo += i;
               sendTo %= totalRanks;
               recvFrom += (totalRanks - i);
               recvFrom %= totalRanks;
 
-              unsigned long int sendOffset = sendTo * sendCount;
-              unsigned long int recvOffset = recvFrom * recvCount;
+              sendOffset = (size_t)sendTo * sendCount;
+              recvOffset = (size_t)recvFrom * recvCount;
 
               // if (sendOffset + sendCount > totalNumRows * totalNumCols){
               //   sendCount = totalNumRows * totalNumCols - sendOffset;
@@ -178,44 +249,59 @@ namespace dftfe
             }
           NCCLCHECK(ncclGroupEnd());
         }
-#  elif DFTFE_WITH_DEVICE_AWARE_MPI
-      dftfe::utils::deviceStreamSynchronize(stream);
-      for (unsigned int i = 0; i < totalRanks; i++)
+#endif
+#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+      if (!ncclCommInit)
         {
-          sendTo += i;
-          sendTo %= totalRanks;
-          recvFrom += (totalRanks - i);
-          recvFrom %= totalRanks;
+          // Printing line and file to show no error
+          // dftfe::utils::deviceSynchronize();
+          // MPI_Barrier(MPI_COMM_WORLD);
+          // fflush(stdout);
+          // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+          //   {
+          //     std::cout << "No error in file " << __FILE__ << " at line " << __LINE__
+          //           << std::endl;
+          //   }
+          // fflush(stdout);
 
-          unsigned long int sendOffset = sendTo * sendCount;
-          unsigned long int recvOffset = recvFrom * recvCount;
+          dftfe::utils::deviceStreamSynchronize(stream);
+          for (unsigned int i = 1; i < totalRanks; i++)
+            {
+              sendTo += i;
+              sendTo %= totalRanks;
+              recvFrom += (totalRanks - i);
+              recvFrom %= totalRanks;
 
-          // if (sendOffset + sendCount > totalNumRows * totalNumCols)
-          //   sendCount = totalNumRows * totalNumCols - sendOffset;
-          // if (recvOffset + recvCount > totalNumRows * totalNumCols)
-          //   recvCount = totalNumRows * totalNumCols - recvOffset;
+              sendOffset = (size_t)sendTo * sendCount;
+              recvOffset = (size_t)recvFrom * recvCount;
 
-          MPICHECK(MPI_Sendrecv(send + sendOffset,
-                                sendCount,
-                                dataTypes::mpi_type_id(send),
-                                sendTo,
-                                0,
-                                recv + recvOffset,
-                                recvCount,
-                                dataTypes::mpi_type_id(recv),
-                                recvFrom,
-                                0,
-                                d_mpiComm,
-                                MPI_STATUS_IGNORE));
+              // if (sendOffset + sendCount > totalNumRows * totalNumCols)
+              //   sendCount = totalNumRows * totalNumCols - sendOffset;
+              // if (recvOffset + recvCount > totalNumRows * totalNumCols)
+              //   recvCount = totalNumRows * totalNumCols - recvOffset;
+
+              MPICHECK(MPI_Sendrecv(send + sendOffset,
+                                    sendCount,
+                                    dataTypes::mpi_type_id(send),
+                                    sendTo,
+                                    0,
+                                    recv + recvOffset,
+                                    recvCount,
+                                    dataTypes::mpi_type_id(recv),
+                                    recvFrom,
+                                    0,
+                                    d_mpiComm,
+                                    MPI_STATUS_IGNORE));
+            }
         }
 #  endif
       return 0;
     }
 
   // initialize alltoall templates
-  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, unsigned long int sendCount, double * recv, unsigned long int recvCount, deviceStream_t stream);
+  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, size_t sendCount, double * recv, size_t recvCount, deviceStream_t stream);
 
-  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, unsigned long int sendCount, float * recv, unsigned long int recvCount, deviceStream_t stream);
+  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, size_t sendCount, float * recv, size_t recvCount, deviceStream_t stream);
 
 
     int
