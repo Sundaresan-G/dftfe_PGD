@@ -203,7 +203,7 @@ namespace dftfe
       d_devicecclMpiCommDomainPtr->init(mpi_comm_domain,
                                         d_dftParamsPtr->useDCCL);
       d_devicecclMpiCommPoolPtr->init(_intrapoolcomm,
-                                        d_dftParamsPtr->useDCCL);
+                                        d_dftParamsPtr->useDCCL, 1);
     }
 #endif
     d_pspCutOff =
