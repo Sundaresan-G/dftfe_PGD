@@ -211,7 +211,7 @@ namespace dftfe
 
     if (isFirstScf && isFirstFilteringCall && numberBandGroups > 1)
     {
-      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL);
+      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL, 1);
       XDevice.resize(reShapedNumRows * reShapedNumCols, 0);
       HXDevice.resize(reShapedNumRows * reShapedNumCols, 0);
 
