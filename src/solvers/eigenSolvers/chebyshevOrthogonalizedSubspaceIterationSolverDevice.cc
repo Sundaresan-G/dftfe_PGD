@@ -599,6 +599,13 @@ namespace dftfe
 
     std::fill(eigenValues.begin(), eigenValues.end(), 0.0);
 
+    if (d_dftParams.deviceFineGrainedTimings)
+      {
+        dftfe::utils::deviceSynchronize();
+        computingTimerStandard.enter_subsection(
+          "Total RR GEP step time");
+      }
+
     if (eigenValues.size() != totalNumberWaveFunctions)
       {
         linearAlgebraOperationsDevice::rayleighRitzGEPSpectrumSplitDirect(
@@ -700,6 +707,13 @@ namespace dftfe
               useMixedPrecOverall);
 
           }
+      }
+
+    if (d_dftParams.deviceFineGrainedTimings)
+      {
+        dftfe::utils::deviceSynchronize();
+        computingTimerStandard.leave_subsection(
+          "Total RR GEP step time");
       }
 
 
