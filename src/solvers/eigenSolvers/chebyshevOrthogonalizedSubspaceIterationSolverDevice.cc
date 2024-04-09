@@ -214,9 +214,10 @@ namespace dftfe
       devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL, 1);
       XDevice.resize(reShapedNumRows * reShapedNumCols, 0);
       HXDevice.resize(reShapedNumRows * reShapedNumCols, 0);
+      extraBufferDevice.resize(reShapedNumRows * reShapedNumCols, 0);
 
-      XHost.resize(reShapedNumRows * reShapedNumCols, 0);
-      HXHost.resize(reShapedNumRows * reShapedNumCols, 0);
+      // XHost.resize(reShapedNumRows * reShapedNumCols, 0);
+      // HXHost.resize(reShapedNumRows * reShapedNumCols, 0);
     }
 
     distributedDeviceVec<dataTypes::number> *XBlock =
@@ -671,8 +672,7 @@ namespace dftfe
                 eigenVectorsFlattenedDevice,
                 XDevice.begin(),
                 HXDevice.begin(),
-                XHost,
-                HXHost,
+                extraBufferDevice.begin(),
                 (*XBlock),
                 (*HXBlock),
                 localVectorSize,

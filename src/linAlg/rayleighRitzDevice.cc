@@ -832,15 +832,12 @@ namespace dftfe
 
     void
     rayleighRitzGEP(
-      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE>        &operatorMatrix,
-      elpaScalaManager &                                          elpaScala,
-      dataTypes::number *                                         X,
-      dataTypes::number *                                         XDevice,
-      dataTypes::number *                                         HXDevice,
-      dftfe::utils::MemoryStorage<dataTypes::number,
-                          dftfe::utils::MemorySpace::HOST_PINNED> &XHost,
-      dftfe::utils::MemoryStorage<dataTypes::number,
-                          dftfe::utils::MemorySpace::HOST_PINNED> &HXHost,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE>         &operatorMatrix,
+      elpaScalaManager &                                           elpaScala,
+      dataTypes::number *                                          X,
+      dataTypes::number *                                          XDevice,
+      dataTypes::number *                                          HXDevice,
+      dataTypes::number *                                          extraBufferDevice,
       distributedDeviceVec<dataTypes::number> &                    Xb,
       distributedDeviceVec<dataTypes::number> &                    HXb,
       const unsigned int                                           M,
@@ -947,7 +944,7 @@ namespace dftfe
           computing_timer.enter_subsection("HX Convert Layout, RR GEP step");
         }
 
-      // kernel function to convert XDevice to row major form and save it in HXDevice using stream streamCompute
+      // kernel function to convert XDevice to row major form and save it in HXDevice
       dftfe::utils::deviceKernelsGeneric::
         convertLayout(HXDevice, 
                       XDevice, 
@@ -964,11 +961,14 @@ namespace dftfe
           computing_timer.leave_subsection("HX Convert Layout, RR GEP step");
         }
 
-      // Copy HX to HXHost
-      dftfe::utils::deviceMemcpyD2H(
-        HXHost.begin(),
-        HXDevice,
-        HXHost.size() * sizeof(dataTypes::number));
+      // Copy HX to extraBufferDevice as the device buffer needs to be used again
+      // dftfe::utils::deviceMemcpyD2D(
+      //   extraBufferDevice,
+      //   HXDevice,
+      //   (((M + numberBandGroups - 1)/numberBandGroups) * N) * sizeof(dataTypes::number));
+      
+      // Swap HXDevice and extraBufferDevice
+      std::swap(HXDevice, extraBufferDevice);
 
       // XDevice set additional points value to 0
       dftfe::utils::deviceSetValue((XDevice + (N/numberBandGroups) * M), 0.0, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
@@ -1031,11 +1031,14 @@ namespace dftfe
 
 
       // Copy resultant HXDevice to XHost as the device buffer needs to be used again
-      dftfe::utils::deviceMemcpyH2D(
-        HXDevice,
-        HXHost.begin(),
-        HXHost.size() * sizeof(dataTypes::number)
-        );
+      // dftfe::utils::deviceMemcpyD2D(
+      //   HXDevice,
+      //   extraBufferDevice,
+      //   (((M + numberBandGroups - 1)/numberBandGroups) * N) * sizeof(dataTypes::number)
+      //   );
+
+      // Swap HXDevice and extraBufferDevice
+      std::swap(HXDevice, extraBufferDevice);
 
       // Now finally HXDevice and XDevice have the resultant in row decomposed form.
 
