@@ -155,11 +155,11 @@ namespace dftfe
     // dftfe::utils::deviceStream_t ncclInterBandCommStream;
     utils::DeviceCCLWrapper  devicecclMpiInterBand;
 
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::HOST_PINNED> XHost, HXHost;
+    // dftfe::utils::MemoryStorage<dataTypes::number,
+    //                             dftfe::utils::MemorySpace::HOST_PINNED> XHost, HXHost;
                                 
     dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE> XDevice, HXDevice;
+                                dftfe::utils::MemorySpace::DEVICE> XDevice, HXDevice, extraBufferDevice;
     unsigned int reShapedNumRows, reShapedNumCols;
   };
 } // namespace dftfe
