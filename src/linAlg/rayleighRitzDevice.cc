@@ -387,7 +387,7 @@ namespace dftfe
                                           dftParams.reproducible_output ||
                                               dftParams.verbosity < 2 ?
                                             dealii::TimerOutput::never :
-                                            dealii::TimerOutput::summary,
+                                            dealii::TimerOutput::every_call,
                                           dealii::TimerOutput::wall_times);
 
       const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
@@ -869,11 +869,11 @@ namespace dftfe
                                             dealii::TimerOutput::every_call,
                                           dealii::TimerOutput::wall_times);
 
-      if (dftParams.deviceFineGrainedTimings)
-        {
-          dftfe::utils::deviceSynchronize();
-          computing_timer.enter_subsection("Total RR GEP step time");
-        }
+      // if (dftParams.deviceFineGrainedTimings)
+      //   {
+      //     dftfe::utils::deviceSynchronize();
+      //     computing_timer.enter_subsection("Total RR GEP step time");
+      //   }
 
       const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
@@ -1460,11 +1460,11 @@ namespace dftfe
       // MPI_Barrier(intrapoolcomm);
       // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
 
-      if (dftParams.deviceFineGrainedTimings)
-        {
-          dftfe::utils::deviceSynchronize();
-          computing_timer.leave_subsection("Total RR GEP step time");
-        }
+      // if (dftParams.deviceFineGrainedTimings)
+      //   {
+      //     dftfe::utils::deviceSynchronize();
+      //     computing_timer.leave_subsection("Total RR GEP step time");
+      //   }
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
