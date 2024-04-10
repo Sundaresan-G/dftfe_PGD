@@ -362,6 +362,9 @@ namespace dftfe
               d_eigenVectorsFlattenedHost.end(),
               0.0);
 
+    const unsigned int numberBandGroups =
+          dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+
     const unsigned int numberGlobalAtoms = atomLocations.size();
 
     if (d_dftParamsPtr->verbosity >= 1)
@@ -418,7 +421,7 @@ namespace dftfe
 #pragma omp parallel num_threads(d_nOMPThreads) \
   firstprivate(waveFunctionsVectorTruncated)
     {
-      std::mt19937 randomIntGenerator(this_mpi_process * d_nOMPThreads +
+      std::mt19937 randomIntGenerator(dealii::Utilities::MPI::this_mpi_process(intrapoolcomm) * d_nOMPThreads +
                                       omp_get_thread_num());
 #pragma omp for
       for (unsigned int dof = 0; dof < numberDofs; dof++)
@@ -518,8 +521,8 @@ namespace dftfe
                               if (it->m > 0)
                                 {
                                   d_eigenVectorsFlattenedHost
-                                    [kPoint * d_numEigenValues * numberDofs +
-                                     dof * d_numEigenValues + waveId] +=
+                                    [kPoint * (d_numEigenValues/numberBandGroups) * numberDofs +
+                                     dof * (d_numEigenValues/numberBandGroups) + waveId] +=
                                     dataTypes::number(
                                       R * std::sqrt(2) *
                                       boost::math::spherical_harmonic_r(
@@ -528,8 +531,8 @@ namespace dftfe
                               else if (it->m == 0)
                                 {
                                   d_eigenVectorsFlattenedHost
-                                    [kPoint * d_numEigenValues * numberDofs +
-                                     dof * d_numEigenValues + waveId] +=
+                                    [kPoint * (d_numEigenValues/numberBandGroups) * numberDofs +
+                                     dof * (d_numEigenValues/numberBandGroups) + waveId] +=
                                     dataTypes::number(
                                       R * boost::math::spherical_harmonic_r(
                                             it->l, it->m, theta, phi));
@@ -537,8 +540,8 @@ namespace dftfe
                               else
                                 {
                                   d_eigenVectorsFlattenedHost
-                                    [kPoint * d_numEigenValues * numberDofs +
-                                     dof * d_numEigenValues + waveId] +=
+                                    [kPoint * (d_numEigenValues/numberBandGroups) * numberDofs +
+                                     dof * (d_numEigenValues/numberBandGroups) + waveId] +=
                                     dataTypes::number(
                                       R * std::sqrt(2) *
                                       boost::math::spherical_harmonic_i(
@@ -563,9 +566,9 @@ namespace dftfe
 
                       dataTypes::number *temp =
                         d_eigenVectorsFlattenedHost.data() +
-                        kPoint * d_numEigenValues * numberDofs;
+                        kPoint * (d_numEigenValues/numberBandGroups) * numberDofs;
                       for (unsigned int iWave = waveFunctionsVector.size();
-                           iWave < d_numEigenValues;
+                           iWave < (d_numEigenValues/numberBandGroups);
                            ++iWave)
                         {
                           double z =
@@ -578,7 +581,7 @@ namespace dftfe
                           if (randomIntGenerator() % 2 == 0)
                             value = -1.0 * value;
 
-                          temp[dof * d_numEigenValues + iWave] =
+                          temp[dof * (d_numEigenValues/numberBandGroups) + iWave] =
                             dataTypes::number(value);
                         }
                     }
@@ -595,14 +598,14 @@ namespace dftfe
              ++kPoint)
           {
             dataTypes::number *temp1 = d_eigenVectorsFlattenedHost.data() +
-                                       kPoint * d_numEigenValues * numberDofs;
+                                       kPoint * (d_numEigenValues/numberBandGroups) * numberDofs;
 
             dataTypes::number *temp2 = d_eigenVectorsFlattenedHost.data();
 
             for (unsigned int idof = 0; idof < numberDofs; idof++)
-              for (unsigned int iwave = 0; iwave < d_numEigenValues; iwave++)
-                temp1[idof * d_numEigenValues + iwave] =
-                  temp2[idof * d_numEigenValues + iwave];
+              for (unsigned int iwave = 0; iwave < (d_numEigenValues/numberBandGroups); iwave++)
+                temp1[idof * (d_numEigenValues/numberBandGroups) + iwave] =
+                  temp2[idof * (d_numEigenValues/numberBandGroups) + iwave];
           }
       }
 
