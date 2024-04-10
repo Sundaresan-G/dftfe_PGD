@@ -93,19 +93,22 @@ namespace dftfe
     // initialize density and PSI/ interpolate from previous ground state
     // solution
     //
+    const unsigned int numberBandGroups =
+          dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+
     for (unsigned int kPoint = 0;
          kPoint < (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
          ++kPoint)
       {
         d_eigenVectorsFlattenedHost.resize(
-          (d_numEigenValues *
+          ((d_numEigenValues/numberBandGroups) *
            matrix_free_data.get_vector_partitioner()->local_size()) *
             (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
           dataTypes::number(0.0));
         if (d_numEigenValuesRR != d_numEigenValues)
           {
             d_eigenVectorsRotFracDensityFlattenedHost.resize(
-              d_numEigenValuesRR *
+              (d_numEigenValuesRR/numberBandGroups) *
                 matrix_free_data.get_vector_partitioner()->local_size() *
                 (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
               dataTypes::number(0.0));
@@ -137,30 +140,30 @@ namespace dftfe
 
 #ifdef DFTFE_WITH_DEVICE
 
-    const unsigned int numberBandGroups =
-          dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+    // const unsigned int numberBandGroups =
+    //       dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
     if (d_dftParamsPtr->useDevice)
       {
         d_eigenVectorsFlattenedDevice.resize(
-          d_eigenVectorsFlattenedHost.size()/numberBandGroups);
+          d_eigenVectorsFlattenedHost.size());
 
         if (d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND")
           d_eigenVectorsDensityMatrixPrimeFlattenedDevice.resize(
-            d_eigenVectorsFlattenedHost.size()/numberBandGroups);
+            d_eigenVectorsFlattenedHost.size());
 
         if (d_numEigenValuesRR != d_numEigenValues)
           d_eigenVectorsRotFracFlattenedDevice.resize(
-            d_eigenVectorsRotFracDensityFlattenedHost.size()/numberBandGroups);
+            d_eigenVectorsRotFracDensityFlattenedHost.size());
         else
           d_eigenVectorsRotFracFlattenedDevice.resize(1);
 
-        // d_eigenVectorsFlattenedDevice.copyFrom(d_eigenVectorsFlattenedHost);
+        d_eigenVectorsFlattenedDevice.copyFrom(d_eigenVectorsFlattenedHost);
 
-        d_eigenVectorsFlattenedDevice.copyFrom(
-          d_eigenVectorsFlattenedHost, 
-          d_eigenVectorsFlattenedHost.size()/numberBandGroups,
-          dealii::Utilities::MPI::this_mpi_process(interBandGroupComm) * d_eigenVectorsFlattenedHost.size()/numberBandGroups,
-          0);
+        // d_eigenVectorsFlattenedDevice.copyFrom(
+        //   d_eigenVectorsFlattenedHost, 
+        //   d_eigenVectorsFlattenedHost.size()/numberBandGroups,
+        //   dealii::Utilities::MPI::this_mpi_process(interBandGroupComm) * d_eigenVectorsFlattenedHost.size()/numberBandGroups,
+        //   0);
       }
 #endif
 
