@@ -237,7 +237,7 @@ namespace dftfe
           if (std::is_same<NumberType, float>::value)
             ncclType = ncclFloat;
           
-          NCCLCHECK(ncclGroupStart());
+          // NCCLCHECK(ncclGroupStart());
           for (unsigned int i = 1; i < totalRanks; i++)
             {
               // Printing line and file to show no error
@@ -296,7 +296,7 @@ namespace dftfe
               // if (recvOffset + recvCount > totalNumRows * totalNumCols)
               //   recvCount = totalNumRows * totalNumCols - recvOffset;
 
-              // NCCLCHECK(ncclGroupStart());
+              NCCLCHECK(ncclGroupStart());
               
                 NCCLCHECK(ncclSend((const void *)(send + sendOffset),
                                   sendCount,
@@ -311,9 +311,9 @@ namespace dftfe
                                     comm,
                                     stream));
 
-              // NCCLCHECK(ncclGroupEnd());
+              NCCLCHECK(ncclGroupEnd());
             }
-          NCCLCHECK(ncclGroupEnd());
+          // NCCLCHECK(ncclGroupEnd());
         }
 #endif
 #  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
