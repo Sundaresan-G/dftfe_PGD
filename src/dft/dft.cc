@@ -2863,7 +2863,7 @@ namespace dftfe
                       adaptiveChebysevFilterPassesTol > firstScfChebyTol) ?
                        firstScfChebyTol :
                        adaptiveChebysevFilterPassesTol);
-                while (maxRes > filterPassTol && count < 100)
+                while (maxRes > filterPassTol && count < d_dftParamsPtr->maxChebyPasses)
                   {
                     for (unsigned int s = 0; s < 2; ++s)
                       {
@@ -3124,7 +3124,7 @@ namespace dftfe
                       adaptiveChebysevFilterPassesTol > firstScfChebyTol) ?
                        firstScfChebyTol :
                        adaptiveChebysevFilterPassesTol);
-                while (maxRes > filterPassTol && count < 100)
+                while (maxRes > filterPassTol && count < d_dftParamsPtr->maxChebyPasses)
                   {
                     for (unsigned int kPoint = 0;
                          kPoint < d_kPointWeights.size();
