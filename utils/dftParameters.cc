@@ -98,6 +98,12 @@ namespace dftfe
           R"([Adavanced] Use NCCL/RCCL for GPUDIRECT communications. Default: false.)");
 
         prm.declare_entry(
+          "USE ALLTOAll DCCL",
+          "true",
+          dealii::Patterns::Bool(),
+          R"([Adavanced] Use NCCL/RCCL for GPUDIRECT AlltoAll communications. Default: true if DCCL is true else false.)");
+
+        prm.declare_entry(
           "USE ELPA GPU KERNEL",
           "false",
           dealii::Patterns::Bool(),
@@ -1365,6 +1371,7 @@ namespace dftfe
       useDeviceDirectAllReduce =
         useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
       useDCCL             = useDevice && prm.get_bool("USE DCCL");
+      useAlltoAllDCCL     = useDevice && useDCCL && prm.get_bool("USE ALLTOAll DCCL");
       useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
     }
     prm.leave_subsection();

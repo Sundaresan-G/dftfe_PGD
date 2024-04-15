@@ -162,6 +162,7 @@ namespace dftfe
     std::string  atomicMassesFile;
     bool         useDeviceDirectAllReduce;
     bool         useDCCL;
+    bool         useAlltoAllDCCL;
     double       pspCutoffImageCharges;
     bool         reuseLanczosUpperBoundFromFirstCall;
     bool         allowMultipleFilteringPassesAfterFirstScf;

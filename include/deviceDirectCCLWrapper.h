@@ -87,7 +87,8 @@ namespace dftfe
                                   unsigned long int            sendCount,
                                   NumberType *       recv,
                                   unsigned long int            recvCount,
-                                  deviceStream_t stream = 0);
+                                  deviceStream_t stream = 0,
+                                  bool            useDCCL = true);
 
 
       int
