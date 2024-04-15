@@ -169,7 +169,8 @@ namespace dftfe
                                                   size_t         sendCount,
                                                   NumberType *              recv,
                                                   size_t         recvCount,
-                                                  deviceStream_t stream /*= 0*/)
+                                                  deviceStream_t stream /*= 0*/,
+                                                  bool useDCCL /*= true*/)
     {
       unsigned int sendTo = myRank;
       unsigned int recvFrom = myRank;
@@ -226,7 +227,7 @@ namespace dftfe
       // fflush(stdout);
 
       // select ncclDouble or ncclFloat based on NumberType
-      if (ncclCommInit)
+      if (ncclCommInit && useDCCL)
         {
           ncclComm_t comm = *ncclCommPtr;
           if (dcclCommSelector != 0){
@@ -317,7 +318,7 @@ namespace dftfe
         }
 #endif
 #  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
-      if (!ncclCommInit)
+      else
         {
           // Printing line and file to show no error
           // dftfe::utils::deviceSynchronize();
@@ -365,9 +366,9 @@ namespace dftfe
     }
 
   // initialize alltoall templates
-  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, size_t sendCount, double * recv, size_t recvCount, deviceStream_t stream);
+  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, size_t sendCount, double * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
 
-  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, size_t sendCount, float * recv, size_t recvCount, deviceStream_t stream);
+  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, size_t sendCount, float * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
 
 
     int

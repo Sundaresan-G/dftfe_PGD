@@ -928,7 +928,9 @@ namespace dftfe
         HXDevice,
         ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
         XDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups)
+        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        0, //default stream
+        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
       // end time
@@ -996,7 +998,9 @@ namespace dftfe
         XDevice,
         ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
         HXDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups)
+        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        0, //default stream
+        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
       // end time
@@ -1438,7 +1442,9 @@ namespace dftfe
         HXDevice,
         ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
         XDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups)        
+        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        0, //default stream
+        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
       // endtime
