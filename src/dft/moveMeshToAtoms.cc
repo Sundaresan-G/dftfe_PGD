@@ -20,9 +20,12 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::calculateNearestAtomDistances()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    calculateNearestAtomDistances()
   {
     const unsigned int numberGlobalAtoms = atomLocations.size();
     const unsigned int numberImageAtoms  = d_imageIdsTrunc.size();
@@ -77,8 +80,10 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void dftClass<FEOrder, FEOrderElectro>::moveMeshToAtoms(
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void dftClass<FEOrder, FEOrderElectro, memorySpace>::moveMeshToAtoms(
     dealii::Triangulation<3, 3> &triangulationMove,
     dealii::Triangulation<3, 3> &triangulationSerial,
     bool                         reuseClosestTriaVertices,
@@ -261,9 +266,11 @@ namespace dftfe
                        d_dftParamsPtr->gaussianConstantForce)));
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::calculateSmearedChargeWidths()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::calculateSmearedChargeWidths()
   {
     d_smearedChargeWidths.clear();
 

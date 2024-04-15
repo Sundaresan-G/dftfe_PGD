@@ -24,8 +24,10 @@
 namespace dftfe
 {
   // compute nonlinear core correction contribution to stress
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
     addENonlinearCoreCorrectionStressContribution(
       dealii::FEEvaluation<
         3,
@@ -190,8 +192,10 @@ namespace dftfe
   }
 
   // compute nonlinear core correction contribution to stress
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
     addENonlinearCoreCorrectionStressContributionSpinPolarized(
       dealii::FEEvaluation<
         3,

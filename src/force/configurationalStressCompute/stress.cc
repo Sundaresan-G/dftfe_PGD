@@ -21,32 +21,29 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeStress(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::computeStress(
     const dealii::MatrixFree<3, double> &matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice,
-#endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
-    const dispersionCorrection &                       dispersionCorr,
-    const unsigned int                                 eigenDofHandlerIndex,
+    const dispersionCorrection &         dispersionCorr,
+    const unsigned int                   eigenDofHandlerIndex,
     const unsigned int                   smearedChargeQuadratureId,
     const unsigned int                   lpspQuadratureIdElectro,
     const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
     const unsigned int                   phiTotDofHandlerIndexElectro,
     const distributedCPUVec<double> &    phiTotRhoOutElectro,
-    const std::map<dealii::CellId, std::vector<double>> &rhoOutValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoOutValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoOutValuesLpsp,
-    const std::map<dealii::CellId, std::vector<double>> &rhoOutValuesElectro,
-    const std::map<dealii::CellId, std::vector<double>>
-      &rhoOutValuesElectroLpsp,
-    const std::map<dealii::CellId, std::vector<double>>
-      &gradRhoOutValuesElectro,
-    const std::map<dealii::CellId, std::vector<double>>
-      &gradRhoOutValuesElectroLpsp,
+    const std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      &rhoOutValues,
+    const std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      &gradRhoOutValues,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &rhoTotalOutValuesLpsp,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &gradRhoTotalOutValuesLpsp,
     const std::map<dealii::CellId, std::vector<double>> &pseudoVLocElectro,
     const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
       &                                                  pseudoVLocAtomsElectro,
@@ -85,10 +82,6 @@ namespace dftfe
     // configurational stress contribution from all terms except those from
     // nuclear self energy
     computeStressEEshelbyEPSPEnlEk(matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-                                   kohnShamDFTEigenOperatorDevice,
-#endif
-                                   kohnShamDFTEigenOperator,
                                    eigenDofHandlerIndex,
                                    smearedChargeQuadratureId,
                                    lpspQuadratureIdElectro,
@@ -97,11 +90,8 @@ namespace dftfe
                                    phiTotRhoOutElectro,
                                    rhoOutValues,
                                    gradRhoOutValues,
-                                   gradRhoOutValuesLpsp,
-                                   rhoOutValuesElectro,
-                                   rhoOutValuesElectroLpsp,
-                                   gradRhoOutValuesElectro,
-                                   gradRhoOutValuesElectroLpsp,
+                                   rhoTotalOutValuesLpsp,
+                                   gradRhoTotalOutValuesLpsp,
                                    pseudoVLocElectro,
                                    pseudoVLocAtomsElectro,
                                    rhoCoreValues,
@@ -154,9 +144,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::printStress()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::printStress()
   {
     if (!d_dftParams.reproducible_output)
       {

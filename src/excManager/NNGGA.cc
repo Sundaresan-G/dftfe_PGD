@@ -6,6 +6,8 @@
 #  include <algorithm>
 #  include <iterator>
 #  include <Exceptions.h>
+
+#  define GGA_CS 0.1616204596739955
 namespace dftfe
 {
   namespace
@@ -71,6 +73,42 @@ namespace dftfe
         }
     }
 
+    std::string
+    trim(const std::string &str, const std::string &whitespace = " \t")
+    {
+      std::size_t strBegin = str.find_first_not_of(whitespace);
+      if (strBegin == std::string::npos)
+        return ""; // no content
+      std::size_t strEnd   = str.find_last_not_of(whitespace);
+      std::size_t strRange = strEnd - strBegin + 1;
+      return str.substr(strBegin, strRange);
+    }
+
+    std::map<std::string, std::string>
+    getKeyValuePairs(const std::string filename, const std::string delimiter)
+    {
+      std::map<std::string, std::string> returnValue;
+      std::ifstream                      readFile;
+      std::string                        readLine;
+      readFile.open(filename.c_str());
+      utils::throwException<utils::InvalidArgument>(readFile.is_open(),
+                                                    "Unable to open file " +
+                                                      filename);
+      while (std::getline(readFile, readLine))
+        {
+          auto pos = readLine.find_last_of(delimiter);
+          if (pos != std::string::npos)
+            {
+              std::string key   = trim(readLine.substr(0, pos));
+              std::string value = trim(readLine.substr(pos + 1));
+              returnValue[key]  = value;
+            }
+        }
+
+      readFile.close();
+      return returnValue;
+    }
+
     void
     excSpinUnpolarized(
       const double *                       rho,
@@ -79,7 +117,8 @@ namespace dftfe
       double *                             exc,
       torch::jit::script::Module *         model,
       const excDensityPositivityCheckTypes densityPositivityCheckType,
-      const double                         rhoTol)
+      const double                         rhoTol,
+      const double                         sThreshold)
     {
       std::vector<double> rhoModified(numPoints, 0.0);
       if (densityPositivityCheckType ==
@@ -106,6 +145,16 @@ namespace dftfe
       std::vector<double> modGradRhoTotal(numPoints, 0.0);
       for (unsigned int i = 0; i < numPoints; ++i)
         modGradRhoTotal[i] = std::sqrt(sigma[i]);
+
+      for (unsigned int i = 0; i < numPoints; ++i)
+        {
+          const double rho4By3 = std::pow(rhoModified[i], 4.0 / 3.0);
+          const double s       = GGA_CS * modGradRhoTotal[i] / rho4By3;
+          if (s < sThreshold)
+            {
+              modGradRhoTotal[i] = sThreshold * rho4By3 / GGA_CS;
+            }
+        }
 
       std::vector<float> rhoFloat(2 * numPoints);
       interleave(&rhoModified[0],
@@ -136,7 +185,8 @@ namespace dftfe
       double *                             exc,
       torch::jit::script::Module *         model,
       const excDensityPositivityCheckTypes densityPositivityCheckType,
-      const double                         rhoTol)
+      const double                         rhoTol,
+      const double                         sThreshold)
     {
       std::vector<double> rhoModified(2 * numPoints, 0.0);
       if (densityPositivityCheckType ==
@@ -164,6 +214,18 @@ namespace dftfe
       for (unsigned int i = 0; i < numPoints; ++i)
         modGradRhoTotal[i] =
           std::sqrt(sigma[3 * i] + 2.0 * sigma[3 * i + 1] + sigma[3 * i + 2]);
+
+      for (unsigned int i = 0; i < numPoints; ++i)
+        {
+          const double rhoTotal = rhoModified[2 * i] + rhoModified[2 * i + 1];
+          const double rho4By3  = std::pow(rhoTotal, 4.0 / 3.0);
+          const double s        = GGA_CS * modGradRhoTotal[i] / rho4By3;
+          if (s < sThreshold)
+            {
+              modGradRhoTotal[i] = sThreshold * rho4By3 / GGA_CS;
+            }
+        }
+
 
       std::vector<float> rhoFloat(3 * numPoints);
       interleave(&rhoModified[0],
@@ -196,7 +258,8 @@ namespace dftfe
       double *                             dexc,
       torch::jit::script::Module *         model,
       const excDensityPositivityCheckTypes densityPositivityCheckType,
-      const double                         rhoTol)
+      const double                         rhoTol,
+      const double                         sThreshold)
     {
       std::vector<double> rhoModified(numPoints, 0.0);
       if (densityPositivityCheckType ==
@@ -223,6 +286,17 @@ namespace dftfe
       std::vector<double> modGradRhoTotal(numPoints, 0.0);
       for (unsigned int i = 0; i < numPoints; ++i)
         modGradRhoTotal[i] = std::sqrt(sigma[i]);
+
+      for (unsigned int i = 0; i < numPoints; ++i)
+        {
+          const double rho4By3 = std::pow(rhoModified[i], 4.0 / 3.0);
+          const double s       = GGA_CS * modGradRhoTotal[i] / rho4By3;
+          if (s < sThreshold)
+            {
+              modGradRhoTotal[i] = sThreshold * rho4By3 / GGA_CS;
+            }
+        }
+
 
       std::vector<float> rhoFloat(2 * numPoints);
       interleave(&rhoModified[0],
@@ -265,7 +339,8 @@ namespace dftfe
       double *                             dexc,
       torch::jit::script::Module *         model,
       const excDensityPositivityCheckTypes densityPositivityCheckType,
-      const double                         rhoTol)
+      const double                         rhoTol,
+      const double                         sThreshold)
     {
       std::vector<double> rhoModified(2 * numPoints, 0.0);
       if (densityPositivityCheckType ==
@@ -293,6 +368,17 @@ namespace dftfe
       for (unsigned int i = 0; i < numPoints; ++i)
         modGradRhoTotal[i] =
           std::sqrt(sigma[3 * i] + 2.0 * sigma[3 * i + 1] + sigma[3 * i + 2]);
+
+      for (unsigned int i = 0; i < numPoints; ++i)
+        {
+          const double rhoTotal = rhoModified[2 * i] + rhoModified[2 * i + 1];
+          const double rho4By3  = std::pow(rhoTotal, 4.0 / 3.0);
+          const double s        = GGA_CS * modGradRhoTotal[i] / rho4By3;
+          if (s < sThreshold)
+            {
+              modGradRhoTotal[i] = sThreshold * rho4By3 / GGA_CS;
+            }
+        }
 
       std::vector<float> rhoFloat(3 * numPoints);
       interleave(&rhoModified[0],
@@ -333,17 +419,40 @@ namespace dftfe
 
   } // namespace
 
-  NNGGA::NNGGA(std::string                          modelFileName,
+  NNGGA::NNGGA(std::string                          modelFilename,
                const bool                           isSpinPolarized /*=false*/,
-               const excDensityPositivityCheckTypes densityPositivityCheckType,
-               const double                         rhoTol)
-    : d_modelFileName(modelFileName)
+               const excDensityPositivityCheckTypes densityPositivityCheckType)
+    : d_modelFilename(modelFilename)
     , d_isSpinPolarized(isSpinPolarized)
     , d_densityPositivityCheckType(densityPositivityCheckType)
-    , d_rhoTol(rhoTol)
   {
+    std::map<std::string, std::string> modelKeyValues =
+      getKeyValuePairs(d_modelFilename, "=");
+
+    std::vector<std::string> keysToFind = {"PTC_FILE",
+                                           "RHO_TOL",
+                                           "S_THRESHOLD"};
+
+    // check if all required keys are found
+    for (unsigned int i = 0; i < keysToFind.size(); ++i)
+      {
+        bool found = false;
+        for (auto it = modelKeyValues.begin(); it != modelKeyValues.end(); ++it)
+          {
+            if (keysToFind[i] == it->first)
+              found = true;
+          }
+        utils::throwException(found,
+                              "Unable to find the key " + keysToFind[i] +
+                                " in file " + d_modelFilename);
+      }
+
+    d_ptcFilename = modelKeyValues["PTC_FILE"];
+    d_rhoTol      = std::stod(modelKeyValues["RHO_TOL"]);
+    d_sThreshold  = std::stod(modelKeyValues["S_THRESHOLD"]);
+
     d_model  = new torch::jit::script::Module;
-    *d_model = torch::jit::load(d_modelFileName);
+    *d_model = torch::jit::load(d_ptcFilename);
     // Explicitly load model onto CPU, you can use kGPU if you are on Linux
     // and have libtorch version with CUDA support (and a GPU)
     d_model->to(torch::kCPU);
@@ -367,7 +476,8 @@ namespace dftfe
                          exc,
                          d_model,
                          d_densityPositivityCheckType,
-                         d_rhoTol);
+                         d_rhoTol,
+                         d_sThreshold);
     else
       excSpinPolarized(rho,
                        sigma,
@@ -375,7 +485,8 @@ namespace dftfe
                        exc,
                        d_model,
                        d_densityPositivityCheckType,
-                       d_rhoTol);
+                       d_rhoTol,
+                       d_sThreshold);
   }
 
   void
@@ -393,7 +504,8 @@ namespace dftfe
                           dexc,
                           d_model,
                           d_densityPositivityCheckType,
-                          d_rhoTol);
+                          d_rhoTol,
+                          d_sThreshold);
     else
       dexcSpinPolarized(rho,
                         sigma,
@@ -402,7 +514,8 @@ namespace dftfe
                         dexc,
                         d_model,
                         d_densityPositivityCheckType,
-                        d_rhoTol);
+                        d_rhoTol,
+                        d_sThreshold);
   }
 
 } // namespace dftfe

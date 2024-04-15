@@ -25,9 +25,11 @@ namespace dftfe
   // Initialize rho by reading in single-atom electron-density and fit a spline
   //
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initAtomicRho()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initAtomicRho()
   {
     // clear existing data
     d_rhoAtomsValues.clear();
@@ -53,55 +55,54 @@ namespace dftfe
          it++)
       {
         char densityFile[256];
-        if (d_dftParamsPtr->isPseudopotential)
-          {
-            strcpy(densityFile,
-                   (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                    "/density.inp")
-                     .c_str());
-          }
-        else
+
+        if (!d_dftParamsPtr->isPseudopotential)
           {
             sprintf(
               densityFile,
               "%s/data/electronicStructure/allElectron/z%u/singleAtomData/density.inp",
               DFTFE_PATH,
               *it);
+
+
+            dftUtils::readFile(2, singleAtomElectronDensity[*it], densityFile);
+            unsigned int numRows = singleAtomElectronDensity[*it].size() - 1;
+            std::vector<double> xData(numRows), yData(numRows);
+
+            unsigned int maxRowId = 0;
+            for (unsigned int irow = 0; irow < numRows; ++irow)
+              {
+                xData[irow] = singleAtomElectronDensity[*it][irow][0];
+                yData[irow] = singleAtomElectronDensity[*it][irow][1];
+
+                if (yData[irow] > truncationTol)
+                  maxRowId = irow;
+
+
+                yData[0] = yData[1];
+
+                // interpolate rho
+                alglib::real_1d_array x;
+                x.setcontent(numRows, &xData[0]);
+                alglib::real_1d_array y;
+                y.setcontent(numRows, &yData[0]);
+                alglib::ae_int_t natural_bound_type_L = 1;
+                alglib::ae_int_t natural_bound_type_R = 1;
+                spline1dbuildcubic(x,
+                                   y,
+                                   numRows,
+                                   natural_bound_type_L,
+                                   0.0,
+                                   natural_bound_type_R,
+                                   0.0,
+                                   denSpline[*it]);
+                outerMostPointDen[*it] = xData[maxRowId];
+              }
           }
-
-        dftUtils::readFile(2, singleAtomElectronDensity[*it], densityFile);
-        unsigned int        numRows = singleAtomElectronDensity[*it].size() - 1;
-        std::vector<double> xData(numRows), yData(numRows);
-
-        unsigned int maxRowId = 0;
-        for (unsigned int irow = 0; irow < numRows; ++irow)
+        else
           {
-            xData[irow] = singleAtomElectronDensity[*it][irow][0];
-            yData[irow] = singleAtomElectronDensity[*it][irow][1];
-
-            if (yData[irow] > truncationTol)
-              maxRowId = irow;
+            outerMostPointDen[*it] = d_oncvClassPtr->getRmaxValenceDensity(*it);
           }
-
-        yData[0] = yData[1];
-
-        // interpolate rho
-        alglib::real_1d_array x;
-        x.setcontent(numRows, &xData[0]);
-        alglib::real_1d_array y;
-        y.setcontent(numRows, &yData[0]);
-        alglib::ae_int_t natural_bound_type_L = 1;
-        alglib::ae_int_t natural_bound_type_R = 1;
-        spline1dbuildcubic(x,
-                           y,
-                           numRows,
-                           natural_bound_type_L,
-                           0.0,
-                           natural_bound_type_R,
-                           0.0,
-                           denSpline[*it]);
-        outerMostPointDen[*it] = xData[maxRowId];
-
         if (outerMostPointDen[*it] > maxRhoTail)
           maxRhoTail = outerMostPointDen[*it];
       }
@@ -206,11 +207,22 @@ namespace dftfe
                     if (distanceToAtom <=
                         outerMostPointDen[atomLocations[iAtom][0]])
                       {
-                        alglib::spline1ddiff(denSpline[atomLocations[iAtom][0]],
-                                             distanceToAtom,
-                                             value,
-                                             radialDensityFirstDerivative,
-                                             radialDensitySecondDerivative);
+                        if (!d_dftParamsPtr->isPseudopotential)
+                          alglib::spline1ddiff(
+                            denSpline[atomLocations[iAtom][0]],
+                            distanceToAtom,
+                            value,
+                            radialDensityFirstDerivative,
+                            radialDensitySecondDerivative);
+                        else
+                          {
+                            std::vector<double> Vec;
+                            d_oncvClassPtr->getRadialValenceDensity(
+                              atomLocations[iAtom][0], distanceToAtom, Vec);
+                            value                         = Vec[0];
+                            radialDensityFirstDerivative  = Vec[1];
+                            radialDensitySecondDerivative = Vec[2];
+                          }
 
                         isRhoDataInCell = true;
                       }
@@ -330,12 +342,24 @@ namespace dftfe
                     if (distanceToAtom <=
                         outerMostPointDen[atomLocations[masterAtomId][0]])
                       {
-                        alglib::spline1ddiff(
-                          denSpline[atomLocations[masterAtomId][0]],
-                          distanceToAtom,
-                          value,
-                          radialDensityFirstDerivative,
-                          radialDensitySecondDerivative);
+                        if (!d_dftParamsPtr->isPseudopotential)
+                          alglib::spline1ddiff(
+                            denSpline[atomLocations[masterAtomId][0]],
+                            distanceToAtom,
+                            value,
+                            radialDensityFirstDerivative,
+                            radialDensitySecondDerivative);
+                        else
+                          {
+                            std::vector<double> Vec;
+                            d_oncvClassPtr->getRadialValenceDensity(
+                              atomLocations[masterAtomId][0],
+                              distanceToAtom,
+                              Vec);
+                            value                         = Vec[0];
+                            radialDensityFirstDerivative  = Vec[1];
+                            radialDensitySecondDerivative = Vec[2];
+                          }
 
                         isRhoDataInCell = true;
                       }
@@ -430,9 +454,11 @@ namespace dftfe
   //
   // Normalize rho
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::normalizeAtomicRhoQuadValues()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::normalizeAtomicRhoQuadValues()
   {
     const double charge  = totalCharge(dofHandler, &d_rhoAtomsValues);
     const double scaling = ((double)numElectrons) / charge;
@@ -494,123 +520,97 @@ namespace dftfe
   //
   //
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::addAtomicRhoQuadValuesGradients(
-    std::map<dealii::CellId, std::vector<double>> &quadratureValueData,
-    std::map<dealii::CellId, std::vector<double>> &quadratureGradValueData,
-    const bool                                     isConsiderGradData)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    addAtomicRhoQuadValuesGradients(
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &quadratureValueData,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &        quadratureGradValueData,
+      const bool isConsiderGradData)
   {
-    const dealii::Quadrature<3> &quadrature_formula =
-      matrix_free_data.get_quadrature(d_densityQuadratureId);
-    const unsigned int n_q_points = quadrature_formula.size();
+    d_basisOperationsPtrHost->reinit(0, 0, d_densityQuadratureId, false);
+    const unsigned int nQuadsPerCell =
+      d_basisOperationsPtrHost->nQuadsPerCell();
+    const unsigned int nCells = d_basisOperationsPtrHost->nCells();
 
-    dealii::DoFHandler<3>::active_cell_iterator cell =
-                                                  dofHandler.begin_active(),
-                                                endc = dofHandler.end();
-    for (; cell != endc; ++cell)
-      if (cell->is_locally_owned())
-        {
-          std::vector<double> &rhoValues =
-            quadratureValueData.find(cell->id())->second;
-          const std::vector<double> &rhoAtomicValues =
-            d_rhoAtomsValues.find(cell->id())->second;
-          for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
-            rhoValues[q_point] += rhoAtomicValues[q_point];
+    for (unsigned int iCell = 0; iCell < nCells; ++iCell)
+      {
+        const std::vector<double> &rhoAtomicValues =
+          d_rhoAtomsValues.find(d_basisOperationsPtrHost->cellID(iCell))
+            ->second;
+        for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+          quadratureValueData[iCell * nQuadsPerCell + iQuad] +=
+            rhoAtomicValues[iQuad];
 
-          if (isConsiderGradData)
-            {
-              std::vector<double> &gradRhoValues =
-                quadratureGradValueData.find(cell->id())->second;
-              const std::vector<double> &gradRhoAtomicValues =
-                d_gradRhoAtomsValues.find(cell->id())->second;
-              for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
-                {
-                  gradRhoValues[3 * q_point + 0] +=
-                    gradRhoAtomicValues[3 * q_point + 0];
-                  gradRhoValues[3 * q_point + 1] +=
-                    gradRhoAtomicValues[3 * q_point + 1];
-                  gradRhoValues[3 * q_point + 2] +=
-                    gradRhoAtomicValues[3 * q_point + 2];
-                }
-            }
-        }
-  }
-
-  //
-  //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void
-  dftClass<FEOrder, FEOrderElectro>::subtractAtomicRhoQuadValuesGradients(
-    std::map<dealii::CellId, std::vector<double>> &quadratureValueData,
-    std::map<dealii::CellId, std::vector<double>> &quadratureGradValueData,
-    const bool                                     isConsiderGradData)
-  {
-    const dealii::Quadrature<3> &quadrature_formula =
-      matrix_free_data.get_quadrature(d_densityQuadratureId);
-    const unsigned int n_q_points = quadrature_formula.size();
-
-    dealii::DoFHandler<3>::active_cell_iterator cell =
-                                                  dofHandler.begin_active(),
-                                                endc = dofHandler.end();
-    for (; cell != endc; ++cell)
-      if (cell->is_locally_owned())
-        {
-          std::vector<double> &rhoValues =
-            quadratureValueData.find(cell->id())->second;
-          const std::vector<double> &rhoAtomicValues =
-            d_rhoAtomsValues.find(cell->id())->second;
-          for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
-            rhoValues[q_point] -= rhoAtomicValues[q_point];
-
-          if (isConsiderGradData)
-            {
-              std::vector<double> &gradRhoValues =
-                quadratureGradValueData.find(cell->id())->second;
-              const std::vector<double> &gradRhoAtomicValues =
-                d_gradRhoAtomsValues.find(cell->id())->second;
-              for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
-                {
-                  gradRhoValues[3 * q_point + 0] -=
-                    gradRhoAtomicValues[3 * q_point + 0];
-                  gradRhoValues[3 * q_point + 1] -=
-                    gradRhoAtomicValues[3 * q_point + 1];
-                  gradRhoValues[3 * q_point + 2] -=
-                    gradRhoAtomicValues[3 * q_point + 2];
-                }
-            }
-        }
+        if (isConsiderGradData)
+          {
+            const std::vector<double> &gradRhoAtomicValues =
+              d_gradRhoAtomsValues
+                .find(d_basisOperationsPtrHost->cellID(iCell))
+                ->second;
+            for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+              {
+                quadratureGradValueData[iCell * nQuadsPerCell * 3 + 3 * iQuad +
+                                        0] +=
+                  gradRhoAtomicValues[3 * iQuad + 0];
+                quadratureGradValueData[iCell * nQuadsPerCell * 3 + 3 * iQuad +
+                                        1] +=
+                  gradRhoAtomicValues[3 * iQuad + 1];
+                quadratureGradValueData[iCell * nQuadsPerCell * 3 + 3 * iQuad +
+                                        2] +=
+                  gradRhoAtomicValues[3 * iQuad + 2];
+              }
+          }
+      }
   }
 
   //
   // compute l2 projection of quad data to nodal data
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::l2ProjectionQuadDensityMinusAtomicDensity(
-    const dealii::MatrixFree<3, double> &                matrixFreeDataObject,
-    const dealii::AffineConstraints<double> &            constraintMatrix,
-    const unsigned int                                   dofHandlerId,
-    const unsigned int                                   quadratureId,
-    const std::map<dealii::CellId, std::vector<double>> &quadratureValueData,
-    distributedCPUVec<double> &                          nodalField)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    l2ProjectionQuadDensityMinusAtomicDensity(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                                      basisOperationsPtr,
+      const dealii::AffineConstraints<double> &constraintMatrix,
+      const unsigned int                       dofHandlerId,
+      const unsigned int                       quadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &                        quadratureValueData,
+      distributedCPUVec<double> &nodalField)
   {
+    basisOperationsPtr->reinit(0, 0, quadratureId, false);
+    const unsigned int nQuadsPerCell = basisOperationsPtr->nQuadsPerCell();
     std::function<
       double(const typename dealii::DoFHandler<3>::active_cell_iterator &cell,
              const unsigned int                                          q)>
       funcRho =
         [&](const typename dealii::DoFHandler<3>::active_cell_iterator &cell,
             const unsigned int                                          q) {
-          return (quadratureValueData.find(cell->id())->second[q] -
-                  d_rhoAtomsValues.find(cell->id())->second[q]);
+          return (
+            quadratureValueData[basisOperationsPtr->cellIndex(cell->id()) *
+                                  nQuadsPerCell +
+                                q] -
+            d_rhoAtomsValues.find(cell->id())->second[q]);
         };
     dealii::VectorTools::project<3, distributedCPUVec<double>>(
       dealii::MappingQ1<3, 3>(),
-      matrixFreeDataObject.get_dof_handler(dofHandlerId),
+      basisOperationsPtr->matrixFreeData().get_dof_handler(dofHandlerId),
       constraintMatrix,
-      matrixFreeDataObject.get_quadrature(quadratureId),
+      basisOperationsPtr->matrixFreeData().get_quadrature(quadratureId),
       funcRho,
       nodalField);
+    constraintMatrix.set_zero(nodalField);
+    nodalField.update_ghost_values();
   }
 #include "dft.inst.cc"
 

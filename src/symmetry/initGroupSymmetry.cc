@@ -34,12 +34,14 @@ namespace dftfe
   //================================================================================================================================================
   //							Class constructor
   //================================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  symmetryClass<FEOrder, FEOrderElectro>::symmetryClass(
-    dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-    const MPI_Comm &                   mpi_comm_parent,
-    const MPI_Comm &                   mpi_comm_domain,
-    const MPI_Comm &                   _interpoolcomm)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  symmetryClass<FEOrder, FEOrderElectro, memorySpace>::symmetryClass(
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+    const MPI_Comm &                                mpi_comm_parent,
+    const MPI_Comm &                                mpi_comm_domain,
+    const MPI_Comm &                                _interpoolcomm)
     : dftPtr(_dftPtr)
     , FE(dealii::QGaussLobatto<1>(FEOrder + 1))
     , d_mpiCommParent(mpi_comm_parent)
@@ -57,9 +59,11 @@ namespace dftfe
   //================================================================================================================================================
   //					Wiping out mapping tables; needed between relaxation steps
   //================================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  symmetryClass<FEOrder, FEOrderElectro>::clearMaps()
+  symmetryClass<FEOrder, FEOrderElectro, memorySpace>::clearMaps()
   {
     mappedGroup.clear();
     mappedGroupSend0.clear();
@@ -82,9 +86,11 @@ namespace dftfe
   // communicate mapping tables
   //================================================================================================================================================
   //================================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  symmetryClass<FEOrder, FEOrderElectro>::initSymmetry()
+  symmetryClass<FEOrder, FEOrderElectro, memorySpace>::initSymmetry()
   {
     //
     dealii::QGauss<3> quadrature(
@@ -702,10 +708,13 @@ namespace dftfe
   // cartesian and flag==-1 does the other way around.
   //================================================================================================================================================
   //================================================================================================================================================
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dealii::Point<3>
-    symmetryClass<FEOrder, FEOrderElectro>::crys2cart(dealii::Point<3> p,
-                                                      int              flag)
+    symmetryClass<FEOrder, FEOrderElectro, memorySpace>::crys2cart(
+      dealii::Point<3> p,
+      int              flag)
   {
     dealii::Point<3> ptemp;
     if (flag == 1)

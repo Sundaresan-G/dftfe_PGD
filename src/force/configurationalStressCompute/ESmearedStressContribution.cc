@@ -22,17 +22,21 @@
 namespace dftfe
 {
   // compute ESmeared contribution stress
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::addEPhiTotSmearedStressContribution(
-    dealii::FEEvaluation<3, -1, 1, 3> &  forceEval,
-    const dealii::MatrixFree<3, double> &matrixFreeData,
-    const unsigned int                   cell,
-    const dealii::AlignedVector<
-      dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &gradPhiTotQuads,
-    const std::vector<unsigned int> &nonTrivialAtomImageIdsMacroCell,
-    const std::map<dealii::CellId, std::vector<int>>
-      &bQuadAtomIdsAllAtomsImages,
-    const dealii::AlignedVector<dealii::VectorizedArray<double>> &smearedbQuads)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    addEPhiTotSmearedStressContribution(
+      dealii::FEEvaluation<3, -1, 1, 3> &  forceEval,
+      const dealii::MatrixFree<3, double> &matrixFreeData,
+      const unsigned int                   cell,
+      const dealii::AlignedVector<
+        dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &gradPhiTotQuads,
+      const std::vector<unsigned int> &nonTrivialAtomImageIdsMacroCell,
+      const std::map<dealii::CellId, std::vector<int>>
+        &bQuadAtomIdsAllAtomsImages,
+      const dealii::AlignedVector<dealii::VectorizedArray<double>>
+        &smearedbQuads)
   {
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor1;
     for (unsigned int idim = 0; idim < 3; idim++)
@@ -116,17 +120,21 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::addEVselfSmearedStressContribution(
-    dealii::FEEvaluation<3, -1, 1, 3> &  forceEval,
-    const dealii::MatrixFree<3, double> &matrixFreeData,
-    const unsigned int                   cell,
-    const dealii::AlignedVector<
-      dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &gradVselfQuads,
-    const std::vector<unsigned int> &nonTrivialAtomImageIdsMacroCell,
-    const std::map<dealii::CellId, std::vector<int>>
-      &bQuadAtomIdsAllAtomsImages,
-    const dealii::AlignedVector<dealii::VectorizedArray<double>> &smearedbQuads)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    addEVselfSmearedStressContribution(
+      dealii::FEEvaluation<3, -1, 1, 3> &  forceEval,
+      const dealii::MatrixFree<3, double> &matrixFreeData,
+      const unsigned int                   cell,
+      const dealii::AlignedVector<
+        dealii::Tensor<1, 3, dealii::VectorizedArray<double>>> &gradVselfQuads,
+      const std::vector<unsigned int> &nonTrivialAtomImageIdsMacroCell,
+      const std::map<dealii::CellId, std::vector<int>>
+        &bQuadAtomIdsAllAtomsImages,
+      const dealii::AlignedVector<dealii::VectorizedArray<double>>
+        &smearedbQuads)
   {
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor1;
     for (unsigned int idim = 0; idim < 3; idim++)

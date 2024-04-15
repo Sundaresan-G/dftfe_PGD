@@ -54,10 +54,10 @@ namespace dftfe
      * @return Return value indicating success or failure.
      */
     virtual void
-    solve(operatorDFTClass &                      operatorMatrix,
-          std::vector<distributedCPUVec<double>> &eigenVectors,
-          std::vector<double> &                   eigenValues,
-          std::vector<double> &                   residuals) = 0;
+    solve(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+          std::vector<distributedCPUVec<double>> &           eigenVectors,
+          std::vector<double> &                              eigenValues,
+          std::vector<double> &                              residuals) = 0;
 
   protected:
     /**

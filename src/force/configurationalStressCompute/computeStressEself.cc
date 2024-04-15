@@ -24,9 +24,11 @@
 namespace dftfe
 {
   // compute stress contribution from nuclear self energy
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeStressEself(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::computeStressEself(
     const dealii::DoFHandler<3> &                    dofHandlerElectro,
     const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro,
     const dealii::MatrixFree<3, double> &            matrixFreeDataElectro,

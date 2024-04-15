@@ -166,7 +166,8 @@ main(int argc, char *argv[])
                                             runParams.restartFilesPath,
                                             MPI_COMM_WORLD,
                                             runParams.restart,
-                                            runParams.verbosity);
+                                            runParams.verbosity,
+                                            runParams.useDevice);
 
       int status = mdClass.runMD();
     }
@@ -179,6 +180,7 @@ main(int argc, char *argv[])
         MPI_COMM_WORLD,
         runParams.restart,
         runParams.verbosity,
+        runParams.useDevice,
         runParams.numberOfImages,
         runParams.imageFreeze,
         runParams.Kmax,
@@ -202,7 +204,8 @@ main(int argc, char *argv[])
                                               runParams.restartFilesPath,
                                               MPI_COMM_WORLD,
                                               runParams.restart,
-                                              runParams.verbosity);
+                                              runParams.verbosity,
+                                              runParams.useDevice);
       geoOpt.runOpt();
     }
   else if (runParams.solvermode == "NONE")
@@ -213,7 +216,8 @@ main(int argc, char *argv[])
                                        true,
                                        "NONE",
                                        runParams.restartFilesPath,
-                                       runParams.verbosity);
+                                       runParams.verbosity,
+                                       runParams.useDevice);
       dftfeWrapped.writeMesh();
     }
   else if (runParams.solvermode == "NSCF")
@@ -224,7 +228,8 @@ main(int argc, char *argv[])
                                        true,
                                        "NSCF",
                                        runParams.restartFilesPath,
-                                       runParams.verbosity);
+                                       runParams.verbosity,
+                                       runParams.useDevice);
       dftfeWrapped.run();
     }
 
@@ -236,7 +241,8 @@ main(int argc, char *argv[])
                                        true,
                                        "GS",
                                        runParams.restartFilesPath,
-                                       runParams.verbosity);
+                                       runParams.verbosity,
+                                       runParams.useDevice);
       dftfeWrapped.run();
     }
 

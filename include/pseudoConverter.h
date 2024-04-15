@@ -39,7 +39,7 @@ namespace dftfe
 
   namespace pseudoUtils
   {
-    int
+    std::vector<int>
     convert(const std::string &file,
             const std::string &dftfeScratchFolderName,
             const int          verbosity,

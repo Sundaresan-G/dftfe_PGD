@@ -2,6 +2,8 @@
 #  CMakeList file for DFT-FE
 ##
 CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Set the name of the project and target:
 SET(TARGET "dftfe_exe")
 SET(TARGETLIB "dftfe")
@@ -48,7 +50,8 @@ SET(TARGET_SRC
   ./src/dft/vselfBinsManager.cc
   ./src/dft/energyCalculator.cc
   ./src/dft/densityCalculator.cc
-  ./src/dft/densityFirstOrderResponseCalculatorCPU.cc
+  ./src/dft/densityFirstOrderResponseCalculator.cc
+  ./src/dft/applyMultipoleDirichletBC.cc
   ./src/excManager/excDensityBaseClass.cpp
   ./src/excManager/excDensityLDAClass.cpp
   ./src/excManager/excWavefunctionBaseClass.cpp
@@ -59,8 +62,8 @@ SET(TARGET_SRC
   ./src/excManager/NNLDA.cc
   ./src/poisson/poissonSolverProblem.cc
   ./src/helmholtz/kerkerSolverProblem.cc
-  ./src/dftOperator/kohnShamDFTOperator.cc
-  ./src/dftOperator/operator.cc
+  ./src/dftOperator/KohnShamHamiltonianOperator.cc
+  ./src/dftOperator/veffPrimeForLRDM.cc
   ./src/force/force.cc
   ./src/force/forceWfcContractions.cc  
   ./src/force/eshelbyTensor/eshelbyTensor.cc
@@ -106,9 +109,7 @@ SET(TARGET_SRC
   ./utils/BLASWrapperHost.cc
   ./utils/MPIWriteOnFile.cpp
   ./utils/QuadDataCompositeWrite.cpp
-  ./pseudoConverters/upfToxml.cc
   ./utils/PeriodicTable.cc
-  ./utils/xmlTodftfeParser.cc
   ./src/dft/dftd.cc
   ./src/mdi/MDIEngine.cpp
   ./src/mdi/libraryMDI.cpp
@@ -122,16 +123,14 @@ SET(TARGET_SRC
   ./src/dft/initBoundaryConditions.cc
   ./src/dft/initCoreRho.cc
   ./src/dft/initElectronicFields.cc
-  ./src/dft/initPseudo-OV.cc
   ./src/dft/initPseudoLocal.cc
   ./src/dft/initRho.cc
   ./src/dft/initUnmovedTriangulation.cc
   ./src/dft/kohnShamEigenSolve.cc
   ./src/dft/localizationLength.cc
-  ./src/dft/mixingschemes.cc
   ./src/dft/moveAtoms.cc
   ./src/dft/moveMeshToAtoms.cc
-  ./src/dft/nodalDensityMixingSchemes.cc
+  ./src/dft/kerker.cc
   ./src/dft/pRefinedDoFHandler.cc
   ./src/dft/psiInitialGuess.cc
   ./src/dft/publicMethods.cc
@@ -142,7 +141,6 @@ SET(TARGET_SRC
   ./src/dft/computeOutputDensityDirectionalDerivative.cc
   ./src/force/configurationalForceCompute/FNonlinearCoreCorrectionGammaAtomsElementalContribution.cc
   ./src/force/configurationalForceCompute/FPSPLocalGammaAtomsElementalContribution.cc
-  ./src/force/configurationalForceCompute/FShadowLocalGammaAtomsElementalContribution.cc
   ./src/force/configurationalForceCompute/FSmearedChargesGammaAtomsElementalContribution.cc
   ./src/force/configurationalForceCompute/FnlGammaElementalContribution.cc
   ./src/force/configurationalForceCompute/accumulateForceContributionGammaAtomsFloating.cc
@@ -158,7 +156,22 @@ SET(TARGET_SRC
   ./src/force/configurationalStressCompute/computeStressEself.cc
   ./src/force/configurationalStressCompute/stress.cc
   ./src/force/createBinObjectsForce.cc
-  ./src/force/locateAtomCoreNodesForce.cc)
+  ./src/force/locateAtomCoreNodesForce.cc  
+  ./utils/FEBasisOperationsKernelsInternalHost.cc
+  ./utils/FEBasisOperations.cc
+  ./utils/FEBasisOperationsKernels.cc
+  ./src/force/locateAtomCoreNodesForce.cc
+  ./src/atom/AtomPseudoWavefunctions.cc
+  ./src/atom/AtomCenteredSphericalFunctionContainer.cc
+  ./src/atom/AtomCenteredSphericalFunctionBase.cc
+  ./src/atom/AtomCenteredSphericalFunctionSinc.cc
+  ./src/atom/AtomCenteredSphericalFunctionBessel.cc
+  ./src/atom/AtomCenteredSphericalFunctionGaussian.cc
+  ./src/atom/AtomCenteredSphericalFunctionSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionValenceDensitySpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
+  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 
@@ -167,15 +180,13 @@ SET(DEVICE_SRC
   ./utils/DeviceKernelsGeneric.cc
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
-  ./src/dft/densityFirstOrderResponseCalculatorDevice.cc
-  ./src/dftOperator/operatorDevice.cc
-  ./src/dftOperator/kohnShamDFTOperatorDevice.cc
+  ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dft/solveVselfInBinsDevice.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
   ./src/linAlg/rayleighRitzDevice.cc
-  ./src/force/forceWfcContractionsDevice.cc
+  ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.cu.cc
   ./utils/DeviceBlasWrapper.cu.cc
@@ -186,7 +197,8 @@ SET(DEVICE_SRC
   ./src/solvers/linearSolverProblemDevice.cc
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
-  ./utils/FEBasisOperationsKernelsDevice.cc
+  ./utils/FEBasisOperationsKernelsInternalDevice.cc
+  ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 
 ELSEIF ("${GPU_LANG}" STREQUAL "hip")
@@ -196,15 +208,13 @@ SET(DEVICE_SRC
   ./utils/DeviceKernelsGeneric.cc
   ./utils/DeviceDirectCCLWrapper.cc
   ./src/dft/densityCalculatorDeviceKernels.cc
-  ./src/dft/densityFirstOrderResponseCalculatorDevice.cc
-  ./src/dftOperator/operatorDevice.cc
-  ./src/dftOperator/kohnShamDFTOperatorDevice.cc
+  ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dft/solveVselfInBinsDevice.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
   ./src/linAlg/rayleighRitzDevice.cc
-  ./src/force/forceWfcContractionsDevice.cc
+  ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.hip.cc
   ./utils/DeviceBlasWrapper.hip.cc
@@ -215,7 +225,8 @@ SET(DEVICE_SRC
   ./src/solvers/linearSolverProblemDevice.cc
   ./src/poisson/poissonSolverProblemDevice.cc
   ./src/helmholtz/kerkerSolverProblemDevice.cc
-  ./utils/FEBasisOperationsKernelsDevice.cc
+  ./utils/FEBasisOperationsKernelsInternalDevice.cc
+  ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
   )
 
 ENDIF()
@@ -441,7 +452,7 @@ IF (WITH_TORCH)
 #
 # TORCH. Set with -DTORCH_DIR=/path/to/prefix
 #
-FIND_PACKAGE(Torch PATHS "/scratch/vikramg_root/vikramg/shared_data/conda_envs/pytorch_cpu/lib/python3.9/site-packages/torch/share/cmake/Torch/" Required) 
+FIND_PACKAGE(Torch PATHS ${TORCH_DIR} Required) 
 target_link_libraries(${TARGETLIB} PUBLIC ${TORCH_LIBRARIES}) 
 ADD_DEFINITIONS(-DDFTFE_WITH_TORCH)
 ENDIF()

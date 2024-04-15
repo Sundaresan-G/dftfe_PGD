@@ -44,9 +44,11 @@ namespace dftfe
       maxLinearSolverIterationsHelmholtz;
 
     bool        poissonGPU;
+    bool        vselfGPU;
     std::string modelXCInputFile;
 
-    double radiusAtomBall, mixingParameter;
+    double radiusAtomBall, mixingParameter, spinMixingEnhancementFactor;
+    bool   adaptAndersonMixingParameter;
     double absLinearSolverTolerance, selfConsistentSolverTolerance, TVal,
       start_magnetization, absLinearSolverToleranceHelmholtz;
 
@@ -55,6 +57,7 @@ namespace dftfe
       writeLdosFile, writeBandsFile, writeLocalizationLengths, pinnedNodeForPBC,
       writePdosFile;
 
+    double netCharge;
 
     /** parameters for LRD preconditioner **/
 
@@ -74,10 +77,11 @@ namespace dftfe
 
     std::string coordinatesGaussianDispFile;
 
-    double      outerAtomBallRadius, innerAtomBallRadius, meshSizeOuterDomain;
-    bool        autoAdaptBaseMeshSize;
-    double      meshSizeInnerBall, meshSizeOuterBall;
-    double      chebyshevTolerance, topfrac, kerkerParameter;
+    double outerAtomBallRadius, innerAtomBallRadius, meshSizeOuterDomain;
+    bool   autoAdaptBaseMeshSize;
+    double meshSizeInnerBall, meshSizeOuterBall;
+    double chebyshevTolerance, topfrac, kerkerParameter, restaScreeningLength,
+      restaFermiWavevector;
     std::string optimizationMode, mixingMethod, ionOptSolver, cellOptSolver;
 
 
@@ -153,18 +157,19 @@ namespace dftfe
     bool         useDensityMatrixPerturbationRankUpdates;
     double       xlbomdKernelRankUpdateFDParameter;
     bool         smearedNuclearCharges;
-    bool         HXOptimFlag;
     bool         floatingNuclearCharges;
+    bool         multipoleBoundaryConditions;
     bool         nonLinearCoreCorrection;
     unsigned int maxLineSearchIterCGPRP;
     std::string  atomicMassesFile;
     bool         useDeviceDirectAllReduce;
+    bool         useDCCL;
     double       pspCutoffImageCharges;
     bool         reuseLanczosUpperBoundFromFirstCall;
     bool         allowMultipleFilteringPassesAfterFirstScf;
     unsigned int highestStateOfInterestForChebFiltering;
     bool         useELPADeviceKernel;
-    bool         deviceMemOptMode;
+    bool         memOptMode;
 
 
     unsigned int dc_dispersioncorrectiontype;
@@ -204,7 +209,8 @@ namespace dftfe
                      const bool         printParams      = false,
                      const std::string  mode             = "GS",
                      const std::string  restartFilesPath = ".",
-                     const int          _verbosity       = 1);
+                     const int          _verbosity       = 1,
+                     const bool         _useDevice       = false);
 
     /**
      * Check parameters

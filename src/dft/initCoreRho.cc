@@ -26,9 +26,11 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initCoreRho()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initCoreRho()
   {
     // clear existing data
     d_rhoCore.clear();
@@ -44,11 +46,10 @@ namespace dftfe
       << std::endl;
     std::map<unsigned int, alglib::spline1dinterpolant> coreDenSpline;
     std::map<unsigned int, std::vector<std::vector<double>>>
-                                         singleAtomCoreElectronDensity;
-    std::map<unsigned int, double>       outerMostPointCoreDen;
-    std::map<unsigned int, unsigned int> atomTypeNLCCFlagMap;
-    const double                         truncationTol = 1e-12;
-    unsigned int                         fileReadFlag  = 0;
+                                   singleAtomCoreElectronDensity;
+    std::map<unsigned int, double> outerMostPointCoreDen;
+    const double                   truncationTol = 1e-12;
+    unsigned int                   fileReadFlag  = 0;
 
     double maxCoreRhoTail = 0.0;
     // loop over atom types
@@ -56,77 +57,16 @@ namespace dftfe
          it != atomTypes.end();
          it++)
       {
-        char coreDensityFile[256];
-        if (d_dftParamsPtr->isPseudopotential)
-          {
-            strcpy(coreDensityFile,
-                   (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                    "/coreDensity.inp")
-                     .c_str());
-          }
-
-        unsigned int fileReadFlag =
-          dftUtils::readPsiFile(2,
-                                singleAtomCoreElectronDensity[*it],
-                                coreDensityFile);
-
-        atomTypeNLCCFlagMap[*it] = fileReadFlag;
-
+        outerMostPointCoreDen[*it] = d_oncvClassPtr->getRmaxCoreDensity(*it);
+        if (outerMostPointCoreDen[*it] > maxCoreRhoTail)
+          maxCoreRhoTail = outerMostPointCoreDen[*it];
         if (d_dftParamsPtr->verbosity >= 4)
-          pcout << "Atomic number: " << *it << " NLCC flag: " << fileReadFlag
+          pcout << " Atomic number: " << *it
+                << " Outermost Point Core Den: " << outerMostPointCoreDen[*it]
                 << std::endl;
-
-        if (fileReadFlag > 0)
-          {
-            unsigned int numRows =
-              singleAtomCoreElectronDensity[*it].size() - 1;
-            std::vector<double> xData(numRows), yData(numRows);
-
-            unsigned int maxRowId = 0;
-            for (unsigned int irow = 0; irow < numRows; ++irow)
-              {
-                xData[irow] = singleAtomCoreElectronDensity[*it][irow][0];
-                yData[irow] =
-                  std::abs(singleAtomCoreElectronDensity[*it][irow][1]);
-
-                if (yData[irow] > truncationTol)
-                  maxRowId = irow;
-              }
-
-            // interpolate rho
-            alglib::real_1d_array x;
-            x.setcontent(numRows, &xData[0]);
-            alglib::real_1d_array y;
-            y.setcontent(numRows, &yData[0]);
-            alglib::ae_int_t natural_bound_type_L = 1;
-            alglib::ae_int_t natural_bound_type_R = 1;
-            // const double slopeL = (singleAtomCoreElectronDensity[*it][1][1]-
-            // singleAtomCoreElectronDensity[*it][0][1])/(singleAtomCoreElectronDensity[*it][1][0]-singleAtomCoreElectronDensity[*it][0][0]);
-            // const double slopeL = (yData[1]- yData[0])/(xData[1]-xData[0]);
-            spline1dbuildcubic(x,
-                               y,
-                               numRows,
-                               natural_bound_type_L,
-                               0.0,
-                               natural_bound_type_R,
-                               0.0,
-                               coreDenSpline[*it]);
-            // spline1dbuildcubic(x, y, numRows, natural_bound_type_L, slopeL,
-            // natural_bound_type_R, 0.0, coreDenSpline[*it]);
-            outerMostPointCoreDen[*it] = xData[maxRowId];
-
-            if (outerMostPointCoreDen[*it] > maxCoreRhoTail)
-              maxCoreRhoTail = outerMostPointCoreDen[*it];
-
-            if (d_dftParamsPtr->verbosity >= 4)
-              pcout << " Atomic number: " << *it
-                    << " Outermost Point Core Den: "
-                    << outerMostPointCoreDen[*it] << std::endl;
-          }
       }
 
     const double cellCenterCutOff = maxCoreRhoTail + 5.0;
-
     //
     // Initialize rho
     //
@@ -199,7 +139,8 @@ namespace dftfe
                                       atomLocations[iAtom][4]);
                 bool             isCoreRhoDataInCell = false;
 
-                if (atomTypeNLCCFlagMap[atomLocations[iAtom][0]] == 0)
+                if (!d_oncvClassPtr->coreNuclearDensityPresent(
+                      atomLocations[iAtom][0]))
                   continue;
 
                 if (atom.distance(cell->center()) > cellCenterCutOff)
@@ -231,13 +172,14 @@ namespace dftfe
                     if (distanceToAtom <=
                         outerMostPointCoreDen[atomLocations[iAtom][0]])
                       {
-                        alglib::spline1ddiff(
-                          coreDenSpline[atomLocations[iAtom][0]],
-                          distanceToAtom,
-                          value,
-                          radialDensityFirstDerivative,
-                          radialDensitySecondDerivative);
+                        std::vector<double> Vec;
+                        d_oncvClassPtr->getRadialCoreDensity(
+                          atomLocations[iAtom][0], distanceToAtom, Vec);
 
+                        value                         = Vec[0];
+                        radialDensityFirstDerivative  = Vec[1];
+                        radialDensitySecondDerivative = Vec[2];
+                        // pcout<<distanceToAtom<<" "<<value<<std::endl;
                         isCoreRhoDataInCell = true;
                       }
                     else
@@ -320,7 +262,8 @@ namespace dftfe
                  ++iImageCharge)
               {
                 const int masterAtomId = d_imageIdsTrunc[iImageCharge];
-                if (atomTypeNLCCFlagMap[atomLocations[masterAtomId][0]] == 0)
+                if (!d_oncvClassPtr->coreNuclearDensityPresent(
+                      atomLocations[masterAtomId][0]))
                   continue;
 
                 dealii::Point<3> imageAtom(
@@ -354,13 +297,13 @@ namespace dftfe
                     if (distanceToAtom <=
                         outerMostPointCoreDen[atomLocations[masterAtomId][0]])
                       {
-                        alglib::spline1ddiff(
-                          coreDenSpline[atomLocations[masterAtomId][0]],
-                          distanceToAtom,
-                          value,
-                          radialDensityFirstDerivative,
-                          radialDensitySecondDerivative);
-
+                        std::vector<double> Vec;
+                        d_oncvClassPtr->getRadialCoreDensity(
+                          atomLocations[masterAtomId][0], distanceToAtom, Vec);
+                        value                         = Vec[0];
+                        radialDensityFirstDerivative  = Vec[1];
+                        radialDensitySecondDerivative = Vec[2];
+                        // pcout<<distanceToAtom<<" "<<value<<std::endl;
                         isCoreRhoDataInCell = true;
                       }
                     else

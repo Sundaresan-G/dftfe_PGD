@@ -801,6 +801,15 @@ namespace dftfe
                     d_mpiPatternP2P->mpiCommunicator());
     }
 
+    template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+    void
+    MultiVector<ValueType, memorySpace>::setCommunicationPrecision(
+      utils::mpi::communicationPrecision commPrecision)
+    {
+      d_mpiCommunicatorP2P->setCommunicationPrecision(commPrecision);
+    }
+
+
     template <typename ValueType, utils::MemorySpace memorySpace>
     void
     createMultiVectorFromDealiiPartitioner(

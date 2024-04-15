@@ -26,9 +26,11 @@ namespace dftfe
   //
   // Initialize rho by reading in single-atom electron-density and fit a spline
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::initLocalPseudoPotential(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::initLocalPseudoPotential(
     const dealii::DoFHandler<3> &            _dofHandler,
     const unsigned int                       lpspQuadratureId,
     const dealii::MatrixFree<3, double> &    _matrix_free_data,
@@ -48,7 +50,6 @@ namespace dftfe
     //
     // Reading single atom rho initial guess
     //
-    std::map<unsigned int, alglib::spline1dinterpolant> pseudoSpline;
     std::map<unsigned int, std::vector<std::vector<double>>>
                                    pseudoPotentialData;
     std::map<unsigned int, double> outerMostDataPoint;
@@ -73,55 +74,7 @@ namespace dftfe
              it != atomTypes.end();
              it++)
           {
-            char pseudoFile[256];
-
-            strcpy(pseudoFile,
-                   (d_dftfeScratchFolderName + "/z" + std::to_string(*it) +
-                    "/locPot.dat")
-                     .c_str());
-
-            dftUtils::readFile(2, pseudoPotentialData[*it], pseudoFile);
-            unsigned int        numRows = pseudoPotentialData[*it].size() - 1;
-            std::vector<double> xData(numRows), yData(numRows);
-
-            unsigned int maxRowId = 0;
-            for (unsigned int irow = 0; irow < numRows; ++irow)
-              {
-                xData[irow] = pseudoPotentialData[*it][irow][0];
-                yData[irow] = pseudoPotentialData[*it][irow][1];
-
-                if (irow > 0 && xData[irow] < maxAllowedTail)
-                  {
-                    if (std::abs(yData[irow] -
-                                 (-((double)d_atomTypeAtributes[*it]) /
-                                  xData[irow])) > truncationTol)
-                      maxRowId = irow;
-                  }
-              }
-
-            // interpolate pseudopotentials
-            alglib::real_1d_array x;
-            x.setcontent(numRows, &xData[0]);
-            alglib::real_1d_array y;
-            y.setcontent(numRows, &yData[0]);
-            alglib::ae_int_t bound_type_l = 0;
-            alglib::ae_int_t bound_type_r = 1;
-            const double     slopeL =
-              (pseudoPotentialData[*it][1][1] -
-               pseudoPotentialData[*it][0][1]) /
-              (pseudoPotentialData[*it][1][0] - pseudoPotentialData[*it][0][0]);
-            const double slopeR = -pseudoPotentialData[*it][numRows - 1][1] /
-                                  pseudoPotentialData[*it][numRows - 1][0];
-            spline1dbuildcubic(x,
-                               y,
-                               numRows,
-                               bound_type_l,
-                               slopeL,
-                               bound_type_r,
-                               slopeR,
-                               pseudoSpline[*it]);
-            outerMostDataPoint[*it] = xData[maxRowId];
-
+            outerMostDataPoint[*it] = d_oncvClassPtr->getRmaxLocalPot(*it);
             if (outerMostDataPoint[*it] > maxTail)
               maxTail = outerMostDataPoint[*it];
           }
@@ -224,11 +177,11 @@ namespace dftfe
           }
       }
 
-    for (unsigned int iCell = 0; iCell < basisOperationsPtrHost->nCells();
+    for (unsigned int iCell = 0; iCell < d_basisOperationsPtrHost->nCells();
          ++iCell)
       {
         std::vector<double> &pseudoVLoc =
-          _pseudoValues[basisOperationsPtrHost->cellID(iCell)];
+          _pseudoValues[d_basisOperationsPtrHost->cellID(iCell)];
         pseudoVLoc.resize(n_q_points, 0.0);
       }
 
@@ -347,8 +300,8 @@ namespace dftfe
                     MPI_SUM,
                     interpoolcomm);
     MPI_Barrier(interpoolcomm);
-
-    basisOperationsPtrElectroHost
+    phiExt.update_ghost_values();
+    d_basisOperationsPtrElectroHost
       ->d_constraintInfo[d_phiExtDofHandlerIndexElectro]
       .distribute(phiExt);
 
@@ -368,8 +321,8 @@ namespace dftfe
     if (numMacroCells > 0)
       dftUtils::createKpointParallelizationIndices(
         interpoolcomm, numMacroCells, kptGroupLowHighPlusOneIndicesStep2);
-    basisOperationsPtrHost->reinit(0, 0, lpspQuadratureId);
-#pragma omp parallel for num_threads(d_nOMPThreads) firstprivate(pseudoSpline)
+    d_basisOperationsPtrHost->reinit(0, 0, lpspQuadratureId);
+#pragma omp parallel for num_threads(d_nOMPThreads)
     for (unsigned int macrocell = 0;
          macrocell < _matrix_free_data.n_cell_batches();
          ++macrocell)
@@ -396,10 +349,10 @@ namespace dftfe
 
                 std::vector<double> &pseudoVLoc = _pseudoValues[subCellId];
                 unsigned int         cellIndex =
-                  basisOperationsPtrHost->cellIndex(subCellId);
+                  d_basisOperationsPtrHost->cellIndex(subCellId);
                 double        value, distanceToAtom, distanceToAtomInv;
                 const double *quadPointPtr =
-                  basisOperationsPtrHost->quadPoints().data() +
+                  d_basisOperationsPtrHost->quadPoints().data() +
                   cellIndex * n_q_points * 3;
 
                 // loop over quad points
@@ -452,9 +405,10 @@ namespace dftfe
                               {
                                 if (d_dftParamsPtr->isPseudopotential)
                                   {
-                                    value = alglib::spline1dcalc(
-                                      pseudoSpline[atomicNumber],
-                                      distanceToAtom);
+                                    value =
+                                      d_oncvClassPtr->getRadialLocalPseudo(
+                                        atomicNumber, distanceToAtom);
+                                    // add here
                                   }
                                 else
                                   {
@@ -522,32 +476,32 @@ namespace dftfe
     if (numMacroCells > 0 && numberKptGroups > 1)
       {
         std::vector<double> tempPseudoValuesFlattened(
-          basisOperationsPtrHost->nCells() * n_q_points, 0.0);
+          d_basisOperationsPtrHost->nCells() * n_q_points, 0.0);
 
 #pragma omp parallel for num_threads(d_nOMPThreads)
-        for (unsigned int iCell = 0; iCell < basisOperationsPtrHost->nCells();
+        for (unsigned int iCell = 0; iCell < d_basisOperationsPtrHost->nCells();
              ++iCell)
           {
             std::vector<double> &pseudoVLoc =
-              _pseudoValues[basisOperationsPtrHost->cellID(iCell)];
+              _pseudoValues[d_basisOperationsPtrHost->cellID(iCell)];
             for (unsigned int q = 0; q < n_q_points; ++q)
               tempPseudoValuesFlattened[iCell * n_q_points + q] = pseudoVLoc[q];
           }
 
         MPI_Allreduce(MPI_IN_PLACE,
                       &tempPseudoValuesFlattened[0],
-                      basisOperationsPtrHost->nCells() * n_q_points,
+                      d_basisOperationsPtrHost->nCells() * n_q_points,
                       MPI_DOUBLE,
                       MPI_SUM,
                       interpoolcomm);
         MPI_Barrier(interpoolcomm);
 
 #pragma omp parallel for num_threads(d_nOMPThreads)
-        for (unsigned int iCell = 0; iCell < basisOperationsPtrHost->nCells();
+        for (unsigned int iCell = 0; iCell < d_basisOperationsPtrHost->nCells();
              ++iCell)
           {
             std::vector<double> &pseudoVLoc =
-              _pseudoValues[basisOperationsPtrHost->cellID(iCell)];
+              _pseudoValues[d_basisOperationsPtrHost->cellID(iCell)];
             for (unsigned int q = 0; q < n_q_points; ++q)
               pseudoVLoc[q] = tempPseudoValuesFlattened[iCell * n_q_points + q];
           }
@@ -565,16 +519,15 @@ namespace dftfe
 
     std::vector<int> kptGroupLowHighPlusOneIndicesStep3;
 
-    if (basisOperationsPtrHost->nCells() > 0)
+    if (d_basisOperationsPtrHost->nCells() > 0)
       dftUtils::createKpointParallelizationIndices(
         interpoolcomm,
-        basisOperationsPtrHost->nCells(),
+        d_basisOperationsPtrHost->nCells(),
         kptGroupLowHighPlusOneIndicesStep3);
 
     std::vector<double> pseudoVLocAtom(n_q_points);
-#pragma omp parallel for num_threads(d_nOMPThreads) \
-  firstprivate(pseudoVLocAtom, pseudoSpline)
-    for (unsigned int iCell = 0; iCell < basisOperationsPtrHost->nCells();
+#pragma omp parallel for num_threads(d_nOMPThreads) firstprivate(pseudoVLocAtom)
+    for (unsigned int iCell = 0; iCell < d_basisOperationsPtrHost->nCells();
          ++iCell)
       {
         if ((iCell <
@@ -587,7 +540,7 @@ namespace dftfe
             int              atomicNumber;
             double           atomCharge;
             const double *   quadPointPtr =
-              basisOperationsPtrHost->quadPoints().data() +
+              d_basisOperationsPtrHost->quadPoints().data() +
               iCell * n_q_points * 3;
 
             // loop over atoms
@@ -645,9 +598,8 @@ namespace dftfe
                       {
                         if (d_dftParamsPtr->isPseudopotential)
                           {
-                            value =
-                              alglib::spline1dcalc(pseudoSpline[atomicNumber],
-                                                   distanceToAtom);
+                            value = d_oncvClassPtr->getRadialLocalPseudo(
+                              atomicNumber, distanceToAtom);
                           }
                         else
                           {
@@ -667,15 +619,14 @@ namespace dftfe
                 if (isPseudoDataInCell)
                   {
 #pragma omp critical(pseudovalsatoms)
-                    _pseudoValuesAtoms[iAtom]
-                                      [basisOperationsPtrHost->cellID(iCell)] =
-                                        pseudoVLocAtom;
+                    _pseudoValuesAtoms[iAtom][d_basisOperationsPtrHost->cellID(
+                      iCell)] = pseudoVLocAtom;
                   }
               } // loop over atoms
           }     // kpt paral loop
       }         // cell loop
 
-    if (basisOperationsPtrHost->nCells() > 0 && numberKptGroups > 1)
+    if (d_basisOperationsPtrHost->nCells() > 0 && numberKptGroups > 1)
       {
         // arranged as iAtom, elemid, and quad data
         std::vector<double> sendData;
@@ -688,10 +639,10 @@ namespace dftfe
             if (_pseudoValuesAtoms.find(iAtom) != _pseudoValuesAtoms.end())
               {
                 for (unsigned int iCell = 0;
-                     iCell < basisOperationsPtrHost->nCells();
+                     iCell < d_basisOperationsPtrHost->nCells();
                      ++iCell)
                   {
-                    auto cellid = basisOperationsPtrHost->cellID(iCell);
+                    auto cellid = d_basisOperationsPtrHost->cellID(iCell);
                     if (_pseudoValuesAtoms[iAtom].find(cellid) !=
                         _pseudoValuesAtoms[iAtom].end())
                       {
@@ -765,7 +716,7 @@ namespace dftfe
             if (iatom != -1)
               {
                 const dealii::CellId writeCellId =
-                  basisOperationsPtrHost->cellID(elementId);
+                  d_basisOperationsPtrHost->cellID(elementId);
                 if (_pseudoValuesAtoms[iatom].find(writeCellId) ==
                     _pseudoValuesAtoms[iatom].end())
                   {

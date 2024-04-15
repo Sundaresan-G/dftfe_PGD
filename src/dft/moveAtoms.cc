@@ -126,12 +126,15 @@ namespace dftfe
   // displacement input. Depending on the maximum displacement magnitude this
   // function decides wether to do auto remeshing or move mesh using Gaussian
   // functions.
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::updateAtomPositionsAndMoveMesh(
-    const std::vector<dealii::Tensor<1, 3, double>> &globalAtomsDisplacements,
-    const double                                     maxJacobianRatioFactor,
-    const bool useSingleAtomSolutionsOverride)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    updateAtomPositionsAndMoveMesh(
+      const std::vector<dealii::Tensor<1, 3, double>> &globalAtomsDisplacements,
+      const double                                     maxJacobianRatioFactor,
+      const bool useSingleAtomSolutionsOverride)
   {
     bool      isAutoRemeshSupressed = false;
     const int numberGlobalAtoms     = atomLocations.size();

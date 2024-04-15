@@ -188,7 +188,7 @@ namespace dftfe
         // src.update_ghost_values();
         // constraintsMatrixDataInfoDevice.distribute(src,numberVectors);
         temp.updateGhostValues();
-        constraintsMatrixDataInfoDevice.distribute(temp, numberVectors);
+        constraintsMatrixDataInfoDevice.distribute(temp);
 
         if ((localSize + ghostSize) > 0)
 #  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
@@ -290,10 +290,10 @@ namespace dftfe
 #  endif
 
 
-        constraintsMatrixDataInfoDevice.distribute_slave_to_master(
-          dst, numberVectors);
+        constraintsMatrixDataInfoDevice.distribute_slave_to_master(dst);
 
         dst.accumulateAddLocallyOwned();
+        temp.setValue(0);
 
         if (localSize > 0)
 #  ifdef DFTFE_WITH_DEVICE_LANG_CUDA
@@ -404,7 +404,12 @@ namespace dftfe
 
     void
     solveVselfInBins(
-      operatorDFTDeviceClass &                 operatorMatrix,
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &cellGradNIGradNJIntergralDevice,
+      const std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                      BLASWrapperPtr,
       const dealii::MatrixFree<3, double> &    matrixFreeData,
       const unsigned int                       mfDofHandlerIndex,
       const dealii::AffineConstraints<double> &hangingPeriodicConstraintMatrix,
@@ -515,7 +520,7 @@ namespace dftfe
         matrixFreeData.get_vector_partitioner(mfDofHandlerIndex),
         hangingPeriodicConstraintMatrix);
 
-      constraintsMatrixDataInfoDevice.set_zero(xD, blockSize);
+      constraintsMatrixDataInfoDevice.set_zero(xD);
 
       dftfe::utils::deviceSynchronize();
       MPI_Barrier(mpiCommParent);
@@ -561,13 +566,11 @@ namespace dftfe
           << " poissonDevice::solveVselfInBins: time for mem allocation: "
           << time << std::endl;
 
-      cgSolver(operatorMatrix.getDeviceBlasHandle(),
+      cgSolver(BLASWrapperPtr->getDeviceBlasHandle(),
                constraintsMatrixDataInfoDevice,
                bD.begin(),
                diagonalAD.begin(),
-               isElectroFEOrderDifferentFromFEOrder ?
-                 operatorMatrix.getShapeFunctionGradientIntegralElectro() :
-                 operatorMatrix.getShapeFunctionGradientIntegral(),
+               cellGradNIGradNJIntergralDevice,
                inhomoIdsColoredVecFlattenedD,
                cellLocalProcIndexIdMapD,
                localSize,
@@ -1145,7 +1148,7 @@ namespace dftfe
 
       // problem.setX();
       x.updateGhostValues();
-      constraintsMatrixDataInfoDevice.distribute(x, numberBins);
+      constraintsMatrixDataInfoDevice.distribute(x);
       dftfe::utils::deviceSynchronize();
       MPI_Barrier(mpiCommParent);
       device_time = MPI_Wtime() - start_time;

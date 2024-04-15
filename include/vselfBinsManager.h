@@ -18,9 +18,7 @@
 #include <headers.h>
 #include "constraintMatrixInfo.h"
 #include "dftParameters.h"
-#if defined(DFTFE_WITH_DEVICE)
-#  include <operatorDevice.h>
-#endif
+#include "FEBasisOperations.h"
 
 #ifndef vselfBinsManager_H_
 #  define vselfBinsManager_H_
@@ -122,7 +120,10 @@ namespace dftfe
      */
     void
     solveVselfInBins(
-      const dealii::MatrixFree<3, double> &    matrix_free_data,
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                                      basisOperationsPtr,
       const unsigned int                       offset,
       const unsigned int                       matrixFreeQuadratureIdAX,
       const dealii::AffineConstraints<double> &hangingPeriodicConstraintMatrix,
@@ -165,11 +166,19 @@ namespace dftfe
      */
     void
     solveVselfInBinsDevice(
-      const dealii::MatrixFree<3, double> &    matrix_free_data,
-      const unsigned int                       mfBaseDofHandlerIndex,
-      const unsigned int                       matrixFreeQuadratureIdAX,
-      const unsigned int                       offset,
-      operatorDFTDeviceClass &                 operatorMatrix,
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                basisOperationsPtr,
+      const unsigned int mfBaseDofHandlerIndex,
+      const unsigned int matrixFreeQuadratureIdAX,
+      const unsigned int offset,
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &cellGradNIGradNJIntergralDevice,
+      const std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                      BLASWrapperPtr,
       const dealii::AffineConstraints<double> &hangingPeriodicConstraintMatrix,
       const std::vector<std::vector<double>> & imagePositions,
       const std::vector<int> &                 imageIds,
@@ -201,12 +210,20 @@ namespace dftfe
      */
     void
     solveVselfInBinsPerturbedDomain(
-      const dealii::MatrixFree<3, double> &matrix_free_data,
-      const unsigned int                   mfBaseDofHandlerIndex,
-      const unsigned int                   matrixFreeQuadratureIdAX,
-      const unsigned int                   offset,
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                basisOperationsPtr,
+      const unsigned int mfBaseDofHandlerIndex,
+      const unsigned int matrixFreeQuadratureIdAX,
+      const unsigned int offset,
 #  ifdef DFTFE_WITH_DEVICE
-      operatorDFTDeviceClass &operatorMatrix,
+      const dftfe::utils::MemoryStorage<double,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &cellGradNIGradNJIntergralDevice,
+      const std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &BLASWrapperPtr,
 #  endif
       const dealii::AffineConstraints<double> &hangingPeriodicConstraintMatrix,
       const std::vector<std::vector<double>> & imagePositions,

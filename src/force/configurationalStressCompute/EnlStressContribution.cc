@@ -22,22 +22,25 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void forceClass<FEOrder, FEOrderElectro>::stressEnlElementalContribution(
-    dealii::Tensor<2, 3, double> &                stressContribution,
-    const dealii::MatrixFree<3, double> &         matrixFreeData,
-    const unsigned int                            numQuadPoints,
-    const std::vector<double> &                   jxwQuadsSubCells,
-    const unsigned int                            cell,
-    const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
-    const std::vector<dataTypes::number> &zetalmDeltaVlProductDistImageAtoms,
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    stressEnlElementalContribution(
+      dealii::Tensor<2, 3, double> &                stressContribution,
+      const dealii::MatrixFree<3, double> &         matrixFreeData,
+      const unsigned int                            numQuadPoints,
+      const std::vector<double> &                   jxwQuadsSubCells,
+      const unsigned int                            cell,
+      const std::map<dealii::CellId, unsigned int> &cellIdToCellNumberMap,
+      const std::vector<dataTypes::number> &zetalmDeltaVlProductDistImageAtoms,
 #ifdef USE_COMPLEX
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened,
 #endif
-    const std::vector<dataTypes::number>
-      &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened,
-    const bool isSpinPolarized)
+      const std::vector<dataTypes::number>
+        &projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened,
+      const bool isSpinPolarized)
   {
     const unsigned int numberGlobalAtoms = dftPtr->atomLocations.size();
     const unsigned int numSubCells =
@@ -46,7 +49,7 @@ namespace dftfe
     const double spinPolarizedFactor = isSpinPolarized ? 0.5 : 1.0;
 
     const unsigned int numNonLocalAtomsCurrentProcess =
-      dftPtr->d_nonLocalAtomIdsInCurrentProcess.size();
+      (dftPtr->d_oncvClassPtr->getTotalNumberOfAtomsInCurrentProcessor());
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
     dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor3;
@@ -61,9 +64,7 @@ namespace dftfe
         // get the global charge Id of the current nonlocal atom
         //
         const int nonLocalAtomId =
-          dftPtr->d_nonLocalAtomIdsInCurrentProcess[iAtom];
-        const int globalChargeIdNonLocalAtom =
-          dftPtr->d_nonLocalAtomGlobalChargeIds[nonLocalAtomId];
+          dftPtr->d_oncvClassPtr->getAtomIdInCurrentProcessor(iAtom);
 
 
 
@@ -74,15 +75,15 @@ namespace dftfe
             const unsigned int elementId =
               cellIdToCellNumberMap.find(subCellPtr->id())->second;
             for (unsigned int i = 0;
-                 i <
-                 dftPtr
-                   ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                   .size();
+                 i < (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                        ->getCellIdToAtomIdsLocalCompactSupportMap())
+                       .find(elementId)
+                       ->second.size();
                  i++)
-              if (dftPtr
-                    ->d_cellIdToNonlocalAtomIdsLocalCompactSupportMap[elementId]
-                                                                     [i] ==
-                  iAtom)
+              if ((dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                     ->getCellIdToAtomIdsLocalCompactSupportMap())
+                    .find(elementId)
+                    ->second[i] == iAtom)
                 {
                   isPseudoWfcsAtomInCell = true;
                   break;
@@ -101,20 +102,23 @@ namespace dftfe
 
                     const unsigned int startingPseudoWfcIdFlattened =
                       kPoint *
-                        dftPtr
-                          ->d_sumNonTrivialPseudoWfcsOverAllCellsZetaDeltaVQuads *
+                        (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                           ->getTotalNonTrivialSphericalFnsOverAllCells()) *
                         numQuadPoints +
-                      dftPtr
-                          ->d_nonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                         ->getNonTrivialSphericalFnsCellStartIndex())
+                          [elementId] *
                         numQuadPoints +
-                      dftPtr
-                          ->d_atomIdToNonTrivialPseudoWfcsCellStartIndexZetaDeltaVQuads
-                            [iAtom][elementId] *
+                      (dftPtr->d_oncvClassPtr->getNonLocalOperator()
+                         ->getAtomIdToNonTrivialSphericalFnCellStartIndex())
+                          .find(iAtom)
+                          ->second[elementId] *
                         numQuadPoints;
 
                     const unsigned int numberPseudoWaveFunctions =
-                      dftPtr->d_numberPseudoAtomicWaveFunctions[nonLocalAtomId];
+                      dftPtr->d_oncvClassPtr
+                        ->getTotalNumberOfSphericalFunctionsForAtomId(
+                          nonLocalAtomId);
                     std::vector<dataTypes::number> temp1(3);
                     std::vector<dataTypes::number> temp2(3);
                     for (unsigned int q = 0; q < numQuadPoints; ++q)
@@ -136,19 +140,20 @@ namespace dftfe
                             temp1[2] = zetalmDeltaVlProductDistImageAtoms
                               [startingPseudoWfcIdFlattened * 3 +
                                iPseudoWave * numQuadPoints * 3 + q * 3 + 2];
-
                             temp2[0] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 0];
+                                 iPseudoWave * 3 * numQuadPoints + q];
                             temp2[1] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 1];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 numQuadPoints + q];
                             temp2[2] =
                               projectorKetTimesPsiTimesVTimesPartOccContractionGradPsiQuadsFlattened
                                 [startingPseudoWfcIdFlattened * 3 +
-                                 iPseudoWave * numQuadPoints * 3 + q * 3 + 2];
+                                 iPseudoWave * 3 * numQuadPoints +
+                                 2 * numQuadPoints + q];
 #ifdef USE_COMPLEX
                             const dataTypes::number temp3 =
                               projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattened

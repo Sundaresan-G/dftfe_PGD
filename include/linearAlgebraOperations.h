@@ -24,7 +24,7 @@
 #include "process_grid.h"
 #include "scalapackWrapper.h"
 #include "dftParameters.h"
-
+#include <BLASWrapper.h>
 namespace dftfe
 {
   //
@@ -45,6 +45,45 @@ namespace dftfe
            const double *      beta,
            double *            C,
            const unsigned int *INCY);
+
+    void
+    sgemv_(const char *        TRANS,
+           const unsigned int *M,
+           const unsigned int *N,
+           const float *       alpha,
+           const float *       A,
+           const unsigned int *LDA,
+           const float *       X,
+           const unsigned int *INCX,
+           const float *       beta,
+           float *             C,
+           const unsigned int *INCY);
+
+    void
+    zgemv_(const char *                TRANS,
+           const unsigned int *        M,
+           const unsigned int *        N,
+           const std::complex<double> *alpha,
+           const std::complex<double> *A,
+           const unsigned int *        LDA,
+           const std::complex<double> *X,
+           const unsigned int *        INCX,
+           const std::complex<double> *beta,
+           std::complex<double> *      C,
+           const unsigned int *        INCY);
+
+    void
+    cgemv_(const char *               TRANS,
+           const unsigned int *       M,
+           const unsigned int *       N,
+           const std::complex<float> *alpha,
+           const std::complex<float> *A,
+           const unsigned int *       LDA,
+           const std::complex<float> *X,
+           const unsigned int *       INCX,
+           const std::complex<float> *beta,
+           std::complex<float> *      C,
+           const unsigned int *       INCY);
     void
     dsymv_(const char *        UPLO,
            const unsigned int *N,
@@ -100,7 +139,7 @@ namespace dftfe
     void
     daxpy_(const unsigned int *n,
            const double *      alpha,
-           double *            x,
+           const double *      x,
            const unsigned int *incx,
            double *            y,
            const unsigned int *incy);
@@ -337,6 +376,14 @@ namespace dftfe
            const unsigned int *        incx,
            std::complex<double> *      y,
            const unsigned int *        incy);
+
+    void
+    ccopy_(const unsigned int *       n,
+           const std::complex<float> *x,
+           const unsigned int *       incx,
+           std::complex<float> *      y,
+           const unsigned int *       incy);
+
     std::complex<double>
     zdotc_(const unsigned int *        N,
            const std::complex<double> *X,
@@ -360,7 +407,7 @@ namespace dftfe
     void
     zaxpy_(const unsigned int *        n,
            const std::complex<double> *alpha,
-           std::complex<double> *      x,
+           const std::complex<double> *x,
            const unsigned int *        incx,
            std::complex<double> *      y,
            const unsigned int *        incy);
@@ -537,11 +584,16 @@ namespace dftfe
      *  @param  vect A dummy vector
      *  @return std::pair<double,double> An estimate of the lower and upper bound of the given matrix
      */
-    template <typename T>
+    template <typename T, dftfe::utils::MemorySpace memorySpace>
     std::pair<double, double>
-    lanczosLowerUpperBoundEigenSpectrum(operatorDFTClass &operatorMatrix,
-                                        const distributedCPUMultiVec<T> &vect,
-                                        const dftParameters &dftParams);
+    lanczosLowerUpperBoundEigenSpectrum(
+      const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
+        &                                                BLASWrapperPtr,
+      operatorDFTClass<memorySpace> &                    operatorMatrix,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &X,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &Y,
+      dftfe::linearAlgebra::MultiVector<T, memorySpace> &Z,
+      const dftParameters &                              dftParams);
 
 
     /** @brief Apply Chebyshev filter to a given subspace
@@ -555,27 +607,15 @@ namespace dftfe
      *  @param[in]  b upper bound of unwanted spectrum
      *  @param[in]  a0 lower bound of wanted spectrum
      */
-    template <typename T>
+    template <typename T, dftfe::utils::MemorySpace memorySpace>
     void
-    chebyshevFilter(operatorDFTClass &         operatorMatrix,
-                    distributedCPUMultiVec<T> &X,
-                    const unsigned int         numberComponents,
-                    const unsigned int         m,
-                    const double               a,
-                    const double               b,
-                    const double               a0);
-
-
-    template <typename T>
-    void
-    chebyshevFilterOpt(operatorDFTClass &              operatorMatrix,
-                       distributedCPUMultiVec<T> &     X,
-                       std::vector<dataTypes::number> &cellWaveFunctionMatrix,
-                       const unsigned int              numberComponents,
-                       const unsigned int              m,
-                       const double                    a,
-                       const double                    b,
-                       const double                    a0);
+    chebyshevFilter(operatorDFTClass<memorySpace> &operatorMatrix,
+                    dftfe::linearAlgebra::MultiVector<T, memorySpace> &X,
+                    dftfe::linearAlgebra::MultiVector<T, memorySpace> &Y,
+                    const unsigned int                                 m,
+                    const double                                       a,
+                    const double                                       b,
+                    const double                                       a0);
 
 
 
@@ -651,17 +691,18 @@ namespace dftfe
      */
     template <typename T>
     void
-    rayleighRitzGEP(operatorDFTClass &   operatorMatrix,
-                    elpaScalaManager &   elpaScala,
-                    T *                  X,
-                    const unsigned int   numberComponents,
-                    const unsigned int   numberDofs,
-                    const MPI_Comm &     mpiCommParent,
-                    const MPI_Comm &     interBandGroupComm,
-                    const MPI_Comm &     mpiCommDomain,
-                    std::vector<double> &eigenValues,
-                    const bool           useMixedPrec,
-                    const dftParameters &dftParams);
+    rayleighRitzGEP(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      elpaScalaManager &                                 elpaScala,
+      T *                                                X,
+      const unsigned int                                 numberComponents,
+      const unsigned int                                 numberDofs,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpiCommDomain,
+      std::vector<double> &                              eigenValues,
+      const bool                                         useMixedPrec,
+      const dftParameters &                              dftParams);
 
 
     /** @brief Compute Rayleigh-Ritz projection
@@ -679,17 +720,18 @@ namespace dftfe
      */
     template <typename T>
     void
-    rayleighRitz(operatorDFTClass &   operatorMatrix,
-                 elpaScalaManager &   elpaScala,
-                 T *                  X,
-                 const unsigned int   numberComponents,
-                 const unsigned int   numberDofs,
-                 const MPI_Comm &     mpiCommParent,
-                 const MPI_Comm &     interBandGroupComm,
-                 const MPI_Comm &     mpiCommDomain,
-                 std::vector<double> &eigenValues,
-                 const dftParameters &dftParams,
-                 const bool           doCommAfterBandParal = true);
+    rayleighRitz(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      elpaScalaManager &                                 elpaScala,
+      T *                                                X,
+      const unsigned int                                 numberComponents,
+      const unsigned int                                 numberDofs,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpiCommDomain,
+      std::vector<double> &                              eigenValues,
+      const dftParameters &                              dftParams,
+      const bool doCommAfterBandParal = true);
 
     /** @brief Compute Rayleigh-Ritz projection in case of spectrum split using direct diagonalization
      *  (serial version using LAPACK, parallel version using ScaLAPACK)
@@ -708,19 +750,20 @@ namespace dftfe
      */
     template <typename T>
     void
-    rayleighRitzGEPSpectrumSplitDirect(operatorDFTClass &   operatorMatrix,
-                                       elpaScalaManager &   elpaScala,
-                                       T *                  X,
-                                       T *                  Y,
-                                       const unsigned int   numberComponents,
-                                       const unsigned int   numberDofs,
-                                       const unsigned int   numberCoreStates,
-                                       const MPI_Comm &     mpiCommParent,
-                                       const MPI_Comm &     interBandGroupComm,
-                                       const MPI_Comm &     mpiCommDomain,
-                                       const bool           useMixedPrec,
-                                       std::vector<double> &eigenValues,
-                                       const dftParameters &dftParams);
+    rayleighRitzGEPSpectrumSplitDirect(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      elpaScalaManager &                                 elpaScala,
+      T *                                                X,
+      T *                                                Y,
+      const unsigned int                                 numberComponents,
+      const unsigned int                                 numberDofs,
+      const unsigned int                                 numberCoreStates,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpiCommDomain,
+      const bool                                         useMixedPrec,
+      std::vector<double> &                              eigenValues,
+      const dftParameters &                              dftParams);
 
 
     /** @brief Compute Rayleigh-Ritz projection in case of spectrum split using direct diagonalization
@@ -740,19 +783,20 @@ namespace dftfe
      */
     template <typename T>
     void
-    rayleighRitzSpectrumSplitDirect(operatorDFTClass &   operatorMatrix,
-                                    elpaScalaManager &   elpaScala,
-                                    const T *            X,
-                                    T *                  Y,
-                                    const unsigned int   numberComponents,
-                                    const unsigned int   numberDofs,
-                                    const unsigned int   numberCoreStates,
-                                    const MPI_Comm &     mpiCommParent,
-                                    const MPI_Comm &     interBandGroupComm,
-                                    const MPI_Comm &     mpiCommDomain,
-                                    const bool           useMixedPrec,
-                                    std::vector<double> &eigenValues,
-                                    const dftParameters &dftParams);
+    rayleighRitzSpectrumSplitDirect(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      elpaScalaManager &                                 elpaScala,
+      const T *                                          X,
+      T *                                                Y,
+      const unsigned int                                 numberComponents,
+      const unsigned int                                 numberDofs,
+      const unsigned int                                 numberCoreStates,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpiCommDomain,
+      const bool                                         useMixedPrec,
+      std::vector<double> &                              eigenValues,
+      const dftParameters &                              dftParams);
 
 
     /** @brief Compute residual norm associated with eigenValue problem of the given operator
@@ -766,16 +810,17 @@ namespace dftfe
      */
     template <typename T>
     void
-    computeEigenResidualNorm(operatorDFTClass &         operatorMatrix,
-                             T *                        X,
-                             const std::vector<double> &eigenValues,
-                             const unsigned int         numberComponents,
-                             const unsigned int         numberDofs,
-                             const MPI_Comm &           mpiCommParent,
-                             const MPI_Comm &           mpiCommDomain,
-                             const MPI_Comm &           interBandGroupComm,
-                             std::vector<double> &      residualNorm,
-                             const dftParameters &      dftParams);
+    computeEigenResidualNorm(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      T *                                                X,
+      const std::vector<double> &                        eigenValues,
+      const unsigned int                                 numberComponents,
+      const unsigned int                                 numberDofs,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   mpiCommDomain,
+      const MPI_Comm &                                   interBandGroupComm,
+      std::vector<double> &                              residualNorm,
+      const dftParameters &                              dftParams);
 
     /** @brief Compute first order response in density matrix with respect to perturbation in the Hamiltonian.
      * Perturbation is computed in the eigenbasis.
@@ -783,19 +828,84 @@ namespace dftfe
     template <typename T>
     void
     densityMatrixEigenBasisFirstOrderResponse(
-      operatorDFTClass &         operatorMatrix,
-      T *                        X,
-      const unsigned int         N,
-      const unsigned int         numberLocalDofs,
-      const MPI_Comm &           mpiCommParent,
-      const MPI_Comm &           mpiCommDomain,
-      const MPI_Comm &           interBandGroupComm,
-      const std::vector<double> &eigenValues,
-      const double               fermiEnergy,
-      std::vector<double> &      densityMatDerFermiEnergy,
-      elpaScalaManager &         elpaScala,
-      const dftParameters &      dftParams);
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      T *                                                X,
+      const unsigned int                                 N,
+      const unsigned int                                 numberLocalDofs,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   mpiCommDomain,
+      const MPI_Comm &                                   interBandGroupComm,
+      const std::vector<double> &                        eigenValues,
+      const double                                       fermiEnergy,
+      std::vector<double> &densityMatDerFermiEnergy,
+      elpaScalaManager &   elpaScala,
+      const dftParameters &dftParams);
 
+    /**
+     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
+     *
+     * @param X Vector of Vectors containing multi-wavefunction fields
+     * @param numberComponents number of wavefunctions associated with a given node
+     * @param ProjMatrix projected small matrix
+     */
+    void
+    XtHX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+         const dataTypes::number *                          X,
+         const unsigned int                                 numberComponents,
+         const unsigned int                                 numberLocalDofs,
+         const MPI_Comm &                                   mpiCommDomain,
+         const MPI_Comm &                                   interBandGroupComm,
+         const dftParameters &                              dftParams,
+         std::vector<dataTypes::number> &                   ProjHam);
+
+    /**
+     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
+     *
+     * @param X Vector of Vectors containing multi-wavefunction fields
+     * @param numberComponents number of wavefunctions associated with a given node
+     * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
+     * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
+     * of the operation into the given subspace
+     */
+    void
+    XtHX(operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+         const dataTypes::number *                          X,
+         const unsigned int                                 numberComponents,
+         const unsigned int                                 numberLocalDofs,
+         const std::shared_ptr<const dftfe::ProcessGrid> &  processGrid,
+         const MPI_Comm &                                   mpiCommDomain,
+         const MPI_Comm &                                   interBandGroupComm,
+         const dftParameters &                              dftParams,
+         dftfe::ScaLAPACKMatrix<dataTypes::number> &        projHamPar,
+         const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+
+    /**
+     * @brief Compute projection of the operator into a subspace spanned by a given orthogonal basis HProjConj=X^{T}*HConj*XConj
+     *
+     * @param X Vector of Vectors containing multi-wavefunction fields
+     * @param totalNumberComponents number of wavefunctions associated with a given node
+     * @param singlePrecComponents number of wavecfuntions starting from the first for
+     * which the project Hamiltionian block will be computed in single
+     * procession. However the cross blocks will still be computed in double
+     * precision.
+     * @param processGrid two-dimensional processor grid corresponding to the parallel projHamPar
+     * @param projHamPar parallel ScaLAPACKMatrix which stores the computed projection
+     * of the operation into the given subspace
+     */
+    void
+    XtHXMixedPrec(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      const dataTypes::number *                          X,
+      const unsigned int                                 totalNumberComponents,
+      const unsigned int                                 singlePrecComponents,
+      const unsigned int                                 numberLocalDofs,
+      const std::shared_ptr<const dftfe::ProcessGrid> &  processGrid,
+      const MPI_Comm &                                   mpiCommDomain,
+      const MPI_Comm &                                   interBandGroupComm,
+      const dftParameters &                              dftParams,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &        projHamPar,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
   } // namespace linearAlgebraOperations
 

@@ -26,9 +26,9 @@ namespace dftfe
   namespace internal
   {
     void
-    pointWiseScaleWithDiagonal(const distributedCPUVec<double> &diagonal,
-                               const unsigned int               numberFields,
-                               const unsigned int               numberDofs,
+    pointWiseScaleWithDiagonal(const double *     diagonal,
+                               const unsigned int numberFields,
+                               const unsigned int numberDofs,
                                dataTypes::number *fieldsArrayFlattened)
     {
       const unsigned int inc = 1;
@@ -36,13 +36,13 @@ namespace dftfe
       for (unsigned int i = 0; i < numberDofs; ++i)
         {
 #ifdef USE_COMPLEX
-          double scalingCoeff = diagonal.local_element(i);
+          double scalingCoeff = diagonal[i];
           zdscal_(&numberFields,
                   &scalingCoeff,
                   &fieldsArrayFlattened[i * numberFields],
                   &inc);
 #else
-          double scalingCoeff = diagonal.local_element(i);
+          double scalingCoeff = diagonal[i];
           dscal_(&numberFields,
                  &scalingCoeff,
                  &fieldsArrayFlattened[i * numberFields],
@@ -53,257 +53,277 @@ namespace dftfe
   } // namespace internal
 
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dataTypes::number
-  dftClass<FEOrder, FEOrderElectro>::computeTraceXtHX(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeTraceXtHX(
     unsigned int numberWaveFunctionsEstimate)
   {
-    //
-    // set up poisson solver
-    //
-    dealiiLinearSolver                            CGSolver(d_mpiCommParent,
-                                mpi_communicator,
-                                dealiiLinearSolver::CG);
-    poissonSolverProblem<FEOrder, FEOrderElectro> phiTotalSolverProblem(
-      mpi_communicator);
+    // //
+    // // set up poisson solver
+    // //
+    // dealiiLinearSolver                            CGSolver(d_mpiCommParent,
+    //                             mpi_communicator,
+    //                             dealiiLinearSolver::CG);
+    // poissonSolverProblem<FEOrder, FEOrderElectro> phiTotalSolverProblem(
+    //   mpi_communicator);
 
-    //
-    // solve for vself and compute Tr(XtHX)
-    //
-    d_vselfBinsManager.solveVselfInBins(d_matrixFreeDataPRefined,
-                                        d_binsStartDofHandlerIndexElectro,
-                                        d_phiTotAXQuadratureIdElectro,
-                                        d_constraintsPRefined,
-                                        d_imagePositionsTrunc,
-                                        d_imageIdsTrunc,
-                                        d_imageChargesTrunc,
-                                        d_localVselfs,
-                                        d_bQuadValuesAllAtoms,
-                                        d_bQuadAtomIdsAllAtomsImages,
-                                        d_bQuadAtomIdsAllAtoms,
-                                        d_bCellNonTrivialAtomIds,
-                                        d_bCellNonTrivialAtomIdsBins,
-                                        d_bCellNonTrivialAtomImageIds,
-                                        d_bCellNonTrivialAtomImageIdsBins,
-                                        d_smearedChargeWidths,
-                                        d_smearedChargeScaling,
-                                        d_smearedChargeQuadratureIdElectro);
+    // //
+    // // solve for vself and compute Tr(XtHX)
+    // //
+    // d_vselfBinsManager.solveVselfInBins(d_basisOperationsPtrElectroHost,
+    //                                     d_binsStartDofHandlerIndexElectro,
+    //                                     d_phiTotAXQuadratureIdElectro,
+    //                                     d_constraintsPRefined,
+    //                                     d_imagePositionsTrunc,
+    //                                     d_imageIdsTrunc,
+    //                                     d_imageChargesTrunc,
+    //                                     d_localVselfs,
+    //                                     d_bQuadValuesAllAtoms,
+    //                                     d_bQuadAtomIdsAllAtomsImages,
+    //                                     d_bQuadAtomIdsAllAtoms,
+    //                                     d_bCellNonTrivialAtomIds,
+    //                                     d_bCellNonTrivialAtomIdsBins,
+    //                                     d_bCellNonTrivialAtomImageIds,
+    //                                     d_bCellNonTrivialAtomImageIdsBins,
+    //                                     d_smearedChargeWidths,
+    //                                     d_smearedChargeScaling,
+    //                                     d_smearedChargeQuadratureIdElectro);
 
-    //
-    // solve for potential corresponding to initial electron-density
-    //
-    phiTotalSolverProblem.reinit(
-      d_matrixFreeDataPRefined,
-      d_phiTotRhoIn,
-      *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-      d_phiTotDofHandlerIndexElectro,
-      d_phiTotAXQuadratureIdElectro,
-      d_densityQuadratureIdElectro,
-      d_atomNodeIdToChargeMap,
-      d_bQuadValuesAllAtoms,
-      d_smearedChargeQuadratureIdElectro,
-      *rhoInValues,
-      true,
-      d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-        d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
-      d_dftParamsPtr->smearedNuclearCharges);
+    // //
+    // // solve for potential corresponding to initial electron-density
+    // //
+    // phiTotalSolverProblem.reinit(
+    //   d_basisOperationsPtrElectroHost,
+    //   d_phiTotRhoIn,
+    //   *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+    //   d_phiTotDofHandlerIndexElectro,
+    //   d_phiTotAXQuadratureIdElectro,
+    //   d_densityQuadratureIdElectro,
+    //   d_atomNodeIdToChargeMap,
+    //   d_bQuadValuesAllAtoms,
+    //   d_smearedChargeQuadratureIdElectro,
+    //   d_densityInQuadValues[0],
+    //   true,
+    //   d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+    //     d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
+    //   d_dftParamsPtr->smearedNuclearCharges);
 
-    std::map<dealii::CellId, std::vector<double>> phiInValues;
+    // dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+    //   phiInValues;
 
-    CGSolver.solve(phiTotalSolverProblem,
-                   d_dftParamsPtr->absLinearSolverTolerance,
-                   d_dftParamsPtr->maxLinearSolverIterations,
-                   d_dftParamsPtr->verbosity);
+    // CGSolver.solve(phiTotalSolverProblem,
+    //                d_dftParamsPtr->absLinearSolverTolerance,
+    //                d_dftParamsPtr->maxLinearSolverIterations,
+    //                d_dftParamsPtr->verbosity);
 
-    std::map<dealii::CellId, std::vector<double>> dummy;
-    interpolateRhoNodalDataToQuadratureDataGeneral(
-      d_matrixFreeDataPRefined,
-      d_phiTotDofHandlerIndexElectro,
-      d_densityQuadratureIdElectro,
-      d_phiTotRhoIn,
-      phiInValues,
-      dummy,
-      dummy);
+    // dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+    // dummy; interpolateElectroNodalDataToQuadratureDataGeneral(
+    //   d_basisOperationsPtrElectroHost,
+    //   d_phiTotDofHandlerIndexElectro,
+    //   d_densityQuadratureIdElectro,
+    //   d_phiTotRhoIn,
+    //   phiInValues,
+    //   dummy);
 
-    //
-    // create kohnShamDFTOperatorClass object
-    //
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> kohnShamDFTEigenOperator(
-      this, d_mpiCommParent, mpi_communicator);
-    kohnShamDFTEigenOperator.init();
+    // //
+    // // create kohnShamDFTOperatorClass object
+    // //
+    // kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+    //   kohnShamDFTEigenOperator(this, d_mpiCommParent, mpi_communicator);
+    // kohnShamDFTEigenOperator.init();
 
-    //
-    // precompute shapeFunctions and shapeFunctionGradients and
-    // shapeFunctionGradientIntegrals
-    //
-    kohnShamDFTEigenOperator.preComputeShapeFunctionGradientIntegrals(
-      d_lpspQuadratureId);
+    // //
+    // // precompute shapeFunctions and shapeFunctionGradients and
+    // // shapeFunctionGradientIntegrals
+    // //
+    // kohnShamDFTEigenOperator.preComputeShapeFunctionGradientIntegrals(
+    //   d_lpspQuadratureId);
 
-    //
-    // compute Veff
-    //
-    if (d_excManagerPtr->getDensityBasedFamilyType() == densityFamilyType::LDA)
-      {
-        kohnShamDFTEigenOperator.computeVEff(rhoInValues.get(),
-                                             phiInValues,
-                                             d_pseudoVLoc,
-                                             d_rhoCore,
-                                             d_lpspQuadratureId);
-      }
-    else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-             densityFamilyType::GGA)
-      {
-        kohnShamDFTEigenOperator.computeVEff(rhoInValues.get(),
-                                             gradRhoInValues.get(),
-                                             phiInValues,
-                                             d_pseudoVLoc,
-                                             d_rhoCore,
-                                             d_gradRhoCore,
-                                             d_lpspQuadratureId);
-      }
+    // //
+    // // compute Veff
+    // //
+    // if (d_excManagerPtr->getDensityBasedFamilyType() ==
+    // densityFamilyType::LDA)
+    //   {
+    //     kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+    //                                          phiInValues,
+    //                                          d_pseudoVLoc,
+    //                                          d_rhoCore,
+    //                                          d_lpspQuadratureId);
+    //   }
+    // else if (d_excManagerPtr->getDensityBasedFamilyType() ==
+    //          densityFamilyType::GGA)
+    //   {
+    //     kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+    //                                          d_gradDensityInQuadValues,
+    //                                          phiInValues,
+    //                                          d_pseudoVLoc,
+    //                                          d_rhoCore,
+    //                                          d_gradRhoCore,
+    //                                          d_lpspQuadratureId);
+    //   }
 
-    //
-    // compute Hamiltonian matrix
-    //
-    kohnShamDFTEigenOperator.computeHamiltonianMatrix(0, 0);
+    // //
+    // // compute Hamiltonian matrix
+    // //
+    // kohnShamDFTEigenOperator.computeHamiltonianMatrix(0, 0);
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_sqrtMassVector,
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data());
-
-
-    //
-    // compute projected Hamiltonian
-    //
-    std::vector<dataTypes::number> ProjHam;
-
-    kohnShamDFTEigenOperator.XtHX(
-      d_eigenVectorsFlattenedHost.data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      ProjHam);
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_invSqrtMassVector,
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data());
+    // //
+    // // scale the eigenVectors (initial guess of single atom wavefunctions or
+    // // previous guess) to convert into Lowden Orthonormalized FE basis
+    // multiply
+    // // by M^{1/2}
+    // internal::pointWiseScaleWithDiagonal(
+    //   kohnShamDFTEigenOperator.d_sqrtMassVector,
+    //   d_numEigenValues,
+    //   matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+    //   d_eigenVectorsFlattenedHost.data());
 
 
-    dataTypes::number trXtHX = 0.0;
-    for (unsigned int i = 0; i < numberWaveFunctionsEstimate; ++i)
-      {
-        trXtHX += ProjHam[d_numEigenValues * i + i];
-      }
+    // //
+    // // compute projected Hamiltonian
+    // //
+    // std::vector<dataTypes::number> ProjHam;
 
-    return trXtHX;
+    // dftfe::linearAlgebraOperations::XtHX(
+    //   kohnShamDFTEigenOperator,
+    //   d_eigenVectorsFlattenedHost.data(),
+    //   d_numEigenValues,
+    //   matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+    //   mpi_communicator,
+    //   interBandGroupComm,
+    //   *d_dftParamsPtr,
+    //   ProjHam);
+
+    // //
+    // // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
+    // // the usual FE basis
+    // //
+    // internal::pointWiseScaleWithDiagonal(
+    //   kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
+    //   d_numEigenValues,
+    //   matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+    //   d_eigenVectorsFlattenedHost.data());
+
+
+    // dataTypes::number trXtHX = 0.0;
+    // for (unsigned int i = 0; i < numberWaveFunctionsEstimate; ++i)
+    //   {
+    //     trXtHX += ProjHam[d_numEigenValues * i + i];
+    //   }
+
+    // return trXtHX;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::computeTraceXtKX(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeTraceXtKX(
     unsigned int numberWaveFunctionsEstimate)
   {
-    //
-    // create kohnShamDFTOperatorClass object
-    //
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> kohnShamDFTEigenOperator(
-      this, d_mpiCommParent, mpi_communicator);
-    kohnShamDFTEigenOperator.init();
+    //     //
+    //     // create kohnShamDFTOperatorClass object
+    //     //
+    //     kohnShamDFTOperatorClass<FEOrder, FEOrderElectro, memorySpace>
+    //       kohnShamDFTEigenOperator(this, d_mpiCommParent, mpi_communicator);
+    //     kohnShamDFTEigenOperator.init();
 
-    //
-    // precompute shapeFunctions and shapeFunctionGradients and
-    // shapeFunctionGradientIntegrals
-    //
-    kohnShamDFTEigenOperator.preComputeShapeFunctionGradientIntegrals(
-      d_lpspQuadratureId);
-
-
-    //
-    // compute Hamiltonian matrix
-    //
-    kohnShamDFTEigenOperator.computeKineticMatrix();
-
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_sqrtMassVector,
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data());
+    //     //
+    //     // precompute shapeFunctions and shapeFunctionGradients and
+    //     // shapeFunctionGradientIntegrals
+    //     //
+    //     kohnShamDFTEigenOperator.preComputeShapeFunctionGradientIntegrals(
+    //       d_lpspQuadratureId);
 
 
-    //
-    // orthogonalize the vectors
-    //
-    linearAlgebraOperations::gramSchmidtOrthogonalization(
-      d_eigenVectorsFlattenedHost.data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      mpi_communicator);
+    //     //
+    //     // compute Hamiltonian matrix
+    //     //
+    //     kohnShamDFTEigenOperator.computeKineticMatrix();
 
-    //
-    // compute projected Hamiltonian
-    //
-    std::vector<dataTypes::number> ProjHam;
+    //     //
+    //     // scale the eigenVectors (initial guess of single atom wavefunctions
+    //     or
+    //     // previous guess) to convert into Lowden Orthonormalized FE basis
+    //     multiply
+    //     // by M^{1/2}
+    //     internal::pointWiseScaleWithDiagonal(
+    //       kohnShamDFTEigenOperator.d_sqrtMassVector,
+    //       d_numEigenValues,
+    //       matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+    //       d_eigenVectorsFlattenedHost.data());
 
-    kohnShamDFTEigenOperator.XtHX(
-      d_eigenVectorsFlattenedHost.data(),
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      ProjHam);
 
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_invSqrtMassVector,
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data());
+    //     //
+    //     // orthogonalize the vectors
+    //     //
+    //     linearAlgebraOperations::gramSchmidtOrthogonalization(
+    //       d_eigenVectorsFlattenedHost.data(),
+    //       d_numEigenValues,
+    //       matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+    //       mpi_communicator);
 
-    double trXtKX = 0.0;
-#ifdef USE_COMPLEX
-    trXtKX = 0.0;
-#else
-    for (unsigned int i = 0; i < numberWaveFunctionsEstimate; ++i)
-      {
-        trXtKX += ProjHam[d_numEigenValues * i + i];
-      }
-#endif
+    //     //
+    //     // compute projected Hamiltonian
+    //     //
+    //     std::vector<dataTypes::number> ProjHam;
 
-    return trXtKX;
+    //     dftfe::linearAlgebraOperations::XtHX(
+    //       kohnShamDFTEigenOperator,
+    //       d_eigenVectorsFlattenedHost.data(),
+    //       d_numEigenValues,
+    //       matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+    //       mpi_communicator,
+    //       interBandGroupComm,
+    //       *d_dftParamsPtr,
+    //       ProjHam);
+
+    //     //
+    //     // scale the eigenVectors with M^{-1/2} to represent the
+    //     wavefunctions in
+    //     // the usual FE basis
+    //     //
+    //     internal::pointWiseScaleWithDiagonal(
+    //       kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
+    //       d_numEigenValues,
+    //       matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+    //       d_eigenVectorsFlattenedHost.data());
+
+    //     double trXtKX = 0.0;
+    // #ifdef USE_COMPLEX
+    //     trXtKX = 0.0;
+    // #else
+    //     for (unsigned int i = 0; i < numberWaveFunctionsEstimate; ++i)
+    //       {
+    //         trXtKX += ProjHam[d_numEigenValues * i + i];
+    //       }
+    // #endif
+
+    //     return trXtKX;
   }
 
 
 
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::kohnShamEigenSpaceCompute(
-    const unsigned int                                 spinType,
-    const unsigned int                                 kPointIndex,
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
-    elpaScalaManager &                                 elpaScala,
-    chebyshevOrthogonalizedSubspaceIterationSolver &   subspaceIterationSolver,
-    std::vector<double> &residualNormWaveFunctions,
-    const bool           computeResidual,
-    const bool           isSpectrumSplit,
-    const bool           useMixedPrec,
-    const bool           isFirstScf)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceCompute(
+    const unsigned int spinType,
+    const unsigned int kPointIndex,
+    KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
+      &                                             kohnShamDFTEigenOperator,
+    elpaScalaManager &                              elpaScala,
+    chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
+    std::vector<double> &                           residualNormWaveFunctions,
+    const bool                                      computeResidual,
+    const bool                                      isSpectrumSplit,
+    const bool                                      useMixedPrec,
+    const bool                                      isFirstScf)
   {
     computing_timer.enter_subsection("Chebyshev solve");
 
@@ -315,19 +335,6 @@ namespace dftfe
           pcout << "spin: " << spinType + 1 << std::endl;
       }
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_sqrtMassVector,
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
-
     std::vector<double> eigenValuesTemp(isSpectrumSplit ? d_numEigenValuesRR :
                                                           d_numEigenValues,
                                         0.0);
@@ -336,13 +343,16 @@ namespace dftfe
                                  kPointIndex +
                                spinType])
       {
-        distributedCPUMultiVec<dataTypes::number> vecForLanczos;
-        kohnShamDFTEigenOperator.reinit(1, vecForLanczos, true);
-
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
+
         std::pair<double, double> bounds =
           linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
-            kohnShamDFTEigenOperator, vecForLanczos, *d_dftParamsPtr);
+            d_BLASWrapperPtrHost,
+            kohnShamDFTEigenOperator,
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            *d_dftParamsPtr);
 
         const double upperBoundUnwantedSpectrum = bounds.second;
         const double lowerBoundWantedSpectrum   = bounds.first;
@@ -360,7 +370,9 @@ namespace dftfe
           lowerBoundWantedSpectrum,
           lowerBoundWantedSpectrum +
             (upperBoundUnwantedSpectrum - lowerBoundWantedSpectrum) /
-              vecForLanczos.globalSize() * d_numEigenValues *
+              kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0)
+                .globalSize() *
+              d_numEigenValues *
               (d_dftParamsPtr->reproducible_output ? 10.0 : 200.0),
           upperBoundUnwantedSpectrum);
       }
@@ -369,11 +381,15 @@ namespace dftfe
         if (!d_dftParamsPtr->reuseLanczosUpperBoundFromFirstCall)
           {
             computing_timer.enter_subsection("Lanczos k-step Upper Bound");
-            distributedCPUMultiVec<dataTypes::number> vecForLanczos;
-            kohnShamDFTEigenOperator.reinit(1, vecForLanczos, true);
+
             std::pair<double, double> bounds =
               linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
-                kohnShamDFTEigenOperator, vecForLanczos, *d_dftParamsPtr);
+                d_BLASWrapperPtrHost,
+                kohnShamDFTEigenOperator,
+                kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
+                kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
+                kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+                *d_dftParamsPtr);
             d_upperBoundUnwantedSpectrumValues
               [(1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType] =
                 bounds.second;
@@ -403,34 +419,10 @@ namespace dftfe
       eigenValuesTemp,
       residualNormWaveFunctions,
       interBandGroupComm,
+      mpi_communicator,
       computeResidual,
       useMixedPrec,
       isFirstScf);
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_invSqrtMassVector,
-      d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-      d_eigenVectorsFlattenedHost.data() +
-        ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size());
-
-    if (isSpectrumSplit && d_numEigenValuesRR != d_numEigenValues)
-      {
-        internal::pointWiseScaleWithDiagonal(
-          kohnShamDFTEigenOperator.d_invSqrtMassVector,
-          d_numEigenValuesRR,
-          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-          d_eigenVectorsRotFracDensityFlattenedHost.data() +
-            ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-              d_numEigenValuesRR *
-              matrix_free_data.get_vector_partitioner()->locally_owned_size());
-      }
 
     //
     // copy the eigenValues and corresponding residual norms back to data
@@ -502,12 +494,14 @@ namespace dftfe
 
 #ifdef DFTFE_WITH_DEVICE
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::kohnShamEigenSpaceCompute(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceCompute(
     const unsigned int spinType,
     const unsigned int kPointIndex,
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+    KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
       &               kohnShamDFTEigenOperator,
     elpaScalaManager &elpaScala,
     chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -544,6 +538,7 @@ namespace dftfe
       {
         subspaceIterationSolverDevice.solveNoRR(
           kohnShamDFTEigenOperator,
+          d_BLASWrapperPtr,
           elpaScala,
           d_eigenVectorsFlattenedDevice.begin() +
             ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
@@ -565,6 +560,7 @@ namespace dftfe
                                            spinType] =
           subspaceIterationSolverDevice.solve(
             kohnShamDFTEigenOperator,
+            d_BLASWrapperPtr,
             elpaScala,
             d_eigenVectorsFlattenedDevice.begin() +
               ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
@@ -654,13 +650,15 @@ namespace dftfe
 #endif
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int spinType,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala)
   {
@@ -676,7 +674,7 @@ namespace dftfe
     // scale the eigenVectors to convert into Lowden Orthonormalized FE basis
     // multiply by M^{1/2}
     internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_sqrtMassVector,
+      kohnShamDFTEigenOperator.getSqrtMassVector().data(),
       d_numEigenValues,
       matrix_free_data.get_vector_partitioner()->locally_owned_size(),
       d_eigenVectorsDensityMatrixPrimeHost.data() +
@@ -701,7 +699,7 @@ namespace dftfe
       d_numEigenValues,
       matrix_free_data.get_vector_partitioner()->locally_owned_size(),
       d_mpiCommParent,
-      kohnShamDFTEigenOperator.getMPICommunicator(),
+      kohnShamDFTEigenOperator.getMPICommunicatorDomain(),
       interBandGroupComm,
       eigenValuesTemp,
       fermiEnergy,
@@ -717,7 +715,7 @@ namespace dftfe
     // the usual FE basis
     //
     internal::pointWiseScaleWithDiagonal(
-      kohnShamDFTEigenOperator.d_invSqrtMassVector,
+      kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
       d_numEigenValues,
       matrix_free_data.get_vector_partitioner()->locally_owned_size(),
       d_eigenVectorsDensityMatrixPrimeHost.data() +
@@ -728,13 +726,15 @@ namespace dftfe
 
 #ifdef DFTFE_WITH_DEVICE
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
       const unsigned int spinType,
       const unsigned int kPointIndex,
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
+      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
         &               kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
@@ -756,6 +756,7 @@ namespace dftfe
 
     subspaceIterationSolverDevice.densityMatrixEigenBasisFirstOrderResponse(
       kohnShamDFTEigenOperator,
+      d_BLASWrapperPtr,
       d_eigenVectorsDensityMatrixPrimeFlattenedDevice.begin() +
         ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
           d_numEigenValues *
@@ -775,15 +776,18 @@ namespace dftfe
 #endif
 
   // chebyshev solver
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::kohnShamEigenSpaceComputeNSCF(
-    const unsigned int                                 spinType,
-    const unsigned int                                 kPointIndex,
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
-    chebyshevOrthogonalizedSubspaceIterationSolver &   subspaceIterationSolver,
-    std::vector<double> &residualNormWaveFunctions,
-    unsigned int         ipass)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::kohnShamEigenSpaceComputeNSCF(
+    const unsigned int spinType,
+    const unsigned int kPointIndex,
+    KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
+      &                                             kohnShamDFTEigenOperator,
+    chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
+    std::vector<double> &                           residualNormWaveFunctions,
+    unsigned int                                    ipass)
   {
     computing_timer.enter_subsection("Chebyshev solve");
 
@@ -799,7 +803,7 @@ namespace dftfe
     // by M^{1/2}
     if (ipass == 1)
       internal::pointWiseScaleWithDiagonal(
-        kohnShamDFTEigenOperator.d_invSqrtMassVector,
+        kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
         d_numEigenValues,
         matrix_free_data.get_vector_partitioner()->locally_owned_size(),
         d_eigenVectorsFlattenedHost.data() +
@@ -814,13 +818,16 @@ namespace dftfe
                                  kPointIndex +
                                spinType])
       {
-        distributedCPUMultiVec<dataTypes::number> vecForLanczos;
-        kohnShamDFTEigenOperator.reinit(1, vecForLanczos, true);
-
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
+
         std::pair<double, double> bounds =
           linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
-            kohnShamDFTEigenOperator, vecForLanczos, *d_dftParamsPtr);
+            d_BLASWrapperPtrHost,
+            kohnShamDFTEigenOperator,
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            *d_dftParamsPtr);
         const double upperBoundUnwantedSpectrum = bounds.second;
         const double lowerBoundWantedSpectrum   = bounds.first;
         a0[(1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType] =
@@ -831,18 +838,24 @@ namespace dftfe
           lowerBoundWantedSpectrum,
           lowerBoundWantedSpectrum +
             (upperBoundUnwantedSpectrum - lowerBoundWantedSpectrum) /
-              vecForLanczos.globalSize() * d_numEigenValues *
+              kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0)
+                .globalSize() *
+              d_numEigenValues *
               (d_dftParamsPtr->reproducible_output ? 10.0 : 200.0),
           upperBoundUnwantedSpectrum);
       }
     else
       {
         computing_timer.enter_subsection("Lanczos k-step Upper Bound");
-        distributedCPUMultiVec<dataTypes::number> vecForLanczos;
-        kohnShamDFTEigenOperator.reinit(1, vecForLanczos, true);
+
         std::pair<double, double> bounds =
           linearAlgebraOperations::lanczosLowerUpperBoundEigenSpectrum(
-            kohnShamDFTEigenOperator, vecForLanczos, *d_dftParamsPtr);
+            d_BLASWrapperPtrHost,
+            kohnShamDFTEigenOperator,
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 0),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 1),
+            kohnShamDFTEigenOperator.getScratchFEMultivector(1, 2),
+            *d_dftParamsPtr);
         const double upperBoundUnwantedSpectrum = bounds.second;
         computing_timer.leave_subsection("Lanczos k-step Upper Bound");
 
@@ -869,6 +882,7 @@ namespace dftfe
       eigenValuesTemp,
       residualNormWaveFunctions,
       interBandGroupComm,
+      mpi_communicator,
       true,
       false);
 
@@ -927,9 +941,11 @@ namespace dftfe
 
   // compute the maximum of the residual norm of the highest state of interest
   // across all K points
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeMaximumHighestOccupiedStateResidualNorm(
       const std::vector<std::vector<double>>
         &residualNormWaveFunctionsAllkPoints,
@@ -953,9 +969,11 @@ namespace dftfe
   }
   // compute the maximum of the residual norm of the highest occupied state
   // among all k points
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeMaximumHighestOccupiedStateResidualNorm(
       const std::vector<std::vector<double>>
         &residualNormWaveFunctionsAllkPoints,
@@ -963,24 +981,70 @@ namespace dftfe
       const double                            fermiEnergy)
   {
     double maxHighestOccupiedStateResNorm = -1e+6;
-    for (int kPoint = 0; kPoint < eigenValuesAllkPoints.size(); ++kPoint)
+    if (d_dftParamsPtr->reproducible_output)
       {
-        unsigned int highestOccupiedState = 0;
-
-        for (unsigned int i = 0; i < eigenValuesAllkPoints[kPoint].size(); i++)
+        for (int kPoint = 0; kPoint < eigenValuesAllkPoints.size(); ++kPoint)
           {
-            const double factor =
-              (eigenValuesAllkPoints[kPoint][i] - fermiEnergy) /
-              (C_kb * d_dftParamsPtr->TVal);
-            if (factor < 0)
-              highestOccupiedState = i;
+            unsigned int highestOccupiedState = 0;
+
+            for (unsigned int i = 0; i < eigenValuesAllkPoints[kPoint].size();
+                 i++)
+              {
+                const double factor =
+                  (eigenValuesAllkPoints[kPoint][i] - fermiEnergy) /
+                  (C_kb * d_dftParamsPtr->TVal);
+                if (factor < 0)
+                  highestOccupiedState = i;
+              }
+
+            if (residualNormWaveFunctionsAllkPoints[kPoint]
+                                                   [highestOccupiedState] >
+                maxHighestOccupiedStateResNorm)
+              {
+                maxHighestOccupiedStateResNorm =
+                  residualNormWaveFunctionsAllkPoints[kPoint]
+                                                     [highestOccupiedState];
+              }
           }
-
-        if (residualNormWaveFunctionsAllkPoints[kPoint][highestOccupiedState] >
-            maxHighestOccupiedStateResNorm)
+      }
+    else
+      {
+        for (int kPoint = 0; kPoint < eigenValuesAllkPoints.size(); ++kPoint)
           {
-            maxHighestOccupiedStateResNorm =
-              residualNormWaveFunctionsAllkPoints[kPoint][highestOccupiedState];
+            unsigned int highestOccupiedState = 0;
+
+            for (unsigned int i = 0; i < eigenValuesAllkPoints[kPoint].size();
+                 i++)
+              {
+                const double factor =
+                  (eigenValuesAllkPoints[kPoint][i] - fermiEnergy) /
+                  (C_kb * d_dftParamsPtr->TVal);
+                double functionValue;
+                if (factor <= 0.0)
+                  {
+                    double temp2  = 1.0 / (1.0 + exp(factor));
+                    functionValue = (2.0 - d_dftParamsPtr->spinPolarized) *
+                                    d_kPointWeights[kPoint] * temp2;
+                  }
+                else
+                  {
+                    double temp2  = 1.0 / (1.0 + exp(-factor));
+                    functionValue = (2.0 - d_dftParamsPtr->spinPolarized) *
+                                    d_kPointWeights[kPoint] * exp(-factor) *
+                                    temp2;
+                  }
+                if (functionValue > 1e-3)
+                  highestOccupiedState = i;
+              }
+            for (unsigned int i = 0; i < highestOccupiedState; i++)
+              {
+                if (residualNormWaveFunctionsAllkPoints[kPoint][i] >
+                    maxHighestOccupiedStateResNorm)
+                  {
+                    maxHighestOccupiedStateResNorm =
+                      residualNormWaveFunctionsAllkPoints[kPoint][i];
+                  }
+              }
           }
       }
     maxHighestOccupiedStateResNorm =

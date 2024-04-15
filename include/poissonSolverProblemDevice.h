@@ -23,9 +23,10 @@
 #    include <constraintMatrixInfoDevice.h>
 #    include <constraintMatrixInfo.h>
 #    include <constants.h>
-#    include <deviceKernelsGeneric.h>
 #    include <dftUtils.h>
 #    include <headers.h>
+#    include "FEBasisOperations.h"
+#    include "BLASWrapper.h"
 
 namespace dftfe
 {
@@ -62,7 +63,10 @@ namespace dftfe
      */
     void
     reinit(
-      const dealii::MatrixFree<3, double> &    matrixFreeData,
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+        &                                      basisOperationsPtr,
       distributedCPUVec<double> &              x,
       const dealii::AffineConstraints<double> &constraintMatrix,
       const unsigned int                       matrixFreeVectorComponent,
@@ -71,8 +75,11 @@ namespace dftfe
       const std::map<dealii::types::global_dof_index, double> &atoms,
       const std::map<dealii::CellId, std::vector<double>> &smearedChargeValues,
       const unsigned int smearedChargeQuadratureId,
-      const std::map<dealii::CellId, std::vector<double>> &rhoValues,
-      dftfe::utils::deviceBlasHandle_t &                   deviceBlasHandle,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &rhoValues,
+      const std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+                         BLASWrapperPtr,
       const bool         isComputeDiagonalA               = true,
       const bool         isComputeMeanValueConstraints    = false,
       const bool         smearedNuclearCharges            = false,
@@ -241,11 +248,10 @@ namespace dftfe
     double *d_jacobianFactorPtr;
     int *   d_mapPtr;
 
-    // cuBLAS handle for cuBLAS operations
-    dftfe::utils::deviceBlasHandle_t *d_deviceBlasHandlePtr;
 
     // constraints
-    dftUtils::constraintMatrixInfoDevice d_constraintsTotalPotentialInfo;
+    dftUtils::constraintMatrixInfoDevice d_constraintsTotalPotentialInfo,
+      d_inhomogenousConstraintsTotalPotentialInfo;
 
     /// pointer to dealii dealii::AffineConstraints<double> object
     const dealii::AffineConstraints<double> *d_constraintMatrixPtr;
@@ -261,7 +267,8 @@ namespace dftfe
     unsigned int d_matrixFreeQuadratureComponentAX;
 
     /// pointer to electron density cell quadrature data
-    const std::map<dealii::CellId, std::vector<double>> *d_rhoValuesPtr;
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      *d_rhoValuesPtr;
 
     /// pointer to smeared charge cell quadrature data
     const std::map<dealii::CellId, std::vector<double>>
@@ -311,9 +318,16 @@ namespace dftfe
 
     /// duplicate constraints object with flattened maps for faster access
     dftUtils::constraintMatrixInfo d_constraintsInfo;
-
+    std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+      d_basisOperationsPtr;
     ///
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+         d_BLASWrapperPtr;
     bool d_isFastConstraintsInitialized;
+    bool d_isHomogenousConstraintsInitialized;
 
     const MPI_Comm             mpi_communicator;
     const unsigned int         n_mpi_processes;

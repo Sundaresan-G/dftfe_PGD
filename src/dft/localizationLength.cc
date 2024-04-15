@@ -24,9 +24,11 @@ namespace dftfe
 {
   // compute localization lengths currently implemented for spin unpolarized
   // case
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::compute_localizationLength(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_localizationLength(
     const std::string &locLengthFileName)
   {
     dealii::QGauss<3>   quadrature_formula(C_num1DQuad<FEOrder>());
@@ -63,6 +65,7 @@ namespace dftfe
           std::make_pair(iWave, iWave + 1),
           tempVec);
 
+        tempVec[0].update_ghost_values();
         constraintsNoneEigenDataInfo.distribute(tempVec[0]);
 
         typename dealii::DoFHandler<3>::active_cell_iterator

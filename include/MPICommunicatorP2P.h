@@ -28,6 +28,14 @@
 #include <MemoryStorage.h>
 #include <DataTypeOverloads.h>
 #include <dftfeDataTypes.h>
+#ifdef DFTFE_WITH_DEVICE
+#  include <DeviceTypeConfig.h>
+#  if defined(DFTFE_WITH_CUDA_NCCL)
+#    include <nccl.h>
+#  elif defined(DFTFE_WITH_HIP_RCCL)
+#    include <rccl.h>
+#  endif
+#endif
 
 
 namespace dftfe
@@ -36,6 +44,36 @@ namespace dftfe
   {
     namespace mpi
     {
+      enum class communicationProtocol
+      {
+        mpiHost,
+        mpiDevice,
+        nccl
+      };
+
+      enum class communicationPrecision
+      {
+        single,
+        full
+      };
+
+
+      template <typename T>
+      struct singlePrecType
+      {
+        typedef T type;
+      };
+      template <>
+      struct singlePrecType<double>
+      {
+        typedef float type;
+      };
+      template <>
+      struct singlePrecType<std::complex<double>>
+      {
+        typedef std::complex<float> type;
+      };
+
       template <typename ValueType, MemorySpace memorySpace>
       class MPICommunicatorP2P
       {
@@ -76,6 +114,9 @@ namespace dftfe
         int
         getBlockSize() const;
 
+        void
+        setCommunicationPrecision(communicationPrecision precision);
+
       private:
         std::shared_ptr<const MPIPatternP2P<memorySpace>> d_mpiPatternP2P;
 
@@ -95,6 +136,11 @@ namespace dftfe
 
         MemoryStorage<float, memorySpace> d_tempFloatImagArrayForAtomics;
 
+        MemoryStorage<typename singlePrecType<ValueType>::type, memorySpace>
+          d_sendRecvBufferSinglePrec;
+
+        MemoryStorage<typename singlePrecType<ValueType>::type, memorySpace>
+          d_ghostDataCopySinglePrec;
 
 #ifdef DFTFE_WITH_DEVICE
         std::shared_ptr<MemoryStorage<ValueType, MemorySpace::HOST_PINNED>>
@@ -102,11 +148,24 @@ namespace dftfe
 
         std::shared_ptr<MemoryStorage<ValueType, MemorySpace::HOST_PINNED>>
           d_sendRecvBufferHostPinnedPtr;
+
+        std::shared_ptr<MemoryStorage<typename singlePrecType<ValueType>::type,
+                                      MemorySpace::HOST_PINNED>>
+          d_ghostDataCopySinglePrecHostPinnedPtr;
+
+        std::shared_ptr<MemoryStorage<typename singlePrecType<ValueType>::type,
+                                      MemorySpace::HOST_PINNED>>
+          d_sendRecvBufferSinglePrecHostPinnedPtr;
 #endif // DFTFE_WITH_DEVICE
 
         std::vector<MPI_Request> d_requestsUpdateGhostValues;
         std::vector<MPI_Request> d_requestsAccumulateAddLocallyOwned;
         MPI_Comm                 d_mpiCommunicator;
+#ifdef DFTFE_WITH_DEVICE
+        dftfe::utils::deviceStream_t d_deviceCommStream;
+#endif
+        communicationProtocol  d_commProtocol;
+        communicationPrecision d_commPrecision;
       };
 
     } // namespace mpi

@@ -22,24 +22,23 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::computeOutputDensityDirectionalDerivative(
-    const distributedCPUVec<double> &v,
-    const distributedCPUVec<double> &vSpin0,
-    const distributedCPUVec<double> &vSpin1,
-    distributedCPUVec<double> &      fv,
-    distributedCPUVec<double> &      fvSpin0,
-    distributedCPUVec<double> &      fvSpin1)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeOutputDensityDirectionalDerivative(
+      const distributedCPUVec<double> &v,
+      const distributedCPUVec<double> &vSpin0,
+      const distributedCPUVec<double> &vSpin1,
+      distributedCPUVec<double> &      fv,
+      distributedCPUVec<double> &      fvSpin0,
+      distributedCPUVec<double> &      fvSpin1)
   {
     computing_timer.enter_subsection("Output density direction derivative");
 
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
     const dealii::Quadrature<3> &quadrature =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
@@ -65,63 +64,79 @@ namespace dftfe
     // set up linear solver Device
     linearSolverCGDevice CGSolverDevice(d_mpiCommParent,
                                         mpi_communicator,
-                                        linearSolverCGDevice::CG);
+                                        linearSolverCGDevice::CG,
+                                        d_BLASWrapperPtr);
 #endif
 
 
-    std::map<dealii::CellId, std::vector<double>> charge;
-    std::map<dealii::CellId, std::vector<double>> dummy;
-    v.update_ghost_values();
-    interpolateRhoNodalDataToQuadratureDataGeneral(
-      d_matrixFreeDataPRefined,
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> charge;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> dummy;
+    std::map<dealii::CellId, std::vector<double>> dummyMap;
+    interpolateDensityNodalDataToQuadratureDataGeneral(
+      d_basisOperationsPtrElectroHost,
       d_densityDofHandlerIndexElectro,
       d_densityQuadratureIdElectro,
       v,
       charge,
       dummy,
       dummy,
+      false,
       false);
 
-    distributedCPUVec<double> electrostaticPotPrime;
-    electrostaticPotPrime.reinit(d_phiTotRhoIn);
-    electrostaticPotPrime = 0;
+    d_phiPrime = 0;
 
     // Reuses diagonalA and mean value constraints
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->floatingNuclearCharges and
         d_dftParamsPtr->poissonGPU and not d_dftParamsPtr->pinnedNodeForPBC)
       {
 #ifdef DFTFE_WITH_DEVICE
-        d_phiTotalSolverProblemDevice.reinit(
-          d_matrixFreeDataPRefined,
-          electrostaticPotPrime,
-          *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-          d_phiTotDofHandlerIndexElectro,
+        d_phiPrimeSolverProblemDevice.reinit(
+          d_basisOperationsPtrElectroHost,
+          d_phiPrime,
+          *d_constraintsVectorElectro[d_phiPrimeDofHandlerIndexElectro],
+          d_phiPrimeDofHandlerIndexElectro,
           d_densityQuadratureIdElectro,
           d_phiTotAXQuadratureIdElectro,
           std::map<dealii::types::global_dof_index, double>(),
-          dummy,
+          dummyMap,
           d_smearedChargeQuadratureIdElectro,
           charge,
-          d_kohnShamDFTOperatorDevicePtr->getDeviceBlasHandle(),
+          d_BLASWrapperPtr,
+          true,
+          d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+            d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
           false,
-          false);
+          true,
+          false,
+          0,
+          true,
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 #endif
       }
     else
       {
-        d_phiTotalSolverProblem.reinit(
-          d_matrixFreeDataPRefined,
-          electrostaticPotPrime,
-          *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-          d_phiTotDofHandlerIndexElectro,
+        d_phiPrimeSolverProblem.reinit(
+          d_basisOperationsPtrElectroHost,
+          d_phiPrime,
+          *d_constraintsVectorElectro[d_phiPrimeDofHandlerIndexElectro],
+          d_phiPrimeDofHandlerIndexElectro,
           d_densityQuadratureIdElectro,
           d_phiTotAXQuadratureIdElectro,
           std::map<dealii::types::global_dof_index, double>(),
-          dummy,
+          dummyMap,
           d_smearedChargeQuadratureIdElectro,
           charge,
+          true,
+          d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+            d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
           false,
-          false);
+          true,
+          false,
+          0,
+          true,
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
       }
 
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
@@ -129,200 +144,146 @@ namespace dftfe
         not d_dftParamsPtr->pinnedNodeForPBC)
       {
 #ifdef DFTFE_WITH_DEVICE
-        CGSolverDevice.solve(
-          d_phiTotalSolverProblemDevice,
-          d_dftParamsPtr->absPoissonSolverToleranceLRD,
-          d_dftParamsPtr->maxLinearSolverIterations,
-          d_kohnShamDFTOperatorDevicePtr->getDeviceBlasHandle(),
-          d_dftParamsPtr->verbosity);
+        CGSolverDevice.solve(d_phiPrimeSolverProblemDevice,
+                             d_dftParamsPtr->absPoissonSolverToleranceLRD,
+                             d_dftParamsPtr->maxLinearSolverIterations,
+                             d_dftParamsPtr->verbosity);
 #endif
       }
     else
       {
-        CGSolver.solve(d_phiTotalSolverProblem,
+        CGSolver.solve(d_phiPrimeSolverProblem,
                        d_dftParamsPtr->absPoissonSolverToleranceLRD,
                        d_dftParamsPtr->maxLinearSolverIterations,
                        d_dftParamsPtr->verbosity);
       }
 
-    std::map<dealii::CellId, std::vector<double>> electrostaticPotPrimeValues;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      electrostaticPotPrimeValues;
     interpolateElectroNodalDataToQuadratureDataGeneral(
-      d_matrixFreeDataPRefined,
-      d_phiTotDofHandlerIndexElectro,
+      d_basisOperationsPtrElectroHost,
+      d_phiPrimeDofHandlerIndexElectro,
       d_densityQuadratureIdElectro,
-      electrostaticPotPrime,
+      d_phiPrime,
       electrostaticPotPrimeValues,
-      dummy);
+      dummy,
+      false);
 
     // interpolate nodal data to quadrature data
-    std::map<dealii::CellId, std::vector<double>> rhoPrimeValues;
-    std::map<dealii::CellId, std::vector<double>> gradRhoPrimeValues;
-    interpolateRhoNodalDataToQuadratureDataGeneral(
-      d_matrixFreeDataPRefined,
+    std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      rhoPrimeValues(2);
+    std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      gradRhoPrimeValues(2);
+    interpolateDensityNodalDataToQuadratureDataGeneral(
+      d_basisOperationsPtrElectroHost,
       d_densityDofHandlerIndexElectro,
       d_densityQuadratureIdElectro,
       v,
-      rhoPrimeValues,
-      gradRhoPrimeValues,
+      rhoPrimeValues[0],
+      gradRhoPrimeValues[0],
       dummy,
       d_excManagerPtr->getDensityBasedFamilyType() == densityFamilyType::GGA);
 
-    std::map<dealii::CellId, std::vector<double>> rhoPrimeValuesSpinPolarized;
-    std::map<dealii::CellId, std::vector<double>>
-      gradRhoPrimeValuesSpinPolarized;
 
     if (d_dftParamsPtr->spinPolarized == 1)
       {
-        vSpin0.update_ghost_values();
-        vSpin1.update_ghost_values();
-        interpolateRhoSpinNodalDataToQuadratureDataGeneral(
-          d_matrixFreeDataPRefined,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          vSpin0Values;
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          gradvSpin0Values;
+
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          vSpin1Values;
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          gradvSpin1Values;
+
+        interpolateDensityNodalDataToQuadratureDataGeneral(
+          d_basisOperationsPtrElectroHost,
           d_densityDofHandlerIndexElectro,
           d_densityQuadratureIdElectro,
           vSpin0,
-          vSpin1,
-          rhoPrimeValuesSpinPolarized,
-          gradRhoPrimeValuesSpinPolarized,
+          vSpin0Values,
+          gradvSpin0Values,
           dummy,
           d_excManagerPtr->getDensityBasedFamilyType() ==
-            densityFamilyType::GGA);
+            densityFamilyType::GGA,
+          false);
+
+        interpolateDensityNodalDataToQuadratureDataGeneral(
+          d_basisOperationsPtrElectroHost,
+          d_densityDofHandlerIndexElectro,
+          d_densityQuadratureIdElectro,
+          vSpin1,
+          vSpin1Values,
+          gradvSpin1Values,
+          dummy,
+          d_excManagerPtr->getDensityBasedFamilyType() ==
+            densityFamilyType::GGA,
+          false);
+
+        rhoPrimeValues[0].resize(vSpin0Values.size());
+        rhoPrimeValues[1].resize(vSpin0Values.size());
+        gradRhoPrimeValues[0].resize(gradvSpin0Values.size());
+        gradRhoPrimeValues[1].resize(gradvSpin0Values.size());
+
+        auto &rhoTotalPrimeQuadVals = rhoPrimeValues[0];
+        auto &rhoMagPrimeQuadVals   = rhoPrimeValues[1];
+        for (unsigned int i = 0; i < vSpin0Values.size(); ++i)
+          {
+            rhoTotalPrimeQuadVals[i] = vSpin0Values[i] + vSpin1Values[i];
+            rhoMagPrimeQuadVals[i]   = vSpin0Values[i] - vSpin1Values[i];
+          }
+
+        auto &gradRhoTotalPrimeQuadVals = gradRhoPrimeValues[0];
+        auto &gradRhoMagPrimeQuadVals   = gradRhoPrimeValues[1];
+        for (unsigned int i = 0; i < gradvSpin0Values.size(); ++i)
+          {
+            gradRhoTotalPrimeQuadVals[i] =
+              gradvSpin0Values[i] + gradvSpin1Values[i];
+            gradRhoMagPrimeQuadVals[i] =
+              gradvSpin0Values[i] - gradvSpin1Values[i];
+          }
       }
 
     for (unsigned int s = 0; s < (1 + d_dftParamsPtr->spinPolarized); ++s)
       {
-        if (d_excManagerPtr->getDensityBasedFamilyType() ==
-            densityFamilyType::LDA)
-          {
-            computing_timer.enter_subsection("VEffPrime Computation");
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrimeSpinPolarized(
-                    *rhoInValuesSpinPolarized,
-                    rhoPrimeValuesSpinPolarized,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore);
-                else
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrime(
-                    *rhoInValues,
-                    rhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore);
-              }
-#endif
-            if (!d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperator.computeVEffPrimeSpinPolarized(
-                    *rhoInValuesSpinPolarized,
-                    rhoPrimeValuesSpinPolarized,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore);
-                else
-                  kohnShamDFTEigenOperator.computeVEffPrime(
-                    *rhoInValues,
-                    rhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore);
-              }
-
-            computing_timer.leave_subsection("VEffPrime Computation");
-          }
-        else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                 densityFamilyType::GGA)
-          {
-            computing_timer.enter_subsection("VEffPrime Computation");
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrimeSpinPolarized(
-                    *rhoInValuesSpinPolarized,
-                    rhoPrimeValuesSpinPolarized,
-                    *gradRhoInValuesSpinPolarized,
-                    gradRhoPrimeValuesSpinPolarized,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore,
-                    d_gradRhoCore);
-                else
-                  kohnShamDFTEigenOperatorDevice.computeVEffPrime(
-                    *rhoInValues,
-                    rhoPrimeValues,
-                    *gradRhoInValues,
-                    gradRhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore,
-                    d_gradRhoCore);
-              }
-#endif
-            if (!d_dftParamsPtr->useDevice)
-              {
-                if (d_dftParamsPtr->spinPolarized == 1)
-                  kohnShamDFTEigenOperator.computeVEffPrimeSpinPolarized(
-                    *rhoInValuesSpinPolarized,
-                    rhoPrimeValuesSpinPolarized,
-                    *gradRhoInValuesSpinPolarized,
-                    gradRhoPrimeValuesSpinPolarized,
-                    electrostaticPotPrimeValues,
-                    s,
-                    d_rhoCore,
-                    d_gradRhoCore);
-                else
-                  kohnShamDFTEigenOperator.computeVEffPrime(
-                    *rhoInValues,
-                    rhoPrimeValues,
-                    *gradRhoInValues,
-                    gradRhoPrimeValues,
-                    electrostaticPotPrimeValues,
-                    d_rhoCore,
-                    d_gradRhoCore);
-              }
-
-            computing_timer.leave_subsection("VEffPrime Computation");
-          }
+        computing_timer.enter_subsection("VEffPrime Computation");
+        kohnShamDFTEigenOperator.computeVEffPrime(d_densityInQuadValues,
+                                                  rhoPrimeValues,
+                                                  d_gradDensityInQuadValues,
+                                                  gradRhoPrimeValues,
+                                                  electrostaticPotPrimeValues,
+                                                  d_rhoCore,
+                                                  d_gradRhoCore,
+                                                  s);
+        computing_timer.leave_subsection("VEffPrime Computation");
 
         for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
           {
             if (kPoint == 0)
               {
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(kPoint,
-                                                                       s);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
+                kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
 
                 computing_timer.enter_subsection(
                   "Hamiltonian matrix prime computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice
-                    .computeHamiltonianMatricesAllkpt(s, true);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeHamiltonianMatrix(kPoint,
-                                                                    s,
-                                                                    true);
+                kohnShamDFTEigenOperator.computeCellHamiltonianMatrix(true);
 
                 computing_timer.leave_subsection(
                   "Hamiltonian matrix prime computation");
               }
 
 #ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
+            if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
               kohnShamEigenSpaceFirstOrderDensityMatResponse(
                 s,
                 kPoint,
-                kohnShamDFTEigenOperatorDevice,
+                kohnShamDFTEigenOperator,
                 *d_elpaScala,
                 d_subspaceIterationSolverDevice);
 #endif
-            if (!d_dftParamsPtr->useDevice)
+            if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
               kohnShamEigenSpaceFirstOrderDensityMatResponse(
                 s, kPoint, kohnShamDFTEigenOperator, *d_elpaScala);
           }
@@ -331,14 +292,7 @@ namespace dftfe
     computing_timer.enter_subsection(
       "Density first order response computation");
 
-    computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTEigenOperator,
-      fv,
-      fvSpin0,
-      fvSpin1);
+    computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(fv, fvSpin0, fvSpin1);
 
     computing_timer.leave_subsection(
       "Density first order response computation");
@@ -349,16 +303,12 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     computeRhoNodalFirstOrderResponseFromPSIAndPSIPrime(
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-        &kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-        &                        kohnShamDFTEigenOperatorCPU,
       distributedCPUVec<double> &fv,
       distributedCPUVec<double> &fvSpin0,
       distributedCPUVec<double> &fvSpin1)
@@ -384,17 +334,18 @@ namespace dftfe
         fvFermiEnergySpin1 = 0;
       }
 
-    std::map<dealii::CellId, std::vector<double>>
+    std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       rhoResponseHamPRefinedNodalData;
-    std::map<dealii::CellId, std::vector<double>>
+    std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       rhoResponseFermiEnergyPRefinedNodalData;
 
-    std::map<dealii::CellId, std::vector<double>>
-      rhoResponseHamPRefinedNodalDataSpinPolarized;
-    std::map<dealii::CellId, std::vector<double>>
-      rhoResponseFermiEnergyPRefinedNodalDataSpinPolarized;
 
     // initialize variables to be used later
+    d_basisOperationsPtrHost->reinit(0, 0, d_gllQuadratureId, false);
+    const unsigned int numLocallyOwnedCells =
+      d_basisOperationsPtrHost->nCells();
     const unsigned int dofs_per_cell =
       d_dofHandlerRhoNodal.get_fe().dofs_per_cell;
     typename dealii::DoFHandler<3>::active_cell_iterator
@@ -406,7 +357,8 @@ namespace dftfe
       matrix_free_data.get_quadrature(d_gllQuadratureId);
     const unsigned int numQuadPoints = quadrature_formula.size();
 
-    // get access to quadrature point coordinates and 2p DoFHandler nodal points
+    // get access to quadrature point coordinates and density DoFHandler nodal
+    // points
     const std::vector<dealii::Point<3>> &quadraturePointCoor =
       quadrature_formula.get_points();
     const std::vector<dealii::Point<3>> &supportPointNaturalCoor =
@@ -431,25 +383,20 @@ namespace dftfe
       }
 
     // allocate the storage to compute 2p nodal values from wavefunctions
-    for (; cell != endc; ++cell)
-      {
-        if (cell->is_locally_owned())
-          {
-            const dealii::CellId cellId = cell->id();
-            rhoResponseHamPRefinedNodalData[cellId] =
-              std::vector<double>(numQuadPoints, 0.0);
-            rhoResponseFermiEnergyPRefinedNodalData[cellId] =
-              std::vector<double>(numQuadPoints, 0.0);
 
-            if (d_dftParamsPtr->spinPolarized == 1)
-              {
-                const dealii::CellId cellId = cell->id();
-                rhoResponseHamPRefinedNodalDataSpinPolarized[cellId] =
-                  std::vector<double>(2 * numQuadPoints, 0.0);
-                rhoResponseFermiEnergyPRefinedNodalDataSpinPolarized[cellId] =
-                  std::vector<double>(2 * numQuadPoints, 0.0);
-              }
-          }
+    rhoResponseHamPRefinedNodalData.resize(
+      d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
+    rhoResponseFermiEnergyPRefinedNodalData.resize(
+      d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
+
+    for (unsigned int iComp = 0; iComp < rhoResponseHamPRefinedNodalData.size();
+         ++iComp)
+      {
+        rhoResponseHamPRefinedNodalData[iComp].resize(numLocallyOwnedCells *
+                                                        numQuadPoints,
+                                                      0);
+        rhoResponseFermiEnergyPRefinedNodalData[iComp].resize(
+          numLocallyOwnedCells * numQuadPoints, 0);
       }
 
 
@@ -458,101 +405,41 @@ namespace dftfe
 #ifdef DFTFE_WITH_DEVICE
     if (d_dftParamsPtr->useDevice)
       {
-        if (d_dftParamsPtr->singlePrecLRD)
-          computeRhoFirstOrderResponseDevice<dataTypes::number,
-                                             dataTypes::numberFP32>(
-            d_eigenVectorsFlattenedDevice.begin(),
-            d_eigenVectorsDensityMatrixPrimeFlattenedDevice.begin(),
-            d_densityMatDerFermiEnergy,
-            d_numEigenValues,
-            matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-            kohnShamDFTEigenOperatorDevice,
-            d_eigenDofHandlerIndex,
-            dofHandler,
-            matrix_free_data.n_physical_cells(),
-            matrix_free_data.get_dofs_per_cell(),
-            quadrature_formula.size(),
-            d_kPointWeights,
-            rhoResponseHamPRefinedNodalData,
-            rhoResponseFermiEnergyPRefinedNodalData,
-            rhoResponseHamPRefinedNodalDataSpinPolarized,
-            rhoResponseFermiEnergyPRefinedNodalDataSpinPolarized,
-            d_mpiCommParent,
-            interpoolcomm,
-            interBandGroupComm,
-            *d_dftParamsPtr);
-        else
-          computeRhoFirstOrderResponseDevice<dataTypes::number,
-                                             dataTypes::number>(
-            d_eigenVectorsFlattenedDevice.begin(),
-            d_eigenVectorsDensityMatrixPrimeFlattenedDevice.begin(),
-            d_densityMatDerFermiEnergy,
-            d_numEigenValues,
-            matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-            kohnShamDFTEigenOperatorDevice,
-            d_eigenDofHandlerIndex,
-            dofHandler,
-            matrix_free_data.n_physical_cells(),
-            matrix_free_data.get_dofs_per_cell(),
-            quadrature_formula.size(),
-            d_kPointWeights,
-            rhoResponseHamPRefinedNodalData,
-            rhoResponseFermiEnergyPRefinedNodalData,
-            rhoResponseHamPRefinedNodalDataSpinPolarized,
-            rhoResponseFermiEnergyPRefinedNodalDataSpinPolarized,
-            d_mpiCommParent,
-            interpoolcomm,
-            interBandGroupComm,
-            *d_dftParamsPtr);
+        computeRhoFirstOrderResponse(
+          d_eigenVectorsFlattenedDevice,
+          d_eigenVectorsDensityMatrixPrimeFlattenedDevice,
+          d_numEigenValues,
+          d_densityMatDerFermiEnergy,
+          d_basisOperationsPtrDevice,
+          d_BLASWrapperPtr,
+          d_densityDofHandlerIndex,
+          d_gllQuadratureId,
+          d_kPointWeights,
+          rhoResponseHamPRefinedNodalData,
+          rhoResponseFermiEnergyPRefinedNodalData,
+          d_mpiCommParent,
+          interpoolcomm,
+          interBandGroupComm,
+          *d_dftParamsPtr);
       }
 #endif
     if (!d_dftParamsPtr->useDevice)
       {
-        if (d_dftParamsPtr->singlePrecLRD)
-          computeRhoFirstOrderResponseCPUMixedPrec<dataTypes::number,
-                                                   dataTypes::numberFP32>(
-            d_eigenVectorsFlattenedHost.data(),
-            d_eigenVectorsDensityMatrixPrimeHost.data(),
-            d_densityMatDerFermiEnergy,
-            d_numEigenValues,
-            matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-            kohnShamDFTEigenOperatorCPU,
-            d_eigenDofHandlerIndex,
-            dofHandler,
-            matrix_free_data.n_physical_cells(),
-            matrix_free_data.get_dofs_per_cell(),
-            quadrature_formula.size(),
-            d_kPointWeights,
-            rhoResponseHamPRefinedNodalData,
-            rhoResponseFermiEnergyPRefinedNodalData,
-            rhoResponseHamPRefinedNodalDataSpinPolarized,
-            rhoResponseFermiEnergyPRefinedNodalDataSpinPolarized,
-            d_mpiCommParent,
-            interpoolcomm,
-            interBandGroupComm,
-            *d_dftParamsPtr);
-        else
-          computeRhoFirstOrderResponseCPU(
-            d_eigenVectorsFlattenedHost.data(),
-            d_eigenVectorsDensityMatrixPrimeHost.data(),
-            d_densityMatDerFermiEnergy,
-            d_numEigenValues,
-            matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-            kohnShamDFTEigenOperatorCPU,
-            d_eigenDofHandlerIndex,
-            dofHandler,
-            matrix_free_data.n_physical_cells(),
-            matrix_free_data.get_dofs_per_cell(),
-            quadrature_formula.size(),
-            d_kPointWeights,
-            rhoResponseHamPRefinedNodalData,
-            rhoResponseFermiEnergyPRefinedNodalData,
-            rhoResponseHamPRefinedNodalDataSpinPolarized,
-            rhoResponseFermiEnergyPRefinedNodalDataSpinPolarized,
-            d_mpiCommParent,
-            interpoolcomm,
-            interBandGroupComm,
-            *d_dftParamsPtr);
+        computeRhoFirstOrderResponse(d_eigenVectorsFlattenedHost,
+                                     d_eigenVectorsDensityMatrixPrimeHost,
+                                     d_numEigenValues,
+                                     d_densityMatDerFermiEnergy,
+                                     d_basisOperationsPtrHost,
+                                     d_BLASWrapperPtrHost,
+                                     d_densityDofHandlerIndex,
+                                     d_gllQuadratureId,
+                                     d_kPointWeights,
+                                     rhoResponseHamPRefinedNodalData,
+                                     rhoResponseFermiEnergyPRefinedNodalData,
+                                     d_mpiCommParent,
+                                     interpoolcomm,
+                                     interBandGroupComm,
+                                     *d_dftParamsPtr);
       }
 
     // copy Lobatto quadrature data to fill in 2p DoFHandler nodal data
@@ -561,22 +448,20 @@ namespace dftfe
                                                 endcP =
                                                   d_dofHandlerRhoNodal.end();
 
+    unsigned int iCell = 0;
     for (; cellP != endcP; ++cellP)
       if (cellP->is_locally_owned())
         {
           std::vector<dealii::types::global_dof_index> cell_dof_indices(
             dofs_per_cell);
           cellP->get_dof_indices(cell_dof_indices);
-          const std::vector<double> &nodalValuesResponseHam =
-            rhoResponseHamPRefinedNodalData.find(cellP->id())->second;
+          const double *nodalValuesResponseHam =
+            rhoResponseHamPRefinedNodalData[0].data() + iCell * dofs_per_cell;
 
-          const std::vector<double> &nodalValuesResponseFermiEnergy =
-            rhoResponseFermiEnergyPRefinedNodalData.find(cellP->id())->second;
 
-          Assert(
-            nodalValuesResponseHam.size() == dofs_per_cell,
-            dealii::ExcMessage(
-              "Number of nodes in 2p DoFHandler does not match with data stored in rhoNodal Values variable"));
+          const double *nodalValuesResponseFermiEnergy =
+            rhoResponseFermiEnergyPRefinedNodalData[0].data() +
+            iCell * dofs_per_cell;
 
           for (unsigned int iNode = 0; iNode < dofs_per_cell; ++iNode)
             {
@@ -593,11 +478,8 @@ namespace dftfe
                     }
                 }
             }
+          iCell++;
         }
-
-
-    fvHam.update_ghost_values();
-    fvFermiEnergy.update_ghost_values();
 
     const double firstOrderResponseFermiEnergy =
       -totalCharge(d_matrixFreeDataPRefined, fvHam) /
@@ -614,25 +496,29 @@ namespace dftfe
         cellP = d_dofHandlerRhoNodal.begin_active();
         endcP = d_dofHandlerRhoNodal.end();
 
+        iCell = 0;
         for (; cellP != endcP; ++cellP)
           if (cellP->is_locally_owned())
             {
               std::vector<dealii::types::global_dof_index> cell_dof_indices(
                 dofs_per_cell);
               cellP->get_dof_indices(cell_dof_indices);
-              const std::vector<double> &nodalValuesResponseHam =
-                rhoResponseHamPRefinedNodalDataSpinPolarized.find(cellP->id())
-                  ->second;
+              const double *nodalValuesRhoTotResponseHam =
+                rhoResponseHamPRefinedNodalData[0].data() +
+                iCell * dofs_per_cell;
 
-              const std::vector<double> &nodalValuesResponseFermiEnergy =
-                rhoResponseFermiEnergyPRefinedNodalDataSpinPolarized
-                  .find(cellP->id())
-                  ->second;
+              const double *nodalValuesRhoTotResponseFermiEnergy =
+                rhoResponseFermiEnergyPRefinedNodalData[0].data() +
+                iCell * dofs_per_cell;
 
-              Assert(
-                nodalValuesResponseHam.size() == 2 * dofs_per_cell,
-                dealii::ExcMessage(
-                  "Number of nodes in 2p DoFHandler does not match with data stored in rhoNodal Values variable"));
+              const double *nodalValuesRhoMagResponseHam =
+                rhoResponseHamPRefinedNodalData[1].data() +
+                iCell * dofs_per_cell;
+
+              const double *nodalValuesRhoMagResponseFermiEnergy =
+                rhoResponseFermiEnergyPRefinedNodalData[1].data() +
+                iCell * dofs_per_cell;
+
 
               for (unsigned int iNode = 0; iNode < dofs_per_cell; ++iNode)
                 {
@@ -643,19 +529,29 @@ namespace dftfe
                       if (locallyOwnedDofs.is_element(nodeID))
                         {
                           fvHamSpin0(nodeID) =
-                            nodalValuesResponseHam[2 * renumberingMap[iNode]];
+                            0.5 * (nodalValuesRhoTotResponseHam
+                                     [renumberingMap[iNode]] +
+                                   nodalValuesRhoMagResponseHam
+                                     [renumberingMap[iNode]]);
                           fvHamSpin1(nodeID) =
-                            nodalValuesResponseHam[2 * renumberingMap[iNode] +
-                                                   1];
+                            0.5 * (nodalValuesRhoTotResponseHam
+                                     [renumberingMap[iNode]] -
+                                   nodalValuesRhoMagResponseHam
+                                     [renumberingMap[iNode]]);
                           fvFermiEnergySpin0(nodeID) =
-                            nodalValuesResponseFermiEnergy
-                              [2 * renumberingMap[iNode]];
+                            0.5 * (nodalValuesRhoTotResponseFermiEnergy
+                                     [renumberingMap[iNode]] +
+                                   nodalValuesRhoMagResponseFermiEnergy
+                                     [renumberingMap[iNode]]);
                           fvFermiEnergySpin1(nodeID) =
-                            nodalValuesResponseFermiEnergy
-                              [2 * renumberingMap[iNode] + 1];
+                            0.5 * (nodalValuesRhoTotResponseFermiEnergy
+                                     [renumberingMap[iNode]] -
+                                   nodalValuesRhoMagResponseFermiEnergy
+                                     [renumberingMap[iNode]]);
                         }
                     }
                 }
+              iCell++;
             }
 
         for (unsigned int i = 0; i < fvHamSpin0.local_size(); i++)

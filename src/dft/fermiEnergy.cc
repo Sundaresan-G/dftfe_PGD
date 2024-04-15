@@ -100,9 +100,11 @@ namespace dftfe
   } // namespace internal
 
   // compute fermi energy
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::compute_fermienergy(
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_fermienergy(
     const std::vector<std::vector<double>> &eigenValuesInput,
     const double                            numElectronsInput)
   {
@@ -248,9 +250,11 @@ namespace dftfe
             << fermiEnergy << std::endl;
   }
   // compute fermi energy constrained magnetization
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::
     compute_fermienergy_constraintMagnetization(
       const std::vector<std::vector<double>> &eigenValuesInput)
   {

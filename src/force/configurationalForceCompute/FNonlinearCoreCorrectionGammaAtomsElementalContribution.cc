@@ -25,9 +25,11 @@ namespace dftfe
 {
   //(locally used function) compute FNonlinearCoreCorrection contibution due to
   // Gamma(Rj) for given set of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     FNonlinearCoreCorrectionGammaAtomsElementalContribution(
       std::map<unsigned int, std::vector<double>>
         &forceContributionFNonlinearCoreCorrectionGammaAtoms,
@@ -131,9 +133,11 @@ namespace dftfe
 
   //(locally used function) compute FNonlinearCoreCorrection contibution due to
   // Gamma(Rj) for given set of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     FNonlinearCoreCorrectionGammaAtomsElementalContribution(
       std::map<unsigned int, std::vector<double>>
         &forceContributionFNonlinearCoreCorrectionGammaAtoms,
@@ -248,9 +252,11 @@ namespace dftfe
 
   //(locally used function) compute FNonlinearCoreCorrection contibution due to
   // Gamma(Rj) for given set of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     FNonlinearCoreCorrectionGammaAtomsElementalContributionSpinPolarized(
       std::map<unsigned int, std::vector<double>>
         &forceContributionFNonlinearCoreCorrectionGammaAtoms,

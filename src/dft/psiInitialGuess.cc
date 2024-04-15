@@ -31,12 +31,15 @@
 
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::loadPSIFiles(unsigned int  Z,
-                                                  unsigned int  n,
-                                                  unsigned int  l,
-                                                  unsigned int &fileReadFlag)
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::loadPSIFiles(
+    unsigned int  Z,
+    unsigned int  n,
+    unsigned int  l,
+    unsigned int &fileReadFlag)
   {
     if (radValues[Z][n].count(l) > 0)
       {
@@ -130,9 +133,11 @@ namespace dftfe
   //
   // determine orbital ordering
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::determineOrbitalFilling()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::determineOrbitalFilling()
   {
     //
     // create a stencil following orbital filling order
@@ -342,9 +347,11 @@ namespace dftfe
   }
 
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::readPSIRadialValues()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::readPSIRadialValues()
   {
     const dealii::IndexSet &locallyOwnedSet = dofHandler.locally_owned_dofs();
     std::vector<dealii::IndexSet::size_type> locallyOwnedDOFs;
@@ -561,11 +568,12 @@ namespace dftfe
                            iWave < d_numEigenValues;
                            ++iWave)
                         {
-                          double z = (-0.5 + (randomIntGenerator() -
-                                              randomIntGenerator.min()) /
-                                               (randomIntGenerator.max() -
-                                                randomIntGenerator.min())) *
-                                     3.0;
+                          double z =
+                            (-0.5 + ((double)randomIntGenerator() -
+                                     (double)randomIntGenerator.min()) /
+                                      ((double)randomIntGenerator.max() -
+                                       (double)randomIntGenerator.min())) *
+                            3.0;
                           double value = boost::math::pdf(normDist, z);
                           if (randomIntGenerator() % 2 == 0)
                             value = -1.0 * value;
@@ -612,9 +620,11 @@ namespace dftfe
   }
 
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::readPSI()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::readPSI()
   {
     computing_timer.enter_subsection("initialize wave functions");
     readPSIRadialValues();

@@ -36,14 +36,15 @@ namespace dftfe
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm) == 0))
   {
-    d_isMeanValueConstraintComputed = false;
-    d_isGradSmearedChargeRhs        = false;
-    d_isStoreSmearedChargeRhs       = false;
-    d_isReuseSmearedChargeRhs       = false;
-    d_isFastConstraintsInitialized  = false;
-    d_rhoValuesPtr                  = NULL;
-    d_atomsPtr                      = NULL;
-    d_smearedChargeValuesPtr        = NULL;
+    d_isMeanValueConstraintComputed      = false;
+    d_isGradSmearedChargeRhs             = false;
+    d_isStoreSmearedChargeRhs            = false;
+    d_isReuseSmearedChargeRhs            = false;
+    d_isFastConstraintsInitialized       = false;
+    d_isHomogenousConstraintsInitialized = false;
+    d_rhoValuesPtr                       = NULL;
+    d_atomsPtr                           = NULL;
+    d_smearedChargeValuesPtr             = NULL;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
@@ -54,20 +55,24 @@ namespace dftfe
     d_rhsSmearedCharge.reinit(0);
     d_meanValueConstraintVec.reinit(0);
     d_cellShapeFunctionGradientIntegralFlattened.clear();
-    d_isMeanValueConstraintComputed = false;
-    d_isGradSmearedChargeRhs        = false;
-    d_isStoreSmearedChargeRhs       = false;
-    d_isReuseSmearedChargeRhs       = false;
-    d_isFastConstraintsInitialized  = false;
-    d_rhoValuesPtr                  = NULL;
-    d_atomsPtr                      = NULL;
-    d_smearedChargeValuesPtr        = NULL;
+    d_isMeanValueConstraintComputed      = false;
+    d_isGradSmearedChargeRhs             = false;
+    d_isStoreSmearedChargeRhs            = false;
+    d_isReuseSmearedChargeRhs            = false;
+    d_isFastConstraintsInitialized       = false;
+    d_isHomogenousConstraintsInitialized = false;
+    d_rhoValuesPtr                       = NULL;
+    d_atomsPtr                           = NULL;
+    d_smearedChargeValuesPtr             = NULL;
   }
 
   template <unsigned int FEOrder, unsigned int FEOrderElectro>
   void
   poissonSolverProblemDevice<FEOrder, FEOrderElectro>::reinit(
-    const dealii::MatrixFree<3, double> &    matrixFreeData,
+    const std::shared_ptr<
+      dftfe::basis::
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+      &                                      basisOperationsPtr,
     distributedCPUVec<double> &              x,
     const dealii::AffineConstraints<double> &constraintMatrix,
     const unsigned int                       matrixFreeVectorComponent,
@@ -76,9 +81,12 @@ namespace dftfe
     const std::map<dealii::types::global_dof_index, double> &atoms,
     const std::map<dealii::CellId, std::vector<double>> &smearedChargeValues,
     const unsigned int smearedChargeQuadratureId,
-    const std::map<dealii::CellId, std::vector<double>> &rhoValues,
-    dftfe::utils::deviceBlasHandle_t &                   deviceBlasHandle,
-    const bool                                           isComputeDiagonalA,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &rhoValues,
+    const std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+                       BLASWrapperPtr,
+    const bool         isComputeDiagonalA,
     const bool         isComputeMeanValueConstraint,
     const bool         smearedNuclearCharges,
     const bool         isRhoValues,
@@ -93,8 +101,9 @@ namespace dftfe
     MPI_Barrier(mpi_communicator);
     double time = MPI_Wtime();
 
-    d_matrixFreeDataPtr = &matrixFreeData;
-    d_xPtr              = &x;
+    d_basisOperationsPtr = basisOperationsPtr;
+    d_matrixFreeDataPtr  = &(basisOperationsPtr->matrixFreeData());
+    d_xPtr               = &x;
     dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
       d_xPtr->get_partitioner(), 1, d_xDevice);
 
@@ -120,7 +129,7 @@ namespace dftfe
     d_smearedChargeGradientComponentId = smearedChargeGradientComponentId;
     d_isStoreSmearedChargeRhs          = storeSmearedChargeRhs;
     d_isReuseSmearedChargeRhs          = reuseSmearedChargeRhs;
-    d_deviceBlasHandlePtr              = &deviceBlasHandle;
+    d_BLASWrapperPtr                   = BLASWrapperPtr;
     d_nLocalCells                      = d_matrixFreeDataPtr->n_cell_batches();
     d_xLocalDof = d_xDevice.locallyOwnedSize() * d_xDevice.numVectors();
     d_xLen      = d_xDevice.localSize() * d_xDevice.numVectors();
@@ -141,9 +150,10 @@ namespace dftfe
 
     if (!d_isFastConstraintsInitialized || reinitializeFastConstraints)
       {
-        d_constraintsInfo.initialize(matrixFreeData.get_vector_partitioner(
-                                       matrixFreeVectorComponent),
-                                     constraintMatrix);
+        d_constraintsInfo.initialize(
+          d_matrixFreeDataPtr->get_vector_partitioner(
+            matrixFreeVectorComponent),
+          constraintMatrix);
 
         // Setup MatrixFree Mesh
         setupMatrixFree();
@@ -151,7 +161,8 @@ namespace dftfe
         // Setup MatrixFree Constraints
         setupconstraints();
 
-        d_isFastConstraintsInitialized = true;
+        d_isFastConstraintsInitialized       = true;
+        d_isHomogenousConstraintsInitialized = true;
       }
   }
 
@@ -170,7 +181,7 @@ namespace dftfe
   void
   poissonSolverProblemDevice<FEOrder, FEOrderElectro>::distributeX()
   {
-    d_constraintsTotalPotentialInfo.distribute(d_xDevice, 1);
+    d_inhomogenousConstraintsTotalPotentialInfo.distribute(d_xDevice);
 
     if (d_isMeanValueConstraintComputed)
       meanValueConstraintDistribute(d_xDevice);
@@ -214,6 +225,7 @@ namespace dftfe
     distributedCPUVec<double> tempvec;
     tempvec.reinit(rhs);
     tempvec = 0.0;
+    tempvec.update_ghost_values();
     d_constraintsInfo.distribute(tempvec);
 
     dealii::FEEvaluation<3, FEOrderElectro, FEOrderElectro + 1> fe_eval(
@@ -273,9 +285,11 @@ namespace dftfe
               {
                 subCellPtr = d_matrixFreeDataPtr->get_cell_iterator(
                   macrocell, iSubCell, d_matrixFreeVectorComponent);
-                dealii::CellId             subCellId = subCellPtr->id();
-                const std::vector<double> &tempVec =
-                  d_rhoValuesPtr->find(subCellId)->second;
+                dealii::CellId subCellId = subCellPtr->id();
+                unsigned int   cellIndex =
+                  d_basisOperationsPtr->cellIndex(subCellId);
+                const double *tempVec = d_rhoValuesPtr->data() +
+                                        cellIndex * fe_eval_density.n_q_points;
 
                 for (unsigned int q = 0; q < fe_eval_density.n_q_points; ++q)
                   rhoQuads[q][iSubCell] = tempVec[q];
@@ -444,12 +458,21 @@ namespace dftfe
   {
     // -\sum_{i \neq o} a_i * u_i computation which involves summation across
     // MPI tasks
-    const double constrainedNodeValue = dftfe::utils::deviceKernelsGeneric::dot(
-      d_meanValueConstraintDeviceVec.begin(),
-      vec.begin(),
-      d_xLocalDof,
-      mpi_communicator,
-      *d_deviceBlasHandlePtr);
+    const unsigned int one                  = 1;
+    double             constrainedNodeValue = 0.0;
+    // dftfe::utils::deviceKernelsGeneric::dot(
+    // d_meanValueConstraintDeviceVec.begin(),
+    // vec.begin(),
+    // d_xLocalDof,
+    // mpi_communicator,
+    // *d_deviceBlasHandlePtr); //FIX ME
+    d_BLASWrapperPtr->xdot(d_xLocalDof,
+                           d_meanValueConstraintDeviceVec.begin(),
+                           one,
+                           vec.begin(),
+                           one,
+                           mpi_communicator,
+                           &constrainedNodeValue);
 
     if (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) ==
         d_meanValueConstraintProcId)
@@ -486,12 +509,17 @@ namespace dftfe
               d_meanValueConstraintProcId,
               mpi_communicator);
 
-    dftfe::utils::deviceKernelsGeneric::add(
-      vec.begin(),
-      d_meanValueConstraintDeviceVec.begin(),
-      constrainedNodeValue,
-      d_xLocalDof,
-      *d_deviceBlasHandlePtr);
+    // dftfe::utils::deviceKernelsGeneric::add(
+    //   vec.begin(),
+    //   d_meanValueConstraintDeviceVec.begin(),
+    //   constrainedNodeValue,
+    //   d_xLocalDof,
+    //   *d_deviceBlasHandlePtr); //FIX ME
+
+    d_BLASWrapperPtr->add(vec.begin(),
+                          d_meanValueConstraintDeviceVec.begin(),
+                          constrainedNodeValue,
+                          d_xLocalDof);
 
     // meanValueConstraintSetZero
     if (d_isMeanValueConstraintComputed)
@@ -782,7 +810,13 @@ namespace dftfe
   void
   poissonSolverProblemDevice<FEOrder, FEOrderElectro>::setupconstraints()
   {
-    d_constraintsTotalPotentialInfo.initialize(
+    if (!d_isHomogenousConstraintsInitialized)
+      d_constraintsTotalPotentialInfo.initialize(
+        d_matrixFreeDataPtr->get_vector_partitioner(
+          d_matrixFreeVectorComponent),
+        *d_constraintMatrixPtr,
+        false);
+    d_inhomogenousConstraintsTotalPotentialInfo.initialize(
       d_matrixFreeDataPtr->get_vector_partitioner(d_matrixFreeVectorComponent),
       *d_constraintMatrixPtr);
   }
@@ -1316,7 +1350,7 @@ namespace dftfe
 
     x.updateGhostValues();
 
-    d_constraintsTotalPotentialInfo.distribute(x, 1);
+    d_constraintsTotalPotentialInfo.distribute(x);
 
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
     computeAXKernel<double, p * p, q, p, dim><<<blocks, threads, smem>>>(
@@ -1336,9 +1370,9 @@ namespace dftfe
                        d_mapPtr);
 #endif
 
-    d_constraintsTotalPotentialInfo.set_zero(x, 1);
+    d_constraintsTotalPotentialInfo.set_zero(x);
 
-    d_constraintsTotalPotentialInfo.distribute_slave_to_master(Ax, 1);
+    d_constraintsTotalPotentialInfo.distribute_slave_to_master(Ax);
 
     Ax.accumulateAddLocallyOwned();
 

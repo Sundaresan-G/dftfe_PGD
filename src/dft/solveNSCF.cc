@@ -28,16 +28,14 @@
 #include <energyCalculator.h>
 namespace dftfe
 {
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro>::solveNoSCF()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::solveNoSCF()
   {
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperator = *d_kohnShamDFTOperatorPtr;
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice = *d_kohnShamDFTOperatorDevicePtr;
-#endif
+    KohnShamHamiltonianOperator<memorySpace> &kohnShamDFTEigenOperator =
+      *d_kohnShamDFTOperatorPtr;
 
     const dealii::Quadrature<3> &quadrature =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
@@ -59,7 +57,8 @@ namespace dftfe
 #ifdef DFTFE_WITH_DEVICE
     linearSolverCGDevice CGSolverDevice(d_mpiCommParent,
                                         mpi_communicator,
-                                        linearSolverCGDevice::CG);
+                                        linearSolverCGDevice::CG,
+                                        d_BLASWrapperPtr);
 #endif
 
 
@@ -73,13 +72,16 @@ namespace dftfe
     computing_timer.enter_subsection("Nuclear self-potential solve");
     computingTimerStandard.enter_subsection("Nuclear self-potential solve");
 #ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
+    if (d_dftParamsPtr->useDevice and d_dftParamsPtr->vselfGPU)
       d_vselfBinsManager.solveVselfInBinsDevice(
-        d_matrixFreeDataPRefined,
+        d_basisOperationsPtrElectroHost,
         d_baseDofHandlerIndexElectro,
         d_phiTotAXQuadratureIdElectro,
         d_binsStartDofHandlerIndexElectro,
-        kohnShamDFTEigenOperatorDevice,
+        FEOrder == FEOrderElectro ?
+          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
+          d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
+        d_BLASWrapperPtr,
         d_constraintsPRefined,
         d_imagePositionsTrunc,
         d_imageIdsTrunc,
@@ -98,7 +100,7 @@ namespace dftfe
         d_dftParamsPtr->smearedNuclearCharges);
     else
       d_vselfBinsManager.solveVselfInBins(
-        d_matrixFreeDataPRefined,
+        d_basisOperationsPtrElectroHost,
         d_binsStartDofHandlerIndexElectro,
         d_phiTotAXQuadratureIdElectro,
         d_constraintsPRefined,
@@ -118,7 +120,7 @@ namespace dftfe
         d_smearedChargeQuadratureIdElectro,
         d_dftParamsPtr->smearedNuclearCharges);
 #else
-    d_vselfBinsManager.solveVselfInBins(d_matrixFreeDataPRefined,
+    d_vselfBinsManager.solveVselfInBins(d_basisOperationsPtrElectroHost,
                                         d_binsStartDofHandlerIndexElectro,
                                         d_phiTotAXQuadratureIdElectro,
                                         d_constraintsPRefined,
@@ -155,7 +157,7 @@ namespace dftfe
                                  d_phiExt,
                                  d_pseudoVLoc,
                                  d_pseudoVLocAtoms);
-
+        kohnShamDFTEigenOperator.computeVEffExternalPotCorr(d_pseudoVLoc);
         computingTimerStandard.leave_subsection("Init local PSP");
       }
 
@@ -187,6 +189,29 @@ namespace dftfe
       pcout << std::endl
             << "Poisson solve for total electrostatic potential (rhoIn+b): ";
 
+    if (d_dftParamsPtr->multipoleBoundaryConditions)
+      {
+        computing_timer.enter_subsection("Update inhomogenous BC");
+        computeMultipoleMoments(d_basisOperationsPtrElectroHost,
+                                d_densityQuadratureIdElectro,
+                                d_densityInQuadValues[0],
+                                &d_bQuadValuesAllAtoms);
+        updatePRefinedConstraints();
+        computing_timer.leave_subsection("Update inhomogenous BC");
+      }
+
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      densityInQuadValuesCopy = d_densityInQuadValues[0];
+    if (std::abs(d_dftParamsPtr->netCharge) > 1e-12 and
+        (d_dftParamsPtr->periodicX || d_dftParamsPtr->periodicY ||
+         d_dftParamsPtr->periodicZ))
+      {
+        double *tempvec = densityInQuadValuesCopy.data();
+        for (unsigned int iquad = 0; iquad < densityInQuadValuesCopy.size();
+             iquad++)
+          tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
+      }
+
 
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
         d_dftParamsPtr->floatingNuclearCharges and
@@ -194,7 +219,7 @@ namespace dftfe
       {
 #ifdef DFTFE_WITH_DEVICE
         d_phiTotalSolverProblemDevice.reinit(
-          d_matrixFreeDataPRefined,
+          d_basisOperationsPtrElectroHost,
           d_phiTotRhoIn,
           *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
           d_phiTotDofHandlerIndexElectro,
@@ -203,8 +228,8 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          *rhoInValues,
-          kohnShamDFTEigenOperatorDevice.getDeviceBlasHandle(),
+          densityInQuadValuesCopy,
+          d_BLASWrapperPtr,
           true,
           d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
             d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
@@ -213,14 +238,15 @@ namespace dftfe
           false,
           0,
           true,
-          false);
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 
 #endif
       }
     else
       {
         d_phiTotalSolverProblem.reinit(
-          d_matrixFreeDataPRefined,
+          d_basisOperationsPtrElectroHost,
           d_phiTotRhoIn,
           *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
           d_phiTotDofHandlerIndexElectro,
@@ -229,7 +255,7 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          *rhoInValues,
+          densityInQuadValuesCopy,
           true,
           d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
             d_dftParamsPtr->periodicZ && !d_dftParamsPtr->pinnedNodeForPBC,
@@ -238,7 +264,8 @@ namespace dftfe
           false,
           0,
           true,
-          false);
+          false,
+          d_dftParamsPtr->multipoleBoundaryConditions);
       }
 
     computing_timer.enter_subsection("phiTot solve");
@@ -248,12 +275,10 @@ namespace dftfe
         not d_dftParamsPtr->pinnedNodeForPBC)
       {
 #ifdef DFTFE_WITH_DEVICE
-        CGSolverDevice.solve(
-          d_phiTotalSolverProblemDevice,
-          d_dftParamsPtr->absLinearSolverTolerance,
-          d_dftParamsPtr->maxLinearSolverIterations,
-          kohnShamDFTEigenOperatorDevice.getDeviceBlasHandle(),
-          d_dftParamsPtr->verbosity);
+        CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
+                             d_dftParamsPtr->absLinearSolverTolerance,
+                             d_dftParamsPtr->maxLinearSolverIterations,
+                             d_dftParamsPtr->verbosity);
 #endif
       }
     else
@@ -264,16 +289,13 @@ namespace dftfe
                        d_dftParamsPtr->verbosity);
       }
 
-
-    d_phiTotRhoIn.update_ghost_values();
-
-    std::map<dealii::CellId, std::vector<double>> dummy;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST> dummy;
     interpolateElectroNodalDataToQuadratureDataGeneral(
-      d_matrixFreeDataPRefined,
+      d_basisOperationsPtrElectroHost,
       d_phiTotDofHandlerIndexElectro,
       d_densityQuadratureIdElectro,
       d_phiTotRhoIn,
-      d_phiInValues,
+      d_phiInQuadValues,
       dummy);
 
     //
@@ -310,94 +332,27 @@ namespace dftfe
 
         for (unsigned int s = 0; s < 2; ++s)
           {
-            if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                densityFamilyType::LDA)
-              {
-                computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.computeVEffSpinPolarized(
-                    rhoInValuesSpinPolarized.get(),
-                    d_phiInValues,
-                    s,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_lpspQuadratureId);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeVEffSpinPolarized(
-                    rhoInValuesSpinPolarized.get(),
-                    d_phiInValues,
-                    s,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_lpspQuadratureId);
-                computing_timer.leave_subsection("VEff Computation");
-              }
-            else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                     densityFamilyType::GGA)
-              {
-                computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.computeVEffSpinPolarized(
-                    rhoInValuesSpinPolarized.get(),
-                    gradRhoInValuesSpinPolarized.get(),
-                    d_phiInValues,
-                    s,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_gradRhoCore,
-                    d_lpspQuadratureId);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.computeVEffSpinPolarized(
-                    rhoInValuesSpinPolarized.get(),
-                    gradRhoInValuesSpinPolarized.get(),
-                    d_phiInValues,
-                    s,
-                    d_pseudoVLoc,
-                    d_rhoCore,
-                    d_gradRhoCore,
-                    d_lpspQuadratureId);
-                computing_timer.leave_subsection("VEff Computation");
-              }
-
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              {
-                computing_timer.enter_subsection(
-                  "Hamiltonian Matrix Computation");
-                kohnShamDFTEigenOperatorDevice.computeHamiltonianMatricesAllkpt(
-                  s);
-                computing_timer.leave_subsection(
-                  "Hamiltonian Matrix Computation");
-              }
-#endif
+            computing_timer.enter_subsection("VEff Computation");
+            kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+                                                 d_gradDensityInQuadValues,
+                                                 d_phiInQuadValues,
+                                                 d_rhoCore,
+                                                 d_gradRhoCore,
+                                                 s);
+            computing_timer.leave_subsection("VEff Computation");
 
 
             for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                  ++kPoint)
               {
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(kPoint,
-                                                                       s);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
+                kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
 
 
-
-                if (!d_dftParamsPtr->useDevice)
-                  {
-                    computing_timer.enter_subsection(
-                      "Hamiltonian Matrix Computation");
-                    kohnShamDFTEigenOperator.computeHamiltonianMatrix(kPoint,
-                                                                      s);
-                    computing_timer.leave_subsection(
-                      "Hamiltonian Matrix Computation");
-                  }
+                computing_timer.enter_subsection(
+                  "Hamiltonian Matrix Computation");
+                kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                computing_timer.leave_subsection(
+                  "Hamiltonian Matrix Computation");
 
 
                 for (unsigned int j = 0; j < 1; ++j)
@@ -409,11 +364,12 @@ namespace dftfe
                       }
 
 #ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         s,
                         kPoint,
-                        kohnShamDFTEigenOperatorDevice,
+                        kohnShamDFTEigenOperator,
                         *d_elpaScala,
                         d_subspaceIterationSolverDevice,
                         residualNormWaveFunctionsAllkPointsSpins[s][kPoint],
@@ -423,7 +379,8 @@ namespace dftfe
                         false,
                         true);
 #endif
-                    if (!d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         s,
                         kPoint,
@@ -514,28 +471,42 @@ namespace dftfe
           {
             for (unsigned int s = 0; s < 2; ++s)
               {
+                if (d_dftParamsPtr->memOptMode)
+                  {
+                    computing_timer.enter_subsection("VEff Computation");
+                    kohnShamDFTEigenOperator.computeVEff(
+                      d_densityInQuadValues,
+                      d_gradDensityInQuadValues,
+                      d_phiInQuadValues,
+                      d_rhoCore,
+                      d_gradRhoCore,
+                      s);
+                    computing_timer.leave_subsection("VEff Computation");
+                  }
                 for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size();
                      ++kPoint)
                   {
                     if (d_dftParamsPtr->verbosity >= 2)
                       pcout << "Beginning Chebyshev filter pass " << 1 + count
                             << " for spin " << s + 1 << std::endl;
-                    ;
+
+                    kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
+                    if (d_dftParamsPtr->memOptMode)
+                      {
+                        computing_timer.enter_subsection(
+                          "Hamiltonian Matrix Computation");
+                        kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                        computing_timer.leave_subsection(
+                          "Hamiltonian Matrix Computation");
+                      }
 
 #ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(
-                        kPoint, s);
-#endif
-                    if (!d_dftParamsPtr->useDevice)
-                      kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, s);
-
-#ifdef DFTFE_WITH_DEVICE
-                    if (d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::DEVICE ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         s,
                         kPoint,
-                        kohnShamDFTEigenOperatorDevice,
+                        kohnShamDFTEigenOperator,
                         *d_elpaScala,
                         d_subspaceIterationSolverDevice,
                         residualNormWaveFunctionsAllkPointsSpins[s][kPoint],
@@ -545,7 +516,8 @@ namespace dftfe
                         false,
                         true);
 #endif
-                    if (!d_dftParamsPtr->useDevice)
+                    if constexpr (dftfe::utils::MemorySpace::HOST ==
+                                  memorySpace)
                       kohnShamEigenSpaceCompute(
                         s,
                         kPoint,
@@ -633,78 +605,22 @@ namespace dftfe
           residualNormWaveFunctionsAllkPoints[kPoint].resize(d_numEigenValues);
 
 
-        if (d_excManagerPtr->getDensityBasedFamilyType() ==
-            densityFamilyType::LDA)
-          {
-            computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              kohnShamDFTEigenOperatorDevice.computeVEff(rhoInValues.get(),
-                                                         d_phiInValues,
-                                                         d_pseudoVLoc,
-                                                         d_rhoCore,
-                                                         d_lpspQuadratureId);
-#endif
-            if (!d_dftParamsPtr->useDevice)
-              kohnShamDFTEigenOperator.computeVEff(rhoInValues.get(),
-                                                   d_phiInValues,
-                                                   d_pseudoVLoc,
-                                                   d_rhoCore,
-                                                   d_lpspQuadratureId);
-            computing_timer.leave_subsection("VEff Computation");
-          }
-        else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-                 densityFamilyType::GGA)
-          {
-            computing_timer.enter_subsection("VEff Computation");
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              kohnShamDFTEigenOperatorDevice.computeVEff(rhoInValues.get(),
-                                                         gradRhoInValues.get(),
-                                                         d_phiInValues,
-                                                         d_pseudoVLoc,
-                                                         d_rhoCore,
-                                                         d_gradRhoCore,
-                                                         d_lpspQuadratureId);
-#endif
-            if (!d_dftParamsPtr->useDevice)
-              kohnShamDFTEigenOperator.computeVEff(rhoInValues.get(),
-                                                   gradRhoInValues.get(),
-                                                   d_phiInValues,
-                                                   d_pseudoVLoc,
-                                                   d_rhoCore,
-                                                   d_gradRhoCore,
-                                                   d_lpspQuadratureId);
-            computing_timer.leave_subsection("VEff Computation");
-          }
-
-#ifdef DFTFE_WITH_DEVICE
-        if (d_dftParamsPtr->useDevice)
-          {
-            computing_timer.enter_subsection("Hamiltonian Matrix Computation");
-            kohnShamDFTEigenOperatorDevice.computeHamiltonianMatricesAllkpt(0);
-            computing_timer.leave_subsection("Hamiltonian Matrix Computation");
-          }
-#endif
+        computing_timer.enter_subsection("VEff Computation");
+        kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
+                                             d_gradDensityInQuadValues,
+                                             d_phiInQuadValues,
+                                             d_rhoCore,
+                                             d_gradRhoCore);
+        computing_timer.leave_subsection("VEff Computation");
 
         for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
           {
-#ifdef DFTFE_WITH_DEVICE
-            if (d_dftParamsPtr->useDevice)
-              kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(kPoint, 0);
-#endif
-            if (!d_dftParamsPtr->useDevice)
-              kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
+            kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
 
 
-            if (!d_dftParamsPtr->useDevice)
-              {
-                computing_timer.enter_subsection(
-                  "Hamiltonian Matrix Computation");
-                kohnShamDFTEigenOperator.computeHamiltonianMatrix(kPoint, 0);
-                computing_timer.leave_subsection(
-                  "Hamiltonian Matrix Computation");
-              }
+            computing_timer.enter_subsection("Hamiltonian Matrix Computation");
+            kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+            computing_timer.leave_subsection("Hamiltonian Matrix Computation");
 
 
             for (unsigned int j = 0; j < 1; ++j)
@@ -717,11 +633,11 @@ namespace dftfe
 
 
 #ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
+                if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
                   kohnShamEigenSpaceCompute(
                     0,
                     kPoint,
-                    kohnShamDFTEigenOperatorDevice,
+                    kohnShamDFTEigenOperator,
                     *d_elpaScala,
                     d_subspaceIterationSolverDevice,
                     residualNormWaveFunctionsAllkPoints[kPoint],
@@ -731,7 +647,7 @@ namespace dftfe
                     false,
                     true);
 #endif
-                if (!d_dftParamsPtr->useDevice)
+                if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
                   kohnShamEigenSpaceCompute(
                     0,
                     kPoint,
@@ -807,20 +723,22 @@ namespace dftfe
                   pcout << "Beginning Chebyshev filter pass " << 1 + count
                         << std::endl;
 
-#ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperatorDevice.reinitkPointSpinIndex(kPoint,
-                                                                       0);
-#endif
-                if (!d_dftParamsPtr->useDevice)
-                  kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
+                kohnShamDFTEigenOperator.reinitkPointSpinIndex(kPoint, 0);
+                if (d_dftParamsPtr->memOptMode && d_kPointWeights.size() > 0)
+                  {
+                    computing_timer.enter_subsection(
+                      "Hamiltonian Matrix Computation");
+                    kohnShamDFTEigenOperator.computeCellHamiltonianMatrix();
+                    computing_timer.leave_subsection(
+                      "Hamiltonian Matrix Computation");
+                  }
 
 #ifdef DFTFE_WITH_DEVICE
-                if (d_dftParamsPtr->useDevice)
+                if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
                   kohnShamEigenSpaceCompute(
                     0,
                     kPoint,
-                    kohnShamDFTEigenOperatorDevice,
+                    kohnShamDFTEigenOperator,
                     *d_elpaScala,
                     d_subspaceIterationSolverDevice,
                     residualNormWaveFunctionsAllkPoints[kPoint],
@@ -831,7 +749,7 @@ namespace dftfe
                     true);
 
 #endif
-                if (!d_dftParamsPtr->useDevice)
+                if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
                   kohnShamEigenSpaceCompute(
                     0,
                     kPoint,
@@ -894,14 +812,7 @@ namespace dftfe
       }
     computing_timer.enter_subsection("compute rho");
 
-#ifdef DFTFE_WITH_DEVICE
-    compute_rhoOut(kohnShamDFTEigenOperatorDevice,
-                   kohnShamDFTEigenOperator,
-                   false,
-                   true);
-#else
-    compute_rhoOut(kohnShamDFTEigenOperator, false, true);
-#endif
+    compute_rhoOut(false, true);
 
     computing_timer.leave_subsection("compute rho");
 
@@ -909,7 +820,7 @@ namespace dftfe
     // compute integral rhoOut
     //
     const double integralRhoValue =
-      totalCharge(d_dofHandlerPRefined, rhoOutValues.get());
+      totalCharge(d_dofHandlerPRefined, d_densityOutQuadValues[0]);
 
     if (d_dftParamsPtr->verbosity >= 2)
       {
@@ -920,7 +831,7 @@ namespace dftfe
     if (d_dftParamsPtr->verbosity >= 1 && d_dftParamsPtr->spinPolarized == 1)
       pcout << std::endl
             << "net magnetization: "
-            << totalMagnetization(rhoOutValuesSpinPolarized.get()) << std::endl;
+            << totalMagnetization(d_densityOutQuadValues[1]) << std::endl;
 
 
     local_timer.stop();
@@ -941,13 +852,37 @@ namespace dftfe
 
     computing_timer.enter_subsection("phiTot solve");
 
+    if (d_dftParamsPtr->multipoleBoundaryConditions)
+      {
+        computing_timer.enter_subsection("Update inhomogenous BC");
+        computeMultipoleMoments(d_basisOperationsPtrElectroHost,
+                                d_densityQuadratureIdElectro,
+                                d_densityOutQuadValues[0],
+                                &d_bQuadValuesAllAtoms);
+        updatePRefinedConstraints();
+        computing_timer.leave_subsection("Update inhomogenous BC");
+      }
+
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      densityOutQuadValuesCopy = d_densityOutQuadValues[0];
+    if (std::abs(d_dftParamsPtr->netCharge) > 1e-12 and
+        (d_dftParamsPtr->periodicX || d_dftParamsPtr->periodicY ||
+         d_dftParamsPtr->periodicZ))
+      {
+        double *tempvec = densityOutQuadValuesCopy.data();
+        for (unsigned int iquad = 0; iquad < densityOutQuadValuesCopy.size();
+             iquad++)
+          tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
+      }
+
+
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
         d_dftParamsPtr->floatingNuclearCharges and
         not d_dftParamsPtr->pinnedNodeForPBC)
       {
 #ifdef DFTFE_WITH_DEVICE
         d_phiTotalSolverProblemDevice.reinit(
-          d_matrixFreeDataPRefined,
+          d_basisOperationsPtrElectroHost,
           d_phiTotRhoOut,
           *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
           d_phiTotDofHandlerIndexElectro,
@@ -956,8 +891,8 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          *rhoOutValues,
-          kohnShamDFTEigenOperatorDevice.getDeviceBlasHandle(),
+          densityOutQuadValuesCopy,
+          d_BLASWrapperPtr,
           false,
           false,
           d_dftParamsPtr->smearedNuclearCharges,
@@ -965,20 +900,19 @@ namespace dftfe
           false,
           0,
           false,
-          true);
+          true,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 
-        CGSolverDevice.solve(
-          d_phiTotalSolverProblemDevice,
-          d_dftParamsPtr->absLinearSolverTolerance,
-          d_dftParamsPtr->maxLinearSolverIterations,
-          kohnShamDFTEigenOperatorDevice.getDeviceBlasHandle(),
-          d_dftParamsPtr->verbosity);
+        CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
+                             d_dftParamsPtr->absLinearSolverTolerance,
+                             d_dftParamsPtr->maxLinearSolverIterations,
+                             d_dftParamsPtr->verbosity);
 #endif
       }
     else
       {
         d_phiTotalSolverProblem.reinit(
-          d_matrixFreeDataPRefined,
+          d_basisOperationsPtrElectroHost,
           d_phiTotRhoOut,
           *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
           d_phiTotDofHandlerIndexElectro,
@@ -987,7 +921,7 @@ namespace dftfe
           d_atomNodeIdToChargeMap,
           d_bQuadValuesAllAtoms,
           d_smearedChargeQuadratureIdElectro,
-          *rhoOutValues,
+          densityOutQuadValuesCopy,
           false,
           false,
           d_dftParamsPtr->smearedNuclearCharges,
@@ -995,7 +929,8 @@ namespace dftfe
           false,
           0,
           false,
-          true);
+          true,
+          d_dftParamsPtr->multipoleBoundaryConditions);
 
         CGSolver.solve(d_phiTotalSolverProblem,
                        d_dftParamsPtr->absLinearSolverTolerance,
@@ -1003,7 +938,13 @@ namespace dftfe
                        d_dftParamsPtr->verbosity);
       }
 
-
+    interpolateElectroNodalDataToQuadratureDataGeneral(
+      d_basisOperationsPtrElectroHost,
+      d_phiTotDofHandlerIndexElectro,
+      d_densityQuadratureIdElectro,
+      d_phiTotRhoOut,
+      d_phiOutQuadValues,
+      dummy);
 
     computing_timer.leave_subsection("phiTot solve");
 
@@ -1011,84 +952,40 @@ namespace dftfe
     // matrix_free_data.get_quadrature(d_densityQuadratureId);
     d_dispersionCorr.computeDispresionCorrection(atomLocations,
                                                  d_domainBoundingVectors);
-    const double totalEnergy =
-      d_dftParamsPtr->spinPolarized == 0 ?
-        energyCalc.computeEnergy(d_dofHandlerPRefined,
-                                 dofHandler,
-                                 quadrature,
-                                 quadrature,
-                                 d_matrixFreeDataPRefined.get_quadrature(
-                                   d_smearedChargeQuadratureIdElectro),
-                                 d_matrixFreeDataPRefined.get_quadrature(
-                                   d_lpspQuadratureIdElectro),
-                                 eigenValues,
-                                 d_kPointWeights,
-                                 fermiEnergy,
-                                 d_excManagerPtr,
-                                 d_dispersionCorr,
-                                 d_phiInValues,
-                                 d_phiTotRhoOut,
-                                 *rhoInValues,
-                                 *rhoOutValues,
-                                 d_rhoOutValuesLpspQuad,
-                                 *rhoOutValues,
-                                 d_rhoOutValuesLpspQuad,
-                                 *gradRhoInValues,
-                                 *gradRhoOutValues,
-                                 d_rhoCore,
-                                 d_gradRhoCore,
-                                 d_bQuadValuesAllAtoms,
-                                 d_bCellNonTrivialAtomIds,
-                                 d_localVselfs,
-                                 d_pseudoVLoc,
-                                 d_pseudoVLoc,
-                                 d_atomNodeIdToChargeMap,
-                                 atomLocations.size(),
-                                 lowerBoundKindex,
-                                 0,
-                                 d_dftParamsPtr->verbosity >= 2,
-                                 d_dftParamsPtr->smearedNuclearCharges) :
-        energyCalc.computeEnergySpinPolarized(
-          d_dofHandlerPRefined,
-          dofHandler,
-          quadrature,
-          quadrature,
-          d_matrixFreeDataPRefined.get_quadrature(
-            d_smearedChargeQuadratureIdElectro),
-          d_matrixFreeDataPRefined.get_quadrature(d_lpspQuadratureIdElectro),
-          eigenValues,
-          d_kPointWeights,
-          fermiEnergy,
-          fermiEnergyUp,
-          fermiEnergyDown,
-          d_excManagerPtr,
-          d_dispersionCorr,
-          d_phiInValues,
-          d_phiTotRhoOut,
-          *rhoInValues,
-          *rhoOutValues,
-          d_rhoOutValuesLpspQuad,
-          *rhoOutValues,
-          d_rhoOutValuesLpspQuad,
-          *gradRhoInValues,
-          *gradRhoOutValues,
-          *rhoInValuesSpinPolarized,
-          *rhoOutValuesSpinPolarized,
-          *gradRhoInValuesSpinPolarized,
-          *gradRhoOutValuesSpinPolarized,
-          d_rhoCore,
-          d_gradRhoCore,
-          d_bQuadValuesAllAtoms,
-          d_bCellNonTrivialAtomIds,
-          d_localVselfs,
-          d_pseudoVLoc,
-          d_pseudoVLoc,
-          d_atomNodeIdToChargeMap,
-          atomLocations.size(),
-          lowerBoundKindex,
-          0,
-          d_dftParamsPtr->verbosity >= 2,
-          d_dftParamsPtr->smearedNuclearCharges);
+    const double totalEnergy = energyCalc.computeEnergy(
+      d_basisOperationsPtrHost,
+      d_basisOperationsPtrElectroHost,
+      d_densityQuadratureId,
+      d_densityQuadratureIdElectro,
+      d_smearedChargeQuadratureIdElectro,
+      d_lpspQuadratureIdElectro,
+      eigenValues,
+      d_kPointWeights,
+      fermiEnergy,
+      d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy : fermiEnergyUp,
+      d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy : fermiEnergyDown,
+      d_excManagerPtr,
+      d_dispersionCorr,
+      d_phiInQuadValues,
+      d_phiOutQuadValues,
+      d_phiTotRhoOut,
+      d_densityInQuadValues,
+      d_densityOutQuadValues,
+      d_gradDensityInQuadValues,
+      d_gradDensityOutQuadValues,
+      d_densityTotalOutValuesLpspQuad,
+      d_rhoCore,
+      d_gradRhoCore,
+      d_bQuadValuesAllAtoms,
+      d_bCellNonTrivialAtomIds,
+      d_localVselfs,
+      d_pseudoVLoc,
+      d_atomNodeIdToChargeMap,
+      atomLocations.size(),
+      lowerBoundKindex,
+      0,
+      d_dftParamsPtr->verbosity >= 0 ? true : false,
+      d_dftParamsPtr->smearedNuclearCharges);
 
     if (d_dftParamsPtr->verbosity <= 1)
       pcout << "Total energy  : " << totalEnergy << std::endl;

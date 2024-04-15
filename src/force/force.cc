@@ -20,9 +20,6 @@
 
 #include <force.h>
 #include <forceWfcContractions.h>
-#ifdef DFTFE_WITH_DEVICE
-#  include <forceWfcContractionsDevice.h>
-#endif
 #include <boost/math/special_functions/spherical_harmonic.hpp>
 
 #include <constants.h>
@@ -153,12 +150,14 @@ namespace dftfe
   //
   // constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  forceClass<FEOrder, FEOrderElectro>::forceClass(
-    dftClass<FEOrder, FEOrderElectro> *_dftPtr,
-    const MPI_Comm &                   mpi_comm_parent,
-    const MPI_Comm &                   mpi_comm_domain,
-    const dftParameters &              dftParams)
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::forceClass(
+    dftClass<FEOrder, FEOrderElectro, memorySpace> *_dftPtr,
+    const MPI_Comm &                                mpi_comm_parent,
+    const MPI_Comm &                                mpi_comm_domain,
+    const dftParameters &                           dftParams)
     : dftPtr(_dftPtr)
     , FEForce(dealii::FE_Q<3>(dealii::QGaussLobatto<1>(2)), 3)
     , d_mpiCommParent(mpi_comm_parent)
@@ -174,9 +173,11 @@ namespace dftfe
   //
   // initialize forceClass object
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::initUnmoved(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::initUnmoved(
     const dealii::Triangulation<3, 3> &     triangulation,
     const dealii::Triangulation<3, 3> &     serialTriangulation,
     const std::vector<std::vector<double>> &domainBoundingVectors,
@@ -211,9 +212,11 @@ namespace dftfe
 
 
   // reinitialize force class object after mesh update
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::initMoved(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::initMoved(
     std::vector<const dealii::DoFHandler<3> *> &dofHandlerVectorMatrixFree,
     std::vector<const dealii::AffineConstraints<double> *>
       &        constraintsVectorMatrixFree,
@@ -261,41 +264,40 @@ namespace dftfe
   //
   // initialize pseudopotential data for force computation
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::initPseudoData()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::initPseudoData()
   {
     // if(d_dftParams.isPseudopotential)
     //	computeElementalNonLocalPseudoOVDataForce();
   }
 
   // compute forces on atoms corresponding to a Gaussian generator
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeAtomsForces(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::computeAtomsForces(
     const dealii::MatrixFree<3, double> &matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice,
-#endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
-    const dispersionCorrection &                       dispersionCorr,
-    const unsigned int                                 eigenDofHandlerIndex,
+    const dispersionCorrection &         dispersionCorr,
+    const unsigned int                   eigenDofHandlerIndex,
     const unsigned int                   smearedChargeQuadratureId,
     const unsigned int                   lpspQuadratureIdElectro,
     const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
     const unsigned int                   phiTotDofHandlerIndexElectro,
     const distributedCPUVec<double> &    phiTotRhoOutElectro,
-    const std::map<dealii::CellId, std::vector<double>> &rhoOutValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoOutValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoOutValuesLpsp,
-    const std::map<dealii::CellId, std::vector<double>> &rhoOutValuesElectro,
-    const std::map<dealii::CellId, std::vector<double>>
-      &rhoOutValuesElectroLpsp,
-    const std::map<dealii::CellId, std::vector<double>>
-      &gradRhoOutValuesElectro,
-    const std::map<dealii::CellId, std::vector<double>>
-      &gradRhoOutValuesElectroLpsp,
+    const std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      &rhoOutValues,
+    const std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      &gradRhoOutValues,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &rhoTotalOutValuesLpsp,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &gradRhoTotalOutValuesLpsp,
     const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
     const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
     const std::map<dealii::CellId, std::vector<double>> &hessianRhoCoreValues,
@@ -307,12 +309,7 @@ namespace dftfe
     const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
       &                                      pseudoVLocAtomsElectro,
     const dealii::AffineConstraints<double> &hangingPlusPBCConstraintsElectro,
-    const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro,
-    const std::map<dealii::CellId, std::vector<double>> &shadowKSRhoMinValues,
-    const std::map<dealii::CellId, std::vector<double>>
-      &                              shadowKSGradRhoMinValues,
-    const distributedCPUVec<double> &phiRhoMinusApproxRho,
-    const bool                       shadowPotentialForce)
+    const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro)
   {
     createBinObjectsForce(matrixFreeDataElectro.get_dof_handler(
                             phiTotDofHandlerIndexElectro),
@@ -327,10 +324,6 @@ namespace dftfe
                           d_cellFacesVselfBallSurfacesDofHandlerForceElectro);
 
     computeConfigurationalForceTotalLinFE(matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-                                          kohnShamDFTEigenOperatorDevice,
-#endif
-                                          kohnShamDFTEigenOperator,
                                           eigenDofHandlerIndex,
                                           smearedChargeQuadratureId,
                                           lpspQuadratureIdElectro,
@@ -339,11 +332,8 @@ namespace dftfe
                                           phiTotRhoOutElectro,
                                           rhoOutValues,
                                           gradRhoOutValues,
-                                          gradRhoOutValuesLpsp,
-                                          rhoOutValuesElectro,
-                                          rhoOutValuesElectroLpsp,
-                                          gradRhoOutValuesElectro,
-                                          gradRhoOutValuesElectroLpsp,
+                                          rhoTotalOutValuesLpsp,
+                                          gradRhoTotalOutValuesLpsp,
                                           rhoCoreValues,
                                           gradRhoCoreValues,
                                           hessianRhoCoreValues,
@@ -351,11 +341,7 @@ namespace dftfe
                                           hessianRhoCoreAtoms,
                                           pseudoVLocElectro,
                                           pseudoVLocAtomsElectro,
-                                          vselfBinsManagerElectro,
-                                          shadowKSRhoMinValues,
-                                          shadowKSGradRhoMinValues,
-                                          phiRhoMinusApproxRho,
-                                          shadowPotentialForce);
+                                          vselfBinsManagerElectro);
 
     MPI_Barrier(d_mpiCommParent);
     double gaussian_time = MPI_Wtime();
@@ -388,9 +374,11 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::configForceLinFEInit(
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::configForceLinFEInit(
     const dealii::MatrixFree<3, double> &matrixFreeData,
     const dealii::MatrixFree<3, double> &matrixFreeDataElectro)
   {
@@ -420,9 +408,11 @@ namespace dftfe
 #endif
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::configForceLinFEFinalize()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::configForceLinFEFinalize()
   {
     d_configForceVectorLinFE.compress(
       dealii::VectorOperation::add); // copies the ghost element cache to the
@@ -462,47 +452,43 @@ namespace dftfe
   // cases. Also both LDA and GGA exchange correlation are handled. For details
   // of the configurational force expressions refer to the Configurational force
   // paper by Motamarri et.al. (https://arxiv.org/abs/1712.05535)
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::computeConfigurationalForceTotalLinFE(
-    const dealii::MatrixFree<3, double> &matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-    kohnShamDFTOperatorDeviceClass<FEOrder, FEOrderElectro>
-      &kohnShamDFTEigenOperatorDevice,
-#endif
-    kohnShamDFTOperatorClass<FEOrder, FEOrderElectro> &kohnShamDFTEigenOperator,
-    const unsigned int                                 eigenDofHandlerIndex,
-    const unsigned int                   smearedChargeQuadratureId,
-    const unsigned int                   lpspQuadratureIdElectro,
-    const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
-    const unsigned int                   phiTotDofHandlerIndexElectro,
-    const distributedCPUVec<double> &    phiTotRhoOutElectro,
-    const std::map<dealii::CellId, std::vector<double>> &rhoOutValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoOutValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoOutValuesLpsp,
-    const std::map<dealii::CellId, std::vector<double>> &rhoOutValuesElectro,
-    const std::map<dealii::CellId, std::vector<double>>
-      &rhoOutValuesElectroLpsp,
-    const std::map<dealii::CellId, std::vector<double>>
-      &gradRhoOutValuesElectro,
-    const std::map<dealii::CellId, std::vector<double>>
-      &gradRhoOutValuesElectroLpsp,
-    const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-    const std::map<dealii::CellId, std::vector<double>> &hessianRhoCoreValues,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &gradRhoCoreAtoms,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &                                                  hessianRhoCoreAtoms,
-    const std::map<dealii::CellId, std::vector<double>> &pseudoVLocElectro,
-    const std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
-      &                                              pseudoVLocAtomsElectro,
-    const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro,
-    const std::map<dealii::CellId, std::vector<double>> &shadowKSRhoMinValues,
-    const std::map<dealii::CellId, std::vector<double>>
-      &                              shadowKSGradRhoMinValues,
-    const distributedCPUVec<double> &phiRhoMinusApproxRho,
-    const bool                       shadowPotentialForce)
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
+    computeConfigurationalForceTotalLinFE(
+      const dealii::MatrixFree<3, double> &matrixFreeData,
+      const unsigned int                   eigenDofHandlerIndex,
+      const unsigned int                   smearedChargeQuadratureId,
+      const unsigned int                   lpspQuadratureIdElectro,
+      const dealii::MatrixFree<3, double> &matrixFreeDataElectro,
+      const unsigned int                   phiTotDofHandlerIndexElectro,
+      const distributedCPUVec<double> &    phiTotRhoOutElectro,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &rhoOutValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &gradRhoOutValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &rhoTotalOutValuesLpsp,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &gradRhoTotalOutValuesLpsp,
+      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
+      const std::map<dealii::CellId, std::vector<double>> &hessianRhoCoreValues,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &gradRhoCoreAtoms,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &                                                  hessianRhoCoreAtoms,
+      const std::map<dealii::CellId, std::vector<double>> &pseudoVLocElectro,
+      const std::map<unsigned int,
+                     std::map<dealii::CellId, std::vector<double>>>
+        &                                              pseudoVLocAtomsElectro,
+      const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinsManagerElectro)
   {
     configForceLinFEInit(matrixFreeData, matrixFreeDataElectro);
 
@@ -510,10 +496,6 @@ namespace dftfe
     // nuclear self energy
     computeConfigurationalForceEEshelbyTensorFPSPFnlLinFE(
       matrixFreeData,
-#ifdef DFTFE_WITH_DEVICE
-      kohnShamDFTEigenOperatorDevice,
-#endif
-      kohnShamDFTEigenOperator,
       eigenDofHandlerIndex,
       smearedChargeQuadratureId,
       lpspQuadratureIdElectro,
@@ -522,11 +504,8 @@ namespace dftfe
       phiTotRhoOutElectro,
       rhoOutValues,
       gradRhoOutValues,
-      gradRhoOutValuesLpsp,
-      rhoOutValuesElectro,
-      rhoOutValuesElectroLpsp,
-      gradRhoOutValuesElectro,
-      gradRhoOutValuesElectroLpsp,
+      rhoTotalOutValuesLpsp,
+      gradRhoTotalOutValuesLpsp,
       rhoCoreValues,
       gradRhoCoreValues,
       hessianRhoCoreValues,
@@ -534,11 +513,7 @@ namespace dftfe
       hessianRhoCoreAtoms,
       pseudoVLocElectro,
       pseudoVLocAtomsElectro,
-      vselfBinsManagerElectro,
-      shadowKSRhoMinValues,
-      shadowKSGradRhoMinValues,
-      phiRhoMinusApproxRho,
-      shadowPotentialForce);
+      vselfBinsManagerElectro);
 
     // configurational force contribution from nuclear self energy. This is
     // handled separately as it involves
@@ -591,16 +566,20 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   std::vector<double> &
-  forceClass<FEOrder, FEOrderElectro>::getAtomsForces()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::getAtomsForces()
   {
     return d_globalAtomsForces;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   dealii::Tensor<2, 3, double> &
-  forceClass<FEOrder, FEOrderElectro>::getStress()
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::getStress()
   {
     return d_stress;
   }

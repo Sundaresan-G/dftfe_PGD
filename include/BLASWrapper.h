@@ -23,6 +23,7 @@
 #include <complex>
 #include <TypeConfig.h>
 #include <DeviceTypeConfig.h>
+#include <cmath>
 
 
 namespace dftfe
@@ -101,6 +102,59 @@ namespace dftfe
             std::complex<double> *      C,
             const unsigned int          ldc) const;
 
+      void
+      xgemv(const char         transA,
+            const unsigned int m,
+            const unsigned int n,
+            const double *     alpha,
+            const double *     A,
+            const unsigned int lda,
+            const double *     x,
+            const unsigned int incx,
+            const double *     beta,
+            double *           y,
+            const unsigned int incy) const;
+
+      void
+      xgemv(const char         transA,
+            const unsigned int m,
+            const unsigned int n,
+            const float *      alpha,
+            const float *      A,
+            const unsigned int lda,
+            const float *      x,
+            const unsigned int incx,
+            const float *      beta,
+            float *            y,
+            const unsigned int incy) const;
+
+      void
+      xgemv(const char                  transA,
+            const unsigned int          m,
+            const unsigned int          n,
+            const std::complex<double> *alpha,
+            const std::complex<double> *A,
+            const unsigned int          lda,
+            const std::complex<double> *x,
+            const unsigned int          incx,
+            const std::complex<double> *beta,
+            std::complex<double> *      y,
+            const unsigned int          incy) const;
+
+      void
+      xgemv(const char                 transA,
+            const unsigned int         m,
+            const unsigned int         n,
+            const std::complex<float> *alpha,
+            const std::complex<float> *A,
+            const unsigned int         lda,
+            const std::complex<float> *x,
+            const unsigned int         incx,
+            const std::complex<float> *beta,
+            std::complex<float> *      y,
+            const unsigned int         incy) const;
+
+
       template <typename ValueType1, typename ValueType2>
       void
       xscal(ValueType1 *           x,
@@ -134,7 +188,15 @@ namespace dftfe
            const double *     Y,
            const unsigned int INCY,
            double *           result) const;
-
+      // Real dot proeuct with all Reduce call
+      void
+      xdot(const unsigned int N,
+           const double *     X,
+           const unsigned int INCX,
+           const double *     Y,
+           const unsigned int INCY,
+           const MPI_Comm &   mpi_communicator,
+           double *           result) const;
 
       // Complex dot product
       void
@@ -145,11 +207,22 @@ namespace dftfe
            const unsigned int          INCY,
            std::complex<double> *      result) const;
 
+      // Complex dot proeuct with all Reduce call
+      void
+      xdot(const unsigned int          N,
+           const std::complex<double> *X,
+           const unsigned int          INCX,
+           const std::complex<double> *Y,
+           const unsigned int          INCY,
+           const MPI_Comm &            mpi_communicator,
+           std::complex<double> *      result) const;
+
+
       // Real double Ax+y
       void
       xaxpy(const unsigned int n,
             const double *     alpha,
-            double *           x,
+            const double *     x,
             const unsigned int incx,
             double *           y,
             const unsigned int incy) const;
@@ -158,7 +231,7 @@ namespace dftfe
       void
       xaxpy(const unsigned int          n,
             const std::complex<double> *alpha,
-            std::complex<double> *      x,
+            const std::complex<double> *x,
             const unsigned int          incx,
             std::complex<double> *      y,
             const unsigned int          incy) const;
@@ -186,6 +259,14 @@ namespace dftfe
             const unsigned int incx,
             float *            y,
             const unsigned int incy) const;
+
+      // Complex float copy of data
+      void
+      xcopy(const unsigned int         n,
+            const std::complex<float> *x,
+            const unsigned int         incx,
+            std::complex<float> *      y,
+            const unsigned int         incy) const;
 
       // Real double symmetric matrix-vector product
       void
@@ -415,24 +496,33 @@ namespace dftfe
                                          const ValueType1 *     copyFromVec,
                                          ValueType2 *           copyToVec);
 
-      template <typename ValueType>
+      template <typename ValueType1, typename ValueType2>
       void
-      axpyStridedBlockAtomicAdd(
-        const dftfe::size_type         contiguousBlockSize,
-        const dftfe::size_type         numContiguousBlocks,
-        const ValueType *              addFromVec,
-        ValueType *                    addToVec,
-        const dftfe::global_size_type *addToVecStartingContiguousBlockIds);
+      axpby(const unsigned int n,
+            const ValueType2   alpha,
+            const ValueType1 * x,
+            const ValueType2   beta,
+            ValueType1 *       y) const;
 
       template <typename ValueType>
       void
-      axpyStridedBlockAtomicAdd(
-        const dftfe::size_type         contiguousBlockSize,
-        const dftfe::size_type         numContiguousBlocks,
-        const ValueType *              addFromVec,
-        double *                       addToVecReal,
-        double *                       addToVecImag,
-        const dftfe::global_size_type *addToVecStartingContiguousBlockIds);
+      axpyStridedBlockAtomicAdd(const dftfe::size_type contiguousBlockSize,
+                                const dftfe::size_type numContiguousBlocks,
+                                const ValueType *      addFromVec,
+                                ValueType *            addToVec,
+                                const dftfe::global_size_type
+                                  *addToVecStartingContiguousBlockIds) const;
+
+      template <typename ValueType1, typename ValueType2>
+      void
+      axpyStridedBlockAtomicAdd(const dftfe::size_type contiguousBlockSize,
+                                const dftfe::size_type numContiguousBlocks,
+                                const ValueType1       a,
+                                const ValueType1 *     s,
+                                const ValueType2 *     addFromVec,
+                                ValueType2 *           addToVec,
+                                const dftfe::global_size_type
+                                  *addToVecStartingContiguousBlockIds) const;
 
       template <typename ValueType1, typename ValueType2>
       void
@@ -441,6 +531,17 @@ namespace dftfe
                         const ValueType1       a,
                         const ValueType1 *     s,
                         ValueType2 *           x);
+
+      template <typename ValueType1, typename ValueType2>
+      void
+      stridedBlockScaleCopy(
+        const dftfe::size_type         contiguousBlockSize,
+        const dftfe::size_type         numContiguousBlocks,
+        const ValueType1               a,
+        const ValueType1 *             s,
+        const ValueType2 *             copyFromVec,
+        ValueType2 *                   copyToVecBlock,
+        const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
       void
       add(double *               y,
@@ -528,6 +629,60 @@ namespace dftfe
             const unsigned int          ldc) const;
 
 
+      void
+      xgemv(const char         transA,
+            const unsigned int m,
+            const unsigned int n,
+            const double *     alpha,
+            const double *     A,
+            const unsigned int lda,
+            const double *     x,
+            const unsigned int incx,
+            const double *     beta,
+            double *           y,
+            const unsigned int incy) const;
+
+      void
+      xgemv(const char         transA,
+            const unsigned int m,
+            const unsigned int n,
+            const float *      alpha,
+            const float *      A,
+            const unsigned int lda,
+            const float *      x,
+            const unsigned int incx,
+            const float *      beta,
+            float *            y,
+            const unsigned int incy) const;
+
+      void
+      xgemv(const char                  transA,
+            const unsigned int          m,
+            const unsigned int          n,
+            const std::complex<double> *alpha,
+            const std::complex<double> *A,
+            const unsigned int          lda,
+            const std::complex<double> *x,
+            const unsigned int          incx,
+            const std::complex<double> *beta,
+            std::complex<double> *      y,
+            const unsigned int          incy) const;
+
+      void
+      xgemv(const char                 transA,
+            const unsigned int         m,
+            const unsigned int         n,
+            const std::complex<float> *alpha,
+            const std::complex<float> *A,
+            const unsigned int         lda,
+            const std::complex<float> *x,
+            const unsigned int         incx,
+            const std::complex<float> *beta,
+            std::complex<float> *      y,
+            const unsigned int         incy) const;
+
+
+
       template <typename ValueType1, typename ValueType2>
       void
       xscal(ValueType1 *           x,
@@ -562,6 +717,17 @@ namespace dftfe
            const unsigned int INCY,
            double *           result) const;
 
+      //
+      // Real dot product
+      void
+      xdot(const unsigned int N,
+           const double *     X,
+           const unsigned int INCX,
+           const double *     Y,
+           const unsigned int INCY,
+           const MPI_Comm &   mpi_communicator,
+           double *           result) const;
+
       // Complex dot product
       void
       xdot(const unsigned int          N,
@@ -571,11 +737,21 @@ namespace dftfe
            const unsigned int          INCY,
            std::complex<double> *      result) const;
 
+      // Complex dot product
+      void
+      xdot(const unsigned int          N,
+           const std::complex<double> *X,
+           const unsigned int          INCX,
+           const std::complex<double> *Y,
+           const unsigned int          INCY,
+           const MPI_Comm &            mpi_communicator,
+           std::complex<double> *      result) const;
+
       // Real double Ax+y
       void
       xaxpy(const unsigned int n,
             const double *     alpha,
-            double *           x,
+            const double *     x,
             const unsigned int incx,
             double *           y,
             const unsigned int incy) const;
@@ -584,7 +760,7 @@ namespace dftfe
       void
       xaxpy(const unsigned int          n,
             const std::complex<double> *alpha,
-            std::complex<double> *      x,
+            const std::complex<double> *x,
             const unsigned int          incx,
             std::complex<double> *      y,
             const unsigned int          incy) const;
@@ -612,6 +788,14 @@ namespace dftfe
             const unsigned int incx,
             float *            y,
             const unsigned int incy) const;
+
+      // Complex float copy of data
+      void
+      xcopy(const unsigned int         n,
+            const std::complex<float> *x,
+            const unsigned int         incx,
+            std::complex<float> *      y,
+            const unsigned int         incy) const;
 
       // Real double symmetric matrix-vector product
       void
@@ -838,25 +1022,33 @@ namespace dftfe
                                          const dftfe::size_type startingId,
                                          const ValueType1 *     copyFromVec,
                                          ValueType2 *           copyToVec);
+      template <typename ValueType1, typename ValueType2>
+      void
+      axpby(const unsigned int n,
+            const ValueType2   alpha,
+            const ValueType1 * x,
+            const ValueType2   beta,
+            ValueType1 *       y) const;
 
       template <typename ValueType>
       void
-      axpyStridedBlockAtomicAdd(
-        const dftfe::size_type         contiguousBlockSize,
-        const dftfe::size_type         numContiguousBlocks,
-        const ValueType *              addFromVec,
-        ValueType *                    addToVec,
-        const dftfe::global_size_type *addToVecStartingContiguousBlockIds);
+      axpyStridedBlockAtomicAdd(const dftfe::size_type contiguousBlockSize,
+                                const dftfe::size_type numContiguousBlocks,
+                                const ValueType *      addFromVec,
+                                ValueType *            addToVec,
+                                const dftfe::global_size_type
+                                  *addToVecStartingContiguousBlockIds) const;
 
-      template <typename ValueType>
+      template <typename ValueType1, typename ValueType2>
       void
-      axpyStridedBlockAtomicAdd(
-        const dftfe::size_type         contiguousBlockSize,
-        const dftfe::size_type         numContiguousBlocks,
-        const ValueType *              addFromVec,
-        double *                       addToVecReal,
-        double *                       addToVecImag,
-        const dftfe::global_size_type *addToVecStartingContiguousBlockIds);
+      axpyStridedBlockAtomicAdd(const dftfe::size_type contiguousBlockSize,
+                                const dftfe::size_type numContiguousBlocks,
+                                const ValueType1       a,
+                                const ValueType1 *     s,
+                                const ValueType2 *     addFromVec,
+                                ValueType2 *           addToVec,
+                                const dftfe::global_size_type
+                                  *addToVecStartingContiguousBlockIds) const;
 
       template <typename ValueType1, typename ValueType2>
       void
@@ -865,6 +1057,16 @@ namespace dftfe
                         const ValueType1       a,
                         const ValueType1 *     s,
                         ValueType2 *           x);
+      template <typename ValueType1, typename ValueType2>
+      void
+      stridedBlockScaleCopy(
+        const dftfe::size_type         contiguousBlockSize,
+        const dftfe::size_type         numContiguousBlocks,
+        const ValueType1               a,
+        const ValueType1 *             s,
+        const ValueType2 *             copyFromVec,
+        ValueType2 *                   copyToVecBlock,
+        const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
       void
       add(double *               y,
@@ -879,6 +1081,9 @@ namespace dftfe
            const ValueType        beta,
            const dftfe::size_type size);
 
+      dftfe::utils::deviceBlasHandle_t &
+      getDeviceBlasHandle();
+
     private:
 #  ifdef DFTFE_WITH_DEVICE_AMD
       void
@@ -888,7 +1093,6 @@ namespace dftfe
       /// storage for deviceblas handle
       dftfe::utils::deviceBlasHandle_t d_deviceBlasHandle;
       dftfe::utils::deviceStream_t     d_streamId;
-
 
       dftfe::utils::deviceBlasStatus_t
       create();

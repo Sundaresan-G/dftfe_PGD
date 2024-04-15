@@ -32,6 +32,7 @@ numdiffdir=""
 # path for NCCL/RCCL libraries
 DCCL_PATH="/global/project/projectdirs/m1759/dsambit/softwaresDFTFE/nccl/build"
 mdiPath=""
+torchDir=""
 
 #Toggle GPU compilation
 withGPU=ON
@@ -80,42 +81,42 @@ out=`echo "$build_type" | tr '[:upper:]' '[:lower:]'`
 
 function cmake_configure() {
   if [ "$gpuLang" = "cuda" ]; then
-    cmake -DCMAKE_CXX_STANDARD=14 -DCMAKE_CXX_COMPILER=$cxx_compiler\
+    cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_COMPILER=$cxx_compiler\
     -DCMAKE_CXX_FLAGS="$cxx_flags"\
     -DCMAKE_CXX_FLAGS_RELEASE="$cxx_flagsRelease" \
     -DCMAKE_BUILD_TYPE=$build_type -DDEAL_II_DIR=$dealiiDir \
     -DALGLIB_DIR=$alglibDir -DLIBXC_DIR=$libxcDir \
     -DSPGLIB_DIR=$spglibDir -DXML_LIB_DIR=$xmlLibDir \
     -DXML_INCLUDE_DIR=$xmlIncludeDir\
-     -DWITH_MDI=$withMDI -DMDI_PATH=$mdiPath -DWITH_TORCH=$withTorch \
+    -DWITH_MDI=$withMDI -DMDI_PATH=$mdiPath -DWITH_TORCH=$withTorch -DTORCH_DIR=$torchDir\
     -DWITH_CUSTOMIZED_DEALII=$withCustomizedDealii\
     -DWITH_DCCL=$withDCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$DCCL_PATH;$dftdpath;$numdiffdir"\
     -DWITH_COMPLEX=$withComplex -DWITH_GPU=$withGPU -DGPU_LANG=$gpuLang -DGPU_VENDOR=$gpuVendor -DWITH_GPU_AWARE_MPI=$withGPUAwareMPI -DCMAKE_CUDA_FLAGS="$device_flags" -DCMAKE_CUDA_ARCHITECTURES="$device_architectures"\
     -DWITH_TESTING=$testing -DMINIMAL_COMPILE=$minimal_compile\
     -DHIGHERQUAD_PSP=$withHigherQuadPSP $1
   elif [ "$gpuLang" = "hip" ]; then
-    cmake -DCMAKE_CXX_STANDARD=14 -DCMAKE_CXX_COMPILER=$cxx_compiler\
+    cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_COMPILER=$cxx_compiler\
     -DCMAKE_CXX_FLAGS="$cxx_flags"\
     -DCMAKE_CXX_FLAGS_RELEASE="$cxx_flagsRelease" \
     -DCMAKE_BUILD_TYPE=$build_type -DDEAL_II_DIR=$dealiiDir \
     -DALGLIB_DIR=$alglibDir -DLIBXC_DIR=$libxcDir \
     -DSPGLIB_DIR=$spglibDir -DXML_LIB_DIR=$xmlLibDir \
     -DXML_INCLUDE_DIR=$xmlIncludeDir\
-    -DWITH_MDI=$withMDI -DMDI_PATH=$mdiPath -DWITH_TORCH=$withTorch \
+    -DWITH_MDI=$withMDI -DMDI_PATH=$mdiPath -DWITH_TORCH=$withTorch -DTORCH_DIR=$torchDir\
     -DWITH_CUSTOMIZED_DEALII=$withCustomizedDealii\
     -DWITH_DCCL=$withDCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$DCCL_PATH;$dftdpath;$numdiffdir"\
     -DWITH_COMPLEX=$withComplex -DWITH_GPU=$withGPU -DGPU_LANG=$gpuLang -DGPU_VENDOR=$gpuVendor -DWITH_GPU_AWARE_MPI=$withGPUAwareMPI -DCMAKE_HIP_FLAGS="$device_flags" -DCMAKE_HIP_ARCHITECTURES="$device_architectures"\
     -DWITH_TESTING=$testing -DMINIMAL_COMPILE=$minimal_compile\
     -DHIGHERQUAD_PSP=$withHigherQuadPSP $1
   else
-    cmake -DCMAKE_CXX_STANDARD=14 -DCMAKE_CXX_COMPILER=$cxx_compiler\
+    cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_COMPILER=$cxx_compiler\
     -DCMAKE_CXX_FLAGS="$cxx_flags"\
     -DCMAKE_CXX_FLAGS_RELEASE="$cxx_flagsRelease" \
     -DCMAKE_BUILD_TYPE=$build_type -DDEAL_II_DIR=$dealiiDir \
     -DALGLIB_DIR=$alglibDir -DLIBXC_DIR=$libxcDir \
     -DSPGLIB_DIR=$spglibDir -DXML_LIB_DIR=$xmlLibDir \
     -DXML_INCLUDE_DIR=$xmlIncludeDir\
-    -DWITH_MDI=$withMDI -DMDI_PATH=$mdiPath -DWITH_TORCH=$withTorch \
+    -DWITH_MDI=$withMDI -DMDI_PATH=$mdiPath -DWITH_TORCH=$withTorch -DTORCH_DIR=$torchDir\
     -DWITH_CUSTOMIZED_DEALII=$withCustomizedDealii\
     -DWITH_DCCL=$withDCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$DCCL_PATH;$dftdpath;$numdiffdir"\
     -DWITH_COMPLEX=$withComplex \

@@ -47,6 +47,11 @@ namespace dftfe
         dealii::Patterns::Bool(),
         "[Standard] If set to true solvermode triggers restart checks and modifies the input files for coordinates, domain vectors. Default: false.");
 
+      prm.declare_entry("USE GPU",
+                        "false",
+                        dealii::Patterns::Bool(),
+                        "[Standard] Use GPU for compute.");
+
       prm.declare_entry("RESTART FOLDER",
                         ".",
                         dealii::Patterns::Anything(),
@@ -69,13 +74,13 @@ namespace dftfe
           "MAXIMUM SPRING CONSTANT",
           "5e-3",
           dealii::Patterns::Double(),
-          "[Standard] Sets the maximum allowable spring constant in (Ha/bohr^2)");
+          R"([Standard] Sets the maximum allowable spring constant in (Ha/bohr\^2))");
 
         prm.declare_entry(
           "MINIMUM SPRING CONSTANT",
           "2e-3",
           dealii::Patterns::Double(),
-          "[Standard] Sets the minimum allowable spring constant in (Ha/bohr^2)");
+          R"([Standard] Sets the minimum allowable spring constant in (Ha/bohr\^2))");
 
         prm.declare_entry(
           "PATH THRESHOLD",
@@ -166,6 +171,7 @@ namespace dftfe
     solvermode       = prm.get("SOLVER MODE");
     restart          = prm.get_bool("RESTART");
     restartFilesPath = prm.get("RESTART FOLDER");
+    useDevice        = prm.get_bool("USE GPU");
     prm.enter_subsection("NEB");
     {
       numberOfImages      = prm.get_integer("NUMBER OF IMAGES");
@@ -183,6 +189,9 @@ namespace dftfe
       optimizationSolver        = prm.get("NEB OPT SOLVER");
       ionRelaxFlagsFile         = prm.get("ION RELAX FLAGS FILE");
     }
+#ifndef DFTFE_WITH_DEVICE
+    useDevice = false;
+#endif
   }
 
 } // namespace dftfe

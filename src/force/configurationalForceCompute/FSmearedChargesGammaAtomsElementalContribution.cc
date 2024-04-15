@@ -23,9 +23,11 @@ namespace dftfe
 {
   //(locally used function) compute FPhiTotSmearedCharges contibution due to
   // Gamma(Rj) for given set of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     FPhiTotSmearedChargesGammaAtomsElementalContribution(
       std::map<unsigned int, std::vector<double>>
         &forceContributionSmearedChargesGammaAtoms,
@@ -93,9 +95,11 @@ namespace dftfe
 
   //(locally used function) compute FVselfSmearedCharges contibution due to
   // Gamma(Rj) for given set of cells
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
   void
-  forceClass<FEOrder, FEOrderElectro>::
+  forceClass<FEOrder, FEOrderElectro, memorySpace>::
     FVselfSmearedChargesGammaAtomsElementalContribution(
       std::map<unsigned int, std::vector<double>>
         &forceContributionSmearedChargesGammaAtoms,
