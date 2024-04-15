@@ -38,7 +38,7 @@ namespace dftfe
       finiteElementPolynomialOrderElectrostatics, n_refinement_steps,
       numberEigenValues, xc_id, spinPolarized, nkx, nky, nkz, offsetFlagX,
       offsetFlagY, offsetFlagZ;
-    unsigned int chebyshevOrder, numPass, numSCFIterations,
+    unsigned int chebyshevOrder, maxChebyPasses, numPass, numSCFIterations,
       maxLinearSolverIterations, mixingHistory, npool,
       numberWaveFunctionsForEstimate, numLevels,
       maxLinearSolverIterationsHelmholtz;
