@@ -401,6 +401,21 @@ namespace dftfe
     double lowerBoundEpsilon = 1.5 * eigenValuesAllkPoints[0];
     double upperBoundEpsilon =
       eigenValuesAllkPoints[totalEigenValues - 1] * 1.5;
+
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &lowerBoundEpsilon,
+                  1,
+                  dataTypes::mpi_type_id(&lowerBoundEpsilon),
+                  MPI_MIN,
+                  interpoolcomm);
+
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &upperBoundEpsilon,
+                  1,
+                  dataTypes::mpi_type_id(&upperBoundEpsilon),
+                  MPI_MAX,
+                  interpoolcomm);
+    
     unsigned int numberIntervals =
       std::ceil((upperBoundEpsilon - lowerBoundEpsilon) / intervalSize);
     unsigned int numberGlobalAtoms = atomLocations.size();
@@ -981,6 +996,20 @@ namespace dftfe
     double lowerBoundEpsilon = 1.5 * eigenValuesAllkPoints[0];
     double upperBoundEpsilon =
       eigenValuesAllkPoints[totalEigenValues - 1] * 1.5;
+
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &lowerBoundEpsilon,
+                  1,
+                  dataTypes::mpi_type_id(&lowerBoundEpsilon),
+                  MPI_MIN,
+                  interpoolcomm);
+
+    MPI_Allreduce(MPI_IN_PLACE,
+                  &upperBoundEpsilon,
+                  1,
+                  dataTypes::mpi_type_id(&upperBoundEpsilon),
+                  MPI_MAX,
+                  interpoolcomm);    
 
     unsigned int numberIntervals =
       std::ceil((upperBoundEpsilon - lowerBoundEpsilon) / intervalSize);
