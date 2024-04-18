@@ -477,6 +477,4 @@ namespace dftfe
 
 
 } // namespace dftfe
-#include "../src/atom/AtomicCenteredNonLocalOperator.t.cc"
-
 #endif // DFTFE_ATOMICCENTEREDNONLOCALOPERATOR_H

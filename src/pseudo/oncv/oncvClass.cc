@@ -16,7 +16,7 @@
 //
 // @author Kartick Ramakrishnan
 //
-
+#include <oncvClass.h>
 namespace dftfe
 {
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -716,4 +716,9 @@ namespace dftfe
       d_atomicProjectorFnsContainer->getTotalNumberOfSphericalFunctionsPerAtom(
         atomicNumbers[atomId]));
   }
+  template class oncvClass<dataTypes::number, dftfe::utils::MemorySpace::HOST>;
+#if defined(DFTFE_WITH_DEVICE)
+  template class oncvClass<dataTypes::number,
+                           dftfe::utils::MemorySpace::DEVICE>;
+#endif
 } // namespace dftfe

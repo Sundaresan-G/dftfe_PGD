@@ -161,6 +161,7 @@ SET(TARGET_SRC
   ./utils/FEBasisOperations.cc
   ./utils/FEBasisOperationsKernels.cc
   ./src/force/locateAtomCoreNodesForce.cc
+  ./src/atom/AtomicCenteredNonLocalOperator.cc
   ./src/atom/AtomPseudoWavefunctions.cc
   ./src/atom/AtomCenteredSphericalFunctionContainer.cc
   ./src/atom/AtomCenteredSphericalFunctionBase.cc
@@ -171,7 +172,8 @@ SET(TARGET_SRC
   ./src/atom/AtomCenteredSphericalFunctionValenceDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
-  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc)
+  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc
+  ./src/pseudo/oncv/oncvClass.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 

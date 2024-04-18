@@ -16,6 +16,7 @@
 //
 // @author Kartick Ramakrishnan, Sambit Das, Phani Motamarri, Vishal Subramanian
 //
+#include <AtomicCenteredNonLocalOperator.h>
 #if defined(DFTFE_WITH_DEVICE)
 #  include <AtomicCenteredNonLocalOperatorKernelsDevice.h>
 #  include <DeviceTypeConfig.h>
@@ -23,7 +24,6 @@
 #  include <DeviceAPICalls.h>
 #  include <DeviceDataTypeOverloads.h>
 #endif
-
 namespace dftfe
 {
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -2271,5 +2271,13 @@ namespace dftfe
   {
     return (d_flattenedNonLocalCellDofIndexToProcessDofIndexMap);
   }
+  template class AtomicCenteredNonLocalOperator<
+    dataTypes::number,
+    dftfe::utils::MemorySpace::HOST>;
+#if defined(DFTFE_WITH_DEVICE)
+  template class AtomicCenteredNonLocalOperator<
+    dataTypes::number,
+    dftfe::utils::MemorySpace::DEVICE>;
+#endif
 
 } // namespace dftfe
