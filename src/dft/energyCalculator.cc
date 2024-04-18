@@ -484,7 +484,7 @@ namespace dftfe
   {
     const dealii::ConditionalOStream scout(
       std::cout,
-      (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) == 0));
+      (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0));
     const double bandEnergy = dealii::Utilities::MPI::sum(
       internal::localBandEnergy(eigenValues,
                                 kPointWeights,
