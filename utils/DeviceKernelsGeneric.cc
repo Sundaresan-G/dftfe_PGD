@@ -102,29 +102,29 @@ namespace dftfe
     convertLayoutDeviceKernel(
       ValueType2 *                   copyTo,
       const ValueType1 *             copyFrom,
-      const dftfe::size_type         blockSize,
-      const dftfe::size_type         initBlockRows,
-      const dftfe::size_type         initBlockCols)
+      const dftfe::global_size_type  blockSize,
+      const dftfe::global_size_type  initBlockRows,
+      const dftfe::global_size_type  initBlockCols)
     {
-      const dftfe::size_type globalThreadId =
+      const dftfe::global_size_type globalThreadId =
         blockIdx.x * blockDim.x + threadIdx.x;
-      const dftfe::size_type numberEntries = initBlockRows * initBlockCols * blockSize; 
-      const dftfe::size_type finalBlockRows = initBlockCols;
-      const dftfe::size_type finalBlockCols = initBlockRows;
+      const dftfe::global_size_type numberEntries = initBlockRows * initBlockCols * blockSize; 
+      const dftfe::global_size_type finalBlockRows = initBlockCols;
+      const dftfe::global_size_type finalBlockCols = initBlockRows;
 
-      for (dftfe::size_type index = globalThreadId; index < numberEntries;
+      for (dftfe::global_size_type index = globalThreadId; index < numberEntries;
            index += blockDim.x * gridDim.x)
         {
-          dftfe::size_type blockIndex = index / blockSize;
-          dftfe::size_type blockCol = blockIndex % initBlockCols;
-          dftfe::size_type blockRow = blockIndex / initBlockCols;
-          dftfe::size_type intraBlockIndex = index - blockIndex * blockSize;
+          dftfe::global_size_type blockIndex = index / blockSize;
+          dftfe::global_size_type blockCol = blockIndex % initBlockCols;
+          dftfe::global_size_type blockRow = blockIndex / initBlockCols;
+          dftfe::global_size_type intraBlockIndex = index - blockIndex * blockSize;
 
-          dftfe::size_type new_blockRow = blockCol;
-          dftfe::size_type new_blockCol = blockRow;
-          dftfe::size_type new_blockIndex = new_blockRow * finalBlockCols + new_blockCol;
+          dftfe::global_size_type new_blockRow = blockCol;
+          dftfe::global_size_type new_blockCol = blockRow;
+          dftfe::global_size_type new_blockIndex = new_blockRow * finalBlockCols + new_blockCol;
 
-          dftfe::size_type new_index = new_blockIndex * blockSize + intraBlockIndex;
+          dftfe::global_size_type new_index = new_blockIndex * blockSize + intraBlockIndex;
 
           dftfe::utils::copyValue(copyTo + new_index, copyFrom[index]);
         }
@@ -545,9 +545,9 @@ namespace dftfe
       convertLayout(
         ValueType2 *                   copyTo,
         const ValueType1 *             copyFrom,
-        const dftfe::size_type         blockSize,
-        const dftfe::size_type         initBlockRows,
-        const dftfe::size_type         initBlockCols,
+        const dftfe::global_size_type  blockSize,
+        const dftfe::global_size_type  initBlockRows,
+        const dftfe::global_size_type  initBlockCols,
         const dftfe::utils::deviceStream_t   streamId)
       {
 #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
@@ -1200,9 +1200,9 @@ namespace dftfe
       convertLayout(
         double *                   copyTo,
         const double *             copyFromVec,
-        const dftfe::size_type         blockSize,
-        const dftfe::size_type         initBlockRows,
-        const dftfe::size_type         initBlockCols,
+        const dftfe::global_size_type         blockSize,
+        const dftfe::global_size_type         initBlockRows,
+        const dftfe::global_size_type         initBlockCols,
         const dftfe::utils::deviceStream_t   streamId);
 
 
