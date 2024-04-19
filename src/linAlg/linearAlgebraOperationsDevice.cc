@@ -2127,8 +2127,8 @@ namespace dftfe
     XtXAndXtHX(
       const dataTypes::number *                        X,
       const dataTypes::number *                        HX,
-      const unsigned int                               M,
-      const unsigned int                               N,
+      const std::size_t                                M,
+      const std::size_t                                N,
       dftfe::utils::deviceBlasHandle_t &               handle,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommIntraPool,
@@ -2157,7 +2157,7 @@ namespace dftfe
       dftUtils::createBandParallelizationIndices(
         interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
 
-      const unsigned int vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
+      const unsigned int vectorsBlockSize = std::min((std::size_t)dftParams.wfcBlockSize, N);
 
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::DEVICE>
@@ -2211,7 +2211,7 @@ namespace dftfe
       for (unsigned int ivec = 0; ivec < N; ivec += vectorsBlockSize)
         {
           // Correct block dimensions if block "goes off edge of" the matrix
-          const unsigned int B = std::min(vectorsBlockSize, N - ivec);
+          const unsigned int B = std::min((std::size_t)vectorsBlockSize, N - ivec);
 
 
           const unsigned int D = N - ivec;
