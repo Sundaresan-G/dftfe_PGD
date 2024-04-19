@@ -65,7 +65,7 @@ namespace dftfe
           elpaScalaManager &                                   elpaScala,
           dataTypes::number *      eigenVectorsFlattenedDevice,
           dataTypes::number *      eigenVectorsRotFracDensityFlattenedDevice,
-          const unsigned int       flattenedSize,
+          const unsigned int       localVectorSize,
           const unsigned int       totalNumberWaveFunctions,
           std::vector<double> &    eigenValues,
           std::vector<double> &    residuals,
@@ -160,7 +160,7 @@ namespace dftfe
                                 
     dftfe::utils::MemoryStorage<dataTypes::number,
                                 dftfe::utils::MemorySpace::DEVICE> XDevice, HXDevice, extraBufferDevice;
-    unsigned int reShapedNumRows, reShapedNumCols;
+    std::size_t reShapedNumRows, reShapedNumCols;
   };
 } // namespace dftfe
 #  endif

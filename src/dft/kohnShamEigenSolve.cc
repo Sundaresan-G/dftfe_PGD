@@ -570,8 +570,7 @@ namespace dftfe
               ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
                 d_numEigenValuesRRPerBandGroup *
                 matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-            d_numEigenValues *
-              matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+            matrix_free_data.get_vector_partitioner()->locally_owned_size(),
             d_numEigenValues,
             eigenValuesTemp,
             residualNormWaveFunctions,
