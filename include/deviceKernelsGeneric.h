@@ -60,9 +60,9 @@ namespace dftfe
       convertLayout(
         ValueType2 *                   copyTo,
         const ValueType1 *             copyFromVec,
-        const dftfe::size_type         blockSize,
-        const dftfe::size_type         initBlockRows,
-        const dftfe::size_type         initBlockCols,
+        const dftfe::global_size_type  blockSize,
+        const dftfe::global_size_type  initBlockRows,
+        const dftfe::global_size_type  initBlockCols,
         const dftfe::utils::deviceStream_t   streamId = 0);
 
 
