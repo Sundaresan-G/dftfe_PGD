@@ -105,16 +105,18 @@ namespace dftfe
           ncclCommDestroy(*ncclCommPtr);
           delete ncclCommPtr;
           delete ncclIdPtr;
-
-          if (dcclCommSelector != 0){
-            ncclCommFinalize(*ncclCommPvtPtr);
-            ncclCommDestroy(*ncclCommPvtPtr);
-            delete ncclCommPvtPtr;
-          }
         }
+
+      if (dcclCommSelector != 0){
+        ncclCommFinalize(*ncclCommPvtPtr);
+        ncclCommDestroy(*ncclCommPvtPtr);
+        delete ncclCommPvtPtr;
+      }
 #  endif
-      if (commStreamCreated)
+      if (commStreamCreated){
         dftfe::utils::deviceStreamDestroy(d_deviceCommStream);
+        commStreamCreated = false;        
+      }
     }
 
     int
