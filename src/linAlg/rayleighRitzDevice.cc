@@ -840,8 +840,8 @@ namespace dftfe
       dataTypes::number *                                          extraBufferDevice,
       distributedDeviceVec<dataTypes::number> &                    Xb,
       distributedDeviceVec<dataTypes::number> &                    HXb,
-      const unsigned int                                           M,
-      const unsigned int                                           N,
+      const std::size_t                                            M,
+      const std::size_t                                            N,
       const MPI_Comm &                                             mpiCommParent,
       const MPI_Comm &                                             mpiCommDomain,
       utils::DeviceCCLWrapper &                                    devicecclMpiCommDomain,
@@ -881,7 +881,7 @@ namespace dftfe
         dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
       const unsigned int chebyBlockSize =
-                std::min(dftParams.chebyWfcBlockSize, N/numberBandGroups);
+                std::min((std::size_t)dftParams.chebyWfcBlockSize, N/numberBandGroups);
 
       const bool   scaleFlag = false;
       const double scalar    = 1.0;
