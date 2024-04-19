@@ -643,7 +643,6 @@ namespace dftfe
             {
               w = tolower(w);
             }
-          std::cout << orbital_string_nl[1];
           char n = orbital_string_nl[0];
           char l;
           if (orbital_string_nl[1] == 's')
