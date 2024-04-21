@@ -3060,14 +3060,6 @@ namespace dftfe
 
 
 #ifdef DFTFE_WITH_DEVICE
-                    std::cout
-                      << "DEBUG ss dft.cc "
-                      << (scfIter <
-                            d_dftParamsPtr->spectrumSplitStartingScfIter ||
-                          scfConverged)
-                      << " " << scfIter << " "
-                      << d_dftParamsPtr->spectrumSplitStartingScfIter << " "
-                      << scfConverged << std::endl;
                     if constexpr (dftfe::utils::MemorySpace::DEVICE ==
                                   memorySpace)
                       kohnShamEigenSpaceCompute(
