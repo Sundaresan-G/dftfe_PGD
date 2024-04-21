@@ -720,6 +720,17 @@ namespace dftfe
                                 const unsigned int numMultiVecs = 1) const;
 
       /**
+       * @brief Creates single precision scratch multivectors.
+       * @param[in] vecBlockSize Number of vectors in the multivector.
+       * @param[out] numMultiVecs number of scratch multivectors needed with
+       * this vecBlockSize.
+       */
+      void
+      createScratchMultiVectorsSinglePrec(
+        const unsigned int vecBlockSize,
+        const unsigned int numMultiVecs = 1) const;
+
+      /**
        * @brief Clears scratch multivectors.
        */
       void
@@ -734,6 +745,18 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace> &
       getMultiVector(const unsigned int vecBlockSize,
                      const unsigned int index = 0) const;
+
+      /**
+       * @brief Gets single precision scratch multivectors.
+       * @param[in] vecBlockSize Number of vectors in the multivector.
+       * @param[out] numMultiVecs index of the multivector among those with the
+       * same vecBlockSize.
+       */
+      dftfe::linearAlgebra::MultiVector<
+        typename dftfe::dataTypes::singlePrecType<ValueTypeBasisCoeff>::type,
+        memorySpace> &
+      getMultiVectorSinglePrec(const unsigned int vecBlockSize,
+                               const unsigned int index = 0) const;
 
       /**
        * @brief Apply constraints on given multivector.
@@ -863,6 +886,13 @@ namespace dftfe
         std::vector<
           dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>>>
         scratchMultiVectors;
+
+      mutable std::map<
+        unsigned int,
+        std::vector<dftfe::linearAlgebra::MultiVector<
+          typename dftfe::dataTypes::singlePrecType<ValueTypeBasisCoeff>::type,
+          memorySpace>>>
+        scratchMultiVectorsSinglePrec;
 
       std::vector<unsigned int> d_quadratureIDsVector;
       unsigned int              d_quadratureID;

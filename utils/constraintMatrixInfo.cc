@@ -53,6 +53,28 @@ namespace dftfe
       zaxpy_(n, alpha, x, incx, y, incy);
     }
 
+    void
+    callaxpy(const unsigned int *n,
+             const float *       alpha,
+             float *             x,
+             const unsigned int *incx,
+             float *             y,
+             const unsigned int *incy)
+    {
+      saxpy_(n, alpha, x, incx, y, incy);
+    }
+
+    void
+    callaxpy(const unsigned int *       n,
+             const std::complex<float> *alpha,
+             std::complex<float> *      x,
+             const unsigned int *       incx,
+             std::complex<float> *      y,
+             const unsigned int *       incy)
+    {
+      caxpy_(n, alpha, x, incx, y, incy);
+    }
+
 
 
     //
@@ -480,12 +502,28 @@ namespace dftfe
       distributedCPUMultiVec<std::complex<double>> &fieldVector) const;
 
     template void
+    constraintMatrixInfo::distribute(
+      distributedCPUMultiVec<float> &fieldVector) const;
+
+    template void
+    constraintMatrixInfo::distribute(
+      distributedCPUMultiVec<std::complex<float>> &fieldVector) const;
+
+    template void
     constraintMatrixInfo::distribute_slave_to_master(
       distributedCPUMultiVec<dataTypes::number> &fieldVector) const;
 
     template void
+    constraintMatrixInfo::distribute_slave_to_master(
+      distributedCPUMultiVec<dataTypes::numberFP32> &fieldVector) const;
+
+    template void
     constraintMatrixInfo::set_zero(
       distributedCPUMultiVec<dataTypes::number> &fieldVector) const;
+
+    template void
+    constraintMatrixInfo::set_zero(
+      distributedCPUMultiVec<dataTypes::numberFP32> &fieldVector) const;
 
   } // namespace dftUtils
 

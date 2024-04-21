@@ -95,14 +95,10 @@ namespace dftfe
        * care of constraints
        * @param blockSize number of components for a given node
        */
+      template <typename NumberType>
       void
       distribute_slave_to_master(
-        distributedDeviceVec<double> &fieldVector) const;
-
-      void
-      distribute_slave_to_master(
-        distributedDeviceVec<std::complex<double>> &fieldVector) const;
-
+        distributedDeviceVec<NumberType> &fieldVector) const;
 
       /**
        * @brief sets field values at constrained nodes to be zero

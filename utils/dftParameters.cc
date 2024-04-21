@@ -879,7 +879,7 @@ namespace dftfe
 
           prm.declare_entry(
             "SPECTRUM SPLIT STARTING SCF ITER",
-            "0",
+            "1000",
             dealii::Patterns::Integer(0),
             "[Advanced] SCF iteration no beyond which spectrum splitting based can be used.");
 
@@ -987,6 +987,12 @@ namespace dftfe
             "false",
             dealii::Patterns::Bool(),
             "[Advanced] Use mixed precision communication only for XtX and XtHX instead of mixed precision compute and communication. This setting has been found to be more optimal on certain architectures. Default setting is false.");
+
+          prm.declare_entry(
+            "USE SINGLE PREC CHEBY",
+            "false",
+            dealii::Patterns::Bool(),
+            "[Advanced] Use a modified single precision algorithm Chebyshev filtering.");
 
           prm.declare_entry(
             "OVERLAP COMPUTE COMMUN CHEBY",
@@ -1613,7 +1619,8 @@ namespace dftfe
         useMixedPrecSubspaceRotRR = prm.get_bool("USE MIXED PREC RR_SR");
         useMixedPrecCommunOnlyXTHXCGSO =
           prm.get_bool("USE MIXED PREC COMMUN ONLY XTX XTHX");
-        useMixedPrecCheby = prm.get_bool("USE MIXED PREC CHEBY");
+        useMixedPrecCheby  = prm.get_bool("USE MIXED PREC CHEBY");
+        useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
         overlapComputeCommunOrthoRR =
