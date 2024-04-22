@@ -1260,7 +1260,7 @@ namespace dftfe
     useMixedPrecXTHXSpectrumSplit                  = false;
     useMixedPrecSubspaceRotRR                      = false;
     useMixedPrecCommunOnlyXTHXCGSO                 = false;
-    spectrumSplitStartingScfIter                   = 1;
+    spectrumSplitStartingScfIter                   = 0;
     useELPA                                        = false;
     constraintsParallelCheck                       = true;
     createConstraintsFromSerialDofhandler          = true;
@@ -2013,6 +2013,9 @@ namespace dftfe
       {
         spinMixingEnhancementFactor = 1.0;
       }
+
+    if (numCoreWfcRR == 0)
+      spectrumSplitStartingScfIter = 10000;
   }
 
 
