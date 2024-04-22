@@ -291,7 +291,7 @@ namespace dftfe
             dftfe::utils::deviceSynchronize();
             computingTimerStandard.leave_subsection("Lanczos upper bound");
           }
-        // d_lowerBoundWantedSpectrum   = bounds.first;
+
         d_upperBoundUnWantedSpectrum = bounds.second;
       }
 
@@ -341,11 +341,6 @@ namespace dftfe
                 "%s:%18.10e\n",
                 "lower bound of unwanted spectrum",
                 d_lowerBoundUnWantedSpectrum);
-        pcout << buffer;
-        sprintf(buffer,
-                "%s:%18.10e\n",
-                "lower bound of wanted spectrum",
-                d_lowerBoundWantedSpectrum);
         pcout << buffer;
         sprintf(buffer,
                 "%s: %u\n\n",

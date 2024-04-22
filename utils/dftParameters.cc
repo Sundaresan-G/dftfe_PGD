@@ -879,7 +879,7 @@ namespace dftfe
 
           prm.declare_entry(
             "SPECTRUM SPLIT STARTING SCF ITER",
-            "1000",
+            "0",
             dealii::Patterns::Integer(0),
             "[Advanced] SCF iteration no beyond which spectrum splitting based can be used.");
 
