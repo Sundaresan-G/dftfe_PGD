@@ -743,7 +743,29 @@ namespace dftfe
                   << std::endl;
           }
       }
+    // convert pseudopotential files in upf format to dftfe format
+    if (d_dftParamsPtr->verbosity >= 1)
+      {
+        pcout
+          << std::endl
+          << "Reading Pseudo-potential data for each atom from the list given in : "
+          << d_dftParamsPtr->pseudoPotentialFile << std::endl;
+      }
 
+    int              nlccFlag = 0;
+    std::vector<int> pspFlags(2, 0);
+    if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
+        d_dftParamsPtr->isPseudopotential == true)
+      pspFlags = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
+                                      d_dftfeScratchFolderName,
+                                      d_dftParamsPtr->verbosity,
+                                      d_dftParamsPtr->natomTypes,
+                                      d_dftParamsPtr->pseudoTestsFlag);
+
+    nlccFlag = pspFlags[0];
+    nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
+    if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
+      d_dftParamsPtr->nonLinearCoreCorrection = true;
     // estimate total number of wave functions from atomic orbital filling
     if (d_dftParamsPtr->startingWFCType == "ATOMIC")
       determineOrbitalFilling();
@@ -803,29 +825,7 @@ namespace dftfe
                                           d_numEigenValuesRR);
       }
 
-    // convert pseudopotential files in upf format to dftfe format
-    if (d_dftParamsPtr->verbosity >= 1)
-      {
-        pcout
-          << std::endl
-          << "Reading Pseudo-potential data for each atom from the list given in : "
-          << d_dftParamsPtr->pseudoPotentialFile << std::endl;
-      }
 
-    int              nlccFlag = 0;
-    std::vector<int> pspFlags(2, 0);
-    if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0 &&
-        d_dftParamsPtr->isPseudopotential == true)
-      pspFlags = pseudoUtils::convert(d_dftParamsPtr->pseudoPotentialFile,
-                                      d_dftfeScratchFolderName,
-                                      d_dftParamsPtr->verbosity,
-                                      d_dftParamsPtr->natomTypes,
-                                      d_dftParamsPtr->pseudoTestsFlag);
-
-    nlccFlag = pspFlags[0];
-    nlccFlag = dealii::Utilities::MPI::sum(nlccFlag, d_mpiCommParent);
-    if (nlccFlag > 0 && d_dftParamsPtr->isPseudopotential == true)
-      d_dftParamsPtr->nonLinearCoreCorrection = true;
     if (d_dftParamsPtr->isPseudopotential == true)
       {
         // pcout<<"dft.cc 827 ONCV Number of cells DEBUG:
