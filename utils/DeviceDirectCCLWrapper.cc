@@ -105,6 +105,7 @@ namespace dftfe
           ncclCommDestroy(*ncclCommPtr);
           delete ncclCommPtr;
           delete ncclIdPtr;
+          ncclCommInit = false;
         }
 
       if (dcclCommSelector != 0){
