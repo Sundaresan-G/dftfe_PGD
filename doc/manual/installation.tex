@@ -153,10 +153,7 @@ Assuming the above p4est dependency is installed, we now briefly discuss the ste
 
 \begin{enumerate}
 
-\item Obtain the customized version of deal.II library via
-\begin{verbatim}
-$ git clone -b dealiiCustomizedCUDARelease https://github.com/dftfeDevelopers/dealii.git
-\end{verbatim}
+\item Obtain the latest release version (9.5.2) of deal.II
 
 \item In addition to requiring C, C++ and Fortran compilers, MPI library, and CMake, deal.II additionally requires BOOST library. If not found externally, cmake will resort to the bundled BOOST that comes along with deal.II. Based on our experience, we recommend to use the deal.II's bundled boost (enforced by unsetting/unloading external BOOST library environment paths) to avoid compilation issues. Please do not install deal.II with GPU support as that is not needed by DFT-FE. Further, when installing deal.II for (DFT-FE with GPU support), one must use \verb|-DDEAL_II_ALLOW_PLATFORM_INTROSPECTION=OFF| to avoid compilation failure of DFT-FE.
 
