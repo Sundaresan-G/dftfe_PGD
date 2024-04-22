@@ -572,7 +572,7 @@ namespace dftfe
           std::ceil(d_numEigenValues / (numberBandGroups * 1.0)) *
           numberBandGroups;
 
-        d_numEigenValuesPerBandGroup = d_numEigenValues/ numberBandGroups;
+        // d_numEigenValuesPerBandGroup = d_numEigenValues/ numberBandGroups;
 
         AssertThrow(
           (d_numEigenValues % numberBandGroups == 0 ||
@@ -721,6 +721,8 @@ namespace dftfe
           }
       }
 #endif
+
+    d_numEigenValuesPerBandGroup = d_numEigenValues/ dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
     if (d_dftParamsPtr->constraintMagnetization)
       {
