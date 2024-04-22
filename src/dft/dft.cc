@@ -4419,7 +4419,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  std::vector<std::vector<double>>
+  const std::vector<std::vector<double>> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomLocationsCart() const
   {
     return atomLocations;
@@ -4428,7 +4428,25 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  std::vector<std::vector<double>>
+  const std::vector<std::vector<double>> &
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getImageAtomLocationsCart() const
+  {
+    return d_imagePositionsTrunc;
+  }
+
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  const std::vector<int> &
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getImageAtomIDs() const
+  {
+    return d_imageIdsTrunc;
+  }
+
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  const std::vector<std::vector<double>> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomLocationsFrac() const
   {
     return atomLocationsFractional;
@@ -4437,7 +4455,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  std::vector<std::vector<double>>
+  const std::vector<std::vector<double>> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getCell() const
   {
     return d_domainBoundingVectors;
@@ -4456,7 +4474,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  std::set<unsigned int>
+  const std::set<unsigned int> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getAtomTypes() const
   {
     return atomTypes;
@@ -4465,7 +4483,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  std::vector<double>
+  const std::vector<double> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getForceonAtoms() const
   {
     return (forcePtr->getAtomsForces());
@@ -4474,7 +4492,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  dealii::Tensor<2, 3, double>
+  const dealii::Tensor<2, 3, double> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getCellStress() const
   {
     return (forcePtr->getStress());
@@ -4519,7 +4537,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  distributedCPUVec<double>
+  const distributedCPUVec<double> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getRhoNodalOut() const
   {
     return d_densityOutNodalValues[0];
@@ -4528,7 +4546,7 @@ namespace dftfe
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
-  distributedCPUVec<double>
+  const distributedCPUVec<double> &
   dftClass<FEOrder, FEOrderElectro, memorySpace>::getRhoNodalSplitOut() const
   {
     return d_rhoOutNodalValuesSplit;
