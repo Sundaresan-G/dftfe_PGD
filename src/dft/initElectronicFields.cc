@@ -96,6 +96,13 @@ namespace dftfe
     const unsigned int numberBandGroups =
           dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
+    AssertThrow(
+      (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
+          d_numEigenValuesPerBandGroup <
+        INT_MAX / matrix_free_data.get_vector_partitioner()->local_size(),
+      dealii::ExcMessage(
+        "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
+
     for (unsigned int kPoint = 0;
          kPoint < (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
          ++kPoint)
