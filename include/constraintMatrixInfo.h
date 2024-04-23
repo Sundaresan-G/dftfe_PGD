@@ -38,6 +38,7 @@ namespace dftfe
      *  @author Phani Motamarri
      *
      */
+    template <dftfe::utils::MemorySpace memorySpace>
     class constraintMatrixInfo
     {
     public:
@@ -85,7 +86,7 @@ namespace dftfe
 
       template <typename T>
       void
-      distribute(distributedCPUMultiVec<T> &fieldVector) const;
+      distribute(dftfe::linearAlgebra::MultiVector<T,memorySpace> &fieldVector) const;
 
       /**
        * @brief transfers the contributions of slave nodes to master nodes using the constraint equation
@@ -104,7 +105,7 @@ namespace dftfe
 
       template <typename T>
       void
-      distribute_slave_to_master(distributedCPUMultiVec<T> &fieldVector) const;
+      distribute_slave_to_master(dftfe::linearAlgebra::MultiVector<T,memorySpace> &fieldVector) const;
 
       /**
        * @brief Scales the constraints with the inverse diagonal mass matrix so that the scaling of the vector can be done at the cell level
@@ -118,7 +119,7 @@ namespace dftfe
       void
       initializeScaledConstraints(
         const dftfe::utils::MemoryStorage<double,
-                                          dftfe::utils::MemorySpace::HOST>
+                                          memorySpace>
           &invSqrtMassVec);
 
 
@@ -134,7 +135,7 @@ namespace dftfe
                const unsigned int    blockSize) const;
       template <typename T>
       void
-      set_zero(distributedCPUMultiVec<T> &fieldVector) const;
+      set_zero(dftfe::linearAlgebra::MultiVector<T,memorySpace> &fieldVector) const;
 
       /**
        * clear data members

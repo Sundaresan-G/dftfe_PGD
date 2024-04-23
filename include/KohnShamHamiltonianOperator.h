@@ -32,15 +32,6 @@ namespace dftfe
   template <dftfe::utils::MemorySpace memorySpace>
   class KohnShamHamiltonianOperator : public operatorDFTClass<memorySpace>
   {
-#if defined(DFTFE_WITH_DEVICE)
-    using constraintInfoClass =
-      typename std::conditional<memorySpace ==
-                                  dftfe::utils::MemorySpace::DEVICE,
-                                dftUtils::constraintMatrixInfoDevice,
-                                dftUtils::constraintMatrixInfo>::type;
-#else
-    using constraintInfoClass = dftUtils::constraintMatrixInfo;
-#endif
   public:
     KohnShamHamiltonianOperator(
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
@@ -73,10 +64,10 @@ namespace dftfe
     const MPI_Comm &
     getMPICommunicatorDomain();
 
-    dftUtils::constraintMatrixInfo *
+    dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::HOST> *
     getOverloadedConstraintMatrixHost() const;
 
-    constraintInfoClass *
+    dftUtils::constraintMatrixInfo<memorySpace> *
     getOverloadedConstraintMatrix() const
     {
       return &(d_basisOperationsPtr
@@ -226,9 +217,9 @@ namespace dftfe
     std::vector<dftfe::utils::MemoryStorage<double, memorySpace>>
       d_invJacKPointTimesJxW;
     // Constraints scaled with inverse sqrt diagonal Mass Matrix
-    std::shared_ptr<constraintInfoClass>
+    std::shared_ptr<dftUtils::constraintMatrixInfo<memorySpace>>
       inverseMassVectorScaledConstraintsNoneDataInfoPtr;
-    std::shared_ptr<constraintInfoClass>
+    std::shared_ptr<dftUtils::constraintMatrixInfo<memorySpace>>
       inverseSqrtMassVectorScaledConstraintsNoneDataInfoPtr;
     // kPoint cartesian coordinates
     std::vector<double> d_kPointCoordinates;

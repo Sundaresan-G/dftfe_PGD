@@ -54,7 +54,7 @@ namespace dftfe
     void
     cgSolver(
       dftfe::utils::deviceBlasHandle_t &    handle,
-      dftUtils::constraintMatrixInfoDevice &constraintsMatrixDataInfoDevice,
+      dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE> &constraintsMatrixDataInfoDevice,
       const double *                        bD,
       const double *                        diagonalAD,
       const dftfe::utils::MemoryStorage<double,

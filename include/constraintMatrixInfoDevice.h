@@ -19,6 +19,7 @@
 #  ifndef constraintMatrixInfoDevice_H_
 #    define constraintMatrixInfoDevice_H_
 
+#    include "constraintMatrixInfo.h"
 #    include <MemoryStorage.h>
 #    include <vector>
 
@@ -36,18 +37,19 @@ namespace dftfe
      *  @author Sambit Das, Phani Motamarri
      *
      */
-    class constraintMatrixInfoDevice
+    template <>
+    class constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
     {
     public:
       /**
        * class constructor
        */
-      constraintMatrixInfoDevice();
+      constraintMatrixInfo();
 
       /**
        * class destructor
        */
-      ~constraintMatrixInfoDevice();
+      ~constraintMatrixInfo();
 
       /**
        * @brief convert a given constraintMatrix to simple arrays (STL) for fast access
@@ -62,6 +64,14 @@ namespace dftfe
         const dealii::AffineConstraints<double> &constraintMatrixData,
         const bool                               useInhomogeneties = true);
 
+      void
+      distribute(distributedCPUVec<double> &fieldVector) const;
+
+      template <typename T>
+      void
+      distribute(distributedCPUVec<T> &fieldVector,
+                 const unsigned int    blockSize) const;
+
       /**
        * @brief overloaded dealii internal function distribute for flattened dealii array  which sets
        * the slave node field values from master nodes
@@ -70,7 +80,8 @@ namespace dftfe
        */
       template <typename NumberType>
       void
-      distribute(distributedDeviceVec<NumberType> &fieldVector) const;
+      distribute( dftfe::linearAlgebra::MultiVector<NumberType,
+                                                   dftfe::utils::MemorySpace::DEVICE> &fieldVector) const;
 
 
       /**
@@ -104,6 +115,15 @@ namespace dftfe
         distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
 
+      template <typename T>
+      void
+      distribute_slave_to_master(distributedCPUVec<T> &fieldVector,
+                                 const unsigned int    blockSize) const;
+
+      void
+      initializeScaledConstraints(
+        const distributedCPUVec<double> &invSqrtMassVec);
+
       /**
        * @brief sets field values at constrained nodes to be zero
        *
@@ -113,6 +133,11 @@ namespace dftfe
       template <typename NumberType>
       void
       set_zero(distributedDeviceVec<NumberType> &fieldVector) const;
+
+      template <typename T>
+      void
+      set_zero(distributedCPUVec<T> &fieldVector,
+               const unsigned int    blockSize) const;
 
       /**
        * clear data members

@@ -151,7 +151,7 @@ namespace dftfe
       void
       computeAX(
         dftfe::utils::deviceBlasHandle_t &    handle,
-        dftUtils::constraintMatrixInfoDevice &constraintsMatrixDataInfoDevice,
+        dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE> &constraintsMatrixDataInfoDevice,
         distributedDeviceVec<double> &        src,
         distributedDeviceVec<double> &        temp,
         const unsigned int                    totalLocallyOwnedCells,
@@ -515,7 +515,7 @@ namespace dftfe
         blockSize,
         cellLocalProcIndexIdMapH);
 
-      dftUtils::constraintMatrixInfoDevice constraintsMatrixDataInfoDevice;
+      dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE> constraintsMatrixDataInfoDevice;
       constraintsMatrixDataInfoDevice.initialize(
         matrixFreeData.get_vector_partitioner(mfDofHandlerIndex),
         hangingPeriodicConstraintMatrix);
@@ -593,7 +593,7 @@ namespace dftfe
     void
     cgSolver(
       dftfe::utils::deviceBlasHandle_t &    handle,
-      dftUtils::constraintMatrixInfoDevice &constraintsMatrixDataInfoDevice,
+      dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE> &constraintsMatrixDataInfoDevice,
       const double *                        bD,
       const double *                        diagonalAD,
       const dftfe::utils::MemoryStorage<double,

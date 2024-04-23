@@ -250,7 +250,7 @@ namespace dftfe
 
 
     // constraints
-    dftUtils::constraintMatrixInfoDevice d_constraintsTotalPotentialInfo,
+    dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE> d_constraintsTotalPotentialInfo,
       d_inhomogenousConstraintsTotalPotentialInfo;
 
     /// pointer to dealii dealii::AffineConstraints<double> object
@@ -317,7 +317,7 @@ namespace dftfe
     unsigned int d_meanValueConstraintProcId;
 
     /// duplicate constraints object with flattened maps for faster access
-    dftUtils::constraintMatrixInfo d_constraintsInfo;
+    dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::HOST> d_constraintsInfo;
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>

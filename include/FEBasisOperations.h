@@ -164,16 +164,6 @@ namespace dftfe
              const bool          isResizeTempStorageForCellMatrices = false);
 
       // private:
-#if defined(DFTFE_WITH_DEVICE)
-      using constraintInfoClass =
-        typename std::conditional<memorySpace ==
-                                    dftfe::utils::MemorySpace::DEVICE,
-                                  dftUtils::constraintMatrixInfoDevice,
-                                  dftUtils::constraintMatrixInfo>::type;
-#else
-      using constraintInfoClass = dftUtils::constraintMatrixInfo;
-#endif
-
 
 
       /**
@@ -761,7 +751,7 @@ namespace dftfe
 
 
 
-      std::vector<constraintInfoClass> d_constraintInfo;
+      std::vector<dftUtils::constraintMatrixInfo<memorySpace>> d_constraintInfo;
       unsigned int                     d_nOMPThreads;
       std::vector<const dealii::AffineConstraints<ValueTypeBasisData> *>
         *                                              d_constraintsVector;
