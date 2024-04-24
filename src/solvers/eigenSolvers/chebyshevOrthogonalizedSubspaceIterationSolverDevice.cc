@@ -344,6 +344,7 @@ namespace dftfe
                 "Chebyshev polynomial degree",
                 chebyshevOrder);
         pcout << buffer;
+        fflush(stdout);
       }
 
 
