@@ -21,6 +21,7 @@
 #include <deviceKernelsGeneric.h>
 #include <DeviceDataTypeOverloads.h>
 #include <DeviceKernelLauncherConstants.h>
+#include <dftUtils.h>
 
 namespace dftfe
 {
@@ -470,14 +471,12 @@ namespace dftfe
 
     // constructor
     //
-    template <>
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::constraintMatrixInfo()
     {}
 
     //
     // destructor
     //
-    template <>
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::~constraintMatrixInfo()
     {}
 
@@ -485,7 +484,6 @@ namespace dftfe
     //
     // store constraintMatrix row data in STL vector
     //
-    template <>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::initialize(
       const std::shared_ptr<const dealii::Utilities::MPI::Partitioner>
@@ -591,7 +589,6 @@ namespace dftfe
       d_numConstrainedDofs = d_rowIdsLocal.size();
     }
 
-    template<>
     template <typename NumberType>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute(
@@ -639,7 +636,6 @@ namespace dftfe
     }
 
 
-    template<>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
       ::initializeScaledConstraints(
@@ -684,7 +680,6 @@ namespace dftfe
     // set the constrained degrees of freedom to values so that constraints
     // are satisfied for flattened array
     //
-    template<>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute_slave_to_master(
       distributedDeviceVec<double> &fieldVector) const
@@ -730,7 +725,6 @@ namespace dftfe
     }
 
 
-    template<>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
       ::distribute_slave_to_master(
@@ -777,7 +771,6 @@ namespace dftfe
     }
 
 
-    template<>
     template <typename NumberType>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
@@ -820,7 +813,6 @@ namespace dftfe
     //
     // clear the data variables
     //
-    template<>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
       ::clear()
@@ -849,7 +841,6 @@ namespace dftfe
     }
 
 
-    template<>
     void
       constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
       ::distribute(distributedCPUVec<double> &fieldVector) const
@@ -857,7 +848,6 @@ namespace dftfe
       AssertThrow(false, dftUtils::ExcNotImplementedYet());
     }
 
-    template <>
     template <typename T>
     void
       constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
@@ -867,7 +857,6 @@ namespace dftfe
       AssertThrow(false, dftUtils::ExcNotImplementedYet());
     }
 
-    template <>
     template <typename T>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
@@ -877,7 +866,6 @@ namespace dftfe
       AssertThrow(false, dftUtils::ExcNotImplementedYet());
     }
 
-    template <>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
     initializeScaledConstraints(
@@ -886,7 +874,6 @@ namespace dftfe
       AssertThrow(false, dftUtils::ExcNotImplementedYet());
     }
 
-    template <>
     template <typename T>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
