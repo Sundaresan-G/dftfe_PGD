@@ -155,7 +155,7 @@ Assuming the above p4est dependency is installed, we now briefly discuss the ste
 
 \item Obtain the latest release version (9.5.2) of deal.II
 
-\item In addition to requiring C, C++ and Fortran compilers, MPI library, and CMake, deal.II additionally requires BOOST library. If not found externally, cmake will resort to the bundled BOOST that comes along with deal.II. Based on our experience, we recommend to use the deal.II's bundled boost (enforced by unsetting/unloading external BOOST library environment paths) to avoid compilation issues. Please do not install deal.II with GPU support as that is not needed by DFT-FE. Further, when installing deal.II for (DFT-FE with GPU support), one must use \verb|-DDEAL_II_ALLOW_PLATFORM_INTROSPECTION=OFF| to avoid compilation failure of DFT-FE.
+\item In addition to requiring C, C++ and Fortran compilers, MPI library, and CMake, deal.II additionally requires BOOST and Kokkos libraries. If not found externally, deal.II will resort to the bundled BOOST and Kokkos libraries that comes along with deal.II. Based on our experience, we recommend to use the deal.II's bundled boost (enforced by unsetting/unloading external BOOST library environment paths) and bundled Kokkos to avoid compilation issues. Please do not install deal.II with GPU support as that is not needed by DFT-FE. Further, when installing deal.II for (DFT-FE with GPU support), one must use \verb|-DDEAL_II_ALLOW_PLATFORM_INTROSPECTION=OFF| to avoid compilation failure of DFT-FE.
 
 \item
 \begin{verbatim}
@@ -165,7 +165,10 @@ $ cmake -DCMAKE_INSTALL_PREFIX=dealii_install_dir_path
         otherCmakeOptions ../deal.II
 $ make -j 8        
 $ make install
+$ cp -r ../bundled/kokkos-3.7.00/tpls/desul/include/desul/atomics dealii_install_dir_path
+/include/deal.II/bundled/desul/
 \end{verbatim}
+The last step of copying the atomics include files is required to avoid compilation issues when linking deal.II to DFT-FE.
 {\bf ``otherCmakeOptions'' include} the following options for CPU installation:
 \begin{verbatim}
 -DCMAKE_CXX_STANDARD=17
@@ -187,6 +190,7 @@ $ make install
 -DDEAL_II_WITH_TASKFLOW=OFF
 -DDEAL_II_COMPONENT_EXAMPLES=OFF
 -DDEAL_II_FORCE_BUNDLED_BOOST=ON
+-DDEAL_II_ALLOW_PLATFORM_INTROSPECTION=OFF
 \end{verbatim}
 
 
@@ -213,6 +217,7 @@ $ cmake
 -DDEAL_II_WITH_TBB=OFF
 -DDEAL_II_WITH_TASKFLOW=OFF 
 -DDEAL_II_FORCE_BUNDLED_BOOST=ON
+-DDEAL_II_ALLOW_PLATFORM_INTROSPECTION=OFF
 -DDEAL_II_WITH_P4EST=ON 
 -DP4EST_DIR=p4est_install_path 
 -DDEAL_II_WITH_LAPACK=ON -DLAPACK_DIR="${MKLROOT}/lib/intel64"
