@@ -53,10 +53,11 @@ namespace dftfe
 
     void
     cgSolver(
-      dftfe::utils::deviceBlasHandle_t &    handle,
-      dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE> &constraintsMatrixDataInfoDevice,
-      const double *                        bD,
-      const double *                        diagonalAD,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
+        &           constraintsMatrixDataInfoDevice,
+      const double *bD,
+      const double *diagonalAD,
       const dftfe::utils::MemoryStorage<double,
                                         dftfe::utils::MemorySpace::DEVICE>
         &poissonCellStiffnessMatricesD,

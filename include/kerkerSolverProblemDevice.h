@@ -214,7 +214,8 @@ namespace dftfe
     int *   d_mapPtr;
 
     // constraints
-    dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE> d_constraintsTotalPotentialInfo;
+    dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
+      d_constraintsTotalPotentialInfo;
 
     /// matrix free index required to access the DofHandler and
     /// dealii::AffineConstraints<double> objects corresponding to the problem

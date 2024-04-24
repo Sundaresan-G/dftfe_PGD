@@ -80,8 +80,10 @@ namespace dftfe
        */
       template <typename NumberType>
       void
-      distribute( dftfe::linearAlgebra::MultiVector<NumberType,
-                                                   dftfe::utils::MemorySpace::DEVICE> &fieldVector) const;
+      distribute(
+        dftfe::linearAlgebra::MultiVector<NumberType,
+                                          dftfe::utils::MemorySpace::DEVICE>
+          &fieldVector) const;
 
 
       /**

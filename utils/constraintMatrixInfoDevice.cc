@@ -471,13 +471,15 @@ namespace dftfe
 
     // constructor
     //
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::constraintMatrixInfo()
+    constraintMatrixInfo<
+      dftfe::utils::MemorySpace::DEVICE>::constraintMatrixInfo()
     {}
 
     //
     // destructor
     //
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::~constraintMatrixInfo()
+    constraintMatrixInfo<
+      dftfe::utils::MemorySpace::DEVICE>::~constraintMatrixInfo()
     {}
 
 
@@ -637,11 +639,11 @@ namespace dftfe
 
 
     void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
-      ::initializeScaledConstraints(
-      const dftfe::utils::MemoryStorage<double,
-                                        dftfe::utils::MemorySpace::DEVICE>
-        &invSqrtMassVec)
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      initializeScaledConstraints(
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::DEVICE>
+          &invSqrtMassVec)
     {
       if (d_numConstrainedDofs == 0)
         return;
@@ -681,8 +683,9 @@ namespace dftfe
     // are satisfied for flattened array
     //
     void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute_slave_to_master(
-      distributedDeviceVec<double> &fieldVector) const
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      distribute_slave_to_master(
+        distributedDeviceVec<double> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
@@ -726,9 +729,9 @@ namespace dftfe
 
 
     void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
-      ::distribute_slave_to_master(
-      distributedDeviceVec<std::complex<double>> &fieldVector) const
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      distribute_slave_to_master(
+        distributedDeviceVec<std::complex<double>> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
         return;
@@ -773,8 +776,7 @@ namespace dftfe
 
     template <typename NumberType>
     void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
-      ::set_zero(
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::set_zero(
       distributedDeviceVec<NumberType> &fieldVector) const
     {
       if (d_numConstrainedDofs == 0)
@@ -814,8 +816,7 @@ namespace dftfe
     // clear the data variables
     //
     void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
-      ::clear()
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::clear()
     {
       d_rowIdsLocal.clear();
       d_columnIdsLocal.clear();
@@ -842,34 +843,17 @@ namespace dftfe
 
 
     void
-      constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
-      ::distribute(distributedCPUVec<double> &fieldVector) const
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute(
+      distributedCPUVec<double> &fieldVector) const
     {
       AssertThrow(false, dftUtils::ExcNotImplementedYet());
     }
 
     template <typename T>
     void
-      constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
-    distribute(distributedCPUVec<T> &fieldVector,
-               const unsigned int    blockSize) const
-    {
-      AssertThrow(false, dftUtils::ExcNotImplementedYet());
-    }
-
-    template <typename T>
-    void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
-    distribute_slave_to_master(distributedCPUVec<T> &fieldVector,
-                               const unsigned int    blockSize) const
-    {
-      AssertThrow(false, dftUtils::ExcNotImplementedYet());
-    }
-
-    void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
-    initializeScaledConstraints(
-      const distributedCPUVec<double> &invSqrtMassVec)
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute(
+      distributedCPUVec<T> &fieldVector,
+      const unsigned int    blockSize) const
     {
       AssertThrow(false, dftUtils::ExcNotImplementedYet());
     }
@@ -877,8 +861,25 @@ namespace dftfe
     template <typename T>
     void
     constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
-    set_zero(distributedCPUVec<T> &fieldVector,
-             const unsigned int    blockSize) const
+      distribute_slave_to_master(distributedCPUVec<T> &fieldVector,
+                                 const unsigned int    blockSize) const
+    {
+      AssertThrow(false, dftUtils::ExcNotImplementedYet());
+    }
+
+    void
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      initializeScaledConstraints(
+        const distributedCPUVec<double> &invSqrtMassVec)
+    {
+      AssertThrow(false, dftUtils::ExcNotImplementedYet());
+    }
+
+    template <typename T>
+    void
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::set_zero(
+      distributedCPUVec<T> &fieldVector,
+      const unsigned int    blockSize) const
     {
       AssertThrow(false, dftUtils::ExcNotImplementedYet());
     }

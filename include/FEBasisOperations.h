@@ -752,7 +752,7 @@ namespace dftfe
 
 
       std::vector<dftUtils::constraintMatrixInfo<memorySpace>> d_constraintInfo;
-      unsigned int                     d_nOMPThreads;
+      unsigned int                                             d_nOMPThreads;
       std::vector<const dealii::AffineConstraints<ValueTypeBasisData> *>
         *                                              d_constraintsVector;
       const dealii::MatrixFree<3, ValueTypeBasisData> *d_matrixFreeDataPtr;
