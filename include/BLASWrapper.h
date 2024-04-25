@@ -1108,7 +1108,6 @@ namespace dftfe
 
       dftfe::utils::deviceBlasStatus_t
       setStream(dftfe::utils::deviceStream_t streamId);
-
     };
 #endif
 
