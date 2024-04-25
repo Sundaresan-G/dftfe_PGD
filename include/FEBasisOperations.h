@@ -21,7 +21,6 @@
 #include <MultiVector.h>
 #include <headers.h>
 #include <constraintMatrixInfo.h>
-#include <constraintMatrixInfoDevice.h>
 #include <DeviceTypeConfig.h>
 #include <BLASWrapper.h>
 

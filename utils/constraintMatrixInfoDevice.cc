@@ -17,7 +17,7 @@
 // @author  Sambit Das, Phani Motamarri
 //
 
-#include <constraintMatrixInfoDevice.h>
+#include <constraintMatrixInfo.h>
 #include <deviceKernelsGeneric.h>
 #include <DeviceDataTypeOverloads.h>
 #include <DeviceKernelLauncherConstants.h>

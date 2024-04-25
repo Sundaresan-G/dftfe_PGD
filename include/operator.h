@@ -28,7 +28,6 @@
 
 #include <vector>
 #if defined(DFTFE_WITH_DEVICE)
-#  include <constraintMatrixInfoDevice.h>
 #  include <DeviceBlasWrapper.h> //FIX ME
 #  include "deviceDirectCCLWrapper.h"
 #endif

@@ -19,7 +19,7 @@
 #  ifndef solveVselfInBinsDevice_H_
 #    define solveVselfInBinsDevice_H_
 
-#    include <constraintMatrixInfoDevice.h>
+#    include <constraintMatrixInfo.h>
 #    include <headers.h>
 #    include <BLASWrapper.h>
 namespace dftfe

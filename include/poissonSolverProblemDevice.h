@@ -20,7 +20,6 @@
 #    define poissonSolverProblemDevice_H_
 
 #    include <linearSolverProblemDevice.h>
-#    include <constraintMatrixInfoDevice.h>
 #    include <constraintMatrixInfo.h>
 #    include <constants.h>
 #    include <dftUtils.h>

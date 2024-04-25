@@ -20,7 +20,6 @@
 #define kohnShamHamiltonianOperatorClass_H_
 #include <constants.h>
 #include <constraintMatrixInfo.h>
-#include <constraintMatrixInfoDevice.h>
 #include <headers.h>
 #include <operator.h>
 #include <BLASWrapper.h>

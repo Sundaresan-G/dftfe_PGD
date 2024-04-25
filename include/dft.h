@@ -35,7 +35,6 @@
 
 #ifdef DFTFE_WITH_DEVICE
 #  include <chebyshevOrthogonalizedSubspaceIterationSolverDevice.h>
-#  include <constraintMatrixInfoDevice.h>
 #  include "deviceKernelsGeneric.h"
 #  include <poissonSolverProblemDevice.h>
 #  include <kerkerSolverProblemDevice.h>
