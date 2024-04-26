@@ -60,13 +60,6 @@ namespace dftfe
       prm.enter_subsection("GPU");
       {
         prm.declare_entry(
-          "USE TF32 OP",
-          "false",
-          dealii::Patterns::Bool(),
-          "[Advanced] Enables TensorFloat-32 precision for single precision math operations on GPUs, which take advantage of the tensor core hardware. This capability is currently available for certain GPUs like NVIDIA A100. Accuracy of USE TF32 OP has been tested in the case of LRDM preconditioner with USE SINGLE PREC DENSITY RESPONSE mode set to true.");
-
-
-        prm.declare_entry(
           "AUTO GPU BLOCK SIZES",
           "true",
           dealii::Patterns::Bool(),
@@ -1280,7 +1273,6 @@ namespace dftfe
     autoAdaptBaseMeshSize                          = true;
     readWfcForPdosPspFile                          = false;
     useDevice                                      = false;
-    useTF32Device                                  = false;
     deviceFineGrainedTimings                       = false;
     allowFullCPUMemSubspaceRot                     = true;
     useMixedPrecCheby                              = false;
@@ -1382,7 +1374,6 @@ namespace dftfe
 
     prm.enter_subsection("GPU");
     {
-      useTF32Device = useDevice && prm.get_bool("USE TF32 OP");
       deviceFineGrainedTimings =
         useDevice && prm.get_bool("FINE GRAINED GPU TIMINGS");
       allowFullCPUMemSubspaceRot =
@@ -1983,6 +1974,9 @@ namespace dftfe
 #endif
 #if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
     useDCCL = false;
+#endif
+#if !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+    useDeviceDirectAllReduce = useDCCL && useDeviceDirectAllReduce;
 #endif
 
     if (useMixedPrecCheby)
