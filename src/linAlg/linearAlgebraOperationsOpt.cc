@@ -3040,7 +3040,7 @@ namespace dftfe
         std::ceil(eigenValuesT[lanczosIterations - 1] +
                   (dftParams.reproducible_output ? YNorm : YNorm / 10.0));
 
-      if (dftParams.verbosity >= 4 && this_mpi_process == 0)
+      if (dftParams.verbosity >= 5 && this_mpi_process == 0)
         {
           std::cout << "bUp1: " << eigenValuesT[lanczosIterations - 1]
                     << ", fvector norm: " << YNorm << std::endl;
