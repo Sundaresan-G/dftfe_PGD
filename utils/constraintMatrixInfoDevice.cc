@@ -967,22 +967,25 @@ namespace dftfe
       distributedDeviceVec<std::complex<float>> &fieldVector) const;
 
     template void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute_slave_to_master(
-      distributedDeviceVec<double> &fieldVector) const;
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      distribute_slave_to_master(
+        distributedDeviceVec<double> &fieldVector) const;
 
     template void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute_slave_to_master(
-      distributedDeviceVec<std::complex<double>> &fieldVector) const;
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      distribute_slave_to_master(
+        distributedDeviceVec<std::complex<double>> &fieldVector) const;
 
     template void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute_slave_to_master(
-      distributedDeviceVec<float> &fieldVector) const;
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      distribute_slave_to_master(
+        distributedDeviceVec<float> &fieldVector) const;
 
     template void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::distribute_slave_to_master(
-      distributedDeviceVec<std::complex<float>> &fieldVector) const;
+    constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>::
+      distribute_slave_to_master(
+        distributedDeviceVec<std::complex<float>> &fieldVector) const;
     template class constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>;
-
 
   } // namespace dftUtils
 } // namespace dftfe

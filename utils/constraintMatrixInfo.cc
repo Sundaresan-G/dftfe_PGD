@@ -521,27 +521,41 @@ namespace dftfe
 
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::distribute(
-      distributedCPUMultiVec<float, dftfe::utils::MemorySpace::HOST> &fieldVector) const;
+      dftfe::linearAlgebra::MultiVector<float, dftfe::utils::MemorySpace::HOST>
+        &fieldVector) const;
 
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::distribute(
-      dftfe::linearAlgebra::MultiVector<std::complex<float>, dftfe::utils::MemorySpace::HOST> &fieldVector) const;
+      dftfe::linearAlgebra::MultiVector<std::complex<float>,
+                                        dftfe::utils::MemorySpace::HOST>
+        &fieldVector) const;
 
     template void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::distribute_slave_to_master(
-      dftfe::linearAlgebra::MultiVector<dataTypes::number, dftfe::utils::MemorySpace::HOST> &fieldVector) const;
+    constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::
+      distribute_slave_to_master(
+        dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                          dftfe::utils::MemorySpace::HOST>
+          &fieldVector) const;
 
     template void
-    constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::distribute_slave_to_master(
-      dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, dftfe::utils::MemorySpace::HOST> &fieldVector) const;
+    constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::
+      distribute_slave_to_master(
+        dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
+                                          dftfe::utils::MemorySpace::HOST>
+          &fieldVector) const;
 
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::set_zero(
-      dftfe::linearAlgebra::MultiVector<dataTypes::number, dftfe::utils::MemorySpace::HOST> &fieldVector) const;
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::HOST>
+        &fieldVector) const;
 
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::set_zero(
-      dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, dftfe::utils::MemorySpace::HOST> &fieldVector) const;
+      dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
+                                        dftfe::utils::MemorySpace::HOST>
+        &fieldVector) const;
+    template class constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>;
 
   } // namespace dftUtils
 
