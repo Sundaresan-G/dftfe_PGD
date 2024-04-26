@@ -2422,8 +2422,7 @@ namespace dftfe
                   0,
                   vectorsBlockSize * N * sizeof(dataTypes::number));
 
-      dftfe::utils::deviceStream_t streamDeviceCCL;
-      dftfe::utils::deviceStreamCreate(&streamDeviceCCL);
+      dftfe::utils::deviceStream_t streamDeviceCCL = 0;
 
       const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0);
       const dataTypes::number scalarCoeffBeta  = dataTypes::number(0);
@@ -2532,9 +2531,6 @@ namespace dftfe
 
             } // band parallelization
         }     // end block loop
-
-
-      dftfe::utils::deviceStreamDestroy(streamDeviceCCL);
 
       if (numberBandGroups > 1)
         linearAlgebraOperations::internal::sumAcrossInterCommScaLAPACKMat(
@@ -2909,8 +2905,7 @@ namespace dftfe
                   0,
                   N * vectorsBlockSize * sizeof(dataTypes::numberFP32));
 
-      dftfe::utils::deviceStream_t streamDeviceCCL;
-      dftfe::utils::deviceStreamCreate(&streamDeviceCCL);
+      dftfe::utils::deviceStream_t streamDeviceCCL = 0;
 
       const dataTypes::number     scalarCoeffAlpha = dataTypes::number(1.0);
       const dataTypes::number     scalarCoeffBeta  = dataTypes::number(0);
@@ -3090,9 +3085,6 @@ namespace dftfe
                     }
             } // band parallelization
         }     // end block loop
-
-
-      dftfe::utils::deviceStreamDestroy(streamDeviceCCL);
 
       if (numberBandGroups > 1)
         linearAlgebraOperations::internal::sumAcrossInterCommScaLAPACKMat(
