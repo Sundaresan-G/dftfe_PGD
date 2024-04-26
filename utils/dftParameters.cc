@@ -985,7 +985,7 @@ namespace dftfe
             "USE SINGLE PREC CHEBY",
             "false",
             dealii::Patterns::Bool(),
-            "[Advanced] Use a modified single precision algorithm Chebyshev filtering. This cannot be used in conjunction with spectrum splitting");
+            "[Advanced] Use a modified single precision algorithm for Chebyshev filtering. This cannot be used in conjunction with spectrum splitting. Default setting is false.");
 
           prm.declare_entry(
             "OVERLAP COMPUTE COMMUN CHEBY",
@@ -1973,7 +1973,7 @@ namespace dftfe
       AssertThrow(
         useELPA,
         dealii::ExcMessage(
-          "DFT-FE Error: USE ELPA must be set to true for USE MIXED PREC CHEBY."));
+          "DFT-FE Error: USE ELPA must be set to true for USE SINGLE PREC COMMUN CHEBY."));
 
     if (verbosity >= 5)
       computeEnergyEverySCF = true;
