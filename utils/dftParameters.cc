@@ -970,10 +970,10 @@ namespace dftfe
             "[Advanced] Use mixed precision arithmetic in Rayleigh-Ritz subspace rotation step. Default setting is false.");
 
           prm.declare_entry(
-            "USE MIXED PREC CHEBY",
+            "USE SINGLE PREC COMMUN CHEBY",
             "false",
             dealii::Patterns::Bool(),
-            "[Advanced] Use mixed precision arithmetic in Chebyshev filtering. Currently this option is only available for real executable and USE ELPA=true for which DFT-FE also has to be linked to ELPA library. Default setting is false.");
+            "[Advanced] Use single precision communication in Chebyshev filtering. Currently this option is only available if USE ELPA=true for which DFT-FE also has to be linked to ELPA library. Default setting is false.");
 
           prm.declare_entry(
             "USE MIXED PREC COMMUN ONLY XTX XTHX",
@@ -985,7 +985,7 @@ namespace dftfe
             "USE SINGLE PREC CHEBY",
             "false",
             dealii::Patterns::Bool(),
-            "[Advanced] Use a modified single precision algorithm Chebyshev filtering.");
+            "[Advanced] Use a modified single precision algorithm Chebyshev filtering. This cannot be used in conjunction with spectrum splitting");
 
           prm.declare_entry(
             "OVERLAP COMPUTE COMMUN CHEBY",
@@ -1610,7 +1610,7 @@ namespace dftfe
         useMixedPrecSubspaceRotRR = prm.get_bool("USE MIXED PREC RR_SR");
         useMixedPrecCommunOnlyXTHXCGSO =
           prm.get_bool("USE MIXED PREC COMMUN ONLY XTX XTHX");
-        useMixedPrecCheby  = prm.get_bool("USE MIXED PREC CHEBY");
+        useMixedPrecCheby  = prm.get_bool("USE SINGLE PREC COMMUN CHEBY");
         useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
@@ -2014,6 +2014,9 @@ namespace dftfe
 
     if (numCoreWfcRR == 0)
       spectrumSplitStartingScfIter = 10000;
+
+    if (numCoreWfcRR != 0)
+      useSinglePrecCheby = false;
   }
 
 
