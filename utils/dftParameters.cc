@@ -1961,6 +1961,9 @@ namespace dftfe
 #if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
     useDCCL = false;
 #endif
+#if !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+    useDeviceDirectAllReduce = useDCCL && useDeviceDirectAllReduce;
+#endif
 
     if (useMixedPrecCheby)
       AssertThrow(
