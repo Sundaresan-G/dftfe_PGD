@@ -64,7 +64,7 @@ namespace dftfe
       DeviceCCLWrapper();
 
       void
-      init(const MPI_Comm &mpiComm, const bool useDCCL);
+      init(const MPI_Comm &mpiComm, const bool useDCCL, int selector = 0);
 
       ~DeviceCCLWrapper();
 
@@ -80,6 +80,15 @@ namespace dftfe
                                    double *        recv,
                                    int             size,
                                    deviceStream_t &stream);
+
+      template <typename NumberType>
+      int 
+      deviceDirectAllToAllWrapper(const NumberType *  send,
+                                  unsigned long int            sendCount,
+                                  NumberType *       recv,
+                                  unsigned long int            recvCount,
+                                  deviceStream_t stream = 0,
+                                  bool            useDCCL = true);
 
 
       int
@@ -192,6 +201,12 @@ namespace dftfe
       inline static bool                         commStreamCreated;
 
     private:
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      // 0 - default is handled by ncclCommPtr
+      int      dcclCommSelector = 0; // 0 - intraBandComm, non-zero for interBandCommm or intrapoolComm
+      ncclUniqueId *ncclIdPvtPtr;
+      ncclComm_t *  ncclCommPvtPtr;
+#    endif
       int      myRank;
       int      totalRanks;
       MPI_Comm d_mpiComm;

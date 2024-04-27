@@ -94,26 +94,33 @@ namespace dftfe
     //
     // initialize PSI and density
     //
+    const unsigned int numberBandGroups =
+          dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
     AssertThrow(
       (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
-          d_numEigenValues <
+          d_numEigenValuesPerBandGroup <
         INT_MAX / matrix_free_data.get_vector_partitioner()->local_size(),
       dealii::ExcMessage(
         "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
 
-    d_eigenVectorsFlattenedHost.resize(
-      (d_numEigenValues *
-       matrix_free_data.get_vector_partitioner()->local_size()) *
-        (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
-      dataTypes::number(0.0));
-    if (d_numEigenValuesRR != d_numEigenValues)
+    for (unsigned int kPoint = 0;
+         kPoint < (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
+         ++kPoint)
       {
-        d_eigenVectorsRotFracDensityFlattenedHost.resize(
-          d_numEigenValuesRR *
-            matrix_free_data.get_vector_partitioner()->local_size() *
+        d_eigenVectorsFlattenedHost.resize(
+          ((d_numEigenValues/numberBandGroups) *
+           matrix_free_data.get_vector_partitioner()->local_size()) *
             (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
           dataTypes::number(0.0));
+        if (d_numEigenValuesRR != d_numEigenValues)
+          {
+            d_eigenVectorsRotFracDensityFlattenedHost.resize(
+              (d_numEigenValuesRR/numberBandGroups) *
+                matrix_free_data.get_vector_partitioner()->local_size() *
+                (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
+              dataTypes::number(0.0));
+          }
       }
 
     pcout << std::endl
@@ -140,6 +147,9 @@ namespace dftfe
       dftUtils::printCurrentMemoryUsage(mpi_communicator, "initRho called");
 
 #ifdef DFTFE_WITH_DEVICE
+
+    // const unsigned int numberBandGroups =
+    //       dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
     if (d_dftParamsPtr->useDevice)
       {
         d_eigenVectorsFlattenedDevice.resize(
@@ -156,6 +166,12 @@ namespace dftfe
           d_eigenVectorsRotFracFlattenedDevice.resize(1);
 
         d_eigenVectorsFlattenedDevice.copyFrom(d_eigenVectorsFlattenedHost);
+
+        // d_eigenVectorsFlattenedDevice.copyFrom(
+        //   d_eigenVectorsFlattenedHost, 
+        //   d_eigenVectorsFlattenedHost.size()/numberBandGroups,
+        //   dealii::Utilities::MPI::this_mpi_process(interBandGroupComm) * d_eigenVectorsFlattenedHost.size()/numberBandGroups,
+        //   0);
       }
 #endif
 

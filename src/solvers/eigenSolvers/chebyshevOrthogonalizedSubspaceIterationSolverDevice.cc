@@ -128,7 +128,7 @@ namespace dftfe
                       pcout,
                       dftParams.reproducible_output || dftParams.verbosity < 4 ?
                         dealii::TimerOutput::never :
-                        dealii::TimerOutput::summary,
+                        dealii::TimerOutput::every_call,
                       dealii::TimerOutput::wall_times)
   {}
 
@@ -160,12 +160,14 @@ namespace dftfe
     elpaScalaManager &       elpaScala,
     dataTypes::number *      eigenVectorsFlattenedDevice,
     dataTypes::number *      eigenVectorsRotFracDensityFlattenedDevice,
-    const unsigned int       flattenedSize,
+    const unsigned int       localVectorSize,
     const unsigned int       totalNumberWaveFunctions,
     std::vector<double> &    eigenValues,
     std::vector<double> &    residualNorms,
     utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+    utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
     const MPI_Comm &         interBandGroupComm,
+    const MPI_Comm &         intrapoolcomm,
     const bool               isFirstFilteringCall,
     const bool               computeResidual,
     const bool               useMixedPrecOverall,
@@ -185,8 +187,8 @@ namespace dftfe
     //
     // allocate memory for full flattened array on device and fill it up
     //
-    const unsigned int localVectorSize =
-      flattenedSize / totalNumberWaveFunctions;
+    // const unsigned int localVectorSize =
+    //   flattenedSize / totalNumberWaveFunctions;
 
     // band group parallelization data structures
     const unsigned int numberBandGroups =
@@ -203,6 +205,20 @@ namespace dftfe
 
     const unsigned int vectorsBlockSize =
       std::min(d_dftParams.chebyWfcBlockSize, totalNumberWaveFunctions);
+
+    reShapedNumRows = (localVectorSize + numberBandGroups - 1)/numberBandGroups;
+    reShapedNumCols = totalNumberWaveFunctions;
+
+    if (isFirstScf && isFirstFilteringCall && numberBandGroups > 1)
+    {
+      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL, 1);
+      XDevice.resize(reShapedNumRows * reShapedNumCols, 0);
+      HXDevice.resize(reShapedNumRows * reShapedNumCols, 0);
+      extraBufferDevice.resize(reShapedNumRows * reShapedNumCols, 0);
+
+      // XHost.resize(reShapedNumRows * reShapedNumCols, 0);
+      // HXHost.resize(reShapedNumRows * reShapedNumCols, 0);
+    }
 
     distributedDeviceVec<dataTypes::number> *XBlock =
       &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 0);
@@ -328,6 +344,7 @@ namespace dftfe
                 "Chebyshev polynomial degree",
                 chebyshevOrder);
         pcout << buffer;
+        fflush(stdout);
       }
 
 
@@ -375,22 +392,24 @@ namespace dftfe
             // copy from vector containg all wavefunction vectors to current
             // wavefunction vectors block
             dftfe::utils::deviceKernelsGeneric::
-              stridedCopyToBlockConstantStride(BVec,
-                                               totalNumberWaveFunctions,
-                                               localVectorSize,
-                                               jvec,
-                                               eigenVectorsFlattenedDevice,
-                                               (*XBlock).begin());
+              stridedCopyToBlockConstantStride(
+                BVec,
+                totalNumberWaveFunctions/numberBandGroups,
+                localVectorSize,
+                jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                eigenVectorsFlattenedDevice,
+                (*XBlock).begin());
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
               dftfe::utils::deviceKernelsGeneric::
-                stridedCopyToBlockConstantStride(BVec,
-                                                 totalNumberWaveFunctions,
-                                                 localVectorSize,
-                                                 jvec + BVec,
-                                                 eigenVectorsFlattenedDevice,
-                                                 (*XBlock2).begin());
+                stridedCopyToBlockConstantStride(
+                  BVec,
+                  totalNumberWaveFunctions/numberBandGroups,
+                  localVectorSize,
+                  jvec + BVec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                  eigenVectorsFlattenedDevice,
+                  (*XBlock2).begin());
 
             //
             // call Chebyshev filtering function only for the current block
@@ -462,55 +481,57 @@ namespace dftfe
             // copy current wavefunction vectors block to vector containing
             // all wavefunction vectors
             dftfe::utils::deviceKernelsGeneric::
-              stridedCopyFromBlockConstantStride(totalNumberWaveFunctions,
-                                                 BVec,
-                                                 localVectorSize,
-                                                 jvec,
-                                                 (*XBlock).begin(),
-                                                 eigenVectorsFlattenedDevice);
+              stridedCopyFromBlockConstantStride(
+                totalNumberWaveFunctions/numberBandGroups,
+                BVec,
+                localVectorSize,
+                jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                (*XBlock).begin(),
+                eigenVectorsFlattenedDevice);
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
               dftfe::utils::deviceKernelsGeneric::
-                stridedCopyFromBlockConstantStride(totalNumberWaveFunctions,
-                                                   BVec,
-                                                   localVectorSize,
-                                                   jvec + BVec,
-                                                   (*XBlock2).begin(),
-                                                   eigenVectorsFlattenedDevice);
+                stridedCopyFromBlockConstantStride(
+                  totalNumberWaveFunctions/numberBandGroups,
+                  BVec,
+                  localVectorSize,
+                  jvec + BVec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                  (*XBlock2).begin(),
+                  eigenVectorsFlattenedDevice);
           }
-        else
-          {
-            // set to zero wavefunctions which wont go through chebyshev
-            // filtering inside a given band group
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-            setZeroKernel<<<(numSimultaneousBlocksCurrent * BVec +
-                             (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                              dftfe::utils::DEVICE_BLOCK_SIZE * localVectorSize,
-                            dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-              numSimultaneousBlocksCurrent * BVec,
-              localVectorSize,
-              totalNumberWaveFunctions,
-              dftfe::utils::makeDataTypeDeviceCompatible(
-                eigenVectorsFlattenedDevice),
-              jvec);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-            hipLaunchKernelGGL(setZeroKernel,
-                               (numSimultaneousBlocksCurrent * BVec +
-                                (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                                 dftfe::utils::DEVICE_BLOCK_SIZE *
-                                 localVectorSize,
-                               dftfe::utils::DEVICE_BLOCK_SIZE,
-                               0,
-                               0,
-                               numSimultaneousBlocksCurrent * BVec,
-                               localVectorSize,
-                               totalNumberWaveFunctions,
-                               dftfe::utils::makeDataTypeDeviceCompatible(
-                                 eigenVectorsFlattenedDevice),
-                               jvec);
-#endif
-          }
+//         else
+//           {
+//             // set to zero wavefunctions which wont go through chebyshev
+//             // filtering inside a given band group
+// #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+//             setZeroKernel<<<(numSimultaneousBlocksCurrent * BVec +
+//                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+//                               dftfe::utils::DEVICE_BLOCK_SIZE * localVectorSize,
+//                             dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+//               numSimultaneousBlocksCurrent * BVec,
+//               localVectorSize,
+//               totalNumberWaveFunctions,
+//               dftfe::utils::makeDataTypeDeviceCompatible(
+//                 eigenVectorsFlattenedDevice),
+//               jvec);
+// #elif DFTFE_WITH_DEVICE_LANG_HIP
+//             hipLaunchKernelGGL(setZeroKernel,
+//                                (numSimultaneousBlocksCurrent * BVec +
+//                                 (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+//                                  dftfe::utils::DEVICE_BLOCK_SIZE *
+//                                  localVectorSize,
+//                                dftfe::utils::DEVICE_BLOCK_SIZE,
+//                                0,
+//                                0,
+//                                numSimultaneousBlocksCurrent * BVec,
+//                                localVectorSize,
+//                                totalNumberWaveFunctions,
+//                                dftfe::utils::makeDataTypeDeviceCompatible(
+//                                  eigenVectorsFlattenedDevice),
+//                                jvec);
+// #endif
+//           }
 
       } // block loop
 
@@ -525,35 +546,35 @@ namespace dftfe
       }
 
 
-    if (numberBandGroups > 1)
-      {
-        std::vector<dataTypes::number> eigenVectorsFlattened(
-          totalNumberWaveFunctions * localVectorSize, dataTypes::number(0.0));
+    // if (numberBandGroups > 1)
+    //   {
+    //     std::vector<dataTypes::number> eigenVectorsFlattened(
+    //       totalNumberWaveFunctions * localVectorSize, dataTypes::number(0.0));
 
-        dftfe::utils::deviceMemcpyD2H(
-          dftfe::utils::makeDataTypeDeviceCompatible(&eigenVectorsFlattened[0]),
-          eigenVectorsFlattenedDevice,
-          totalNumberWaveFunctions * localVectorSize *
-            sizeof(dataTypes::number));
+    //     dftfe::utils::deviceMemcpyD2H(
+    //       dftfe::utils::makeDataTypeDeviceCompatible(&eigenVectorsFlattened[0]),
+    //       eigenVectorsFlattenedDevice,
+    //       totalNumberWaveFunctions * localVectorSize *
+    //         sizeof(dataTypes::number));
 
-        MPI_Barrier(interBandGroupComm);
+    //     MPI_Barrier(interBandGroupComm);
 
 
-        MPI_Allreduce(MPI_IN_PLACE,
-                      &eigenVectorsFlattened[0],
-                      totalNumberWaveFunctions * localVectorSize,
-                      dataTypes::mpi_type_id(&eigenVectorsFlattened[0]),
-                      MPI_SUM,
-                      interBandGroupComm);
+    //     MPI_Allreduce(MPI_IN_PLACE,
+    //                   &eigenVectorsFlattened[0],
+    //                   totalNumberWaveFunctions * localVectorSize,
+    //                   dataTypes::mpi_type_id(&eigenVectorsFlattened[0]),
+    //                   MPI_SUM,
+    //                   interBandGroupComm);
 
-        MPI_Barrier(interBandGroupComm);
+    //     MPI_Barrier(interBandGroupComm);
 
-        dftfe::utils::deviceMemcpyH2D(
-          eigenVectorsFlattenedDevice,
-          dftfe::utils::makeDataTypeDeviceCompatible(&eigenVectorsFlattened[0]),
-          totalNumberWaveFunctions * localVectorSize *
-            sizeof(dataTypes::number));
-      }
+    //     dftfe::utils::deviceMemcpyH2D(
+    //       eigenVectorsFlattenedDevice,
+    //       dftfe::utils::makeDataTypeDeviceCompatible(&eigenVectorsFlattened[0]),
+    //       totalNumberWaveFunctions * localVectorSize *
+    //         sizeof(dataTypes::number));
+    //   }
 
     // if (d_dftParams.measureOnlyChebyTime)
     //  exit(0);
@@ -563,7 +584,7 @@ namespace dftfe
     // previous guess) to convert into Lowden Orthonormalized FE basis
     // multiply by M^{1/2}
     dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
+      totalNumberWaveFunctions/numberBandGroups,
       localVectorSize,
       1.0,
       operatorMatrix.getSqrtMassVector().data(),
@@ -579,6 +600,13 @@ namespace dftfe
       }
 
     std::fill(eigenValues.begin(), eigenValues.end(), 0.0);
+
+    if (d_dftParams.deviceFineGrainedTimings)
+      {
+        dftfe::utils::deviceSynchronize();
+        computingTimerStandard.enter_subsection(
+          "Total RR GEP step time");
+      }
 
     if (eigenValues.size() != totalNumberWaveFunctions)
       {
@@ -638,7 +666,31 @@ namespace dftfe
           }
         else
           {
-            linearAlgebraOperationsDevice::rayleighRitzGEP(
+            if (numberBandGroups > 1)
+              linearAlgebraOperationsDevice::rayleighRitzGEP(
+                operatorMatrix,
+                elpaScala,
+                eigenVectorsFlattenedDevice,
+                XDevice.begin(),
+                HXDevice.begin(),
+                extraBufferDevice.begin(),
+                (*XBlock),
+                (*HXBlock),
+                localVectorSize,
+                totalNumberWaveFunctions,
+                d_mpiCommParent,
+                operatorMatrix.getMPICommunicatorDomain(),
+                devicecclMpiCommDomain,
+                devicecclMpiInterBand,
+                devicecclMpiCommIntraPool,
+                interBandGroupComm,
+                intrapoolcomm,
+                eigenValues,
+                deviceBlasHandle,
+                d_dftParams,
+                useMixedPrecOverall);
+            else
+              linearAlgebraOperationsDevice::rayleighRitzGEP(
               operatorMatrix,
               elpaScala,
               eigenVectorsFlattenedDevice,
@@ -654,7 +706,15 @@ namespace dftfe
               deviceBlasHandle,
               d_dftParams,
               useMixedPrecOverall);
+
           }
+      }
+
+    if (d_dftParams.deviceFineGrainedTimings)
+      {
+        dftfe::utils::deviceSynchronize();
+        computingTimerStandard.leave_subsection(
+          "Total RR GEP step time");
       }
 
 
@@ -710,7 +770,7 @@ namespace dftfe
     // the usual FE basis
     //
     dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
+      totalNumberWaveFunctions/numberBandGroups,
       localVectorSize,
       1.0,
       operatorMatrix.getInverseSqrtMassVector().data(),

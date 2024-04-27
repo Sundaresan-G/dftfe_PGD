@@ -65,12 +65,14 @@ namespace dftfe
           elpaScalaManager &                                   elpaScala,
           dataTypes::number *      eigenVectorsFlattenedDevice,
           dataTypes::number *      eigenVectorsRotFracDensityFlattenedDevice,
-          const unsigned int       flattenedSize,
+          const unsigned int       localVectorSize,
           const unsigned int       totalNumberWaveFunctions,
           std::vector<double> &    eigenValues,
           std::vector<double> &    residuals,
           utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+          utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
           const MPI_Comm &         interBandGroupComm,
+          const MPI_Comm &         intrapoolcomm,
           const bool               isFirstFilteringCall,
           const bool               computeResidual,
           const bool               useMixedPrecOverall = false,
@@ -149,6 +151,16 @@ namespace dftfe
     //
     dealii::ConditionalOStream pcout;
     dealii::TimerOutput        computing_timer;
+
+    // dftfe::utils::deviceStream_t ncclInterBandCommStream;
+    utils::DeviceCCLWrapper  devicecclMpiInterBand;
+
+    // dftfe::utils::MemoryStorage<dataTypes::number,
+    //                             dftfe::utils::MemorySpace::HOST_PINNED> XHost, HXHost;
+                                
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE> XDevice, HXDevice, extraBufferDevice;
+    std::size_t reShapedNumRows, reShapedNumCols;
   };
 } // namespace dftfe
 #  endif

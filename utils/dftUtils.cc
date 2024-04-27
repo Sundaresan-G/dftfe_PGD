@@ -303,21 +303,29 @@ namespace dftfe
       const unsigned int color2 = taskId / poolSize;
       MPI_Comm_split(mpi_communicator, color2, 0, &intrapoolcomm);
 
+      char processor_name[MPI_MAX_PROCESSOR_NAME];
+      int  name_len = MPI_MAX_PROCESSOR_NAME;
+      MPI_Get_processor_name(processor_name, &name_len);
+
       // FIXME: output should be optional
-      for (unsigned int i = 0; i < n_mpi_processes; ++i)
-        {
-          if (taskId == i)
-            {
-              if (verbosity > 4)
+      if (verbosity > 4)
+        for (unsigned int i = 0; i < n_mpi_processes; ++i)
+          {
+            if (taskId == i)
+              {              
                 std::cout
-                  << " My global id is " << taskId << " , pool id is "
+                  << " My global id is " << taskId << " , interpool id is "
                   << dealii::Utilities::MPI::this_mpi_process(interpoolcomm)
                   << " , intrapool id is "
                   << dealii::Utilities::MPI::this_mpi_process(intrapoolcomm)
+                  << " , and my host name is " << processor_name
                   << std::endl;
-            }
-          MPI_Barrier(mpi_communicator);
-        }
+                std::fflush(stdout);
+              }
+            MPI_Barrier(mpi_communicator);
+          }
+      
+      // MPI_Abort(mpi_communicator, 0);
     }
 
     MPI_Comm &

@@ -72,6 +72,7 @@ namespace dftfe
                  const MPI_Comm &      mpi_comm_domain,
                  const MPI_Comm &      interpoolcomm,
                  const MPI_Comm &      interBandGroupComm,
+                 const MPI_Comm &      intrapoolcomm,
                  const std::string &   scratchFolderName,
                  dftfe::dftParameters &dftParams,
                  dftBase **            dftfeBaseDoublePtr)
@@ -81,6 +82,7 @@ namespace dftfe
                                             mpi_comm_domain,
                                             interpoolcomm,
                                             interBandGroupComm,
+                                            intrapoolcomm,
                                             scratchFolderName,
                                             dftParams);
     }
@@ -96,6 +98,7 @@ namespace dftfe
                                   const MPI_Comm &      mpi_comm_domain,
                                   const MPI_Comm &      interpoolcomm,
                                   const MPI_Comm &      interBandGroupComm,
+                                  const MPI_Comm &      intrapoolcomm,
                                   const std::string &   scratchFolderName,
                                   dftfe::dftParameters &dftParams,
                                   dftBase **            dftBaseDoublePtr);
@@ -163,6 +166,7 @@ namespace dftfe
                                     const MPI_Comm &      mpi_comm_domain,
                                     const MPI_Comm &      interpoolcomm,
                                     const MPI_Comm &      interBandGroupComm,
+                                    const MPI_Comm &      intrapoolcomm,
                                     const std::string &   scratchFolderName,
                                     dftfe::dftParameters &dftParams,
                                     dftBase **            dftBaseDoublePtr);
@@ -844,9 +848,19 @@ namespace dftfe
           }
 #endif
 
+        if (d_dftfeParamsPtr->verbosity > 4){
+          if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) == 0)
+            std::cout << "Printing kPointPool details" << std::endl;
+        }
+
         dftfe::dftUtils::Pool kPointPool(d_mpi_comm_parent,
                                          d_dftfeParamsPtr->npool,
                                          d_dftfeParamsPtr->verbosity);
+
+        if (d_dftfeParamsPtr->verbosity > 4){
+          if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) == 0)
+            std::cout << "Printing bandGroupsPool details" << std::endl;
+        }
         dftfe::dftUtils::Pool bandGroupsPool(kPointPool.get_intrapool_comm(),
                                              d_dftfeParamsPtr->nbandGrps,
                                              d_dftfeParamsPtr->verbosity);
@@ -958,6 +972,7 @@ namespace dftfe
                    bandGroupsPool.get_intrapool_comm(),
                    kPointPool.get_interpool_comm(),
                    bandGroupsPool.get_interpool_comm(),
+                   kPointPool.get_intrapool_comm(),
                    d_scratchFolderName,
                    *d_dftfeParamsPtr,
                    &d_dftfeBasePtr);
@@ -971,6 +986,7 @@ namespace dftfe
                    bandGroupsPool.get_intrapool_comm(),
                    kPointPool.get_interpool_comm(),
                    bandGroupsPool.get_interpool_comm(),
+                   kPointPool.get_intrapool_comm(),
                    d_scratchFolderName,
                    *d_dftfeParamsPtr,
                    &d_dftfeBasePtr);

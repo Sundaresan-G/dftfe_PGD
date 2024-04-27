@@ -129,6 +129,7 @@ namespace dftfe
              const MPI_Comm &   mpi_comm_domain,
              const MPI_Comm &   interpoolcomm,
              const MPI_Comm &   interBandGroupComm,
+             const MPI_Comm &   intrapoolcomm,
              const std::string &scratchFolderName,
              dftParameters &    dftParams);
 
@@ -280,12 +281,14 @@ namespace dftfe
      * @brief Number of Kohn-Sham eigen values to be computed
      */
     unsigned int d_numEigenValues;
+    unsigned int d_numEigenValuesPerBandGroup;
 
     /**
      * @brief Number of Kohn-Sham eigen values to be computed in the Rayleigh-Ritz step
      * after spectrum splitting.
      */
     unsigned int d_numEigenValuesRR;
+    unsigned int d_numEigenValuesRRPerBandGroup;
 
     /**
      * @brief Number of random wavefunctions
@@ -1278,10 +1281,12 @@ namespace dftfe
     const MPI_Comm mpi_communicator;
 #if defined(DFTFE_WITH_DEVICE)
     utils::DeviceCCLWrapper *d_devicecclMpiCommDomainPtr;
+    utils::DeviceCCLWrapper *d_devicecclMpiCommPoolPtr;
 #endif
     const MPI_Comm     d_mpiCommParent;
     const MPI_Comm     interpoolcomm;
     const MPI_Comm     interBandGroupComm;
+    const MPI_Comm     intrapoolcomm;
     const unsigned int n_mpi_processes;
     const unsigned int this_mpi_process;
     dealii::IndexSet   locally_owned_dofs, locally_owned_dofsEigen;

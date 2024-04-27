@@ -91,6 +91,12 @@ namespace dftfe
           R"([Adavanced] Use NCCL/RCCL for GPUDIRECT communications. Default: false.)");
 
         prm.declare_entry(
+          "USE ALLTOAll DCCL",
+          "true",
+          dealii::Patterns::Bool(),
+          R"([Adavanced] Use NCCL/RCCL for GPUDIRECT AlltoAll communications. Default: true if DCCL is true else false.)");
+
+        prm.declare_entry(
           "USE ELPA GPU KERNEL",
           "false",
           dealii::Patterns::Bool(),
@@ -883,6 +889,12 @@ namespace dftfe
             "[Advanced] Chebyshev polynomial degree to be employed for the Chebyshev filtering subspace iteration procedure to dampen the unwanted spectrum of the Kohn-Sham Hamiltonian. If set to 0, a default value depending on the upper bound of the eigen-spectrum is used. See Phani Motamarri et.al., J. Comp. Phys. 253, 308-343 (2013).");
 
           prm.declare_entry(
+            "MAX CHEBYSHEV PASSES PER SCF",
+            "100",
+            dealii::Patterns::Integer(0, 200),
+            "[Advanced] Maximum number of Chebyshev polynomial passes to be employed for the Chebyshev filtering subspace iteration procedure. Default value is 100.");
+
+          prm.declare_entry(
             "CHEBYSHEV POLYNOMIAL DEGREE SCALING FACTOR FIRST SCF",
             "1.34",
             dealii::Patterns::Double(0, 2000),
@@ -1370,6 +1382,7 @@ namespace dftfe
       useDeviceDirectAllReduce =
         useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
       useDCCL             = useDevice && prm.get_bool("USE DCCL");
+      useAlltoAllDCCL     = useDevice && useDCCL && prm.get_bool("USE ALLTOAll DCCL");
       useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
     }
     prm.leave_subsection();
@@ -1588,6 +1601,7 @@ namespace dftfe
         spectrumSplitStartingScfIter =
           prm.get_integer("SPECTRUM SPLIT STARTING SCF ITER");
         chebyshevOrder     = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
+        maxChebyPasses     = prm.get_integer("MAX CHEBYSHEV PASSES PER SCF");
         useELPA            = prm.get_bool("USE ELPA");
         orthogType         = prm.get("ORTHOGONALIZATION TYPE");
         chebyshevTolerance = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
