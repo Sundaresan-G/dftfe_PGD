@@ -64,6 +64,20 @@ namespace dftfe
     void
     initializeOptimizedConstraints();
 
+    /**
+     * @brief set Veff and VeffExtPot for matrixFree AX
+     *
+     */
+    void
+    setVeffMF(
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE> &VeffJxW,
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        &VeffExtPotJxW,
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE> &VGGA);
+
 
     /**
      * @brief set Veff and VeffExtPot for matrixFree AX
@@ -79,6 +93,16 @@ namespace dftfe
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::HOST> &VGGA);
 
+    /**
+     * @brief Compute A matrix multipled by x.
+     *
+     */
+    void
+    computeAX(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE> &Ax,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE> &x);
 
     /**
      * @brief Compute A matrix multipled by x.
@@ -122,7 +146,7 @@ namespace dftfe
       d_nDofsPerCell, d_nQuadsPerCell;
 
     /// duplicate constraints object with flattened maps for faster access
-    dftUtils::constraintMatrixInfo d_constraintsInfo;
+    // dftUtils::constraintMatrixInfo d_constraintsInfo;
     std::shared_ptr<const dealii::Utilities::MPI::Partitioner>
       d_singleVectorPartitioner, d_singleBatchPartitioner;
 

@@ -62,6 +62,28 @@ namespace dftfe
         &VeffExtPotJxW,
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::HOST> &VGGA) = 0;
+
+      /**
+     * @brief Compute A matrix multipled by x.
+     *
+     */
+    virtual void
+    computeAX(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE> &Ax,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                        dftfe::utils::MemorySpace::DEVICE>
+        &x) = 0;
+
+    virtual void
+    setVeffMF(
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE> &VeffJxW,
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        &VeffExtPotJxW,
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE> &VGGA) = 0;
   };
 
 } // namespace dftfe

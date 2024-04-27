@@ -1232,68 +1232,68 @@ namespace dftfe
                                        false,
                                        false);
 
-        double dstNorm;
-        double srcNorm;
+        // double dstNorm;
+        // double srcNorm;
 
-        pcout << "MF Enter" << std::endl;
+        // pcout << "MF Enter" << std::endl;
 
-        const int           trials = 105;
-        std::vector<double> HXTimes(trials);
-        double              HXMean = 0.0, HXStdDev = 0.0;
+        const int           trials = 1;
+        // std::vector<double> HXTimes(trials);
+        // double              HXMean = 0.0, HXStdDev = 0.0;
 
         for (int j = 0; j < trials; j++)
           {
-            MPI_Barrier(d_mpiCommDomain);
-            auto start_HX = getTime(); //*/
+            // MPI_Barrier(d_mpiCommDomain);
+            // auto start_HX = getTime(); //*/
 
             d_matrixFreeBasePtr->computeAX(dst, src);
 
-            MPI_Barrier(d_mpiCommDomain);
-            auto stop_HX = getTime();
+            // MPI_Barrier(d_mpiCommDomain);
+            // auto stop_HX = getTime();
 
-            HXTimes[j] = stop_HX - start_HX;
+            // HXTimes[j] = stop_HX - start_HX;
           }
 
-        meanAndStdDev(HXTimes, HXMean, HXStdDev);
+        // meanAndStdDev(HXTimes, HXMean, HXStdDev);
 
-        pcout << "HX Mean Time: " << HXMean << "\n"
-              << "HX Std Dev Time: " << HXStdDev << "\n"; //*/
+        // pcout << "HX Mean Time: " << HXMean << "\n"
+        //       << "HX Std Dev Time: " << HXStdDev << "\n"; //*/
 
-        pcout << "MF Exit" << std::endl << std::endl;
+        // pcout << "MF Exit" << std::endl << std::endl;
 
-        d_BLASWrapperPtr->xnrm2(dst.localSize() * dst.numVectors(),
-                                dst.data(),
-                                1,
-                                d_mpiCommDomain,
-                                &dstNorm);
+        // d_BLASWrapperPtr->xnrm2(dst.localSize() * dst.numVectors(),
+        //                         dst.data(),
+        //                         1,
+        //                         d_mpiCommDomain,
+        //                         &dstNorm);
 
-        d_BLASWrapperPtr->xnrm2(src.localSize() * src.numVectors(),
-                                src.data(),
-                                1,
-                                d_mpiCommDomain,
-                                &srcNorm);
+        // d_BLASWrapperPtr->xnrm2(src.localSize() * src.numVectors(),
+        //                         src.data(),
+        //                         1,
+        //                         d_mpiCommDomain,
+        //                         &srcNorm);
 
-        pcout << "numCells: " << numCells << std::endl;
-        pcout << "numDoFsPerCell: " << numDoFsPerCell << std::endl;
-        pcout << "batchSize: " << batchSize << std::endl;
-        pcout << "numberWavefunctions: " << numberWavefunctions << std::endl
-              << std::endl;
+        // pcout << "numCells: " << numCells << std::endl;
+        // pcout << "numDoFsPerCell: " << numDoFsPerCell << std::endl;
+        // pcout << "batchSize: " << batchSize << std::endl;
+        // pcout << "numberWavefunctions: " << numberWavefunctions << std::endl
+        //       << std::endl;
 
-        pcout << "src.localSize(): " << src.localSize() << std::endl;
-        pcout << "src.numVectors(): " << src.numVectors() << std::endl;
-        pcout << "dst.localSize(): " << dst.localSize() << std::endl;
-        pcout << "dst.numVectors(): " << dst.numVectors() << std::endl
-              << std::endl;
+        // pcout << "src.localSize(): " << src.localSize() << std::endl;
+        // pcout << "src.numVectors(): " << src.numVectors() << std::endl;
+        // pcout << "dst.localSize(): " << dst.localSize() << std::endl;
+        // pcout << "dst.numVectors(): " << dst.numVectors() << std::endl
+        //       << std::endl;
 
-        pcout << "dst Norm: " << dstNorm << std::endl;
-        pcout << "src Norm: " << srcNorm << std::endl << std::endl;
+        // pcout << "dst Norm: " << dstNorm << std::endl;
+        // pcout << "src Norm: " << srcNorm << std::endl << std::endl;
       }
     else
       {
-        double dstNorm;
-        double srcNorm;
+        // double dstNorm;
+        // double srcNorm;
 
-        pcout << "CM Enter" << std::endl;
+        // pcout << "CM Enter" << std::endl;
 
         if (d_numVectorsInternal != numberWavefunctions)
           reinitNumberWavefunctions(numberWavefunctions);
@@ -1305,14 +1305,14 @@ namespace dftfe
                                        false,
                                        false);
 
-        const int           trials = 105;
-        std::vector<double> HXTimes(trials);
-        double              HXMean = 0.0, HXStdDev = 0.0;
+        const int           trials = 1;
+        // std::vector<double> HXTimes(trials);
+        // double              HXMean = 0.0, HXStdDev = 0.0;
 
         for (int j = 0; j < trials; j++)
           {
-            MPI_Barrier(d_mpiCommDomain);
-            auto start_HX = getTime();
+            // MPI_Barrier(d_mpiCommDomain);
+            // auto start_HX = getTime();
 
             /*const bool hasNonlocalComponents =
               d_dftParamsPtr->isPseudopotential &&
@@ -1455,44 +1455,44 @@ namespace dftfe
                 dst.zeroOutGhosts();
               }
 
-            MPI_Barrier(d_mpiCommDomain);
-            auto stop_HX = getTime();
+            // MPI_Barrier(d_mpiCommDomain);
+            // auto stop_HX = getTime();
 
-            HXTimes[j] = stop_HX - start_HX;
+            // HXTimes[j] = stop_HX - start_HX;
           }
 
-        meanAndStdDev(HXTimes, HXMean, HXStdDev);
+        // meanAndStdDev(HXTimes, HXMean, HXStdDev);
 
-        pcout << "HX Mean Time: " << HXMean << "\n"
-              << "HX Std Dev Time: " << HXStdDev << "\n"; //*/
+        // pcout << "HX Mean Time: " << HXMean << "\n"
+        //       << "HX Std Dev Time: " << HXStdDev << "\n"; //*/
 
-        pcout << "CM Exit" << std::endl << std::endl;
+        // pcout << "CM Exit" << std::endl << std::endl;
 
-        d_BLASWrapperPtr->xnrm2(src.localSize() * src.numVectors(),
-                                src.data(),
-                                1,
-                                d_mpiCommDomain,
-                                &srcNorm);
+        // d_BLASWrapperPtr->xnrm2(src.localSize() * src.numVectors(),
+        //                         src.data(),
+        //                         1,
+        //                         d_mpiCommDomain,
+        //                         &srcNorm);
 
-        d_BLASWrapperPtr->xnrm2(dst.localSize() * dst.numVectors(),
-                                dst.data(),
-                                1,
-                                d_mpiCommDomain,
-                                &dstNorm);
+        // d_BLASWrapperPtr->xnrm2(dst.localSize() * dst.numVectors(),
+        //                         dst.data(),
+        //                         1,
+        //                         d_mpiCommDomain,
+        //                         &dstNorm);
 
-        pcout << "numCells: " << numCells << std::endl;
-        pcout << "numDoFsPerCell: " << numDoFsPerCell << std::endl;
-        pcout << "numberWavefunctions: " << numberWavefunctions << std::endl
-              << std::endl;
+        // pcout << "numCells: " << numCells << std::endl;
+        // pcout << "numDoFsPerCell: " << numDoFsPerCell << std::endl;
+        // pcout << "numberWavefunctions: " << numberWavefunctions << std::endl
+        //       << std::endl;
 
-        pcout << "src.localSize(): " << src.localSize() << std::endl;
-        pcout << "src.numVectors(): " << src.numVectors() << std::endl;
-        pcout << "dst.localSize(): " << dst.localSize() << std::endl;
-        pcout << "dst.numVectors(): " << dst.numVectors() << std::endl
-              << std::endl;
+        // pcout << "src.localSize(): " << src.localSize() << std::endl;
+        // pcout << "src.numVectors(): " << src.numVectors() << std::endl;
+        // pcout << "dst.localSize(): " << dst.localSize() << std::endl;
+        // pcout << "dst.numVectors(): " << dst.numVectors() << std::endl
+        //       << std::endl;
 
-        pcout << "dst Norm: " << dstNorm << std::endl;
-        pcout << "src Norm: " << srcNorm << std::endl << std::endl;
+        // pcout << "dst Norm: " << dstNorm << std::endl;
+        // pcout << "src Norm: " << srcNorm << std::endl << std::endl;
       }
   }
 

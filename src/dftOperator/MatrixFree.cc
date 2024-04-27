@@ -964,6 +964,19 @@ namespace dftfe
       }
   }
 
+  template <unsigned int ndofsPerDim,
+            unsigned int nQuadPointsPerDim,
+            unsigned int batchSize>
+  void
+  MatrixFree<ndofsPerDim, nQuadPointsPerDim, batchSize>::setVeffMF(
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE> &VeffJxW,
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE> &VeffExtPotJxW,
+    dftfe::utils::MemoryStorage<dataTypes::number,
+                                dftfe::utils::MemorySpace::DEVICE> &VGGA)
+  {}
+
 
   template <unsigned int ndofsPerDim,
             unsigned int nQuadPointsPerDim,
@@ -1323,6 +1336,17 @@ namespace dftfe
                          nodalShapeFunctionValuesAtQuadPointsEO.data(),
                          arrayX);
   }
+
+  template <unsigned int ndofsPerDim,
+            unsigned int nQuadPointsPerDim,
+            unsigned int batchSize>
+  void
+  MatrixFree<ndofsPerDim, nQuadPointsPerDim, batchSize>::computeAX(
+    dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                      dftfe::utils::MemorySpace::DEVICE> &Ax,
+    dftfe::linearAlgebra::MultiVector<dataTypes::number,
+                                      dftfe::utils::MemorySpace::DEVICE> &x)
+  {}
 
 
   template <unsigned int ndofsPerDim,
