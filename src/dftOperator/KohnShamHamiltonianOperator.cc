@@ -821,12 +821,12 @@ namespace dftfe
             temp[iQuad] * cellJxWPtr[iQuad];
       }
 
-    d_VeffExtPotJxW.setValue(0);
-
 #if defined(DFTFE_WITH_DEVICE)
     d_VeffExtPotJxW.resize(d_VeffExtPotJxWHost.size());
     d_VeffExtPotJxW.copyFrom(d_VeffExtPotJxWHost);
 #endif
+
+    d_VeffExtPotJxW.setValue(0);
   }
 
 
@@ -1100,14 +1100,17 @@ namespace dftfe
     const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0),
                             scalarCoeffBeta  = dataTypes::number(0.0);
 
-    if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
-      if (d_dftParamsPtr->isPseudopotential)
-        d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
-    const bool hasNonlocalComponents =
-      d_dftParamsPtr->isPseudopotential &&
-      (d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor() >
-       0) &&
-      !onlyHPrimePartForFirstOrderDensityMatResponse;
+    // if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
+    //   if (d_dftParamsPtr->isPseudopotential)
+    //     d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+    
+    const bool hasNonlocalComponents = false;
+
+    // const bool hasNonlocalComponents =
+    //   d_dftParamsPtr->isPseudopotential &&
+    //   (d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor() >
+    //    0) &&
+    //   !onlyHPrimePartForFirstOrderDensityMatResponse;
 
     for (unsigned int iCell = 0; iCell < numCells; iCell += d_cellsBlockSizeHX)
       {
@@ -1132,18 +1135,18 @@ namespace dftfe
             cellRange);
       }
 
-    if (d_dftParamsPtr->isPseudopotential &&
-        !onlyHPrimePartForFirstOrderDensityMatResponse)
-      {
-        d_ONCVNonLocalProjectorTimesVectorBlock.setValue(0);
-        d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
-          d_ONCVNonLocalProjectorTimesVectorBlock);
-        d_ONCVnonLocalOperator->applyVOnCconjtransX(
-          CouplingStructure::diagonal,
-          d_oncvClassPtr->getCouplingMatrix(),
-          d_ONCVNonLocalProjectorTimesVectorBlock,
-          true);
-      }
+    // if (d_dftParamsPtr->isPseudopotential &&
+    //     !onlyHPrimePartForFirstOrderDensityMatResponse)
+    //   {
+    //     d_ONCVNonLocalProjectorTimesVectorBlock.setValue(0);
+    //     d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
+    //       d_ONCVNonLocalProjectorTimesVectorBlock);
+    //     d_ONCVnonLocalOperator->applyVOnCconjtransX(
+    //       CouplingStructure::diagonal,
+    //       d_oncvClassPtr->getCouplingMatrix(),
+    //       d_ONCVNonLocalProjectorTimesVectorBlock,
+    //       true);
+    //   }
 
     for (unsigned int iCell = 0; iCell < numCells; iCell += d_cellsBlockSizeHX)
       {
@@ -1314,90 +1317,81 @@ namespace dftfe
             // MPI_Barrier(d_mpiCommDomain);
             // auto start_HX = getTime();
 
-            /*const bool hasNonlocalComponents =
-              d_dftParamsPtr->isPseudopotential &&
-              (d_ONCVnonLocalOperator
-                 ->getTotalNonLocalElementsInCurrentProcessor() > 0) &&
-              !onlyHPrimePartForFirstOrderDensityMatResponse; //*/
+            const bool hasNonlocalComponents = false;
 
+            // const bool hasNonlocalComponents =
+            //   d_dftParamsPtr->isPseudopotential &&
+            //   (d_ONCVnonLocalOperator->getTotalNonLocalElementsInCurrentProcessor() >
+            //     0) &&
+            //   !onlyHPrimePartForFirstOrderDensityMatResponse; 
             const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0),
                                     scalarCoeffBeta  = dataTypes::number(0.0);
 
             if (!skip1 && !skip2 && !skip3)
               src.updateGhostValues();
-
             if (!skip1)
               {
-                // d_basisOperationsPtr->distribute(src);
-
-                /*if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
-                  if (d_dftParamsPtr->isPseudopotential)
-                    d_ONCVnonLocalOperator->initialiseOperatorActionOnX(
-                      d_kPointIndex); //*/
-
+                d_basisOperationsPtr->distribute(src);
+                // if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
+                //   if (d_dftParamsPtr->isPseudopotential)
+                //     d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
                 for (unsigned int iCell = 0; iCell < numCells;
                      iCell += d_cellsBlockSizeHX)
                   {
                     std::pair<unsigned int, unsigned int> cellRange(
                       iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
-
                     d_BLASWrapperPtr->stridedCopyToBlock(
                       numberWavefunctions,
                       numDoFsPerCell * (cellRange.second - cellRange.first),
                       src.data(),
                       d_cellWaveFunctionMatrixSrc.data() +
                         cellRange.first * numDoFsPerCell * numberWavefunctions,
-                      d_basisOperationsPtr
-                          ->d_flattenedCellDofIndexToProcessDofIndexMap.data() +
+                      d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
+                          .data() +
                         cellRange.first * numDoFsPerCell);
-
-                    /*if (hasNonlocalComponents)
+                    if (hasNonlocalComponents)
                       d_ONCVnonLocalOperator->applyCconjtransOnX(
                         d_cellWaveFunctionMatrixSrc.data() +
-                          cellRange.first * numDoFsPerCell *
-                      numberWavefunctions, cellRange); //*/
+                          cellRange.first * numDoFsPerCell * numberWavefunctions,
+                        cellRange); 
                   }
               }
-
             if (!skip2)
               {
-                /*if (d_dftParamsPtr->isPseudopotential &&
-                    !onlyHPrimePartForFirstOrderDensityMatResponse)
-                  {
-                    d_ONCVNonLocalProjectorTimesVectorBlock.setValue(0);
-                    d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
-                      d_ONCVNonLocalProjectorTimesVectorBlock, true);
-                    d_ONCVNonLocalProjectorTimesVectorBlock
-                      .accumulateAddLocallyOwnedBegin();
-                  } //*/
-
-                // src.zeroOutGhosts();
-                // inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);
-
-                /*if (d_dftParamsPtr->isPseudopotential &&
-                    !onlyHPrimePartForFirstOrderDensityMatResponse)
-                  {
-                    d_ONCVNonLocalProjectorTimesVectorBlock
-                      .accumulateAddLocallyOwnedEnd();
-                    d_ONCVNonLocalProjectorTimesVectorBlock
-                      .updateGhostValuesBegin();
-                  }
-
-                d_BLASWrapperPtr->axpby(src.locallyOwnedSize() *
-                src.numVectors(), scalarX, src.data(), scalarY, dst.data());
-
-                if (d_dftParamsPtr->isPseudopotential &&
-                    !onlyHPrimePartForFirstOrderDensityMatResponse)
-                  {
-                    d_ONCVNonLocalProjectorTimesVectorBlock.updateGhostValuesEnd();
-                    d_ONCVnonLocalOperator->applyVOnCconjtransX(
-                      CouplingStructure::diagonal,
-                      d_oncvClassPtr->getCouplingMatrix(),
-                      d_ONCVNonLocalProjectorTimesVectorBlock,
-                      true);
-                  } //*/
+                // if (d_dftParamsPtr->isPseudopotential &&
+                //     !onlyHPrimePartForFirstOrderDensityMatResponse)
+                //   {
+                //     d_ONCVNonLocalProjectorTimesVectorBlock.setValue(0);
+                //     d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
+                //       d_ONCVNonLocalProjectorTimesVectorBlock, true);
+                //     d_ONCVNonLocalProjectorTimesVectorBlock
+                //       .accumulateAddLocallyOwnedBegin();
+                //   }
+                src.zeroOutGhosts();
+                inverseMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);
+                // if (d_dftParamsPtr->isPseudopotential &&
+                //     !onlyHPrimePartForFirstOrderDensityMatResponse)
+                //   {
+                //     d_ONCVNonLocalProjectorTimesVectorBlock
+                //       .accumulateAddLocallyOwnedEnd();
+                //     d_ONCVNonLocalProjectorTimesVectorBlock.updateGhostValuesBegin();
+                //   }
+                d_BLASWrapperPtr->axpby(src.locallyOwnedSize() * src.numVectors(),
+                                scalarX,
+                                src.data(),
+                                scalarY,
+                                dst.data());
+                // if (d_dftParamsPtr->isPseudopotential &&
+                //     !onlyHPrimePartForFirstOrderDensityMatResponse)
+                //   {
+                //     d_ONCVNonLocalProjectorTimesVectorBlock.updateGhostValuesEnd();
+                //     d_ONCVnonLocalOperator->applyVOnCconjtransX(
+                //       CouplingStructure::diagonal,
+                //       d_oncvClassPtr->getCouplingMatrix(),
+                //       d_ONCVNonLocalProjectorTimesVectorBlock,
+                //       true);
+                //   }
               }
-
             if (!skip3)
               {
                 for (unsigned int iCell = 0; iCell < numCells;
@@ -1426,29 +1420,25 @@ namespace dftfe
                       numberWavefunctions,
                       numDoFsPerCell * numberWavefunctions,
                       cellRange.second - cellRange.first);
-
-                    /*if (hasNonlocalComponents)
+                    if (hasNonlocalComponents)
                       d_ONCVnonLocalOperator->applyCOnVCconjtransX(
-                        d_cellWaveFunctionMatrixDst.data(), cellRange); //*/
-
+                        d_cellWaveFunctionMatrixDst.data(), cellRange);
                     d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
                       numberWavefunctions,
                       numDoFsPerCell * (cellRange.second - cellRange.first),
-                      // scalarHX,
-                      // d_basisOperationsPtr->cellInverseMassVectorBasisData()
-                      //     .data() +
-                      //   cellRange.first * numDoFsPerCell,
+                      scalarHX,
+                      d_basisOperationsPtr->cellInverseMassVectorBasisData().data() +
+                      cellRange.first * numDoFsPerCell,
                       d_cellWaveFunctionMatrixDst.data(),
                       dst.data(),
-                      d_basisOperationsPtr
-                          ->d_flattenedCellDofIndexToProcessDofIndexMap.data() +
+                      d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
+                          .data() +
                         cellRange.first * numDoFsPerCell);
                   }
 
-                // inverseMassVectorScaledConstraintsNoneDataInfoPtr
-                //   ->distribute_slave_to_master(dst);
+                inverseMassVectorScaledConstraintsNoneDataInfoPtr
+                  ->distribute_slave_to_master(dst);
               }
-
             if (!skip1 && !skip2 && !skip3)
               {
                 dst.accumulateAddLocallyOwned();
