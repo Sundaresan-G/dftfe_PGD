@@ -1077,20 +1077,36 @@ namespace dftfe
                     projHamPar.local_m() * projHamPar.local_n(),
                   dataTypes::number(0.0));
 
-      linearAlgebraOperationsDevice::XtXAndXtHX(
-        XDevice,
-        HXDevice,
-        (M + numberBandGroups - 1)/numberBandGroups,
-        N,
-        handle,
-        mpiCommDomain,
-        devicecclMpiCommIntraPool,
-        interBandGroupComm,
-        intrapoolcomm,
-        processGrid,
-        overlapMatPar,
-        projHamPar,
-        dftParams);
+      if(!dftParams.useMixedPrecCGS_O)
+        linearAlgebraOperationsDevice::XtXAndXtHX(
+          XDevice,
+          HXDevice,
+          (M + numberBandGroups - 1)/numberBandGroups,
+          N,
+          handle,
+          mpiCommDomain,
+          devicecclMpiCommIntraPool,
+          interBandGroupComm,
+          intrapoolcomm,
+          processGrid,
+          overlapMatPar,
+          projHamPar,
+          dftParams);
+      else
+        linearAlgebraOperationsDevice::XtXAndXtHXMixedPrec(
+          XDevice,
+          HXDevice,
+          (M + numberBandGroups - 1)/numberBandGroups,
+          N,
+          handle,
+          mpiCommDomain,
+          devicecclMpiCommIntraPool,
+          interBandGroupComm,
+          intrapoolcomm,
+          processGrid,
+          overlapMatPar,
+          projHamPar,
+          dftParams);
         
 
       if (dftParams.deviceFineGrainedTimings)
@@ -1360,17 +1376,17 @@ namespace dftfe
       projHamParCopy.mmult(projHamPar, LMatPar);
 
       if (useMixedPrecOverall && dftParams.useMixedPrecSubspaceRotRR)
-        subspaceRotationRRMixedPrecScalapack(X,
-                                             M,
-                                             N,
-                                             handle,
-                                             processGrid,
-                                             mpiCommDomain,
-                                             devicecclMpiCommDomain,
-                                             interBandGroupComm,
-                                             projHamPar,
-                                             dftParams,
-                                             false);
+        subspaceRotationRRMixedPrecScalapack(XDevice,
+                                            (M + numberBandGroups - 1)/numberBandGroups,
+                                            N,
+                                            handle,
+                                            processGrid,
+                                            intrapoolcomm,
+                                            devicecclMpiCommIntraPool,
+                                            interBandGroupComm,
+                                            projHamPar,
+                                            dftParams,
+                                            false);
       else
         subspaceRotationScalapack(XDevice,
                                   (M + numberBandGroups - 1)/numberBandGroups,
