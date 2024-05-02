@@ -114,6 +114,22 @@ namespace dftfe
       dftfe::ScaLAPACKMatrix<dataTypes::number> &      overlapMatPar,
       dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
       const dftParameters &                            dftParams);
+    
+    void
+    XtXAndXtHXMixedPrec(
+      const dataTypes::number *                        X,
+      const dataTypes::number *                        HX,
+      const std::size_t                                M,
+      const std::size_t                                N,
+      dftfe::utils::deviceBlasHandle_t &               handle,
+      const MPI_Comm &                                 mpiCommDomain,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommIntraPool,
+      const MPI_Comm &                                 interBandGroupComm,
+      const MPI_Comm &                                 intrapoolcomm,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      overlapMatPar,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      const dftParameters &                            dftParams);
       
     void
     fillParallelOverlapMatScalapack(
