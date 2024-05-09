@@ -378,4 +378,6 @@ class Plotters:
                         elimit = self.eLimit,
                         dirname = self.outdir)
         gph[1].grid(True)
+        gph[1].set_xlabel('E - E$_f$ (eV)')
+        gph[1].set_ylabel('DOS')
         gph[0].savefig(self.outdir+'dosplot.png', dpi = 500)
