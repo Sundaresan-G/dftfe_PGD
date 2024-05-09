@@ -48,7 +48,7 @@ class Plotters:
         with open(filesPath+"fermiEnergy.out") as f:
             for line in f:
                 if (len(line) != 0):
-                    self.eFermi = float(line.strip())
+                    self.eFermi = float(line.strip()) # in Ha
 
         if self.isPeriodic:
             self.ionPosVecType = "Direct"
@@ -274,8 +274,8 @@ class Plotters:
 
                 with tag("dos"):
                     with tag('i', name="efermi"):
-                        text(self.eFermi*self.hartreeToEv)
-                    
+                        # text(self.eFermi*self.hartreeToEv)
+                        text (0.0)
                     with tag('total'):
                         with tag('array'):
                             with tag("dimension", dim = "1"):
