@@ -4,6 +4,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # Set the name of the project and target:
 SET(TARGET "dftfe_exe")
 SET(TARGETLIB "dftfe")
@@ -51,6 +52,7 @@ SET(TARGET_SRC
   ./src/dft/energyCalculator.cc
   ./src/dft/densityCalculator.cc
   ./src/dft/densityFirstOrderResponseCalculator.cc
+  ./src/dft/applyMultipoleDirichletBC.cc
   ./src/excManager/excDensityBaseClass.cpp
   ./src/excManager/excDensityLDAClass.cpp
   ./src/excManager/excWavefunctionBaseClass.cpp
@@ -547,7 +549,7 @@ ENDIF()
 #
 # ELPA. Pass path to -DCMAKE_PREFIX_PATH
 #
-find_package(ELPA 2022 REQUIRED)
+find_package(ELPA 2024 REQUIRED)
 MESSAGE(STATUS "Will Link With ELPA")
 target_link_libraries(${TARGETLIB} PUBLIC ELPA::ELPA)
 
