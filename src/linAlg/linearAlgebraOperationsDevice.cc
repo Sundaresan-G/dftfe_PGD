@@ -4402,7 +4402,7 @@ namespace dftfe
                       interBandGroupComm);
 
 
-      if (dftParams.verbosity >= 4)
+      if (dftParams.verbosity >= 5)
         {
           if (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
             std::cout << "L-2 Norm of residue   :" << std::endl;
@@ -4410,13 +4410,13 @@ namespace dftfe
       for (unsigned int iWave = 0; iWave < N; ++iWave)
         residualNorm[iWave] = std::sqrt(residualNorm[iWave]);
 
-      if (dftParams.verbosity >= 4 &&
+      if (dftParams.verbosity >= 5 &&
           dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
         for (unsigned int iWave = 0; iWave < N; ++iWave)
           std::cout << "eigen vector " << iWave << ": " << residualNorm[iWave]
                     << std::endl;
 
-      if (dftParams.verbosity >= 4)
+      if (dftParams.verbosity >= 5)
         if (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
           std::cout << std::endl;
     }
