@@ -1304,11 +1304,18 @@ namespace dftfe
 
     initializeKohnShamDFTOperator();
 
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(
+        mpi_communicator, "initializeKohnShamDFTOperator completed");
+
     d_netFloatingDispSinceLastCheckForSmearedChargeOverlaps.clear();
     d_netFloatingDispSinceLastCheckForSmearedChargeOverlaps.resize(
       atomLocations.size() * 3, 0.0);
 
     computingTimerStandard.leave_subsection("KSDFT problem initialization");
+
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "KSDFT problem initialization completed");
   }
 
   template <unsigned int              FEOrder,
@@ -1810,6 +1817,9 @@ namespace dftfe
     if (d_dftParamsPtr->meshAdaption)
       aposterioriMeshGenerate();
 
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "aposterioriMeshGenerate completed");
+
     if (d_dftParamsPtr->restartFolder != "." && d_dftParamsPtr->saveRhoData &&
         dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {
@@ -2052,11 +2062,17 @@ namespace dftfe
                                 interBandGroupComm,
                                 *d_dftParamsPtr);
 
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "energyCalc init completed");
+
 
     // set up linear solver
     dealiiLinearSolver CGSolver(d_mpiCommParent,
                                 mpi_communicator,
                                 dealiiLinearSolver::CG);
+
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "CGSolver init completed");
 
     // set up linear solver Device
 #ifdef DFTFE_WITH_DEVICE
@@ -2066,6 +2082,9 @@ namespace dftfe
                                         d_BLASWrapperPtr);
 #endif
 
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "CGSolverDevice init completed");
+
     //
     // set up solver functions for Helmholtz to be used only when Kerker mixing
     // is on use higher polynomial order dofHandler
@@ -2074,12 +2093,18 @@ namespace dftfe
       kerkerPreconditionedResidualSolverProblem(d_mpiCommParent,
                                                 mpi_communicator);
 
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "kerkerPreconditionedResidualSolverProblem created");
+
     // set up solver functions for Helmholtz Device
 #ifdef DFTFE_WITH_DEVICE
     kerkerSolverProblemDevice<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>
       kerkerPreconditionedResidualSolverProblemDevice(d_mpiCommParent,
                                                       mpi_communicator);
 #endif
+
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "kerkerPreconditionedResidualSolverProblemDevice created");
 
     if (d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER" ||
         d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA")
@@ -2114,6 +2139,9 @@ namespace dftfe
 
     // FIXME: Check if this call can be removed
     d_phiTotalSolverProblem.clear();
+
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "kerkerPreconditionedResidualSolverProblem init completed");
 
     //
     // solve vself in bins
@@ -2192,6 +2220,9 @@ namespace dftfe
     computingTimerStandard.leave_subsection("Nuclear self-potential solve");
     computing_timer.leave_subsection("Nuclear self-potential solve");
 
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "Nuclear self-potential solve completed");
+
     if ((d_dftParamsPtr->isPseudopotential ||
          d_dftParamsPtr->smearedNuclearCharges))
       {
@@ -2210,6 +2241,9 @@ namespace dftfe
         kohnShamDFTEigenOperator.computeVEffExternalPotCorr(d_pseudoVLoc);
         computingTimerStandard.leave_subsection("Init local PSP");
       }
+
+    if (d_dftParamsPtr->verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(mpi_communicator, "Init local PSP completed");
 
 
     computingTimerStandard.enter_subsection("Total scf solve");
