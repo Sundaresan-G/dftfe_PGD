@@ -35,6 +35,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 
 namespace dftfe
 {
@@ -130,23 +131,67 @@ namespace dftfe
         }
     }
 
+    // Only for linux systems to get in kB
+    void process_mem_usage(double& vm_usage, double& resident_set)
+    {
+        vm_usage     = 0.0;
+        resident_set = 0.0;
+
+        // the two fields we want
+        unsigned long vsize;
+        long rss;
+        {
+            std::string ignore;
+            std::ifstream ifs("/proc/self/stat", std::ios_base::in);
+            ifs >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore
+                    >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore
+                    >> ignore >> ignore >> vsize >> rss;
+        }
+
+        long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
+        vm_usage = vsize / 1024.0;
+        resident_set = rss * page_size_kb;
+    }
+
     void
     printCurrentMemoryUsage(const MPI_Comm &mpiComm, const std::string message)
     {
-#ifdef USE_PETSC
-      PetscLogDouble bytes;
-      PetscMemoryGetCurrentUsage(&bytes);
-      const double       maxBytes = dealii::Utilities::MPI::max(bytes, mpiComm);
+      double vm, rss;
+      process_mem_usage(vm, rss);
+      double       maxVm = dealii::Utilities::MPI::max(vm, mpiComm);
+      double       maxRss = dealii::Utilities::MPI::max(rss, mpiComm);
       const unsigned int taskId =
         dealii::Utilities::MPI::this_mpi_process(mpiComm);
+      
+      // Convert to GB
+      maxVm = maxVm / 1.0e+6;
+      maxRss = maxRss / 1.0e+6;
+      fflush(stdout);
       if (taskId == 0)
         std::cout << std::endl
                   << message +
                        ", Current maximum memory usage across all processors: "
-                  << maxBytes / 1.0e+6 << " MB." << std::endl
+                  << maxVm << " GB (virtual VM) and " << maxRss << " GB (resident RSS).\n"
+                  << "Rank in MPI_COMM_WORLD: " 
+                  << dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)
+                  << std::endl
                   << std::endl;
+      fflush(stdout);
       MPI_Barrier(mpiComm);
-#endif
+      // #ifdef USE_PETSC
+      //       PetscLogDouble bytes;
+      //       PetscMemoryGetCurrentUsage(&bytes);
+      //       const double       maxBytes = dealii::Utilities::MPI::max(bytes, mpiComm);
+      //       const unsigned int taskId =
+      //         dealii::Utilities::MPI::this_mpi_process(mpiComm);
+      //       if (taskId == 0)
+      //         std::cout << std::endl
+      //                   << message +
+      //                        ", Current maximum memory usage across all processors: "
+      //                   << maxBytes / 1.0e+6 << " MB." << std::endl
+      //                   << std::endl;
+      //       MPI_Barrier(mpiComm);
+      // #endif
     }
 
     void
