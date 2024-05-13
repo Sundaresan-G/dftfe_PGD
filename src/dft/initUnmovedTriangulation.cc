@@ -56,7 +56,7 @@ namespace dftfe
 
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(
-        mpi_communicator,
+        intrapoolcomm,
         "Inititialization of meshmovement class objects completed");
     //
     // initialize FE objects
@@ -69,7 +69,7 @@ namespace dftfe
     dofHandlerEigen.distribute_dofs(FEEigen);
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator, "Distributed dofs");
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "Distributed dofs");
     //
     // extract locally owned dofs
     //
@@ -123,7 +123,7 @@ namespace dftfe
 #endif
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator, "Extracted indices");
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "Extracted indices");
 
     // std::cout<< " procId: "<< this_mpi_process << " ,locallly_owned_dofs:
     // "<<dofHandler.n_locally_owned_dofs()<<std::endl;
@@ -291,7 +291,7 @@ namespace dftfe
 
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(
-        mpi_communicator, "Created the basic constraint matrices");
+        intrapoolcomm, "Created the basic constraint matrices");
 
     forcePtr->initUnmoved(triangulation,
                           d_mesh.getSerialMeshUnmoved(),
@@ -303,7 +303,7 @@ namespace dftfe
                           true);
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator, "Force initUnmoved");
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "Force initUnmoved");
 
 
     d_excManagerPtr->init(d_dftParamsPtr->xc_id,

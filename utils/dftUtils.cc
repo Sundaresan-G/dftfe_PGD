@@ -198,8 +198,8 @@ namespace dftfe
                   << "Current maximum GPU memory usage ( and minimum free space) across all processors: "
                   << maxUsedGB << " GB (used) and " << minFreeGB << " GB (free).\n"
 #endif
-                  << "Rank in MPI_COMM_WORLD: " 
-                  << dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)
+                  // << "Rank in MPI_COMM_WORLD: " 
+                  // << dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)
                   << std::endl
                   << std::endl;
       fflush(stdout);
