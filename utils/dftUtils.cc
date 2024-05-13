@@ -36,6 +36,9 @@
 #include <fstream>
 #include <iostream>
 #include <unistd.h>
+#ifdef DFTFE_WITH_DEVICE
+  # include <DeviceAPICalls.h>
+#endif
 
 namespace dftfe
 {
@@ -162,6 +165,25 @@ namespace dftfe
       double       maxRss = dealii::Utilities::MPI::max(rss, mpiComm);
       const unsigned int taskId =
         dealii::Utilities::MPI::this_mpi_process(mpiComm);
+
+#ifdef DFTFE_WITH_DEVICE
+
+      std::size_t free, total;
+
+      dftfe::utils::deviceMemGetInfo(&free, &total);
+
+      double freeGB  = free / 1.0e+9;
+      double totalGB = total / 1.0e+9;
+
+      double usedGB = totalGB - freeGB;
+
+      // Find max
+      double maxUsedGB = dealii::Utilities::MPI::max(usedGB, mpiComm);
+
+      // find min
+      double minFreeGB = dealii::Utilities::MPI::min(freeGB, mpiComm);
+
+#endif
       
       // Convert to GB
       maxVm = maxVm / 1.0e+6;
@@ -172,6 +194,10 @@ namespace dftfe
                   << message +
                        ", Current maximum memory usage across all processors: "
                   << maxVm << " GB (virtual VM) and " << maxRss << " GB (resident RSS).\n"
+#ifdef DFTFE_WITH_DEVICE
+                  << "Current maximum GPU memory usage ( and minimum free space) across all processors: "
+                  << maxUsedGB << " GB (used) and " << minFreeGB << " GB (free).\n"
+#endif
                   << "Rank in MPI_COMM_WORLD: " 
                   << dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)
                   << std::endl
