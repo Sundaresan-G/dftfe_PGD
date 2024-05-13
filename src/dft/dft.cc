@@ -1806,11 +1806,14 @@ namespace dftfe
     if (d_dftParamsPtr->solverMode == "GS")
       {
         solve(true, true, d_isRestartGroundStateCalcFromChk);
+        if (d_dftParamsPtr->writeBandsFile)
+          writeBands();
       }
     else if (d_dftParamsPtr->solverMode == "NSCF")
       {
         solveNoSCF();
-        writeBands();
+        if (d_dftParamsPtr->writeBandsFile)
+          writeBands();
       }
 
     if (d_dftParamsPtr->writeStructreEnergyForcesFileForPostProcess)
@@ -3507,15 +3510,27 @@ namespace dftfe
     else
       {
         pcout << "SCF iterations converged to the specified tolerance after: "
-            << scfIter << " iterations." << std::endl;
+              << scfIter << " iterations." << std::endl;
 
         if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
           {
-            if (d_dftParamsPtr->solverMode == "GS")
+            if (d_dftParamsPtr->solverMode == "GS" &&
+                d_dftParamsPtr->saveRhoData)
               {
                 FILE *fermiFile;
                 fermiFile = fopen("fermiEnergy.out", "w");
-                fprintf(fermiFile,"%.14g\n", fermiEnergy);
+                if (d_dftParamsPtr->constraintMagnetization)
+                  {
+                    fprintf(fermiFile,
+                            "%.14g\n%.14g\n%.14g\n ",
+                            fermiEnergy,
+                            fermiEnergyUp,
+                            fermiEnergyDown);
+                  }
+                else
+                  {
+                    fprintf(fermiFile, "%.14g\n", fermiEnergy);
+                  }
                 fclose(fermiFile);
               }
           }
@@ -4329,7 +4344,7 @@ namespace dftfe
         std::min(d_numEigenValues, maxeigenIndex + 10) :
         d_dftParamsPtr->highestStateOfInterestForChebFiltering;
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
-      { 
+      {
         FILE *pFile;
         pFile = fopen("bands.out", "w");
         fprintf(pFile, "%d %d \n", totkPoints, numberEigenValues);
