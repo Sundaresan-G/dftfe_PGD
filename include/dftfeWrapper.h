@@ -372,7 +372,8 @@ namespace dftfe
     dftBase *
     getDftfeBasePtr();
 
-    dftParameters * getDftfeParamsPtr();
+    dftParameters *
+    getDftfeParamsPtr();
 
   private:
     void
