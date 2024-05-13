@@ -1262,7 +1262,19 @@ namespace dftfe
   }
 
 
-  void
+    dftParameters *
+    dftfeWrapper::getDftfeParamsPtr()
+    {
+        AssertThrow(
+                d_mpi_comm_parent != MPI_COMM_NULL,
+                dealii::ExcMessage(
+                        "DFT-FE Error: dftfeWrapper cannot be used on MPI_COMM_NULL."));
+        return d_dftfeParamsPtr;
+    }
+
+
+
+    void
   dftfeWrapper::writeDomainAndAtomCoordinates(const std::string Path) const
   {
     AssertThrow(
