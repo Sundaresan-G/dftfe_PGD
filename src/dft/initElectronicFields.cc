@@ -89,7 +89,7 @@ namespace dftfe
 
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(
-        mpi_communicator, "Overloaded constraint matrices initialized");
+        intrapoolcomm, "Overloaded constraint matrices initialized");
 
     //
     // initialize PSI and density
@@ -128,13 +128,13 @@ namespace dftfe
 
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(
-        mpi_communicator,
+        intrapoolcomm,
         "Created flattened array eigenvectors before update ghost values");
 
     readPSI();
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator,
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
                                         "Created flattened array eigenvectors");
 
     // if(!(d_dftParamsPtr->chkType==2 && d_dftParamsPtr->restartFromChk))
@@ -144,7 +144,7 @@ namespace dftfe
     //}
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator, "initRho called");
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "initRho called");
 
 #ifdef DFTFE_WITH_DEVICE
 

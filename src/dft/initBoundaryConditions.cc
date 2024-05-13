@@ -141,7 +141,7 @@ namespace dftfe
       }
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator,
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
                                         "Dofs distributed again");
     d_supportPoints.clear();
     dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
@@ -161,7 +161,7 @@ namespace dftfe
         << init_dofhandlerobjs << std::endl;
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator,
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
                                         "Created support points");
     //
     // matrix free data structure
@@ -250,7 +250,7 @@ namespace dftfe
     */
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator,
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
                                         "Called force init moved");
 
     MPI_Barrier(d_mpiCommParent);
@@ -418,7 +418,7 @@ namespace dftfe
             << init_mf << std::endl;
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(mpi_communicator,
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
                                         "Called matrix free reinit");
 
     // compute volume of the domain

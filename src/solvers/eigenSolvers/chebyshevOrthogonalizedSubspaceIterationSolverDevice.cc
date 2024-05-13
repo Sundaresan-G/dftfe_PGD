@@ -173,6 +173,12 @@ namespace dftfe
     const bool               useMixedPrecOverall,
     const bool               isFirstScf)
   {
+
+    // print current memory usage
+    if (d_dftParams.verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "Starting Chebyshev solve");
+
     dealii::TimerOutput computingTimerStandard(
       operatorMatrix.getMPICommunicatorDomain(),
       pcout,
@@ -234,6 +240,11 @@ namespace dftfe
         NULL;
     operatorMatrix.reinitNumberWavefunctions(vectorsBlockSize);
 
+    // print current memory usage
+    if (d_dftParams.verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "Allocated additional Device Vectors");
+
     if (isFirstFilteringCall)
       {
         if (d_dftParams.deviceFineGrainedTimings)
@@ -291,6 +302,11 @@ namespace dftfe
 
         d_upperBoundUnWantedSpectrum = bounds.second;
       }
+
+    // print current memory usage
+    if (d_dftParams.verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "Lanczos Upper Bound computed");
 
     if (d_dftParams.deviceFineGrainedTimings)
       {
@@ -545,6 +561,11 @@ namespace dftfe
           pcout << "ChebyShev Filtering Done: " << std::endl;
       }
 
+    // print current memory usage
+    if (d_dftParams.verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "Chebyshev filtering completed");
+
 
     // if (numberBandGroups > 1)
     //   {
@@ -717,6 +738,11 @@ namespace dftfe
           "Total RR GEP step time");
       }
 
+    // print current memory usage
+    if (d_dftParams.verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "Rayleigh Ritz completed");
+
 
     if (computeResidual)
       {
@@ -764,6 +790,11 @@ namespace dftfe
             computingTimerStandard.leave_subsection("Residual norm");
           }
       }
+
+    // print current memory usage
+    if (d_dftParams.verbosity >= 4)
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "Residual norm computation completed");
 
     //
     // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
