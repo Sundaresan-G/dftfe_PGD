@@ -843,7 +843,11 @@ namespace dftfe
         if (useDevice && setDeviceToMPITaskBindingInternally &&
             !d_isDeviceToMPITaskBindingSetInternally)
           {
+            if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) == 0)
+              std::cout << "Entered setupDevice()" << std::endl << std::flush;
             dftfe::utils::deviceKernelsGeneric::setupDevice();
+            if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) == 0)
+              std::cout << "Exited setupDevice()" << std::endl << std::flush;
             d_isDeviceToMPITaskBindingSetInternally = true;
           }
 #endif
