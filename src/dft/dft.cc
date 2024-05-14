@@ -2148,75 +2148,75 @@ namespace dftfe
     //
     computing_timer.enter_subsection("Nuclear self-potential solve");
     computingTimerStandard.enter_subsection("Nuclear self-potential solve");
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice and d_dftParamsPtr->vselfGPU)
-      d_vselfBinsManager.solveVselfInBinsDevice(
-        d_basisOperationsPtrElectroHost,
-        d_baseDofHandlerIndexElectro,
-        d_phiTotAXQuadratureIdElectro,
-        d_binsStartDofHandlerIndexElectro,
-        FEOrder == FEOrderElectro ?
-          d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
-          d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
-        d_BLASWrapperPtr,
-        d_constraintsPRefined,
-        d_imagePositionsTrunc,
-        d_imageIdsTrunc,
-        d_imageChargesTrunc,
-        d_localVselfs,
-        d_bQuadValuesAllAtoms,
-        d_bQuadAtomIdsAllAtoms,
-        d_bQuadAtomIdsAllAtomsImages,
-        d_bCellNonTrivialAtomIds,
-        d_bCellNonTrivialAtomIdsBins,
-        d_bCellNonTrivialAtomImageIds,
-        d_bCellNonTrivialAtomImageIdsBins,
-        d_smearedChargeWidths,
-        d_smearedChargeScaling,
-        d_smearedChargeQuadratureIdElectro,
-        d_dftParamsPtr->smearedNuclearCharges);
-    else
-      d_vselfBinsManager.solveVselfInBins(
-        d_basisOperationsPtrElectroHost,
-        d_binsStartDofHandlerIndexElectro,
-        d_phiTotAXQuadratureIdElectro,
-        d_constraintsPRefined,
-        d_imagePositionsTrunc,
-        d_imageIdsTrunc,
-        d_imageChargesTrunc,
-        d_localVselfs,
-        d_bQuadValuesAllAtoms,
-        d_bQuadAtomIdsAllAtoms,
-        d_bQuadAtomIdsAllAtomsImages,
-        d_bCellNonTrivialAtomIds,
-        d_bCellNonTrivialAtomIdsBins,
-        d_bCellNonTrivialAtomImageIds,
-        d_bCellNonTrivialAtomImageIdsBins,
-        d_smearedChargeWidths,
-        d_smearedChargeScaling,
-        d_smearedChargeQuadratureIdElectro,
-        d_dftParamsPtr->smearedNuclearCharges);
-#else
-    d_vselfBinsManager.solveVselfInBins(d_basisOperationsPtrElectroHost,
-                                        d_binsStartDofHandlerIndexElectro,
-                                        d_phiTotAXQuadratureIdElectro,
-                                        d_constraintsPRefined,
-                                        d_imagePositionsTrunc,
-                                        d_imageIdsTrunc,
-                                        d_imageChargesTrunc,
-                                        d_localVselfs,
-                                        d_bQuadValuesAllAtoms,
-                                        d_bQuadAtomIdsAllAtoms,
-                                        d_bQuadAtomIdsAllAtomsImages,
-                                        d_bCellNonTrivialAtomIds,
-                                        d_bCellNonTrivialAtomIdsBins,
-                                        d_bCellNonTrivialAtomImageIds,
-                                        d_bCellNonTrivialAtomImageIdsBins,
-                                        d_smearedChargeWidths,
-                                        d_smearedChargeScaling,
-                                        d_smearedChargeQuadratureIdElectro,
-                                        d_dftParamsPtr->smearedNuclearCharges);
-#endif
+// #ifdef DFTFE_WITH_DEVICE
+//     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->vselfGPU)
+//       d_vselfBinsManager.solveVselfInBinsDevice(
+//         d_basisOperationsPtrElectroHost,
+//         d_baseDofHandlerIndexElectro,
+//         d_phiTotAXQuadratureIdElectro,
+//         d_binsStartDofHandlerIndexElectro,
+//         FEOrder == FEOrderElectro ?
+//           d_basisOperationsPtrDevice->cellStiffnessMatrixBasisData() :
+//           d_basisOperationsPtrElectroDevice->cellStiffnessMatrixBasisData(),
+//         d_BLASWrapperPtr,
+//         d_constraintsPRefined,
+//         d_imagePositionsTrunc,
+//         d_imageIdsTrunc,
+//         d_imageChargesTrunc,
+//         d_localVselfs,
+//         d_bQuadValuesAllAtoms,
+//         d_bQuadAtomIdsAllAtoms,
+//         d_bQuadAtomIdsAllAtomsImages,
+//         d_bCellNonTrivialAtomIds,
+//         d_bCellNonTrivialAtomIdsBins,
+//         d_bCellNonTrivialAtomImageIds,
+//         d_bCellNonTrivialAtomImageIdsBins,
+//         d_smearedChargeWidths,
+//         d_smearedChargeScaling,
+//         d_smearedChargeQuadratureIdElectro,
+//         d_dftParamsPtr->smearedNuclearCharges);
+//     else
+//       d_vselfBinsManager.solveVselfInBins(
+//         d_basisOperationsPtrElectroHost,
+//         d_binsStartDofHandlerIndexElectro,
+//         d_phiTotAXQuadratureIdElectro,
+//         d_constraintsPRefined,
+//         d_imagePositionsTrunc,
+//         d_imageIdsTrunc,
+//         d_imageChargesTrunc,
+//         d_localVselfs,
+//         d_bQuadValuesAllAtoms,
+//         d_bQuadAtomIdsAllAtoms,
+//         d_bQuadAtomIdsAllAtomsImages,
+//         d_bCellNonTrivialAtomIds,
+//         d_bCellNonTrivialAtomIdsBins,
+//         d_bCellNonTrivialAtomImageIds,
+//         d_bCellNonTrivialAtomImageIdsBins,
+//         d_smearedChargeWidths,
+//         d_smearedChargeScaling,
+//         d_smearedChargeQuadratureIdElectro,
+//         d_dftParamsPtr->smearedNuclearCharges);
+// #else
+//     d_vselfBinsManager.solveVselfInBins(d_basisOperationsPtrElectroHost,
+//                                         d_binsStartDofHandlerIndexElectro,
+//                                         d_phiTotAXQuadratureIdElectro,
+//                                         d_constraintsPRefined,
+//                                         d_imagePositionsTrunc,
+//                                         d_imageIdsTrunc,
+//                                         d_imageChargesTrunc,
+//                                         d_localVselfs,
+//                                         d_bQuadValuesAllAtoms,
+//                                         d_bQuadAtomIdsAllAtoms,
+//                                         d_bQuadAtomIdsAllAtomsImages,
+//                                         d_bCellNonTrivialAtomIds,
+//                                         d_bCellNonTrivialAtomIdsBins,
+//                                         d_bCellNonTrivialAtomImageIds,
+//                                         d_bCellNonTrivialAtomImageIdsBins,
+//                                         d_smearedChargeWidths,
+//                                         d_smearedChargeScaling,
+//                                         d_smearedChargeQuadratureIdElectro,
+//                                         d_dftParamsPtr->smearedNuclearCharges);
+// #endif
     computingTimerStandard.leave_subsection("Nuclear self-potential solve");
     computing_timer.leave_subsection("Nuclear self-potential solve");
 
@@ -2622,102 +2622,102 @@ namespace dftfe
             not d_dftParamsPtr->pinnedNodeForPBC)
           {
 #ifdef DFTFE_WITH_DEVICE
-            if (scfIter > 0)
-              d_phiTotalSolverProblemDevice.reinit(
-                d_basisOperationsPtrElectroHost,
-                d_phiTotRhoIn,
-                *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                d_phiTotDofHandlerIndexElectro,
-                d_densityQuadratureIdElectro,
-                d_phiTotAXQuadratureIdElectro,
-                d_atomNodeIdToChargeMap,
-                d_bQuadValuesAllAtoms,
-                d_smearedChargeQuadratureIdElectro,
-                densityInQuadValuesCopy,
-                d_BLASWrapperPtr,
-                false,
-                false,
-                d_dftParamsPtr->smearedNuclearCharges,
-                true,
-                false,
-                0,
-                false,
-                true,
-                d_dftParamsPtr->multipoleBoundaryConditions);
-            else
-              {
-                d_phiTotalSolverProblemDevice.reinit(
-                  d_basisOperationsPtrElectroHost,
-                  d_phiTotRhoIn,
-                  *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                  d_phiTotDofHandlerIndexElectro,
-                  d_densityQuadratureIdElectro,
-                  d_phiTotAXQuadratureIdElectro,
-                  d_atomNodeIdToChargeMap,
-                  d_bQuadValuesAllAtoms,
-                  d_smearedChargeQuadratureIdElectro,
-                  densityInQuadValuesCopy,
-                  d_BLASWrapperPtr,
-                  true,
-                  d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                    d_dftParamsPtr->periodicZ &&
-                    !d_dftParamsPtr->pinnedNodeForPBC,
-                  d_dftParamsPtr->smearedNuclearCharges,
-                  true,
-                  false,
-                  0,
-                  true,
-                  false,
-                  d_dftParamsPtr->multipoleBoundaryConditions);
-              }
+            // if (scfIter > 0)
+            //   d_phiTotalSolverProblemDevice.reinit(
+            //     d_basisOperationsPtrElectroHost,
+            //     d_phiTotRhoIn,
+            //     *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+            //     d_phiTotDofHandlerIndexElectro,
+            //     d_densityQuadratureIdElectro,
+            //     d_phiTotAXQuadratureIdElectro,
+            //     d_atomNodeIdToChargeMap,
+            //     d_bQuadValuesAllAtoms,
+            //     d_smearedChargeQuadratureIdElectro,
+            //     densityInQuadValuesCopy,
+            //     d_BLASWrapperPtr,
+            //     false,
+            //     false,
+            //     d_dftParamsPtr->smearedNuclearCharges,
+            //     true,
+            //     false,
+            //     0,
+            //     false,
+            //     true,
+            //     d_dftParamsPtr->multipoleBoundaryConditions);
+            // else
+            //   {
+            //     d_phiTotalSolverProblemDevice.reinit(
+            //       d_basisOperationsPtrElectroHost,
+            //       d_phiTotRhoIn,
+            //       *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+            //       d_phiTotDofHandlerIndexElectro,
+            //       d_densityQuadratureIdElectro,
+            //       d_phiTotAXQuadratureIdElectro,
+            //       d_atomNodeIdToChargeMap,
+            //       d_bQuadValuesAllAtoms,
+            //       d_smearedChargeQuadratureIdElectro,
+            //       densityInQuadValuesCopy,
+            //       d_BLASWrapperPtr,
+            //       true,
+            //       d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+            //         d_dftParamsPtr->periodicZ &&
+            //         !d_dftParamsPtr->pinnedNodeForPBC,
+            //       d_dftParamsPtr->smearedNuclearCharges,
+            //       true,
+            //       false,
+            //       0,
+            //       true,
+            //       false,
+            //       d_dftParamsPtr->multipoleBoundaryConditions);
+            //   }
 #endif
           }
         else
           {
-            if (scfIter > 0)
-              d_phiTotalSolverProblem.reinit(
-                d_basisOperationsPtrElectroHost,
-                d_phiTotRhoIn,
-                *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                d_phiTotDofHandlerIndexElectro,
-                d_densityQuadratureIdElectro,
-                d_phiTotAXQuadratureIdElectro,
-                d_atomNodeIdToChargeMap,
-                d_bQuadValuesAllAtoms,
-                d_smearedChargeQuadratureIdElectro,
-                densityInQuadValuesCopy,
-                false,
-                false,
-                d_dftParamsPtr->smearedNuclearCharges,
-                true,
-                false,
-                0,
-                false,
-                true,
-                d_dftParamsPtr->multipoleBoundaryConditions);
-            else
-              d_phiTotalSolverProblem.reinit(
-                d_basisOperationsPtrElectroHost,
-                d_phiTotRhoIn,
-                *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                d_phiTotDofHandlerIndexElectro,
-                d_densityQuadratureIdElectro,
-                d_phiTotAXQuadratureIdElectro,
-                d_atomNodeIdToChargeMap,
-                d_bQuadValuesAllAtoms,
-                d_smearedChargeQuadratureIdElectro,
-                densityInQuadValuesCopy,
-                true,
-                d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                  d_dftParamsPtr->periodicZ &&
-                  !d_dftParamsPtr->pinnedNodeForPBC,
-                d_dftParamsPtr->smearedNuclearCharges,
-                true,
-                false,
-                0,
-                true,
-                false,
-                d_dftParamsPtr->multipoleBoundaryConditions);
+            // if (scfIter > 0)
+            //   d_phiTotalSolverProblem.reinit(
+            //     d_basisOperationsPtrElectroHost,
+            //     d_phiTotRhoIn,
+            //     *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+            //     d_phiTotDofHandlerIndexElectro,
+            //     d_densityQuadratureIdElectro,
+            //     d_phiTotAXQuadratureIdElectro,
+            //     d_atomNodeIdToChargeMap,
+            //     d_bQuadValuesAllAtoms,
+            //     d_smearedChargeQuadratureIdElectro,
+            //     densityInQuadValuesCopy,
+            //     false,
+            //     false,
+            //     d_dftParamsPtr->smearedNuclearCharges,
+            //     true,
+            //     false,
+            //     0,
+            //     false,
+            //     true,
+            //     d_dftParamsPtr->multipoleBoundaryConditions);
+            // else
+            //   d_phiTotalSolverProblem.reinit(
+            //     d_basisOperationsPtrElectroHost,
+            //     d_phiTotRhoIn,
+            //     *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+            //     d_phiTotDofHandlerIndexElectro,
+            //     d_densityQuadratureIdElectro,
+            //     d_phiTotAXQuadratureIdElectro,
+            //     d_atomNodeIdToChargeMap,
+            //     d_bQuadValuesAllAtoms,
+            //     d_smearedChargeQuadratureIdElectro,
+            //     densityInQuadValuesCopy,
+            //     true,
+            //     d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+            //       d_dftParamsPtr->periodicZ &&
+            //       !d_dftParamsPtr->pinnedNodeForPBC,
+            //     d_dftParamsPtr->smearedNuclearCharges,
+            //     true,
+            //     false,
+            //     0,
+            //     true,
+            //     false,
+            //     d_dftParamsPtr->multipoleBoundaryConditions);
           }
 
         computing_timer.enter_subsection("phiTot solve");
@@ -2727,18 +2727,18 @@ namespace dftfe
             not d_dftParamsPtr->pinnedNodeForPBC)
           {
 #ifdef DFTFE_WITH_DEVICE
-            CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
-                                 d_dftParamsPtr->absLinearSolverTolerance,
-                                 d_dftParamsPtr->maxLinearSolverIterations,
-                                 d_dftParamsPtr->verbosity);
+            // CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
+            //                      d_dftParamsPtr->absLinearSolverTolerance,
+            //                      d_dftParamsPtr->maxLinearSolverIterations,
+            //                      d_dftParamsPtr->verbosity);
 #endif
           }
         else
           {
-            CGSolver.solve(d_phiTotalSolverProblem,
-                           d_dftParamsPtr->absLinearSolverTolerance,
-                           d_dftParamsPtr->maxLinearSolverIterations,
-                           d_dftParamsPtr->verbosity);
+            // CGSolver.solve(d_phiTotalSolverProblem,
+            //                d_dftParamsPtr->absLinearSolverTolerance,
+            //                d_dftParamsPtr->maxLinearSolverIterations,
+            //                d_dftParamsPtr->verbosity);
           }
 
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
@@ -3385,61 +3385,61 @@ namespace dftfe
                 not d_dftParamsPtr->pinnedNodeForPBC)
               {
 #ifdef DFTFE_WITH_DEVICE
-                d_phiTotalSolverProblemDevice.reinit(
-                  d_basisOperationsPtrElectroHost,
-                  d_phiTotRhoOut,
-                  *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                  d_phiTotDofHandlerIndexElectro,
-                  d_densityQuadratureIdElectro,
-                  d_phiTotAXQuadratureIdElectro,
-                  d_atomNodeIdToChargeMap,
-                  d_bQuadValuesAllAtoms,
-                  d_smearedChargeQuadratureIdElectro,
-                  densityOutQuadValuesCopy,
-                  d_BLASWrapperPtr,
-                  false,
-                  false,
-                  d_dftParamsPtr->smearedNuclearCharges,
-                  true,
-                  false,
-                  0,
-                  false,
-                  true,
-                  d_dftParamsPtr->multipoleBoundaryConditions);
+                // d_phiTotalSolverProblemDevice.reinit(
+                //   d_basisOperationsPtrElectroHost,
+                //   d_phiTotRhoOut,
+                //   *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+                //   d_phiTotDofHandlerIndexElectro,
+                //   d_densityQuadratureIdElectro,
+                //   d_phiTotAXQuadratureIdElectro,
+                //   d_atomNodeIdToChargeMap,
+                //   d_bQuadValuesAllAtoms,
+                //   d_smearedChargeQuadratureIdElectro,
+                //   densityOutQuadValuesCopy,
+                //   d_BLASWrapperPtr,
+                //   false,
+                //   false,
+                //   d_dftParamsPtr->smearedNuclearCharges,
+                //   true,
+                //   false,
+                //   0,
+                //   false,
+                //   true,
+                //   d_dftParamsPtr->multipoleBoundaryConditions);
 
-                CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
-                                     d_dftParamsPtr->absLinearSolverTolerance,
-                                     d_dftParamsPtr->maxLinearSolverIterations,
-                                     d_dftParamsPtr->verbosity);
+                // CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
+                //                      d_dftParamsPtr->absLinearSolverTolerance,
+                //                      d_dftParamsPtr->maxLinearSolverIterations,
+                //                      d_dftParamsPtr->verbosity);
 #endif
               }
             else
               {
-                d_phiTotalSolverProblem.reinit(
-                  d_basisOperationsPtrElectroHost,
-                  d_phiTotRhoOut,
-                  *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-                  d_phiTotDofHandlerIndexElectro,
-                  d_densityQuadratureIdElectro,
-                  d_phiTotAXQuadratureIdElectro,
-                  d_atomNodeIdToChargeMap,
-                  d_bQuadValuesAllAtoms,
-                  d_smearedChargeQuadratureIdElectro,
-                  densityOutQuadValuesCopy,
-                  false,
-                  false,
-                  d_dftParamsPtr->smearedNuclearCharges,
-                  true,
-                  false,
-                  0,
-                  false,
-                  true,
-                  d_dftParamsPtr->multipoleBoundaryConditions);
+                // d_phiTotalSolverProblem.reinit(
+                //   d_basisOperationsPtrElectroHost,
+                //   d_phiTotRhoOut,
+                //   *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+                //   d_phiTotDofHandlerIndexElectro,
+                //   d_densityQuadratureIdElectro,
+                //   d_phiTotAXQuadratureIdElectro,
+                //   d_atomNodeIdToChargeMap,
+                //   d_bQuadValuesAllAtoms,
+                //   d_smearedChargeQuadratureIdElectro,
+                //   densityOutQuadValuesCopy,
+                //   false,
+                //   false,
+                //   d_dftParamsPtr->smearedNuclearCharges,
+                //   true,
+                //   false,
+                //   0,
+                //   false,
+                //   true,
+                //   d_dftParamsPtr->multipoleBoundaryConditions);
 
-                CGSolver.solve(d_phiTotalSolverProblem,
-                               d_dftParamsPtr->absLinearSolverTolerance,
-                               d_dftParamsPtr->maxLinearSolverIterations,
-                               d_dftParamsPtr->verbosity);
+                // CGSolver.solve(d_phiTotalSolverProblem,
+                //                d_dftParamsPtr->absLinearSolverTolerance,
+                //                d_dftParamsPtr->maxLinearSolverIterations,
+                //                d_dftParamsPtr->verbosity);
               }
 
             interpolateElectroNodalDataToQuadratureDataGeneral(
@@ -3628,61 +3628,61 @@ namespace dftfe
             not d_dftParamsPtr->pinnedNodeForPBC)
           {
 #ifdef DFTFE_WITH_DEVICE
-            d_phiTotalSolverProblemDevice.reinit(
-              d_basisOperationsPtrElectroHost,
-              d_phiTotRhoOut,
-              *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-              d_phiTotDofHandlerIndexElectro,
-              d_densityQuadratureIdElectro,
-              d_phiTotAXQuadratureIdElectro,
-              d_atomNodeIdToChargeMap,
-              d_bQuadValuesAllAtoms,
-              d_smearedChargeQuadratureIdElectro,
-              densityOutQuadValuesCopy,
-              d_BLASWrapperPtr,
-              false,
-              false,
-              d_dftParamsPtr->smearedNuclearCharges,
-              true,
-              false,
-              0,
-              false,
-              true,
-              d_dftParamsPtr->multipoleBoundaryConditions);
+            // d_phiTotalSolverProblemDevice.reinit(
+            //   d_basisOperationsPtrElectroHost,
+            //   d_phiTotRhoOut,
+            //   *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+            //   d_phiTotDofHandlerIndexElectro,
+            //   d_densityQuadratureIdElectro,
+            //   d_phiTotAXQuadratureIdElectro,
+            //   d_atomNodeIdToChargeMap,
+            //   d_bQuadValuesAllAtoms,
+            //   d_smearedChargeQuadratureIdElectro,
+            //   densityOutQuadValuesCopy,
+            //   d_BLASWrapperPtr,
+            //   false,
+            //   false,
+            //   d_dftParamsPtr->smearedNuclearCharges,
+            //   true,
+            //   false,
+            //   0,
+            //   false,
+            //   true,
+            //   d_dftParamsPtr->multipoleBoundaryConditions);
 
-            CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
-                                 d_dftParamsPtr->absLinearSolverTolerance,
-                                 d_dftParamsPtr->maxLinearSolverIterations,
-                                 d_dftParamsPtr->verbosity);
+            // CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
+            //                      d_dftParamsPtr->absLinearSolverTolerance,
+            //                      d_dftParamsPtr->maxLinearSolverIterations,
+            //                      d_dftParamsPtr->verbosity);
 #endif
           }
         else
           {
-            d_phiTotalSolverProblem.reinit(
-              d_basisOperationsPtrElectroHost,
-              d_phiTotRhoOut,
-              *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
-              d_phiTotDofHandlerIndexElectro,
-              d_densityQuadratureIdElectro,
-              d_phiTotAXQuadratureIdElectro,
-              d_atomNodeIdToChargeMap,
-              d_bQuadValuesAllAtoms,
-              d_smearedChargeQuadratureIdElectro,
-              densityOutQuadValuesCopy,
-              false,
-              false,
-              d_dftParamsPtr->smearedNuclearCharges,
-              true,
-              false,
-              0,
-              false,
-              true,
-              d_dftParamsPtr->multipoleBoundaryConditions);
+            // d_phiTotalSolverProblem.reinit(
+            //   d_basisOperationsPtrElectroHost,
+            //   d_phiTotRhoOut,
+            //   *d_constraintsVectorElectro[d_phiTotDofHandlerIndexElectro],
+            //   d_phiTotDofHandlerIndexElectro,
+            //   d_densityQuadratureIdElectro,
+            //   d_phiTotAXQuadratureIdElectro,
+            //   d_atomNodeIdToChargeMap,
+            //   d_bQuadValuesAllAtoms,
+            //   d_smearedChargeQuadratureIdElectro,
+            //   densityOutQuadValuesCopy,
+            //   false,
+            //   false,
+            //   d_dftParamsPtr->smearedNuclearCharges,
+            //   true,
+            //   false,
+            //   0,
+            //   false,
+            //   true,
+            //   d_dftParamsPtr->multipoleBoundaryConditions);
 
-            CGSolver.solve(d_phiTotalSolverProblem,
-                           d_dftParamsPtr->absLinearSolverTolerance,
-                           d_dftParamsPtr->maxLinearSolverIterations,
-                           d_dftParamsPtr->verbosity);
+            // CGSolver.solve(d_phiTotalSolverProblem,
+            //                d_dftParamsPtr->absLinearSolverTolerance,
+            //                d_dftParamsPtr->maxLinearSolverIterations,
+            //                d_dftParamsPtr->verbosity);
           }
 
         computing_timer.leave_subsection("phiTot solve");

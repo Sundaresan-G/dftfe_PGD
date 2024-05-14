@@ -292,19 +292,19 @@ namespace dftfe
     else
       {
         computing_timer.enter_subsection("Create atom bins");
-        d_vselfBinsManager.createAtomBins(d_constraintsVectorElectro,
-                                          d_constraintsPRefinedOnlyHanging,
-                                          d_dofHandlerPRefined,
-                                          d_constraintsPRefined,
-                                          atomLocations,
-                                          d_imagePositionsTrunc,
-                                          d_imageIdsTrunc,
-                                          d_imageChargesTrunc,
-                                          d_dftParamsPtr->radiusAtomBall);
+        // d_vselfBinsManager.createAtomBins(d_constraintsVectorElectro,
+        //                                   d_constraintsPRefinedOnlyHanging,
+        //                                   d_dofHandlerPRefined,
+        //                                   d_constraintsPRefined,
+        //                                   atomLocations,
+        //                                   d_imagePositionsTrunc,
+        //                                   d_imageIdsTrunc,
+        //                                   d_imageChargesTrunc,
+        //                                   d_dftParamsPtr->radiusAtomBall);
 
-        d_netFloatingDispSinceLastBinsUpdate.clear();
-        d_netFloatingDispSinceLastBinsUpdate.resize(atomLocations.size() * 3,
-                                                    0.0);
+        // d_netFloatingDispSinceLastBinsUpdate.clear();
+        // d_netFloatingDispSinceLastBinsUpdate.resize(atomLocations.size() * 3,
+        //                                             0.0);
         computing_timer.leave_subsection("Create atom bins");
       }
 

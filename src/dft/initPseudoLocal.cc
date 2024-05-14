@@ -90,9 +90,9 @@ namespace dftfe
     if (d_dftParamsPtr->verbosity >= 4)
       pcout << "initLocalPSP, max psp tail considered: " << maxTail
             << std::endl;
-    const double cutOffForPsp =
-      std::max(vselfBinManager.getStoredAdaptiveBallRadius() + 6.0,
-               maxTail + 2.0);
+    const double cutOffForPsp = maxTail + 2.0;
+      // std::max(vselfBinManager.getStoredAdaptiveBallRadius() + 6.0,
+      //          maxTail + 2.0);
 
     //
     // Initialize pseudopotential
@@ -121,15 +121,15 @@ namespace dftfe
     const unsigned int totalSize   = localSize + n_ghosts;
 
 
-    const std::vector<std::map<dealii::types::global_dof_index, int>>
-      &boundaryNodeMapBinsOnlyChargeId =
-        vselfBinManager.getBoundaryFlagsBinsOnlyChargeId();
-    const std::vector<
-      std::map<dealii::types::global_dof_index, dealii::Point<3>>>
-      &dofClosestChargeLocationMapBins =
-        vselfBinManager.getClosestAtomLocationsBins();
-    const std::map<unsigned int, unsigned int> &atomIdBinIdMap =
-      vselfBinManager.getAtomIdBinIdMapLocalAllImages();
+    // const std::vector<std::map<dealii::types::global_dof_index, int>>
+    //   &boundaryNodeMapBinsOnlyChargeId =
+    //     vselfBinManager.getBoundaryFlagsBinsOnlyChargeId();
+    // const std::vector<
+    //   std::map<dealii::types::global_dof_index, dealii::Point<3>>>
+    //   &dofClosestChargeLocationMapBins =
+    //     vselfBinManager.getClosestAtomLocationsBins();
+    // const std::map<unsigned int, unsigned int> &atomIdBinIdMap =
+    //   vselfBinManager.getAtomIdBinIdMapLocalAllImages();
 
     const unsigned int dofs_per_cell = _dofHandler.get_fe().dofs_per_cell;
 
@@ -235,50 +235,51 @@ namespace dftfe
                     distanceToAtom =
                       std::sqrt(diffx * diffx + diffy * diffy + diffz * diffz);
 
-                    if (distanceToAtom < cutOffForPsp)
+                    // if (distanceToAtom < cutOffForPsp)
+                    if (false)
                       {
-                        if (iAtom < numberGlobalCharges)
-                          {
-                            chargeId = iAtom;
-                          }
-                        else
-                          {
-                            const unsigned int iImageCharge =
-                              iAtom - numberGlobalCharges;
-                            chargeId = d_imageIds[iImageCharge];
-                          }
+                        // if (iAtom < numberGlobalCharges)
+                        //   {
+                        //     chargeId = iAtom;
+                        //   }
+                        // else
+                        //   {
+                        //     const unsigned int iImageCharge =
+                        //       iAtom - numberGlobalCharges;
+                        //     chargeId = d_imageIds[iImageCharge];
+                        //   }
 
-                        if (atomIdBinIdMap.find(chargeId) !=
-                            atomIdBinIdMap.end())
-                          {
-                            const unsigned int binId =
-                              atomIdBinIdMap.find(chargeId)->second;
-                            const int boundaryFlagChargeId =
-                              boundaryNodeMapBinsOnlyChargeId[binId]
-                                .find(dofId)
-                                ->second;
+                        // if (atomIdBinIdMap.find(chargeId) !=
+                        //     atomIdBinIdMap.end())
+                        //   {
+                        //     const unsigned int binId =
+                        //       atomIdBinIdMap.find(chargeId)->second;
+                        //     const int boundaryFlagChargeId =
+                        //       boundaryNodeMapBinsOnlyChargeId[binId]
+                        //         .find(dofId)
+                        //         ->second;
 
-                            if (boundaryFlagChargeId == chargeId)
-                              {
-                                atom[0] = atomsImagesPositions[iAtom * 3 + 0];
-                                atom[1] = atomsImagesPositions[iAtom * 3 + 1];
-                                atom[2] = atomsImagesPositions[iAtom * 3 + 2];
+                        //     if (boundaryFlagChargeId == chargeId)
+                        //       {
+                        //         atom[0] = atomsImagesPositions[iAtom * 3 + 0];
+                        //         atom[1] = atomsImagesPositions[iAtom * 3 + 1];
+                        //         atom[2] = atomsImagesPositions[iAtom * 3 + 2];
 
-                                if (dofClosestChargeLocationMapBins[binId]
-                                      .find(dofId)
-                                      ->second.distance(atom) < 1e-5)
-                                  {
-                                    const distributedCPUVec<double> &vselfBin =
-                                      vselfBinManager
-                                        .getVselfFieldBins()[binId];
-                                    val = vselfBin.local_element(localDofId);
-                                  }
-                                else
-                                  val = -atomCharge / distanceToAtom;
-                              }
-                            else
-                              val = -atomCharge / distanceToAtom;
-                          }
+                        //         if (dofClosestChargeLocationMapBins[binId]
+                        //               .find(dofId)
+                        //               ->second.distance(atom) < 1e-5)
+                        //           {
+                        //             const distributedCPUVec<double> &vselfBin =
+                        //               vselfBinManager
+                        //                 .getVselfFieldBins()[binId];
+                        //             val = vselfBin.local_element(localDofId);
+                        //           }
+                        //         else
+                        //           val = -atomCharge / distanceToAtom;
+                        //       }
+                        //     else
+                        //       val = -atomCharge / distanceToAtom;
+                        //   }
                       }
                     else
                       {
