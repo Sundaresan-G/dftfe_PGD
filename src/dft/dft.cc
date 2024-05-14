@@ -3704,54 +3704,55 @@ namespace dftfe
     //
     d_dispersionCorr.computeDispresionCorrection(atomLocations,
                                                  d_domainBoundingVectors);
-    const double totalEnergy = energyCalc.computeEnergy(
-      d_basisOperationsPtrHost,
-      d_basisOperationsPtrElectroHost,
-      d_densityQuadratureId,
-      d_densityQuadratureIdElectro,
-      d_smearedChargeQuadratureIdElectro,
-      d_lpspQuadratureIdElectro,
-      eigenValues,
-      d_kPointWeights,
-      fermiEnergy,
-      d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy : fermiEnergyUp,
-      d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy : fermiEnergyDown,
-      d_excManagerPtr,
-      d_dispersionCorr,
-      d_phiInQuadValues,
-      d_phiOutQuadValues,
-      d_phiTotRhoOut,
-      d_densityInQuadValues,
-      d_densityOutQuadValues,
-      d_gradDensityInQuadValues,
-      d_gradDensityOutQuadValues,
-      d_densityTotalOutValuesLpspQuad,
-      d_rhoCore,
-      d_gradRhoCore,
-      d_bQuadValuesAllAtoms,
-      d_bCellNonTrivialAtomIds,
-      d_localVselfs,
-      d_pseudoVLoc,
-      d_atomNodeIdToChargeMap,
-      atomLocations.size(),
-      lowerBoundKindex,
-      1,
-      d_dftParamsPtr->verbosity >= 0 ? true : false,
-      d_dftParamsPtr->smearedNuclearCharges);
+    const double totalEnergy = 0;
+    // energyCalc.computeEnergy(
+    //   d_basisOperationsPtrHost,
+    //   d_basisOperationsPtrElectroHost,
+    //   d_densityQuadratureId,
+    //   d_densityQuadratureIdElectro,
+    //   d_smearedChargeQuadratureIdElectro,
+    //   d_lpspQuadratureIdElectro,
+    //   eigenValues,
+    //   d_kPointWeights,
+    //   fermiEnergy,
+    //   d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy : fermiEnergyUp,
+    //   d_dftParamsPtr->spinPolarized == 0 ? fermiEnergy : fermiEnergyDown,
+    //   d_excManagerPtr,
+    //   d_dispersionCorr,
+    //   d_phiInQuadValues,
+    //   d_phiOutQuadValues,
+    //   d_phiTotRhoOut,
+    //   d_densityInQuadValues,
+    //   d_densityOutQuadValues,
+    //   d_gradDensityInQuadValues,
+    //   d_gradDensityOutQuadValues,
+    //   d_densityTotalOutValuesLpspQuad,
+    //   d_rhoCore,
+    //   d_gradRhoCore,
+    //   d_bQuadValuesAllAtoms,
+    //   d_bCellNonTrivialAtomIds,
+    //   d_localVselfs,
+    //   d_pseudoVLoc,
+    //   d_atomNodeIdToChargeMap,
+    //   atomLocations.size(),
+    //   lowerBoundKindex,
+    //   1,
+    //   d_dftParamsPtr->verbosity >= 0 ? true : false,
+    //   d_dftParamsPtr->smearedNuclearCharges);
 
     d_groundStateEnergy = totalEnergy;
 
     MPI_Barrier(interpoolcomm);
 
-    d_entropicEnergy =
-      energyCalc.computeEntropicEnergy(eigenValues,
-                                       d_kPointWeights,
-                                       fermiEnergy,
-                                       fermiEnergyUp,
-                                       fermiEnergyDown,
-                                       d_dftParamsPtr->spinPolarized == 1,
-                                       d_dftParamsPtr->constraintMagnetization,
-                                       d_dftParamsPtr->TVal);
+    d_entropicEnergy = 0;
+      // energyCalc.computeEntropicEnergy(eigenValues,
+      //                                  d_kPointWeights,
+      //                                  fermiEnergy,
+      //                                  fermiEnergyUp,
+      //                                  fermiEnergyDown,
+      //                                  d_dftParamsPtr->spinPolarized == 1,
+      //                                  d_dftParamsPtr->constraintMagnetization,
+      //                                  d_dftParamsPtr->TVal);
 
     if (d_dftParamsPtr->verbosity >= 1)
       pcout << "Total entropic energy: " << d_entropicEnergy << std::endl;
