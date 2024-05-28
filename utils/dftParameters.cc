@@ -60,13 +60,6 @@ namespace dftfe
       prm.enter_subsection("GPU");
       {
         prm.declare_entry(
-          "USE TF32 OP",
-          "false",
-          dealii::Patterns::Bool(),
-          "[Advanced] Enables TensorFloat-32 precision for single precision math operations on GPUs, which take advantage of the tensor core hardware. This capability is currently available for certain GPUs like NVIDIA A100. Accuracy of USE TF32 OP has been tested in the case of LRDM preconditioner with USE SINGLE PREC DENSITY RESPONSE mode set to true.");
-
-
-        prm.declare_entry(
           "AUTO GPU BLOCK SIZES",
           "true",
           dealii::Patterns::Bool(),
@@ -404,6 +397,12 @@ namespace dftfe
           "[Developer] Flag to set point wise dirichlet constraints to eliminate null-space associated with the discretized Poisson operator subject to periodic BCs.");
 
         prm.declare_entry(
+          "MULTIPOLE BOUNDARY CONDITIONS",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Flag to set point wise multipole boundary conditions (upto quadrupole term) for non-periodic systems.");
+
+        prm.declare_entry(
           "CONSTRAINTS PARALLEL CHECK",
           "false",
           dealii::Patterns::Bool(),
@@ -641,6 +640,12 @@ namespace dftfe
           dealii::Patterns::Anything(),
           "[Developer] File that contains both the pytorch ML-XC NN model (.ptc file) and the tolerances. This is an experimental feature to test out any new XC functional developed using machine learning.");
 
+
+        prm.declare_entry(
+          "NET CHARGE",
+          "0.0",
+          dealii::Patterns::Double(),
+          "[Standard] Net charge of the system in atomic units, positive quantity implies addition of electrons. In case of non-periodic boundary conditions, this capability is implemented using multipole Dirichlet inhomogeneous boundary conditions for the electrostatics. In case of periodic and semi-periodic conditions a uniform background charge is used to create a neutral system.");
 
         prm.declare_entry(
           "SPIN POLARIZATION",
@@ -1260,7 +1265,7 @@ namespace dftfe
     useMixedPrecXTHXSpectrumSplit                  = false;
     useMixedPrecSubspaceRotRR                      = false;
     useMixedPrecCommunOnlyXTHXCGSO                 = false;
-    spectrumSplitStartingScfIter                   = 1;
+    spectrumSplitStartingScfIter                   = 0;
     useELPA                                        = false;
     constraintsParallelCheck                       = true;
     createConstraintsFromSerialDofhandler          = true;
@@ -1268,7 +1273,6 @@ namespace dftfe
     autoAdaptBaseMeshSize                          = true;
     readWfcForPdosPspFile                          = false;
     useDevice                                      = false;
-    useTF32Device                                  = false;
     deviceFineGrainedTimings                       = false;
     allowFullCPUMemSubspaceRot                     = true;
     useMixedPrecCheby                              = false;
@@ -1289,11 +1293,13 @@ namespace dftfe
     useDensityMatrixPerturbationRankUpdates        = false;
     smearedNuclearCharges                          = false;
     floatingNuclearCharges                         = false;
+    multipoleBoundaryConditions                    = false;
     nonLinearCoreCorrection                        = false;
     maxLineSearchIterCGPRP                         = 5;
     atomicMassesFile                               = "";
     useDeviceDirectAllReduce                       = false;
     pspCutoffImageCharges                          = 15.0;
+    netCharge                                      = 0;
     reuseLanczosUpperBoundFromFirstCall            = false;
     allowMultipleFilteringPassesAfterFirstScf      = true;
     useELPADeviceKernel                            = false;
@@ -1368,7 +1374,6 @@ namespace dftfe
 
     prm.enter_subsection("GPU");
     {
-      useTF32Device = useDevice && prm.get_bool("USE TF32 OP");
       deviceFineGrainedTimings =
         useDevice && prm.get_bool("FINE GRAINED GPU TIMINGS");
       allowFullCPUMemSubspaceRot =
@@ -1468,6 +1473,8 @@ namespace dftfe
       pinnedNodeForPBC       = prm.get_bool("POINT WISE DIRICHLET CONSTRAINT");
       smearedNuclearCharges  = prm.get_bool("SMEARED NUCLEAR CHARGES");
       floatingNuclearCharges = prm.get_bool("FLOATING NUCLEAR CHARGES");
+      multipoleBoundaryConditions =
+        prm.get_bool("MULTIPOLE BOUNDARY CONDITIONS");
     }
     prm.leave_subsection();
 
@@ -1547,6 +1554,7 @@ namespace dftfe
       modelXCInputFile      = prm.get("MODEL XC INPUT FILE");
       start_magnetization   = prm.get_double("START MAGNETIZATION");
       pspCutoffImageCharges = prm.get_double("PSP CUTOFF IMAGE CHARGES");
+      netCharge             = prm.get_double("NET CHARGE");
     }
     prm.leave_subsection();
 
@@ -1701,6 +1709,7 @@ namespace dftfe
         (writeLdosFile || writePdosFile)),
       dealii::ExcMessage(
         "DFT-FE Error: LOCAL DENSITY OF STATES and PROJECTED DENSITY OF STATES are currently not implemented in the case of periodic and semi-periodic boundary conditions."));
+
 
     if (floatingNuclearCharges)
       AssertThrow(
@@ -1966,6 +1975,9 @@ namespace dftfe
 #if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
     useDCCL = false;
 #endif
+#if !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+    useDeviceDirectAllReduce = useDCCL && useDeviceDirectAllReduce;
+#endif
 
     if (useMixedPrecCheby)
       AssertThrow(
@@ -2000,10 +2012,18 @@ namespace dftfe
           mixingParameter = 0.2;
       }
 
+    if (std::fabs(netCharge - 0.0) > 1.0e-12 &&
+        !(periodicX || periodicY || periodicZ))
+      {
+        multipoleBoundaryConditions = true;
+      }
     if (reproducible_output)
       {
         spinMixingEnhancementFactor = 1.0;
       }
+
+    if (numCoreWfcRR == 0)
+      spectrumSplitStartingScfIter = 10000;
   }
 
 
