@@ -4,7 +4,7 @@ set SOLVER MODE = NSCF
 set RESTART FOLDER = ../../fccAl_03.release/mpirun=16/fccAl_03
 
 subsection Post-processing Options
- set WRITE BANDS = true 
+ set WRITE BANDS = false
  set WRITE DENSITY OF STATES=true
 end
 
