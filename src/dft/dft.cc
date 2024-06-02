@@ -1806,11 +1806,14 @@ namespace dftfe
     if (d_dftParamsPtr->solverMode == "GS")
       {
         solve(true, true, d_isRestartGroundStateCalcFromChk);
+        if (d_dftParamsPtr->writeBandsFile)
+          writeBands();
       }
     else if (d_dftParamsPtr->solverMode == "NSCF")
       {
         solveNoSCF();
-        writeBands();
+        if (d_dftParamsPtr->writeBandsFile)
+          writeBands();
       }
 
     if (d_dftParamsPtr->writeStructreEnergyForcesFileForPostProcess)
@@ -3505,8 +3508,33 @@ namespace dftfe
             << scfIter << " iterations." << std::endl;
       }
     else
-      pcout << "SCF iterations converged to the specified tolerance after: "
-            << scfIter << " iterations." << std::endl;
+      {
+        pcout << "SCF iterations converged to the specified tolerance after: "
+              << scfIter << " iterations." << std::endl;
+
+        if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
+          {
+            if (d_dftParamsPtr->solverMode == "GS" &&
+                d_dftParamsPtr->saveRhoData)
+              {
+                FILE *fermiFile;
+                fermiFile = fopen("fermiEnergy.out", "w");
+                if (d_dftParamsPtr->constraintMagnetization)
+                  {
+                    fprintf(fermiFile,
+                            "%.14g\n%.14g\n%.14g\n ",
+                            fermiEnergy,
+                            fermiEnergyUp,
+                            fermiEnergyDown);
+                  }
+                else
+                  {
+                    fprintf(fermiFile, "%.14g\n", fermiEnergy);
+                  }
+                fclose(fermiFile);
+              }
+          }
+      }
 
     const unsigned int numberBandGroups =
       dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
@@ -4319,7 +4347,7 @@ namespace dftfe
       {
         FILE *pFile;
         pFile = fopen("bands.out", "w");
-        fprintf(pFile, "%d %d %.14g\n", totkPoints, numberEigenValues, FE);
+        fprintf(pFile, "%d %d \n", totkPoints, numberEigenValues);
         for (unsigned int kPoint = 0;
              kPoint < totkPoints / (1 + d_dftParamsPtr->spinPolarized);
              ++kPoint)

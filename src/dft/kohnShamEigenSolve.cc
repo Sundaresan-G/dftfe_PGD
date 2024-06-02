@@ -1035,7 +1035,7 @@ namespace dftfe
                 if (functionValue > 1e-3)
                   highestOccupiedState = i;
               }
-            for (unsigned int i = 0; i < highestOccupiedState; i++)
+            for (unsigned int i = 0; i < highestOccupiedState + 1; i++)
               {
                 if (residualNormWaveFunctionsAllkPoints[kPoint][i] >
                     maxHighestOccupiedStateResNorm)
