@@ -191,7 +191,7 @@ namespace dftfe
           "SAVE RHO DATA",
           "false",
           dealii::Patterns::Bool(),
-          "[Standard] Saves charge density and mesh triagulation data for restart, if SOLVER MODE is GS then the save is done every 10 scf iterations, otherwise it is done after each converged scf solve. If the value is "true", the SOLVER MODE is GS and if the SCF loop converges, an outputfile "fermiEnergy.out" is written that contains the fermi energy in the units of Ha. This Fermi energy is used when "WRITE BANDS" is true");
+          "[Standard] Saves charge density and mesh triagulation data for restart, if SOLVER MODE is GS then the save is done every 10 scf iterations, otherwise it is done after each converged scf solve. If the value is 'true', the SOLVER MODE is GS and if the SCF loop converges, an outputfile 'fermiEnergy.out' is written that contains the fermi energy in the units of Ha. This Fermi energy is used when 'WRITE BANDS' is true");
 
         prm.declare_entry(
           "LOAD RHO DATA",
