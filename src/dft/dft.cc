@@ -1187,7 +1187,8 @@ namespace dftfe
                                  d_densityQuadratureIdElectro,
                                  d_excManagerPtr,
                                  atomLocations,
-                                 d_numEigenValues);
+                                 d_numEigenValues,
+                                 d_dftParamsPtr->useSinglePrecCheby);
 
 
     //
