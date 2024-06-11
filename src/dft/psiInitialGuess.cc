@@ -78,7 +78,7 @@ namespace dftfe
           {
             sprintf(
               psiFile,
-              "%s/data/electronicStructure/allElectron/z%u/singleAtomData/psi%u%u.inp",
+              "%s/data/electronicStructure/pseudoPotential/z%u/singleAtomData/psi%u%u.inp",
               DFTFE_PATH,
               Z,
               n,
