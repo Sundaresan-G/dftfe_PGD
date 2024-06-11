@@ -753,7 +753,8 @@ namespace dftfe
     return totalEnergy;
   }
 
-  // compute energies
+  // compute energie residual,
+  // E_KS-E_HWF=\int(V_{in}(\rho_{out}-\rho_{in}))+E_{pot}[\rho_{out}]-E_{pot}[\rho_{in}]
   double
   energyCalculator::computeEnergyResidual(
     const std::shared_ptr<
