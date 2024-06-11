@@ -812,7 +812,7 @@ namespace dftfe
           "USE ENERGY RESIDUAL METRIC",
           "false",
           dealii::Patterns::Bool(),
-          "[Advanced] Boolean parameter specifying whether to use the energy residual metric for convergence check. Setting it to false can lead to some computational time savings. Default value is false");
+          "[Advanced] Boolean parameter specifying whether to use the energy residual metric (equation 7.23 of Richard Matrin second edition) for convergence check. Setting it to false can lead to some computational time savings. Default value is false");
 
 
         prm.enter_subsection("LOW RANK DIELECM PRECOND");
