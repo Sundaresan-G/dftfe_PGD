@@ -90,23 +90,23 @@ namespace dftfe
         if (processGrid->is_process_active())
           {
             /* Set parameters the matrix and it's MPI distribution */
-            elpa_set_integer(elpaHandle, "na", na, &error);
+            elpa_set(elpaHandle, "na", int(na), &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
 
-            elpa_set_integer(elpaHandle, "nev", nev, &error);
+            elpa_set(elpaHandle, "nev", int(nev), &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-            elpa_set_integer(elpaHandle, "nblk", blockSize, &error);
+            elpa_set(elpaHandle, "nblk", int(blockSize), &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-            elpa_set_integer(elpaHandle,
-                             "mpi_comm_parent",
-                             MPI_Comm_c2f(processGridCommunicatorActive),
-                             &error);
+            elpa_set(elpaHandle,
+                     "mpi_comm_parent",
+                     MPI_Comm_c2f(processGridCommunicatorActive),
+                     &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
@@ -118,40 +118,44 @@ namespace dftfe
             // std::cout<<"process_col:
             // "<<processGrid->get_this_process_column()<<std::endl;
 
-            elpa_set_integer(elpaHandle,
-                             "local_nrows",
-                             tempMat.local_m(),
-                             &error);
+            elpa_set(elpaHandle, "local_nrows", int(tempMat.local_m()), &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-            elpa_set_integer(elpaHandle,
-                             "local_ncols",
-                             tempMat.local_n(),
-                             &error);
+            elpa_set(elpaHandle, "local_ncols", int(tempMat.local_n()), &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-            elpa_set_integer(elpaHandle,
-                             "process_row",
-                             processGrid->get_this_process_row(),
-                             &error);
+            elpa_set(elpaHandle,
+                     "process_row",
+                     processGrid->get_this_process_row(),
+                     &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-            elpa_set_integer(elpaHandle,
-                             "process_col",
-                             processGrid->get_this_process_column(),
-                             &error);
+            elpa_set(elpaHandle,
+                     "process_col",
+                     processGrid->get_this_process_column(),
+                     &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+
+            if (dftParams.useELPAGHEP)
+              {
+                elpa_set(elpaHandle,
+                         "blacs_context",
+                         processGrid->get_blacs_context(),
+                         &error);
+                AssertThrow(error == ELPA_OK,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+              }
 
 
             /* Setup */
             AssertThrow(elpa_setup(elpaHandle) == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-            elpa_set_integer(elpaHandle, "solver", ELPA_SOLVER_2STAGE, &error);
+            elpa_set(elpaHandle, "solver", ELPA_SOLVER_2STAGE, &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
@@ -160,56 +164,59 @@ namespace dftfe
             if (dftParams.useELPADeviceKernel)
               {
 #  ifdef DFTFE_WITH_DEVICE_NVIDIA
-                elpa_set_integer(elpaHandle, "nvidia-gpu", 1, &error);
+                elpa_set(elpaHandle, "nvidia-gpu", 1, &error);
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-                elpa_set_integer(elpaHandle,
-                                 "real_kernel",
-                                 ELPA_2STAGE_REAL_NVIDIA_GPU,
-                                 &error);
+                elpa_set(elpaHandle,
+                         "real_kernel",
+                         ELPA_2STAGE_REAL_NVIDIA_GPU,
+                         &error);
 
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-                elpa_set_integer(elpaHandle,
-                                 "complex_kernel",
-                                 ELPA_2STAGE_COMPLEX_NVIDIA_GPU,
-                                 &error);
+                elpa_set(elpaHandle,
+                         "complex_kernel",
+                         ELPA_2STAGE_COMPLEX_NVIDIA_GPU,
+                         &error);
 
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #  elif DFTFE_WITH_DEVICE_AMD
-                elpa_set_integer(elpaHandle, "amd-gpu", 1, &error);
+                elpa_set(elpaHandle, "amd-gpu", 1, &error);
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-                elpa_set_integer(elpaHandle,
-                                 "real_kernel",
-                                 ELPA_2STAGE_REAL_AMD_GPU,
-                                 &error);
+                elpa_set(elpaHandle,
+                         "real_kernel",
+                         ELPA_2STAGE_REAL_AMD_GPU,
+                         &error);
 
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-                elpa_set_integer(elpaHandle,
-                                 "complex_kernel",
-                                 ELPA_2STAGE_COMPLEX_AMD_GPU,
-                                 &error);
+                elpa_set(elpaHandle,
+                         "complex_kernel",
+                         ELPA_2STAGE_COMPLEX_AMD_GPU,
+                         &error);
 
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #  endif
+                /* Setup */
+                AssertThrow(elpa_setup_gpu(elpaHandle) == ELPA_OK,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
               }
 #endif
 
-              // elpa_set_integer(elpaHandle,
+              // elpa_set(elpaHandle,
               // "real_kernel",ELPA_2STAGE_REAL_AVX512_BLOCK6, &error);
               // AssertThrow(error==ELPA_OK,
               //   dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
 #ifdef DEBUG
-            elpa_set_integer(elpaHandle, "debug", 1, &error);
+            elpa_set(elpaHandle, "debug", 1, &error);
             AssertThrow(error == ELPA_OK,
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #endif

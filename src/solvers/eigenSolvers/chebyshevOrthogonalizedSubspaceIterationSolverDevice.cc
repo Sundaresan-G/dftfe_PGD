@@ -747,22 +747,40 @@ namespace dftfe
           }
         else
           {
-            linearAlgebraOperationsDevice::rayleighRitzGEP(
-              operatorMatrix,
-              elpaScala,
-              eigenVectorsFlattenedDevice,
-              (*XBlock),
-              (*HXBlock),
-              localVectorSize,
-              totalNumberWaveFunctions,
-              d_mpiCommParent,
-              operatorMatrix.getMPICommunicatorDomain(),
-              devicecclMpiCommDomain,
-              interBandGroupComm,
-              eigenValues,
-              deviceBlasHandle,
-              d_dftParams,
-              useMixedPrecOverall);
+            if (d_dftParams.useELPA && d_dftParams.useELPAGHEP)
+              linearAlgebraOperationsDevice::rayleighRitzGEPELPA(
+                operatorMatrix,
+                elpaScala,
+                eigenVectorsFlattenedDevice,
+                (*XBlock),
+                (*HXBlock),
+                localVectorSize,
+                totalNumberWaveFunctions,
+                d_mpiCommParent,
+                operatorMatrix.getMPICommunicatorDomain(),
+                devicecclMpiCommDomain,
+                interBandGroupComm,
+                eigenValues,
+                deviceBlasHandle,
+                d_dftParams,
+                useMixedPrecOverall);
+            else
+              linearAlgebraOperationsDevice::rayleighRitzGEP(
+                operatorMatrix,
+                elpaScala,
+                eigenVectorsFlattenedDevice,
+                (*XBlock),
+                (*HXBlock),
+                localVectorSize,
+                totalNumberWaveFunctions,
+                d_mpiCommParent,
+                operatorMatrix.getMPICommunicatorDomain(),
+                devicecclMpiCommDomain,
+                interBandGroupComm,
+                eigenValues,
+                deviceBlasHandle,
+                d_dftParams,
+                useMixedPrecOverall);
           }
       }
 

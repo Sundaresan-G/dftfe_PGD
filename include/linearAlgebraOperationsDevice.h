@@ -332,6 +332,24 @@ namespace dftfe
       const bool                        useMixedPrecOverall = false);
 
     void
+    rayleighRitzGEPELPA(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      const MPI_Comm &                  interBandGroupComm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall = false);
+
+    void
     rayleighRitzGEPSpectrumSplitDirect(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       elpaScalaManager &                                   elpaScala,

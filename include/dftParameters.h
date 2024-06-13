@@ -129,6 +129,7 @@ namespace dftfe
     bool         useMixedPrecCommunOnlyXTHXCGSO;
     unsigned int spectrumSplitStartingScfIter;
     bool         useELPA;
+    bool         useELPAGHEP;
     bool         constraintsParallelCheck;
     bool         createConstraintsFromSerialDofhandler;
     bool         bandParalOpt;

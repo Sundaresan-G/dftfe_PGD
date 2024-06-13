@@ -519,17 +519,11 @@ namespace dftfe
               if (dftParams.useELPADeviceKernel)
                 {
 #ifdef DFTFE_WITH_DEVICE_NVIDIA
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "nvidia-gpu",
-                                   0,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "nvidia-gpu", 0, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #elif DFTFE_WITH_DEVICE_AMD
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "amd-gpu",
-                                   0,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "amd-gpu", 0, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #endif
@@ -545,17 +539,11 @@ namespace dftfe
               if (dftParams.useELPADeviceKernel)
                 {
 #ifdef DFTFE_WITH_DEVICE_NVIDIA
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "nvidia-gpu",
-                                   1,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "nvidia-gpu", 1, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #elif DFTFE_WITH_DEVICE_AMD
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "amd-gpu",
-                                   1,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "amd-gpu", 1, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #endif
@@ -829,6 +817,354 @@ namespace dftfe
         }
     }
 
+
+    void
+    rayleighRitzGEPELPA(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      const MPI_Comm &                  interBandGroupComm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall)
+    {
+      dealii::ConditionalOStream pcout(
+        std::cout,
+        (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0));
+
+      dealii::TimerOutput computing_timer(mpiCommDomain,
+                                          pcout,
+                                          dftParams.reproducible_output ||
+                                              dftParams.verbosity < 4 ?
+                                            dealii::TimerOutput::never :
+                                            dealii::TimerOutput::summary,
+                                          dealii::TimerOutput::wall_times);
+
+      const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
+      std::shared_ptr<const dftfe::ProcessGrid> processGrid =
+        elpaScala.getProcessGridDftfeScalaWrapper();
+
+      //
+      // SConj=X^{T}*XConj.
+      //
+
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          if (dftParams.useMixedPrecCGS_O && useMixedPrecOverall)
+            computing_timer.enter_subsection(
+              "SConj=X^{T}XConj Mixed Prec, RR GEP step");
+          else
+            computing_timer.enter_subsection("SConj=X^{T}XConj, RR GEP step");
+        }
+
+      //
+      // compute overlap matrix
+      //
+      dftfe::ScaLAPACKMatrix<dataTypes::number> overlapMatPar(N,
+                                                              processGrid,
+                                                              rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&overlapMatPar.local_el(0, 0),
+                  &overlapMatPar.local_el(0, 0) +
+                    overlapMatPar.local_m() * overlapMatPar.local_n(),
+                  dataTypes::number(0.0));
+
+      if (dftParams.useMixedPrecCGS_O && useMixedPrecOverall)
+        {
+          if (dftParams.overlapComputeCommunOrthoRR)
+            linearAlgebraOperationsDevice::
+              fillParallelOverlapMatMixedPrecScalapackAsyncComputeCommun(
+                X,
+                M,
+                N,
+                handle,
+                mpiCommDomain,
+                devicecclMpiCommDomain,
+                interBandGroupComm,
+                processGrid,
+                overlapMatPar,
+                dftParams);
+          else
+            linearAlgebraOperationsDevice::
+              fillParallelOverlapMatMixedPrecScalapack(X,
+                                                       M,
+                                                       N,
+                                                       handle,
+                                                       mpiCommDomain,
+                                                       devicecclMpiCommDomain,
+                                                       interBandGroupComm,
+                                                       processGrid,
+                                                       overlapMatPar,
+                                                       dftParams);
+        }
+      else
+        {
+          if (dftParams.overlapComputeCommunOrthoRR)
+            linearAlgebraOperationsDevice::
+              fillParallelOverlapMatScalapackAsyncComputeCommun(
+                X,
+                M,
+                N,
+                handle,
+                mpiCommDomain,
+                devicecclMpiCommDomain,
+                interBandGroupComm,
+                processGrid,
+                overlapMatPar,
+                dftParams);
+          else
+            linearAlgebraOperationsDevice::fillParallelOverlapMatScalapack(
+              X,
+              M,
+              N,
+              handle,
+              mpiCommDomain,
+              devicecclMpiCommDomain,
+              interBandGroupComm,
+              processGrid,
+              overlapMatPar,
+              dftParams);
+        }
+
+      // Construct the full HConjProj matrix
+      dftfe::ScaLAPACKMatrix<dataTypes::number> overlapMatParConjTrans(
+        N, processGrid, rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&overlapMatParConjTrans.local_el(0, 0),
+                  &overlapMatParConjTrans.local_el(0, 0) +
+                    overlapMatParConjTrans.local_m() *
+                      overlapMatParConjTrans.local_n(),
+                  dataTypes::number(0.0));
+
+
+      overlapMatParConjTrans.copy_conjugate_transposed(overlapMatPar);
+      overlapMatPar.add(overlapMatParConjTrans,
+                        dataTypes::number(1.0),
+                        dataTypes::number(1.0));
+
+      if (processGrid->is_process_active())
+        for (unsigned int i = 0; i < overlapMatPar.local_n(); ++i)
+          {
+            const unsigned int glob_i = overlapMatPar.global_column(i);
+            for (unsigned int j = 0; j < overlapMatPar.local_m(); ++j)
+              {
+                const unsigned int glob_j = overlapMatPar.global_row(j);
+                if (glob_i == glob_j)
+                  overlapMatPar.local_el(j, i) *= dataTypes::number(0.5);
+              }
+          }
+
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          if (dftParams.useMixedPrecCGS_O && useMixedPrecOverall)
+            computing_timer.leave_subsection(
+              "SConj=X^{T}XConj Mixed Prec, RR GEP step");
+          else
+            computing_timer.leave_subsection("SConj=X^{T}XConj, RR GEP step");
+        }
+
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.enter_subsection(
+            "HConjProj= X^{T}*HConj*XConj, RR GEP step");
+        }
+
+
+      //
+      // compute projected Hamiltonian conjugate HConjProj= X^{T}*HConj*XConj
+      //
+      dftfe::ScaLAPACKMatrix<dataTypes::number> projHamPar(N,
+                                                           processGrid,
+                                                           rowsBlockSize);
+      if (processGrid->is_process_active())
+        std::fill(&projHamPar.local_el(0, 0),
+                  &projHamPar.local_el(0, 0) +
+                    projHamPar.local_m() * projHamPar.local_n(),
+                  dataTypes::number(0.0));
+
+      if (dftParams.overlapComputeCommunOrthoRR)
+        XtHXOverlapComputeCommun(operatorMatrix,
+                                 X,
+                                 Xb,
+                                 HXb,
+                                 M,
+                                 N,
+                                 handle,
+                                 processGrid,
+                                 projHamPar,
+                                 devicecclMpiCommDomain,
+                                 mpiCommDomain,
+                                 interBandGroupComm,
+                                 dftParams);
+      else
+        XtHX(operatorMatrix,
+             X,
+             Xb,
+             HXb,
+             M,
+             N,
+             handle,
+             processGrid,
+             projHamPar,
+             devicecclMpiCommDomain,
+             mpiCommDomain,
+             interBandGroupComm,
+             dftParams);
+      // Construct the full HConjProj matrix
+      dftfe::ScaLAPACKMatrix<dataTypes::number> projHamParConjTrans(
+        N, processGrid, rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&projHamParConjTrans.local_el(0, 0),
+                  &projHamParConjTrans.local_el(0, 0) +
+                    projHamParConjTrans.local_m() *
+                      projHamParConjTrans.local_n(),
+                  dataTypes::number(0.0));
+
+
+      projHamParConjTrans.copy_conjugate_transposed(projHamPar);
+      projHamPar.add(projHamParConjTrans,
+                     dataTypes::number(1.0),
+                     dataTypes::number(1.0));
+
+      if (processGrid->is_process_active())
+        for (unsigned int i = 0; i < projHamPar.local_n(); ++i)
+          {
+            const unsigned int glob_i = projHamPar.global_column(i);
+            for (unsigned int j = 0; j < projHamPar.local_m(); ++j)
+              {
+                const unsigned int glob_j = projHamPar.global_row(j);
+                if (glob_i == glob_j)
+                  projHamPar.local_el(j, i) *= dataTypes::number(0.5);
+              }
+          }
+
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.leave_subsection(
+            "HConjProj= X^{T}*HConj*XConj, RR GEP step");
+        }
+
+      //
+      // compute standard eigendecomposition HSConjProj: {QConjPrime,D}
+      // HSConjProj=QConjPrime*D*QConjPrime^{C} QConj={Lc^{-1}}^{C}*QConjPrime
+      const unsigned int numberEigenValues = N;
+      eigenValues.resize(numberEigenValues);
+      if (dftParams.deviceFineGrainedTimings)
+        computing_timer.enter_subsection("ELPA eigen decomp, RR GEP step");
+      dftfe::ScaLAPACKMatrix<dataTypes::number> eigenVectors(N,
+                                                             processGrid,
+                                                             rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&eigenVectors.local_el(0, 0),
+                  &eigenVectors.local_el(0, 0) +
+                    eigenVectors.local_m() * eigenVectors.local_n(),
+                  dataTypes::number(0.0));
+
+      if (processGrid->is_process_active())
+        {
+          int error;
+          elpa_generalized_eigenvectors(elpaScala.getElpaHandle(),
+                                        &projHamPar.local_el(0, 0),
+                                        &overlapMatPar.local_el(0, 0),
+                                        &eigenValues[0],
+                                        &eigenVectors.local_el(0, 0),
+                                        0,
+                                        &error);
+          AssertThrow(error == ELPA_OK,
+                      dealii::ExcMessage(
+                        "DFT-FE Error: elpa_eigenvectors error."));
+        }
+
+
+      MPI_Bcast(
+        &eigenValues[0], eigenValues.size(), MPI_DOUBLE, 0, mpiCommDomain);
+
+
+      projHamPar.copy_conjugate_transposed(eigenVectors);
+
+      if (dftParams.deviceFineGrainedTimings)
+        computing_timer.leave_subsection("ELPA eigen decomp, RR GEP step");
+
+      linearAlgebraOperations::internal::broadcastAcrossInterCommScaLAPACKMat(
+        processGrid, projHamPar, interBandGroupComm, 0);
+
+      /*
+         MPI_Bcast(&eigenValues[0],
+         eigenValues.size(),
+         MPI_DOUBLE,
+         0,
+         interBandGroupComm);
+       */
+      //
+      // rotate the basis in the subspace
+      // X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T}, stored in the column major
+      // format In the above we use Q^{T}={QConjPrime}^{C}*LConj^{-1}
+
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          if (!(dftParams.useMixedPrecSubspaceRotRR && useMixedPrecOverall))
+            computing_timer.enter_subsection(
+              "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T}, RR GEP step");
+          else
+            computing_timer.enter_subsection(
+              "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T} mixed prec, RR GEP step");
+        }
+
+
+      if (useMixedPrecOverall && dftParams.useMixedPrecSubspaceRotRR)
+        subspaceRotationRRMixedPrecScalapack(X,
+                                             M,
+                                             N,
+                                             handle,
+                                             processGrid,
+                                             mpiCommDomain,
+                                             devicecclMpiCommDomain,
+                                             interBandGroupComm,
+                                             projHamPar,
+                                             dftParams,
+                                             false);
+      else
+        subspaceRotationScalapack(X,
+                                  M,
+                                  N,
+                                  handle,
+                                  processGrid,
+                                  mpiCommDomain,
+                                  devicecclMpiCommDomain,
+                                  interBandGroupComm,
+                                  projHamPar,
+                                  dftParams,
+                                  false);
+
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          if (!(dftParams.useMixedPrecSubspaceRotRR && useMixedPrecOverall))
+            computing_timer.leave_subsection(
+              "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T}, RR GEP step");
+          else
+            computing_timer.leave_subsection(
+              "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T} mixed prec, RR GEP step");
+        }
+    }
+
     void
     rayleighRitzGEPSpectrumSplitDirect(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
@@ -988,17 +1324,11 @@ namespace dftfe
               if (dftParams.useELPADeviceKernel)
                 {
 #ifdef DFTFE_WITH_DEVICE_NVIDIA
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "nvidia-gpu",
-                                   0,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "nvidia-gpu", 0, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #elif DFTFE_WITH_DEVICE_AMD
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "amd-gpu",
-                                   0,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "amd-gpu", 0, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #endif
@@ -1015,17 +1345,11 @@ namespace dftfe
               if (dftParams.useELPADeviceKernel)
                 {
 #ifdef DFTFE_WITH_DEVICE_NVIDIA
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "nvidia-gpu",
-                                   1,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "nvidia-gpu", 1, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #elif DFTFE_WITH_DEVICE_AMD
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "amd-gpu",
-                                   1,
-                                   &error);
+                  elpa_set(elpaScala.getElpaHandle(), "amd-gpu", 1, &error);
                   AssertThrow(error == ELPA_OK,
                               dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #endif

@@ -925,6 +925,297 @@ namespace dftfe
 
     template <typename T>
     void
+    rayleighRitzGEPELPA(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      elpaScalaManager &                                 elpaScala,
+      T *                                                X,
+      const unsigned int                                 numberWaveFunctions,
+      const unsigned int                                 localVectorSize,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpi_communicator,
+      std::vector<double> &                              eigenValues,
+      const bool                                         useMixedPrec,
+      const dftParameters &                              dftParams)
+    {
+      dealii::ConditionalOStream pcout(
+        std::cout,
+        (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0));
+
+      dealii::TimerOutput computing_timer(mpi_communicator,
+                                          pcout,
+                                          dftParams.reproducible_output ||
+                                              dftParams.verbosity < 4 ?
+                                            dealii::TimerOutput::never :
+                                            dealii::TimerOutput::summary,
+                                          dealii::TimerOutput::wall_times);
+
+      const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
+      std::shared_ptr<const dftfe::ProcessGrid> processGrid =
+        elpaScala.getProcessGridDftfeScalaWrapper();
+
+      if (dftParams.useMixedPrecCGS_O && useMixedPrec)
+        computing_timer.enter_subsection(
+          "SConj=X^{T}XConj Mixed Prec, RR GEP step");
+      else
+        computing_timer.enter_subsection("SConj=X^{T}XConj, RR GEP step");
+      //
+      // compute overlap matrix
+      //
+      dftfe::ScaLAPACKMatrix<T> overlapMatPar(numberWaveFunctions,
+                                              processGrid,
+                                              rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&overlapMatPar.local_el(0, 0),
+                  &overlapMatPar.local_el(0, 0) +
+                    overlapMatPar.local_m() * overlapMatPar.local_n(),
+                  T(0.0));
+
+      // SConj=X^{T}*XConj.
+      if (!(dftParams.useMixedPrecCGS_O && useMixedPrec))
+        {
+          internal::fillParallelOverlapMatrix(
+            X,
+            numberWaveFunctions * localVectorSize,
+            numberWaveFunctions,
+            processGrid,
+            interBandGroupComm,
+            operatorMatrix.getMPICommunicatorDomain(),
+            overlapMatPar,
+            dftParams);
+        }
+      else
+        {
+          if (std::is_same<T, std::complex<double>>::value)
+            internal::fillParallelOverlapMatrixMixedPrec<T,
+                                                         std::complex<float>>(
+              X,
+              numberWaveFunctions * localVectorSize,
+              numberWaveFunctions,
+              processGrid,
+              interBandGroupComm,
+              operatorMatrix.getMPICommunicatorDomain(),
+              overlapMatPar,
+              dftParams);
+          else
+            internal::fillParallelOverlapMatrixMixedPrec<T, float>(
+              X,
+              numberWaveFunctions * localVectorSize,
+              numberWaveFunctions,
+              processGrid,
+              interBandGroupComm,
+              operatorMatrix.getMPICommunicatorDomain(),
+              overlapMatPar,
+              dftParams);
+        }
+      // Construct the full overlap matrix
+      dftfe::ScaLAPACKMatrix<T> overlapMatParConjTrans(numberWaveFunctions,
+                                                       processGrid,
+                                                       rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&overlapMatParConjTrans.local_el(0, 0),
+                  &overlapMatParConjTrans.local_el(0, 0) +
+                    overlapMatParConjTrans.local_m() *
+                      overlapMatParConjTrans.local_n(),
+                  T(0.0));
+
+
+      overlapMatParConjTrans.copy_conjugate_transposed(overlapMatPar);
+      overlapMatPar.add(overlapMatParConjTrans, T(1.0), T(1.0));
+
+      if (processGrid->is_process_active())
+        for (unsigned int i = 0; i < overlapMatPar.local_n(); ++i)
+          {
+            const unsigned int glob_i = overlapMatPar.global_column(i);
+            for (unsigned int j = 0; j < overlapMatPar.local_m(); ++j)
+              {
+                const unsigned int glob_j = overlapMatPar.global_row(j);
+                if (glob_i == glob_j)
+                  overlapMatPar.local_el(j, i) *= T(0.5);
+              }
+          }
+
+      if (dftParams.useMixedPrecCGS_O && useMixedPrec)
+        computing_timer.leave_subsection(
+          "SConj=X^{T}XConj Mixed Prec, RR GEP step");
+      else
+        computing_timer.leave_subsection("SConj=X^{T}XConj, RR GEP step");
+
+      computing_timer.enter_subsection("Compute ProjHam, RR step");
+      //
+      // compute projected Hamiltonian conjugate HConjProj= X^{T}*HConj*XConj
+      //
+      dftfe::ScaLAPACKMatrix<T> projHamPar(numberWaveFunctions,
+                                           processGrid,
+                                           rowsBlockSize);
+      if (processGrid->is_process_active())
+        std::fill(&projHamPar.local_el(0, 0),
+                  &projHamPar.local_el(0, 0) +
+                    projHamPar.local_m() * projHamPar.local_n(),
+                  T(0.0));
+
+
+      XtHX(operatorMatrix,
+           X,
+           numberWaveFunctions,
+           localVectorSize,
+           processGrid,
+           operatorMatrix.getMPICommunicatorDomain(),
+           interBandGroupComm,
+           dftParams,
+           projHamPar);
+      // Construct the full HConjProj matrix
+      dftfe::ScaLAPACKMatrix<T> projHamParConjTrans(numberWaveFunctions,
+                                                    processGrid,
+                                                    rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&projHamParConjTrans.local_el(0, 0),
+                  &projHamParConjTrans.local_el(0, 0) +
+                    projHamParConjTrans.local_m() *
+                      projHamParConjTrans.local_n(),
+                  T(0.0));
+
+
+      projHamParConjTrans.copy_conjugate_transposed(projHamPar);
+      projHamPar.add(projHamParConjTrans, T(1.0), T(1.0));
+
+      if (processGrid->is_process_active())
+        for (unsigned int i = 0; i < projHamPar.local_n(); ++i)
+          {
+            const unsigned int glob_i = projHamPar.global_column(i);
+            for (unsigned int j = 0; j < projHamPar.local_m(); ++j)
+              {
+                const unsigned int glob_j = projHamPar.global_row(j);
+                if (glob_i == glob_j)
+                  projHamPar.local_el(j, i) *= T(0.5);
+              }
+          }
+
+      computing_timer.leave_subsection("Compute ProjHam, RR step");
+
+      //
+      // compute standard eigendecomposition HSConjProj: {QConjPrime,D}
+      // HSConjProj=QConjPrime*D*QConjPrime^{C} QConj={Lc^{-1}}^{C}*QConjPrime
+      const unsigned int numberEigenValues = numberWaveFunctions;
+      eigenValues.resize(numberEigenValues);
+      computing_timer.enter_subsection("ELPA eigen decomp, RR step");
+      dftfe::ScaLAPACKMatrix<T> eigenVectors(numberWaveFunctions,
+                                             processGrid,
+                                             rowsBlockSize);
+
+      if (processGrid->is_process_active())
+        std::fill(&eigenVectors.local_el(0, 0),
+                  &eigenVectors.local_el(0, 0) +
+                    eigenVectors.local_m() * eigenVectors.local_n(),
+                  T(0.0));
+
+      if (processGrid->is_process_active())
+        {
+          int error;
+          elpa_generalized_eigenvectors(elpaScala.getElpaHandle(),
+                                        &projHamPar.local_el(0, 0),
+                                        &overlapMatPar.local_el(0, 0),
+                                        &eigenValues[0],
+                                        &eigenVectors.local_el(0, 0),
+                                        0,
+                                        &error);
+          AssertThrow(error == ELPA_OK,
+                      dealii::ExcMessage(
+                        "DFT-FE Error: elpa_eigenvectors error."));
+        }
+
+
+      MPI_Bcast(&eigenValues[0],
+                eigenValues.size(),
+                MPI_DOUBLE,
+                0,
+                operatorMatrix.getMPICommunicatorDomain());
+
+
+      projHamPar.copy_conjugate_transposed(eigenVectors);
+
+      computing_timer.leave_subsection("ELPA eigen decomp, RR step");
+
+      computing_timer.enter_subsection(
+        "Broadcast eigvec and eigenvalues across band groups, RR step");
+      internal::broadcastAcrossInterCommScaLAPACKMat(processGrid,
+                                                     projHamPar,
+                                                     interBandGroupComm,
+                                                     0);
+
+      /*
+         MPI_Bcast(&eigenValues[0],
+         eigenValues.size(),
+         MPI_DOUBLE,
+         0,
+         interBandGroupComm);
+       */
+      computing_timer.leave_subsection(
+        "Broadcast eigvec and eigenvalues across band groups, RR step");
+      //
+      // rotate the basis in the subspace
+      // X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T}, stored in the column major
+      // format In the above we use Q^{T}={QConjPrime}^{C}*LConj^{-1}
+      if (!(dftParams.useMixedPrecSubspaceRotRR && useMixedPrec))
+        computing_timer.enter_subsection(
+          "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T}, RR step");
+      else
+        computing_timer.enter_subsection(
+          "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T} mixed prec, RR step");
+
+      if (!(dftParams.useMixedPrecSubspaceRotRR && useMixedPrec))
+        internal::subspaceRotation(X,
+                                   numberWaveFunctions * localVectorSize,
+                                   numberWaveFunctions,
+                                   processGrid,
+                                   interBandGroupComm,
+                                   operatorMatrix.getMPICommunicatorDomain(),
+                                   projHamPar,
+                                   dftParams,
+                                   false,
+                                   false,
+                                   false);
+      else
+        {
+          if (std::is_same<T, std::complex<double>>::value)
+            internal::subspaceRotationMixedPrec<T, std::complex<float>>(
+              X,
+              numberWaveFunctions * localVectorSize,
+              numberWaveFunctions,
+              processGrid,
+              interBandGroupComm,
+              operatorMatrix.getMPICommunicatorDomain(),
+              projHamPar,
+              dftParams,
+              false,
+              false);
+          else
+            internal::subspaceRotationMixedPrec<T, float>(
+              X,
+              numberWaveFunctions * localVectorSize,
+              numberWaveFunctions,
+              processGrid,
+              interBandGroupComm,
+              operatorMatrix.getMPICommunicatorDomain(),
+              projHamPar,
+              dftParams,
+              false,
+              false);
+        }
+
+      if (!(dftParams.useMixedPrecSubspaceRotRR && useMixedPrec))
+        computing_timer.leave_subsection(
+          "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T}, RR step");
+      else
+        computing_timer.leave_subsection(
+          "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T} mixed prec, RR step");
+    }
+
+    template <typename T>
+    void
     rayleighRitz(
       operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
       elpaScalaManager &                                 elpaScala,
@@ -3908,6 +4199,20 @@ namespace dftfe
 
     template void
     rayleighRitzGEP(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      elpaScalaManager &                                 elpaScala,
+      dataTypes::number *,
+      const unsigned int numberWaveFunctions,
+      const unsigned int localVectorSize,
+      const MPI_Comm &,
+      const MPI_Comm &,
+      const MPI_Comm &,
+      std::vector<double> &eigenValues,
+      const bool           useMixedPrec,
+      const dftParameters &dftParams);
+
+    template void
+    rayleighRitzGEPELPA(
       operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
       elpaScalaManager &                                 elpaScala,
       dataTypes::number *,
