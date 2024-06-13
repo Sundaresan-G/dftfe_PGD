@@ -4,6 +4,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.17)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # Set the name of the project and target:
 SET(TARGET "dftfe_exe")
 SET(TARGETLIB "dftfe")
@@ -161,6 +162,7 @@ SET(TARGET_SRC
   ./utils/FEBasisOperations.cc
   ./utils/FEBasisOperationsKernels.cc
   ./src/force/locateAtomCoreNodesForce.cc
+  ./src/atom/AtomicCenteredNonLocalOperator.cc
   ./src/atom/AtomPseudoWavefunctions.cc
   ./src/atom/AtomCenteredSphericalFunctionContainer.cc
   ./src/atom/AtomCenteredSphericalFunctionBase.cc
@@ -171,7 +173,8 @@ SET(TARGET_SRC
   ./src/atom/AtomCenteredSphericalFunctionValenceDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
-  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc)
+  ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc
+  ./src/pseudo/oncv/oncvClass.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 
