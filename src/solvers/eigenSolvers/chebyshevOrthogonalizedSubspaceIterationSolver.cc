@@ -507,17 +507,31 @@ namespace dftfe
           }
         else
           {
-            linearAlgebraOperations::rayleighRitzGEP(operatorMatrix,
-                                                     elpaScala,
-                                                     eigenVectorsFlattened,
-                                                     totalNumberWaveFunctions,
-                                                     localVectorSize,
-                                                     d_mpiCommParent,
-                                                     interBandGroupComm,
-                                                     mpiCommDomain,
-                                                     eigenValues,
-                                                     useMixedPrec,
-                                                     d_dftParams);
+            if (d_dftParams.useELPA && d_dftParams.useELPAGHEP)
+              linearAlgebraOperations::rayleighRitzGEPELPA(
+                operatorMatrix,
+                elpaScala,
+                eigenVectorsFlattened,
+                totalNumberWaveFunctions,
+                localVectorSize,
+                d_mpiCommParent,
+                interBandGroupComm,
+                mpiCommDomain,
+                eigenValues,
+                useMixedPrec,
+                d_dftParams);
+            else
+              linearAlgebraOperations::rayleighRitzGEP(operatorMatrix,
+                                                       elpaScala,
+                                                       eigenVectorsFlattened,
+                                                       totalNumberWaveFunctions,
+                                                       localVectorSize,
+                                                       d_mpiCommParent,
+                                                       interBandGroupComm,
+                                                       mpiCommDomain,
+                                                       eigenValues,
+                                                       useMixedPrec,
+                                                       d_dftParams);
           }
         computing_timer.leave_subsection("Rayleigh-Ritz GEP");
 
