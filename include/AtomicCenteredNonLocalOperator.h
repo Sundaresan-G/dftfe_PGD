@@ -431,6 +431,12 @@ namespace dftfe
                           std::vector<ValueType> &      entriesPadded,
                           const CouplingStructure       couplingtype);
 
+    void
+    copyDistributedVectorToPaddedMemoryStorageVector(
+      const dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened,
+      dftfe::utils::MemoryStorage<ValueType, memorySpace> paddedVector);
+
     std::map<
       unsigned int,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>
