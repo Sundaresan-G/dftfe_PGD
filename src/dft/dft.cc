@@ -2310,11 +2310,7 @@ namespace dftfe
     pcout << std::endl;
     if (d_dftParamsPtr->verbosity == 0)
       pcout << "Starting SCF iterations...." << std::endl;
-    while (((norm > d_dftParamsPtr->selfConsistentSolverTolerance) ||
-            (d_dftParamsPtr->useEnergyResidualTolerance &&
-             energyResidual >
-               d_dftParamsPtr->selfConsistentSolverEnergyTolerance)) &&
-           (scfIter < d_dftParamsPtr->numSCFIterations))
+    while (!scfConverged && (scfIter < d_dftParamsPtr->numSCFIterations))
       {
         dealii::Timer local_timer(d_mpiCommParent, true);
         if (d_dftParamsPtr->verbosity >= 1)
@@ -3444,6 +3440,9 @@ namespace dftfe
               d_dftParamsPtr->smearedNuclearCharges);
             if (d_dftParamsPtr->verbosity >= 1)
               pcout << "Energy residual  : " << energyResidual << std::endl;
+            if (d_dftParamsPtr->reproducible_output)
+              pcout << "Energy residual  : " << std::setprecision(4)
+                    << energyResidual << std::endl;
             computing_timer.leave_subsection("Energy residual computation");
           }
         if (d_dftParamsPtr->computeEnergyEverySCF &&
