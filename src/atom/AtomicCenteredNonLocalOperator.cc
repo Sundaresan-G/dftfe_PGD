@@ -2360,7 +2360,7 @@ namespace dftfe
     copyDistributedVectorToPaddedMemoryStorageVector(
       const dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
         &sphericalFunctionKetTimesVectorParFlattened,
-      dftfe::utils::MemoryStorage<ValueType, memorySpace> paddedVector)
+      dftfe::utils::MemoryStorage<ValueType, memorySpace> &paddedVector)
   {
     paddedVector.clear();
     const std::vector<unsigned int> atomIdsInProcessor =
