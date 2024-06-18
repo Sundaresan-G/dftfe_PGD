@@ -299,6 +299,10 @@ namespace dftfe
     applyCOnVCconjtransX(ValueType *                                 Xout,
                          const std::pair<unsigned int, unsigned int> cellRange);
 
+    void
+    paddingCouplingMatrix(const std::vector<ValueType> &entries,
+                          std::vector<ValueType> &      entriesPadded,
+                          const CouplingStructure       couplingtype);
 
   protected:
     bool                d_AllReduceCompleted;
@@ -426,10 +430,6 @@ namespace dftfe
         dftfe::utils::MemorySpace::HOST>> basisOperationsPtr,
       const unsigned int                  quadratureIndex);
 
-    void
-    paddingCouplingMatrix(const std::vector<ValueType> &entries,
-                          std::vector<ValueType> &      entriesPadded,
-                          const CouplingStructure       couplingtype);
 
     void
     copyDistributedVectorToPaddedMemoryStorageVector(
