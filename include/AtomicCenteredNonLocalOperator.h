@@ -449,6 +449,12 @@ namespace dftfe
         &sphericalFunctionKetTimesVectorParFlattened,
       dftfe::utils::MemoryStorage<ValueType, memorySpace> &paddedVector);
 
+    void
+    copyPaddedMemoryStorageVectorToDistributeVector(
+      const dftfe::utils::MemoryStorage<ValueType, memorySpace> &paddedVector,
+      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened);
+
     std::map<
       unsigned int,
       dftfe::utils::MemoryStorage<ValueType, dftfe::utils::MemorySpace::HOST>>

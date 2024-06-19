@@ -1500,6 +1500,9 @@ namespace dftfe
       d_ghostSphericalFunctionIdsCurrentProcess,
       d_mpi_communicator);
 #endif
+    vec.update_ghost_values();
+    d_SphericalFunctionKetTimesVectorPar.resize(1);
+    d_SphericalFunctionKetTimesVectorPar[0].reinit(vec);
     d_atomNumberingMapCurrentProcess.resize(atomIdsInCurrentProcess.size());
     std::vector<std::pair<unsigned int, unsigned int>> localIds;
     for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size(); iAtom++)
@@ -1517,10 +1520,6 @@ namespace dftfe
     std::sort(localIds.begin(), localIds.end());
     for (int iAtom = 0; iAtom < atomIdsInCurrentProcess.size(); iAtom++)
       d_atomNumberingMapCurrentProcess[iAtom] = localIds[iAtom].second;
-
-    vec.update_ghost_values();
-    d_SphericalFunctionKetTimesVectorPar.resize(1);
-    d_SphericalFunctionKetTimesVectorPar[0].reinit(vec);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -1759,6 +1758,10 @@ namespace dftfe
                       d_sphericalFnTimesVectorAllCellsDevice.begin(),
                       d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice
                         .begin());
+                else
+                  copyPaddedMemoryStorageVectorToDistributeVector(
+                    d_sphericalFnTimesVectorDevice,
+                    sphericalFunctionKetTimesVectorParFlattened);
               }
             else if (couplingtype == CouplingStructure::blockDiagonal)
               {
@@ -2481,6 +2484,43 @@ namespace dftfe
           1,
           paddedVector.data() +
             iAtom * d_maxSingleAtomContribution * d_numberWaveFunctions,
+          1);
+      }
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  void
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
+    copyPaddedMemoryStorageVectorToDistributeVector(
+      const dftfe::utils::MemoryStorage<ValueType, memorySpace> &paddedVector,
+      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened)
+  {
+    const std::vector<unsigned int> atomIdsInProcessor =
+      d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
+    const std::vector<unsigned int> atomicNumber =
+      d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
+    for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
+      {
+        const unsigned int atomId = atomIdsInProcessor[iAtom];
+        const unsigned int Znum   = atomicNumber[atomId];
+        unsigned int       numberSphercialFunctions =
+          d_atomCenteredSphericalFunctionContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        unsigned int globalId =
+          d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
+            atomId, 0)];
+
+        const unsigned int id = d_SphericalFunctionKetTimesVectorPar[0]
+                                  .get_partitioner()
+                                  ->global_to_local(globalId);
+        d_BLASWrapperPtr->xcopy(
+          numberSphercialFunctions * d_numberWaveFunctions,
+          paddedVector.data() +
+            iAtom * d_maxSingleAtomContribution * d_numberWaveFunctions,
+          1,
+          sphericalFunctionKetTimesVectorParFlattened.data() +
+            id * d_numberWaveFunctions,
           1);
       }
   }
