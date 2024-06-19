@@ -687,9 +687,6 @@ namespace dftfe
               d_atomicProjectorFnsContainer->getAtomicNumbers();
             d_couplingMatrixEntries.clear();
             std::vector<ValueType> Entries;
-            Entries.resize(
-              d_nonLocalOperator->getTotalNonLocalEntriesCurrentProcessor(),
-              0.0);
             for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
               {
                 unsigned int atomId = atomIdsInProcessor[iAtom];
@@ -700,17 +697,15 @@ namespace dftfe
                 for (unsigned int alpha = 0; alpha < numberSphericalFunctions;
                      alpha++)
                   {
-                    unsigned int globalId =
-                      d_nonLocalOperator->getGlobalDofAtomIdSphericalFnPair(
-                        atomId, alpha);
-                    const unsigned int id =
-                      d_nonLocalOperator->getLocalIdOfDistributedVec(globalId);
-                    Entries[id] = ValueType(
-                      d_atomicNonLocalPseudoPotentialConstants[Znum][alpha]);
+                    Entries.push_back(ValueType(
+                      d_atomicNonLocalPseudoPotentialConstants[Znum][alpha]));
                   }
               }
-            d_couplingMatrixEntries.resize(Entries.size());
-            d_couplingMatrixEntries.copyFrom(Entries);
+            std::vector<ValueType> EntriesPadded;
+            d_nonLocalOperator->paddingCouplingMatrix(
+              Entries, EntriesPadded, CouplingStructure::diagonal);
+            d_couplingMatrixEntries.resize(EntriesPadded.size());
+            d_couplingMatrixEntries.copyFrom(EntriesPadded);
             d_HamiltonianCouplingMatrixEntriesUpdated = true;
           }
         return (d_couplingMatrixEntries);
