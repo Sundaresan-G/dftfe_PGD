@@ -619,7 +619,7 @@ IF (WITH_TESTING)
   ENABLE_TESTING()
   INCLUDE(CTest)
   # default 600sec is not enough for some tests, increase:
-  SET (TEST_TIME_LIMIT 3600)
+  SET (TEST_TIME_LIMIT 5000)
   #
   IF (WITH_COMPLEX)
      ADD_SUBDIRECTORY(tests/dft/pseudopotential/complex)
