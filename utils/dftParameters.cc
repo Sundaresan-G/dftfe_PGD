@@ -950,6 +950,13 @@ namespace dftfe
             "[Standard] Use ELPA instead of ScaLAPACK for diagonalization of subspace projected Hamiltonian and Cholesky-Gram-Schmidt orthogonalization.  Default setting is true.");
 
           prm.declare_entry(
+            "USE ELPA GHEP",
+            "false",
+            dealii::Patterns::Bool(),
+            "[Standard] Use ELPA GHEP instead of ELPA SHEP.  Default setting is false.");
+
+
+          prm.declare_entry(
             "SUBSPACE PROJ SHEP GPU",
             "true",
             dealii::Patterns::Bool(),
@@ -1609,6 +1616,7 @@ namespace dftfe
         chebyshevOrder     = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
         maxChebyPasses     = prm.get_integer("MAX CHEBYSHEV PASSES PER SCF");
         useELPA            = prm.get_bool("USE ELPA");
+        useELPAGHEP        = prm.get_bool("USE ELPA GHEP");
         orthogType         = prm.get("ORTHOGONALIZATION TYPE");
         chebyshevTolerance = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
         wfcBlockSize       = prm.get_integer("WFC BLOCK SIZE");

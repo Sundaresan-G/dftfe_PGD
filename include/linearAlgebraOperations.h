@@ -733,6 +733,21 @@ namespace dftfe
       const bool                                         useMixedPrec,
       const dftParameters &                              dftParams);
 
+    template <typename T>
+    void
+    rayleighRitzGEPELPA(
+      operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
+      elpaScalaManager &                                 elpaScala,
+      T *                                                X,
+      const unsigned int                                 numberComponents,
+      const unsigned int                                 numberDofs,
+      const MPI_Comm &                                   mpiCommParent,
+      const MPI_Comm &                                   interBandGroupComm,
+      const MPI_Comm &                                   mpiCommDomain,
+      std::vector<double> &                              eigenValues,
+      const bool                                         useMixedPrec,
+      const dftParameters &                              dftParams);
+
 
     /** @brief Compute Rayleigh-Ritz projection
      *  (serial version using LAPACK, parallel version using ScaLAPACK)

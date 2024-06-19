@@ -389,6 +389,49 @@ namespace dftfe
       const bool                        useMixedPrecOverall = false);
 
     void
+    rayleighRitzGEPELPA(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      const unsigned int                                   M,
+      const unsigned int                                   N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      const MPI_Comm &                  interBandGroupComm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall = false);
+
+    void
+    rayleighRitzGEPELPA(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager &                                   elpaScala,
+      dataTypes::number *                                  X,
+      dataTypes::number *                                  XDevice,
+      dataTypes::number *                                  HXDevice,
+      dataTypes::number *                                  extraBufferDevice,
+      distributedDeviceVec<dataTypes::number> &            Xb,
+      distributedDeviceVec<dataTypes::number> &            HXb,
+      const std::size_t                                    M,
+      const std::size_t                                    N,
+      const MPI_Comm &                                     mpiCommParent,
+      const MPI_Comm &                                     mpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
+      utils::DeviceCCLWrapper &         devicecclMpiInterBand,
+      utils::DeviceCCLWrapper &         devicecclMpiCommIntraPool,
+      const MPI_Comm &                  interBandGroupComm,
+      const MPI_Comm &                  intrapoolcomm,
+      std::vector<double> &             eigenValues,
+      dftfe::utils::deviceBlasHandle_t &handle,
+      const dftParameters &             dftParams,
+      const bool                        useMixedPrecOverall = false);
+
+      
+    void
     rayleighRitzGEPSpectrumSplitDirect(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       elpaScalaManager &                                   elpaScala,
