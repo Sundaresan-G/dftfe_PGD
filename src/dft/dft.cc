@@ -1095,7 +1095,7 @@ namespace dftfe
           d_BLASWrapperPtr);
       }
 #endif
-    // initImageChargesUpdateKPoints();
+    initImageChargesUpdateKPoints();
 
     calculateNearestAtomDistances();
 
