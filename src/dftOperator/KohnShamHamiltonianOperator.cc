@@ -627,14 +627,14 @@ namespace dftfe
       d_dftParamsPtr->memOptMode ?
         0 :
         kPointIndex * (d_dftParamsPtr->spinPolarized + 1) + spinIndex;
-    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-      if (d_dftParamsPtr->isPseudopotential)
-        d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
-    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-      if (d_dftParamsPtr->isPseudopotential &&
-          d_dftParamsPtr->useSinglePrecCheby)
-        d_ONCVnonLocalOperatorSinglePrec->initialiseOperatorActionOnX(
-          d_kPointIndex);
+    // if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+    //   if (d_dftParamsPtr->isPseudopotential)
+    //     d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
+    // if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+    //   if (d_dftParamsPtr->isPseudopotential &&
+    //       d_dftParamsPtr->useSinglePrecCheby)
+    //     d_ONCVnonLocalOperatorSinglePrec->initialiseOperatorActionOnX(
+    //       d_kPointIndex);
   }
 
 
@@ -664,35 +664,35 @@ namespace dftfe
       d_cellWaveFunctionMatrixDstSinglePrec.resize(
         d_cellsBlockSizeHX * nDofsPerCell * numWaveFunctions);
 
-    if (d_dftParamsPtr->isPseudopotential)
-      {
-        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-          {
-            d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-              numWaveFunctions, d_ONCVNonLocalProjectorTimesVectorBlock);
-            d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
-              d_cellWaveFunctionMatrixSrc);
-          }
-        else
-          d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
-            numWaveFunctions, d_ONCVNonLocalProjectorTimesVectorBlock);
-      }
-    if (d_dftParamsPtr->isPseudopotential && d_dftParamsPtr->useSinglePrecCheby)
-      {
-        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-          {
-            d_ONCVnonLocalOperatorSinglePrec->initialiseFlattenedDataStructure(
-              numWaveFunctions,
-              d_ONCVNonLocalProjectorTimesVectorBlockSinglePrec);
-            d_ONCVnonLocalOperatorSinglePrec
-              ->initialiseCellWaveFunctionPointers(
-                d_cellWaveFunctionMatrixSrcSinglePrec);
-          }
-        else
-          d_ONCVnonLocalOperatorSinglePrec->initialiseFlattenedDataStructure(
-            numWaveFunctions,
-            d_ONCVNonLocalProjectorTimesVectorBlockSinglePrec);
-      }
+    // if (d_dftParamsPtr->isPseudopotential)
+    //   {
+    //     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+    //       {
+    //         d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+    //           numWaveFunctions, d_ONCVNonLocalProjectorTimesVectorBlock);
+    //         d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
+    //           d_cellWaveFunctionMatrixSrc);
+    //       }
+    //     else
+    //       d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
+    //         numWaveFunctions, d_ONCVNonLocalProjectorTimesVectorBlock);
+    //   }
+    // if (d_dftParamsPtr->isPseudopotential && d_dftParamsPtr->useSinglePrecCheby)
+    //   {
+    //     if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+    //       {
+    //         d_ONCVnonLocalOperatorSinglePrec->initialiseFlattenedDataStructure(
+    //           numWaveFunctions,
+    //           d_ONCVNonLocalProjectorTimesVectorBlockSinglePrec);
+    //         d_ONCVnonLocalOperatorSinglePrec
+    //           ->initialiseCellWaveFunctionPointers(
+    //             d_cellWaveFunctionMatrixSrcSinglePrec);
+    //       }
+    //     else
+    //       d_ONCVnonLocalOperatorSinglePrec->initialiseFlattenedDataStructure(
+    //         numWaveFunctions,
+    //         d_ONCVNonLocalProjectorTimesVectorBlockSinglePrec);
+    //   }
 
     d_basisOperationsPtr->reinit(numWaveFunctions,
                                  d_cellsBlockSizeHX,

@@ -898,16 +898,16 @@ namespace dftfe
             << init_core << std::endl;
         determineAtomsOfInterstPseudopotential(atomLocations);
         MPI_Barrier(d_mpiCommParent);
-        if (d_dftParamsPtr->isPseudopotential == true)
-          {
-            d_oncvClassPtr->initialiseNonLocalContribution(
-              d_atomLocationsInterestPseudopotential,
-              d_imageIdsTrunc,
-              d_imagePositionsTrunc,
-              d_kPointWeights,     // accounts for interpool
-              d_kPointCoordinates, // accounts for interpool
-              updateNonlocalSparsity);
-          }
+        // if (d_dftParamsPtr->isPseudopotential == true)
+        //   {
+        //     d_oncvClassPtr->initialiseNonLocalContribution(
+        //       d_atomLocationsInterestPseudopotential,
+        //       d_imageIdsTrunc,
+        //       d_imagePositionsTrunc,
+        //       d_kPointWeights,     // accounts for interpool
+        //       d_kPointCoordinates, // accounts for interpool
+        //       updateNonlocalSparsity);
+        //   }
       }
   }
 
