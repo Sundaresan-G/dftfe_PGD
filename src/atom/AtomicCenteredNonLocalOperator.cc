@@ -842,10 +842,17 @@ namespace dftfe
           d_kPointWeights.size() * d_totalNonlocalElems *
             d_numberNodesPerElement * d_maxSingleAtomContribution,
           ValueType(0.0));
-
+        std::vector<unsigned int> atomIdsInCurrentProcess =
+          d_atomCenteredSphericalFunctionContainer
+            ->getAtomIdsInCurrentProcess();
+        const std::vector<unsigned int> &atomicNumber =
+          d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
 
         d_sphericalFnIdsParallelNumberingMap.clear();
         d_sphericalFnIdsParallelNumberingMap.resize(d_totalNonLocalEntries, 0);
+        d_sphericalFnIdsPaddedParallelNumberingMap.clear();
+        d_sphericalFnIdsPaddedParallelNumberingMap.resize(
+          atomIdsInCurrentProcess.size() * d_maxSingleAtomContribution, -1);
 
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.clear();
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.resize(
@@ -862,13 +869,6 @@ namespace dftfe
         d_cellNodeIdMapNonLocalToLocal.resize(d_totalNonlocalElems *
                                               d_numberNodesPerElement);
 
-
-
-        std::vector<unsigned int> atomIdsInCurrentProcess =
-          d_atomCenteredSphericalFunctionContainer
-            ->getAtomIdsInCurrentProcess();
-        const std::vector<unsigned int> &atomicNumber =
-          d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
 
 
         unsigned int countElemNode    = 0;
@@ -904,7 +904,8 @@ namespace dftfe
                                           ->global_to_local(globalId);
 
                 d_sphericalFnIdsParallelNumberingMap[countAlpha] = id;
-
+                d_sphericalFnIdsPaddedParallelNumberingMap
+                  [iAtom * d_maxSingleAtomContribution + alpha] = id;
                 for (unsigned int iElemComp = 0;
                      iElemComp < totalAtomIdElementIterators;
                      iElemComp++)
@@ -1013,10 +1014,15 @@ namespace dftfe
 
 
         d_sphericalFnIdsParallelNumberingMapDevice.clear();
+        d_sphericalFnIdsPaddedParallelNumberingMapDevice.clear();
+        d_sphericalFnIdsPaddedParallelNumberingMapDevice.resize(
+          d_sphericalFnIdsPaddedParallelNumberingMap.size());
         d_sphericalFnIdsParallelNumberingMapDevice.resize(
           d_sphericalFnIdsParallelNumberingMap.size());
         d_sphericalFnIdsParallelNumberingMapDevice.copyFrom(
           d_sphericalFnIdsParallelNumberingMap);
+        d_sphericalFnIdsPaddedParallelNumberingMapDevice.copyFrom(
+          d_sphericalFnIdsPaddedParallelNumberingMap);
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.clear();
         d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice.resize(
           d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec.size());
@@ -2461,31 +2467,15 @@ namespace dftfe
   {
     const std::vector<unsigned int> atomIdsInProcessor =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
-    const std::vector<unsigned int> atomicNumber =
-      d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
-    for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
-      {
-        const unsigned int atomId = atomIdsInProcessor[iAtom];
-        const unsigned int Znum   = atomicNumber[atomId];
-        unsigned int       numberSphercialFunctions =
-          d_atomCenteredSphericalFunctionContainer
-            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-        unsigned int globalId =
-          d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
-            atomId, 0)];
-
-        const unsigned int id = d_SphericalFunctionKetTimesVectorPar[0]
-                                  .get_partitioner()
-                                  ->global_to_local(globalId);
-        d_BLASWrapperPtr->xcopy(
-          numberSphercialFunctions * d_numberWaveFunctions,
-          sphericalFunctionKetTimesVectorParFlattened.data() +
-            id * d_numberWaveFunctions,
-          1,
-          paddedVector.data() +
-            iAtom * d_maxSingleAtomContribution * d_numberWaveFunctions,
-          1);
-      }
+    const unsigned int totalEntries =
+      atomIdsInProcessor.size() * d_maxSingleAtomContribution;
+    dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
+      copyFromDealiiParallelNonLocalVecToPaddedVector(
+        d_numberWaveFunctions,
+        totalEntries,
+        sphericalFunctionKetTimesVectorParFlattened.begin(),
+        paddedVector.begin(),
+        d_sphericalFnIdsPaddedParallelNumberingMapDevice.begin());
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -2498,31 +2488,15 @@ namespace dftfe
   {
     const std::vector<unsigned int> atomIdsInProcessor =
       d_atomCenteredSphericalFunctionContainer->getAtomIdsInCurrentProcess();
-    const std::vector<unsigned int> atomicNumber =
-      d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
-    for (int iAtom = 0; iAtom < atomIdsInProcessor.size(); iAtom++)
-      {
-        const unsigned int atomId = atomIdsInProcessor[iAtom];
-        const unsigned int Znum   = atomicNumber[atomId];
-        unsigned int       numberSphercialFunctions =
-          d_atomCenteredSphericalFunctionContainer
-            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-        unsigned int globalId =
-          d_sphericalFunctionIdsNumberingMapCurrentProcess[std::make_pair(
-            atomId, 0)];
-
-        const unsigned int id = d_SphericalFunctionKetTimesVectorPar[0]
-                                  .get_partitioner()
-                                  ->global_to_local(globalId);
-        d_BLASWrapperPtr->xcopy(
-          numberSphercialFunctions * d_numberWaveFunctions,
-          paddedVector.data() +
-            iAtom * d_maxSingleAtomContribution * d_numberWaveFunctions,
-          1,
-          sphericalFunctionKetTimesVectorParFlattened.data() +
-            id * d_numberWaveFunctions,
-          1);
-      }
+    const unsigned int totalEntries =
+      atomIdsInProcessor.size() * d_maxSingleAtomContribution;
+    dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
+      copyToDealiiParallelNonLocalVecFromPaddedVector(
+        d_numberWaveFunctions,
+        totalEntries,
+        paddedVector.begin(),
+        sphericalFunctionKetTimesVectorParFlattened.begin(),
+        d_sphericalFnIdsPaddedParallelNumberingMapDevice.begin());
   }
 
   template class AtomicCenteredNonLocalOperator<

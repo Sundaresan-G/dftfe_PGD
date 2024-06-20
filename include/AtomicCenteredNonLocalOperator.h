@@ -498,8 +498,11 @@ namespace dftfe
       d_sphericalFnTimesVectorAllCellsReductionDevice;
 
     std::vector<unsigned int> d_sphericalFnIdsParallelNumberingMap;
+    std::vector<int>          d_sphericalFnIdsPaddedParallelNumberingMap;
     dftfe::utils::MemoryStorage<unsigned int, dftfe::utils::MemorySpace::DEVICE>
-                     d_sphericalFnIdsParallelNumberingMapDevice;
+      d_sphericalFnIdsParallelNumberingMapDevice;
+    dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
+                     d_sphericalFnIdsPaddedParallelNumberingMapDevice;
     std::vector<int> d_indexMapFromPaddedNonLocalVecToParallelNonLocalVec;
     dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE>
                               d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice;
