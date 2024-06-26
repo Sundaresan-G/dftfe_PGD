@@ -1748,7 +1748,7 @@ namespace dftfe
 
                 d_BLASWrapperPtr->stridedBlockScale(
                   d_numberWaveFunctions,
-                  d_totalNonLocalEntries,
+                  couplingMatrix.size(),
                   ValueType(1.0),
                   couplingMatrix.begin(),
                   d_sphericalFnTimesVectorDevice.begin());
