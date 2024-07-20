@@ -318,11 +318,10 @@ namespace dftfe
               NCCLCHECK(ncclGroupEnd());
             }
           // NCCLCHECK(ncclGroupEnd());
-        }
+        } else
 #endif
-#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
-      else
         {
+#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
           // Printing line and file to show no error
           // dftfe::utils::deviceSynchronize();
           // MPI_Barrier(MPI_COMM_WORLD);
@@ -363,8 +362,9 @@ namespace dftfe
                                     d_mpiComm,
                                     MPI_STATUS_IGNORE));
             }
-        }
 #  endif
+        }
+
       return 0;
     }
 
