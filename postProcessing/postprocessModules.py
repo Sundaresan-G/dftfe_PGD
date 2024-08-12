@@ -67,9 +67,9 @@ class Plotters:
                 f.write("{}\n".format(self.scaleFactor)) 
                 lines = f1.readlines()
                 for line in lines:
-                    f.write(line)
-                    self.latticeVecs.append((np.array(list(map(float,line.strip().split()))))*self.scaleFactor)
-
+                    if len(line.strip()) != 0:
+                        f.write(line.strip()+"\n")
+                        self.latticeVecs.append((np.array(list(map(float,line.strip().split()))))*self.scaleFactor)
             self.ionData =[]   
 
             with open(self.filesPath+self.coordinatesFile) as f1:

@@ -40,17 +40,29 @@ namespace dftfe
     std::vector<double> xData(numRows), yData(numRows);
 
     unsigned int maxRowId = 0;
+    // std::cout <<" file name : " <<filename<< std::endl;
+
     for (unsigned int irow = 0; irow < numRows; ++irow)
       {
         xData[irow] = radialFunctionData[irow][0];
         if (radialPower == 0)
           yData[irow] = radialFunctionData[irow][colIndex];
         else
-          yData[irow] =
-            radialFunctionData[irow][colIndex] * pow(xData[irow], radialPower);
+          {
+            if (xData[irow] != 0)
+              yData[irow] = radialFunctionData[irow][colIndex] *
+                            pow(xData[irow], radialPower);
+            else
+              consider0thEntry = true;
+            // yData[irow] = radialFunctionData[irow][colIndex];
+          }
         if (std::abs(yData[irow]) > truncationTol)
           maxRowId = irow;
+        // std::cout <<"max row: " <<maxRowId << std::endl;
+        // std::cout <<"spline data: " <<xData[irow] <<","<<yData[irow] <<
+        // std::endl;
       }
+
 
     if (!consider0thEntry)
       yData[0] = yData[1];
@@ -69,8 +81,10 @@ namespace dftfe
                        natural_bound_type_R,
                        0.0,
                        d_radialSplineObject);
-    d_cutOff = xData[maxRowId + 10];
+    d_cutOff = xData[std::min(maxRowId + 10, numRows - 1)];
     d_rMin   = xData[0];
+    // std::cout << d_rMin << std::endl;
+    // std::cout << d_cutOff << std::endl;
   }
 
 

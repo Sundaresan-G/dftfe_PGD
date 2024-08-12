@@ -66,6 +66,7 @@
 
 #include <mixingClass.h>
 #include <oncvClass.h>
+#include <atomCenteredPostProcessing.h>
 
 namespace dftfe
 {
@@ -954,9 +955,17 @@ namespace dftfe
     compute_ldos(const std::vector<std::vector<double>> &eigenValuesInput,
                  const std::string &                     fileName);
 
+    // void
+    // compute_pdos(const std::vector<std::vector<double>> &eigenValuesInput,
+    //              const std::string &                     fileName);
+
     void
     compute_pdos(const std::vector<std::vector<double>> &eigenValuesInput,
-                 const std::string &                     fileName);
+                 const unsigned int highestStateOfInterest);
+
+    std::shared_ptr<
+      AtomicCenteredNonLocalOperator<dataTypes::number, memorySpace>>
+      d_pdosUtilNonLocalOperator;
 
 
     /**
@@ -1257,6 +1266,9 @@ namespace dftfe
     std::shared_ptr<dftfe::oncvClass<dataTypes::number, memorySpace>>
       d_oncvClassPtr;
 
+    std::shared_ptr<
+      dftfe::atomCenteredOrbitalsPostProcessing<dataTypes::number, memorySpace>>
+      d_atomCenteredOrbitalsPostProcessingPtr;
 
     std::shared_ptr<
 #if defined(DFTFE_WITH_DEVICE)

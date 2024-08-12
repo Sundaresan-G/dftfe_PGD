@@ -843,6 +843,25 @@ namespace dftfe
             d_dftParamsPtr->useDevice);
       }
 
+    if (d_dftParamsPtr->solverMode == "NSCF")
+      {
+        if (d_dftParamsPtr->writePdosFile)
+          {
+            d_atomCenteredOrbitalsPostProcessingPtr = std::make_shared<
+              dftfe::atomCenteredOrbitalsPostProcessing<dataTypes::number,
+                                                        memorySpace>>(
+              mpi_communicator,
+              d_dftfeScratchFolderName,
+              atomTypes,
+              d_dftParamsPtr->floatingNuclearCharges,
+              d_nOMPThreads,
+              d_atomTypeAtributes,
+              d_dftParamsPtr->reproducible_output,
+              d_dftParamsPtr->verbosity,
+              d_dftParamsPtr->useDevice);
+          }
+      }
+
     if (d_dftParamsPtr->verbosity >= 1)
       if (d_dftParamsPtr->nonLinearCoreCorrection == true)
         pcout
@@ -894,6 +913,20 @@ namespace dftfe
               d_kPointWeights,     // accounts for interpool
               d_kPointCoordinates, // accounts for interpool
               updateNonlocalSparsity);
+          }
+        if (d_dftParamsPtr->solverMode == "NSCF")
+          {
+            if (d_dftParamsPtr->writePdosFile)
+              {
+                d_atomCenteredOrbitalsPostProcessingPtr
+                  ->initialiseNonLocalContribution(
+                    d_atomLocationsInterestPseudopotential,
+                    d_imageIdsTrunc,
+                    d_imagePositionsTrunc,
+                    d_kPointWeights,
+                    d_kPointCoordinates,
+                    updateNonlocalSparsity);
+              }
           }
       }
   }
@@ -1190,7 +1223,30 @@ namespace dftfe
                                  d_numEigenValues,
                                  d_dftParamsPtr->useSinglePrecCheby);
 
-
+    if (d_dftParamsPtr->solverMode == "NSCF")
+      {
+        if (d_dftParamsPtr->writePdosFile)
+          {
+            d_atomCenteredOrbitalsPostProcessingPtr->initialise(
+              d_basisOperationsPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+              d_basisOperationsPtrDevice,
+#endif
+              d_BLASWrapperPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+              d_BLASWrapperPtr,
+#endif
+              d_densityQuadratureId,
+              d_lpspQuadratureId,
+              d_sparsityPatternQuadratureId,
+              d_nlpspQuadratureId,
+              d_densityQuadratureIdElectro,
+              d_excManagerPtr,
+              atomLocations,
+              d_numEigenValues,
+              d_dftParamsPtr->useSinglePrecCheby);
+          }
+      }
     //
     // initialize guesses for electron-density and wavefunctions
     //
@@ -1815,6 +1871,23 @@ namespace dftfe
         solveNoSCF();
         if (d_dftParamsPtr->writeBandsFile)
           writeBands();
+
+        if (d_dftParamsPtr->writePdosFile)
+          {
+            d_atomCenteredOrbitalsPostProcessingPtr->computeAtomCenteredEntries(
+              &d_eigenVectorsFlattenedHost,
+              d_dftParamsPtr->numberEigenValues,
+              eigenValues,
+              d_basisOperationsPtrHost,
+              d_BLASWrapperPtrHost,
+              d_lpspQuadratureId,
+              d_kPointWeights,
+              interBandGroupComm,
+              interpoolcomm,
+              d_dftParamsPtr,
+              d_dftParamsPtr->highestStateOfInterestForChebFiltering,
+              fermiEnergy);
+          }
       }
 
     if (d_dftParamsPtr->writeStructreEnergyForcesFileForPostProcess)
@@ -1837,9 +1910,6 @@ namespace dftfe
 
     if (d_dftParamsPtr->writeLdosFile)
       compute_ldos(eigenValues, "ldosData.out");
-
-    if (d_dftParamsPtr->writePdosFile)
-      compute_pdos(eigenValues, "pdosData");
 
     if (d_dftParamsPtr->writeLocalizationLengths)
       compute_localizationLength("localizationLengths.out");

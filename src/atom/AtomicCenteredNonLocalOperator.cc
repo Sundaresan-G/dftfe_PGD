@@ -1634,6 +1634,79 @@ namespace dftfe
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  std::map<unsigned int, std::vector<ValueType>>
+  AtomicCenteredNonLocalOperator<ValueType, memorySpace>::
+    extractLocallyOwnedAtomFromDistributedVector(
+      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened)
+  {
+    std::map<unsigned int, std::vector<ValueType>> extractedAtomicMap;
+    if (d_totalNonLocalEntries > 0)
+      {
+        // ********have to add for device as well********
+        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+          {
+            const std::vector<unsigned int> &atomicNumber =
+              d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
+            const std::vector<unsigned int> atomIdsInProc =
+              d_atomCenteredSphericalFunctionContainer
+                ->getAtomIdsInCurrentProcess();
+            for (int iAtom = 0; iAtom < d_totalAtomsInCurrentProc; iAtom++)
+              {
+                const unsigned int atomId = atomIdsInProc[iAtom];
+                const unsigned int Znum   = atomicNumber[atomId];
+                const unsigned int numberSphericalFunctions =
+                  d_atomCenteredSphericalFunctionContainer
+                    ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                const unsigned int localId =
+                  sphericalFunctionKetTimesVectorParFlattened
+                    .getMPIPatternP2P()
+                    ->globalToLocal(
+                      d_sphericalFunctionIdsNumberingMapCurrentProcess
+                        .find(std::make_pair(atomId, 0))
+                        ->second);
+
+                if (localId <= sphericalFunctionKetTimesVectorParFlattened
+                                 .getMPIPatternP2P()
+                                 ->localOwnedSize())
+                  {
+                    std::vector<ValueType> tempVec(numberSphericalFunctions *
+                                                     d_numberWaveFunctions,
+                                                   0.0);
+
+                    for (unsigned int alpha = 0;
+                         alpha < numberSphericalFunctions;
+                         alpha++)
+                      {
+                        const unsigned int localId =
+                          sphericalFunctionKetTimesVectorParFlattened
+                            .getMPIPatternP2P()
+                            ->globalToLocal(
+                              d_sphericalFunctionIdsNumberingMapCurrentProcess
+                                .find(std::make_pair(atomId, alpha))
+                                ->second);
+
+                        std::transform(
+                          sphericalFunctionKetTimesVectorParFlattened.begin() +
+                            localId * d_numberWaveFunctions,
+                          sphericalFunctionKetTimesVectorParFlattened.begin() +
+                            localId * d_numberWaveFunctions +
+                            d_numberWaveFunctions,
+                          tempVec.begin() + d_numberWaveFunctions * alpha,
+                          [](auto &a) { return a; });
+                      }
+
+                    extractedAtomicMap[atomId] = tempVec;
+                    // pcout <<"Size of tempVec After " <<tempVec.size()<<
+                    // std::endl;
+                  }
+              }
+          }
+      }
+    return extractedAtomicMap;
+  }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   AtomicCenteredNonLocalOperator<ValueType, memorySpace>::applyVOnCconjtransX(
     const CouplingStructure                                    couplingtype,
@@ -2286,6 +2359,16 @@ namespace dftfe
   {
     return (d_flattenedNonLocalCellDofIndexToProcessDofIndexMap);
   }
+
+  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
+  std::shared_ptr<AtomCenteredSphericalFunctionContainer>
+  AtomicCenteredNonLocalOperator<ValueType,
+                                 memorySpace>::getSphericalFunctionContainer()
+  {
+    return (d_atomCenteredSphericalFunctionContainer);
+  }
+
+
   template class AtomicCenteredNonLocalOperator<
     dataTypes::number,
     dftfe::utils::MemorySpace::HOST>;
