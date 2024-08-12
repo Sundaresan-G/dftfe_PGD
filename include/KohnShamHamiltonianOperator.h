@@ -25,6 +25,7 @@
 #include <BLASWrapper.h>
 #include <FEBasisOperations.h>
 #include <oncvClass.h>
+#include <AuxDensityMatrix.h>
 
 namespace dftfe
 {
@@ -85,23 +86,27 @@ namespace dftfe
 
     /**
      * @brief Computes effective potential involving exchange-correlation functionals
-     * @param rhoValues electron-density
+     * @param auxDensityMatrixRepresentation core plus valence electron-density
      * @param phiValues electrostatic potential arising both from electron-density and nuclear charge
-     * @param rhoCoreValues quadrature data of sum{Vext} minus sum{Vnu}
      */
     void
     computeVEff(
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &rhoValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &gradRhoValues,
+      std::shared_ptr<AuxDensityMatrix> auxDensityXCRepresentationPtr,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &                                                  phiValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-      const unsigned int                                   spinIndex = 0);
+        &                phiValues,
+      const unsigned int spinIndex = 0);
+
+    /**
+     * @brief Sets the V-eff potential
+     * @param vKS_quadValues the input V-KS values stored at the quadrature points
+     * @param spinIndex spin index
+     */
+    void
+    setVEff(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &                vKS_quadValues,
+      const unsigned int spinIndex);
 
     void
     computeVEffExternalPotCorr(
@@ -110,23 +115,16 @@ namespace dftfe
 
     void
     computeVEffPrime(
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &rhoValues,
+      std::shared_ptr<AuxDensityMatrix> auxDensityXCRepresentationPtr,
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &rhoPrimeValues,
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &gradRhoValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &gradRhoPrimeValues,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &                                                  phiPrimeValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-      const unsigned int                                   spinIndex);
+        &                phiPrimeValues,
+      const unsigned int spinIndex);
 
     /**
      * @brief sets the data member to appropriate kPoint and spin Index
@@ -194,6 +192,9 @@ namespace dftfe
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
   private:
+    void
+    setVEffExternalPotCorrToZero();
+
     std::shared_ptr<
       AtomicCenteredNonLocalOperator<dataTypes::number, memorySpace>>
       d_ONCVnonLocalOperator;
