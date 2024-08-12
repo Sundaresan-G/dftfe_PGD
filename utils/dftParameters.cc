@@ -1398,7 +1398,8 @@ namespace dftfe
       writeDensitySolutionFields = prm.get_bool("WRITE DENSITY FE MESH");
       writeDensityQuadData       = prm.get_bool("WRITE DENSITY QUAD DATA");
       writeDosFile               = prm.get_bool("WRITE DENSITY OF STATES");
-      writeLdosFile            = prm.get_bool("WRITE LOCAL DENSITY OF STATES");
+      writeLdosFile = prm.get_bool("WRITE LOCAL DENSITY OF STATES");
+      writePdosFile = prm.get_bool("WRITE PROJECTED DENSITY OF STATES");
       writeLocalizationLengths = prm.get_bool("WRITE LOCALIZATION LENGTHS");
       readWfcForPdosPspFile =
         prm.get_bool("READ ATOMIC WFC PDOS FROM PSP FILE");
@@ -1712,10 +1713,9 @@ namespace dftfe
   dftParameters::check_parameters(const MPI_Comm &mpi_comm_parent) const
   {
     AssertThrow(
-      !((periodicX || periodicY || periodicZ) &&
-        (writeLdosFile || writePdosFile)),
+      !((periodicX || periodicY || periodicZ) && writeLdosFile),
       dealii::ExcMessage(
-        "DFT-FE Error: LOCAL DENSITY OF STATES and PROJECTED DENSITY OF STATES are currently not implemented in the case of periodic and semi-periodic boundary conditions."));
+        "DFT-FE Error: LOCAL DENSITY OF STATES is currently not implemented in the case of periodic and semi-periodic boundary conditions."));
 
 
     if (floatingNuclearCharges)

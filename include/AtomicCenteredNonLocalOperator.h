@@ -197,6 +197,12 @@ namespace dftfe
     const std::vector<unsigned int> &
     getSphericalFnTimesVectorFlattenedVectorLocalIds() const;
 
+    std::map<unsigned int, std::vector<ValueType>>
+    extractLocallyOwnedAtomFromDistributedVector(
+      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
+        &sphericalFunctionKetTimesVectorParFlattened);
+
+
 
     // Calls for both device and host
     /**
@@ -299,6 +305,8 @@ namespace dftfe
     applyCOnVCconjtransX(ValueType *                                 Xout,
                          const std::pair<unsigned int, unsigned int> cellRange);
 
+    std::shared_ptr<AtomCenteredSphericalFunctionContainer>
+    getSphericalFunctionContainer();
 
   protected:
     bool                d_AllReduceCompleted;
