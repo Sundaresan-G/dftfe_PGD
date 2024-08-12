@@ -36,8 +36,8 @@ namespace dftfe
   public:
     unsigned int finiteElementPolynomialOrder,
       finiteElementPolynomialOrderElectrostatics, n_refinement_steps,
-      numberEigenValues, xc_id, spinPolarized, nkx, nky, nkz, offsetFlagX,
-      offsetFlagY, offsetFlagZ;
+      numberEigenValues, spinPolarized, nkx, nky, nkz, offsetFlagX, offsetFlagY,
+      offsetFlagZ;
     unsigned int chebyshevOrder, numPass, numSCFIterations,
       maxLinearSolverIterations, mixingHistory, npool,
       numberWaveFunctionsForEstimate, numLevels,
@@ -45,7 +45,10 @@ namespace dftfe
 
     bool        poissonGPU;
     bool        vselfGPU;
+    std::string XCType;
     std::string modelXCInputFile;
+    std::string auxBasisTypeXC;
+    std::string auxBasisDataXC;
 
     double radiusAtomBall, mixingParameter, spinMixingEnhancementFactor;
     bool   adaptAndersonMixingParameter;
@@ -60,6 +63,8 @@ namespace dftfe
 
     double netCharge;
 
+    /** parameters for functional tests **/
+    std::string functionalTestName;
     /** parameters for LRD preconditioner **/
 
     double      startingNormLRDLargeDamping;
@@ -101,6 +106,7 @@ namespace dftfe
     bool reproducible_output;
 
     bool writeWfcSolutionFields;
+    bool printKE;
 
     bool writeDensitySolutionFields;
 

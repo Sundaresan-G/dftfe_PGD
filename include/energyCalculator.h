@@ -20,11 +20,130 @@
 #include <excManager.h>
 #include "dftParameters.h"
 #include <FEBasisOperations.h>
+#include <AuxDensityMatrix.h>
 #ifndef energyCalculator_H_
 #  define energyCalculator_H_
 
 namespace dftfe
 {
+  namespace internalEnergy
+  {
+    template <typename T>
+    double
+    computeFieldTimesDensity(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<T, double, dftfe::utils::MemorySpace::HOST>>
+        &                                                  basisOperationsPtr,
+      const unsigned int                                   quadratureId,
+      const std::map<dealii::CellId, std::vector<double>> &fieldValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &densityQuadValues);
+
+    template <typename T>
+    double
+    computeFieldTimesDensityResidual(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<T, double, dftfe::utils::MemorySpace::HOST>>
+        &                                                  basisOperationsPtr,
+      const unsigned int                                   quadratureId,
+      const std::map<dealii::CellId, std::vector<double>> &fieldValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &densityQuadValuesIn,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &densityQuadValuesOut);
+
+    template <typename T>
+    double
+    computeFieldTimesDensity(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<T, double, dftfe::utils::MemorySpace::HOST>>
+        &                basisOperationsPtr,
+      const unsigned int quadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &fieldValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &densityQuadValues);
+
+    template <typename T>
+    double
+    computeFieldTimesDensityResidual(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<T, double, dftfe::utils::MemorySpace::HOST>>
+        &                basisOperationsPtr,
+      const unsigned int quadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &fieldValues,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &densityQuadValuesIn,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &densityQuadValuesOut);
+
+    void
+    printEnergy(const double                      bandEnergy,
+                const double                      totalkineticEnergy,
+                const double                      totalexchangeEnergy,
+                const double                      totalcorrelationEnergy,
+                const double                      totalElectrostaticEnergy,
+                const double                      dispersionEnergy,
+                const double                      totalEnergy,
+                const unsigned int                numberAtoms,
+                const dealii::ConditionalOStream &pcout,
+                const bool                        reproducibleOutput,
+                const bool                        isPseudo,
+                const unsigned int                verbosity,
+                const dftParameters &             dftParams);
+
+    double
+    localBandEnergy(const std::vector<std::vector<double>> &eigenValues,
+                    const std::vector<double> &             kPointWeights,
+                    const double                            fermiEnergy,
+                    const double                            fermiEnergyUp,
+                    const double                            fermiEnergyDown,
+                    const double                            TVal,
+                    const unsigned int                      spinPolarized,
+                    const dealii::ConditionalOStream &      scout,
+                    const MPI_Comm &                        interpoolcomm,
+                    const unsigned int                      lowerBoundKindex,
+                    const unsigned int                      verbosity,
+                    const dftParameters &                   dftParams);
+
+    double
+    nuclearElectrostaticEnergyLocal(
+      const distributedCPUVec<double> &                    phiTotRhoOut,
+      const std::vector<std::vector<double>> &             localVselfs,
+      const std::map<dealii::CellId, std::vector<double>> &smearedbValues,
+      const std::map<dealii::CellId, std::vector<unsigned int>>
+        &                          smearedbNonTrivialAtomIds,
+      const dealii::DoFHandler<3> &dofHandlerElectrostatic,
+      const dealii::Quadrature<3> &quadratureElectrostatic,
+      const dealii::Quadrature<3> &quadratureSmearedCharge,
+      const std::map<dealii::types::global_dof_index, double>
+        &        atomElectrostaticNodeIdToChargeMap,
+      const bool smearedNuclearCharges = false);
+
+    double
+    nuclearElectrostaticEnergyResidualLocal(
+      const distributedCPUVec<double> &                    phiTotRhoIn,
+      const distributedCPUVec<double> &                    phiTotRhoOut,
+      const std::map<dealii::CellId, std::vector<double>> &smearedbValues,
+      const std::map<dealii::CellId, std::vector<unsigned int>>
+        &                          smearedbNonTrivialAtomIds,
+      const dealii::DoFHandler<3> &dofHandlerElectrostatic,
+      const dealii::Quadrature<3> &quadratureSmearedCharge,
+      const std::map<dealii::types::global_dof_index, double>
+        &        atomElectrostaticNodeIdToChargeMap,
+      const bool smearedNuclearCharges = false);
+
+    double
+    computeRepulsiveEnergy(
+      const std::vector<std::vector<double>> &atomLocationsAndCharge,
+      const bool                              isPseudopotential);
+  } // namespace internalEnergy
+
   /**
    * @brief Calculates the ksdft problem total energy and its components
    *
@@ -126,14 +245,11 @@ namespace dftfe
         &densityOutValues,
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &gradDensityInValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &gradDensityOutValues,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &                                                  rhoOutValuesLpsp,
-      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
+        &                               rhoOutValuesLpsp,
+      std::shared_ptr<AuxDensityMatrix> auxDensityXCInRepresentationPtr,
+      std::shared_ptr<AuxDensityMatrix> auxDensityXCOutRepresentationPtr,
       const std::map<dealii::CellId, std::vector<double>> &smearedbValues,
       const std::map<dealii::CellId, std::vector<unsigned int>>
         &                                     smearedbNonTrivialAtomIds,
@@ -180,9 +296,9 @@ namespace dftfe
         &gradDensityInValues,
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &                                                  gradDensityOutValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
+        &                               gradDensityOutValues,
+      std::shared_ptr<AuxDensityMatrix> AuxDensityXCInRepresentationPtr,
+      std::shared_ptr<AuxDensityMatrix> AuxDensityXCOutRepresentationPtr,
       const std::map<dealii::CellId, std::vector<double>> &smearedbValues,
       const std::map<dealii::CellId, std::vector<unsigned int>>
         &                                     smearedbNonTrivialAtomIds,
@@ -206,46 +322,12 @@ namespace dftfe
         &densityInValues,
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &densityOutValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &gradDensityInValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &                                                  gradDensityOutValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-      double &                                             exchangeEnergy,
-      double &                                             correlationEnergy,
-      double &excCorrPotentialTimesRho);
-
-    void
-    computeXCEnergyTerms(
-      const std::shared_ptr<
-        dftfe::basis::FEBasisOperations<dataTypes::number,
-                                        double,
-                                        dftfe::utils::MemorySpace::HOST>>
-        &                               basisOperationsPtr,
-      const unsigned int                quadratureId,
-      const std::shared_ptr<excManager> excManagerPtr,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &densityInValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &densityOutValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &gradDensityInValues,
-      const std::vector<
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-        &                                                  gradDensityOutValues,
-      const std::map<dealii::CellId, std::vector<double>> &rhoCoreValues,
-      const std::map<dealii::CellId, std::vector<double>> &gradRhoCoreValues,
-      double &                                             exchangeEnergy,
-      double &                                             correlationEnergy,
-      double &excCorrPotentialTimesRho);
-
+        &                               gradDensityOutValues,
+      std::shared_ptr<AuxDensityMatrix> AuxDensityXCInRepresentationPtr,
+      std::shared_ptr<AuxDensityMatrix> auxDensityXCOutRepresentationPtr,
+      double &                          exchangeEnergy,
+      double &                          correlationEnergy,
+      double &                          excCorrPotentialTimesRho);
 
     double
     computeEntropicEnergy(const std::vector<std::vector<double>> &eigenValues,

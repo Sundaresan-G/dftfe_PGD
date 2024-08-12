@@ -19,11 +19,14 @@ end
 
 
 subsection DFT functional parameters
-  set EXCHANGE CORRELATION TYPE   = 4
+  set EXCHANGE CORRELATION TYPE = GGA-PBE
   set PSEUDOPOTENTIAL CALCULATION = true
   set PSEUDOPOTENTIAL FILE NAMES LIST = pseudoMg.inp
 end
 
+subsection Post-processing Options
+  set PRINT KINETIC ENERGY = true
+end
 
 subsection Finite element mesh parameters
   set POLYNOMIAL ORDER = 3

@@ -25,7 +25,6 @@
 #include <DeviceTypeConfig.h>
 #include <cmath>
 
-
 namespace dftfe
 {
   namespace linearAlgebra
@@ -38,6 +37,21 @@ namespace dftfe
     {
     public:
       BLASWrapper();
+
+      template <typename ValueType>
+      void
+      hadamardProduct(const unsigned int m,
+                      const ValueType *  X,
+                      const ValueType *  Y,
+                      ValueType *        output) const;
+
+      template <typename ValueType>
+      void
+      hadamardProductWithConj(const unsigned int m,
+                              const ValueType *  X,
+                              const ValueType *  Y,
+                              ValueType *        output) const;
+
       // Real-Single Precision GEMM
       void
       xgemm(const char         transA,
@@ -161,6 +175,23 @@ namespace dftfe
             const ValueType2       alpha,
             const dftfe::size_type n) const;
 
+      // Brief
+      //      for ( i = 0  i < numContiguousBlocks; i ++)
+      //        {
+      //          for( j = 0 ; j < contiguousBlockSize; j++)
+      //            {
+      //              output[j] += input1[i*contiguousBlockSize+j] *
+      //              input2[i*contiguousBlockSize+j];
+      //            }
+      //        }
+      template <typename ValueType>
+      void
+      addVecOverContinuousIndex(const dftfe::size_type numContiguousBlocks,
+                                const dftfe::size_type contiguousBlockSize,
+                                const ValueType *      input1,
+                                const ValueType *      input2,
+                                ValueType *            output);
+
       // Real-Float scaling of Real-vector
 
 
@@ -216,6 +247,32 @@ namespace dftfe
            const unsigned int          INCY,
            const MPI_Comm &            mpi_communicator,
            std::complex<double> *      result) const;
+
+
+      // MultiVector Real dot product
+      template <typename ValueType>
+      void
+      MultiVectorXDot(const unsigned int contiguousBlockSize,
+                      const unsigned int numContiguousBlocks,
+                      const ValueType *  X,
+                      const ValueType *  Y,
+                      const ValueType *  onesVec,
+                      ValueType *        tempVector,
+                      ValueType *        tempResults,
+                      ValueType *        result) const;
+
+      // MultiVector Real dot product with all Reduce call
+      template <typename ValueType>
+      void
+      MultiVectorXDot(const unsigned int contiguousBlockSize,
+                      const unsigned int numContiguousBlocks,
+                      const ValueType *  X,
+                      const ValueType *  Y,
+                      const ValueType *  onesVec,
+                      ValueType *        tempVector,
+                      ValueType *        tempResults,
+                      const MPI_Comm &   mpi_communicator,
+                      ValueType *        result) const;
 
 
       // Real double Ax+y
@@ -472,7 +529,7 @@ namespace dftfe
                                        const dftfe::size_type numBlocks,
                                        const dftfe::size_type startingId,
                                        const ValueType1 *     copyFromVec,
-                                       ValueType2 *           copyToVec);
+                                       ValueType2 *           copyToVec) const;
 
 
       template <typename ValueType1, typename ValueType2>
@@ -569,6 +626,33 @@ namespace dftfe
            const ValueType        beta,
            const dftfe::size_type size);
 
+      template <typename ValueType>
+      void
+      stridedBlockScaleColumnWise(const dftfe::size_type contiguousBlockSize,
+                                  const dftfe::size_type numContiguousBlocks,
+                                  const ValueType *      beta,
+                                  ValueType *            x);
+
+      template <typename ValueType>
+      void
+      stridedBlockScaleAndAddColumnWise(
+        const dftfe::size_type contiguousBlockSize,
+        const dftfe::size_type numContiguousBlocks,
+        const ValueType *      x,
+        const ValueType *      beta,
+        ValueType *            y);
+
+      template <typename ValueType>
+      void
+      stridedBlockScaleAndAddTwoVecColumnWise(
+        const dftfe::size_type contiguousBlockSize,
+        const dftfe::size_type numContiguousBlocks,
+        const ValueType *      x,
+        const ValueType *      alpha,
+        const ValueType *      y,
+        const ValueType *      beta,
+        ValueType *            z);
+
     private:
     };
 #if defined(DFTFE_WITH_DEVICE)
@@ -577,6 +661,29 @@ namespace dftfe
     {
     public:
       BLASWrapper();
+
+      template <typename ValueType1, typename ValueType2>
+      static void
+      copyValueType1ArrToValueType2ArrDeviceCall(
+        const dftfe::size_type             size,
+        const ValueType1 *                 valueType1Arr,
+        ValueType2 *                       valueType2Arr,
+        const dftfe::utils::deviceStream_t streamId = 0);
+
+      template <typename ValueType>
+      void
+      hadamardProduct(const unsigned int m,
+                      const ValueType *  X,
+                      const ValueType *  Y,
+                      ValueType *        output) const;
+
+      template <typename ValueType>
+      void
+      hadamardProductWithConj(const unsigned int m,
+                              const ValueType *  X,
+                              const ValueType *  Y,
+                              ValueType *        output) const;
+
       // Real-Single Precision GEMM
       void
       xgemm(const char         transA,
@@ -693,6 +800,14 @@ namespace dftfe
             const std::complex<float> *beta,
             std::complex<float> *      y,
             const unsigned int         incy) const;
+
+      template <typename ValueType>
+      void
+      addVecOverContinuousIndex(const dftfe::size_type numContiguousBlocks,
+                                const dftfe::size_type contiguousBlockSize,
+                                const ValueType *      input1,
+                                const ValueType *      input2,
+                                ValueType *            output);
 
 
 
@@ -760,6 +875,30 @@ namespace dftfe
            const MPI_Comm &            mpi_communicator,
            std::complex<double> *      result) const;
 
+
+      template <typename ValueType>
+      void
+      MultiVectorXDot(const unsigned int contiguousBlockSize,
+                      const unsigned int numContiguousBlocks,
+                      const ValueType *  X,
+                      const ValueType *  Y,
+                      const ValueType *  onesVec,
+                      ValueType *        tempVector,
+                      ValueType *        tempResults,
+                      ValueType *        result) const;
+
+      template <typename ValueType>
+      void
+      MultiVectorXDot(const unsigned int contiguousBlockSize,
+                      const unsigned int numContiguousBlocks,
+                      const ValueType *  X,
+                      const ValueType *  Y,
+                      const ValueType *  onesVec,
+                      ValueType *        tempVector,
+                      ValueType *        tempResults,
+                      const MPI_Comm &   mpi_communicator,
+                      ValueType *        result) const;
+
       // Real double Ax+y
       void
       xaxpy(const unsigned int n,
@@ -1012,7 +1151,7 @@ namespace dftfe
                                        const dftfe::size_type numBlocks,
                                        const dftfe::size_type startingId,
                                        const ValueType1 *     copyFromVec,
-                                       ValueType2 *           copyToVec);
+                                       ValueType2 *           copyToVec) const;
 
 
       template <typename ValueType1, typename ValueType2>
@@ -1109,6 +1248,33 @@ namespace dftfe
            const ValueType        beta,
            const dftfe::size_type size);
 
+      template <typename ValueType>
+      void
+      stridedBlockScaleColumnWise(const dftfe::size_type contiguousBlockSize,
+                                  const dftfe::size_type numContiguousBlocks,
+                                  const ValueType *      beta,
+                                  ValueType *            x);
+
+      template <typename ValueType>
+      void
+      stridedBlockScaleAndAddColumnWise(
+        const dftfe::size_type contiguousBlockSize,
+        const dftfe::size_type numContiguousBlocks,
+        const ValueType *      x,
+        const ValueType *      beta,
+        ValueType *            y);
+
+      template <typename ValueType>
+      void
+      stridedBlockScaleAndAddTwoVecColumnWise(
+        const dftfe::size_type contiguousBlockSize,
+        const dftfe::size_type numContiguousBlocks,
+        const ValueType *      x,
+        const ValueType *      alpha,
+        const ValueType *      y,
+        const ValueType *      beta,
+        ValueType *            z);
+
       dftfe::utils::deviceBlasHandle_t &
       getDeviceBlasHandle();
 
@@ -1117,6 +1283,8 @@ namespace dftfe
       setMathMode(dftfe::utils::deviceBlasMath_t mathMode);
 #  endif
 
+      dftfe::utils::deviceBlasStatus_t
+      setStream(dftfe::utils::deviceStream_t streamId);
 
     private:
 #  ifdef DFTFE_WITH_DEVICE_AMD
@@ -1133,9 +1301,6 @@ namespace dftfe
 
       dftfe::utils::deviceBlasStatus_t
       destroy();
-
-      dftfe::utils::deviceBlasStatus_t
-      setStream(dftfe::utils::deviceStream_t streamId);
     };
 #endif
 

@@ -107,6 +107,12 @@ namespace dftfe
           R"([Standard] Writes DFT ground state wavefunction solution fields (FEM mesh nodal values) to wfcOutput.vtu file for visualization purposes. The wavefunction solution fields in wfcOutput.vtu are named wfc\_s\_k\_i in case of spin-polarized calculations and wfc\_k\_i otherwise, where s denotes the spin index (0 or 1), k denotes the k point index starting from 0, and i denotes the Kohn-Sham wavefunction index starting from 0. In the case of geometry optimization, the wavefunctions corresponding to the last ground-state solve are written.  Default: false.)");
 
         prm.declare_entry(
+          "PRINT KINETIC ENERGY",
+          "false",
+          dealii::Patterns::Bool(),
+          R"([Standard] Prints the Kinetic energy of the electrons.  Default: false.)");
+
+        prm.declare_entry(
           "WRITE DENSITY FE MESH",
           "false",
           dealii::Patterns::Bool(),
@@ -157,6 +163,15 @@ namespace dftfe
       }
       prm.leave_subsection();
 
+      prm.enter_subsection("FunctionalTest");
+      {
+        prm.declare_entry(
+          "TEST NAME",
+          "",
+          dealii::Patterns::Anything(),
+          "[Standard] Name of the Functional test that needs to be run.");
+      }
+      prm.leave_subsection();
       prm.enter_subsection("Parallelization");
       {
         prm.declare_entry(
@@ -630,16 +645,28 @@ namespace dftfe
 
         prm.declare_entry(
           "EXCHANGE CORRELATION TYPE",
-          "1",
-          dealii::Patterns::Integer(1, 8),
-          R"([Standard] Parameter specifying the type of exchange-correlation to be used: 1(LDA: Perdew Zunger Ceperley Alder correlation with Slater Exchange[PRB. 23, 5048 (1981)]), 2(LDA: Perdew-Wang 92 functional with Slater Exchange [PRB. 45, 13244 (1992)]), 3(LDA: Vosko, Wilk \& Nusair with Slater Exchange[Can. J. Phys. 58, 1200 (1980)]), 4(GGA: Perdew-Burke-Ernzerhof functional [PRL. 77, 3865 (1996)], 5(RPBE: B. Hammer, L. B. Hansen, and J. K. Nørskov, Phys. Rev. B 59, 7413 (1999)), 6(ML-XC NNLDA: LDA-PW + NN), 7(ML-XC NNGGA: GGA-PBE + NN). Caution: options 6-7 are experimental and only accessible to the DFT-FE developers currently.)");
+          "GGA-PBE",
+          dealii::Patterns::Selection(
+            "LDA-PZ|LDA-PW|LDA-VWN|GGA-PBE|GGA-RPBE|GGA-LBxPBEc|MLXC-NNLDA|MLXC-NNGGA|MLXC-NNLLMGGA"),
+          R"([Standard] Parameter specifying the type of exchange-correlation to be used: LDA-PZ (Perdew Zunger Ceperley Alder correlation with Slater Exchange[PRB. 23, 5048 (1981)]), LDA-PW (Perdew-Wang 92 functional with Slater Exchange [PRB. 45, 13244 (1992)]), LDA-VWN (Vosko, Wilk \& Nusair with Slater Exchange[Can. J. Phys. 58, 1200 (1980)]), GGA-PBE (Perdew-Burke-Ernzerhof functional [PRL. 77, 3865 (1996)]), GGA-RPBE (RPBE: B. Hammer, L. B. Hansen, and J. K. Nørskov, Phys. Rev. B 59, 7413 (1999)), GGA-LBxPBEc van Leeuwen & Baerends exchange [Phys. Rev. A 49, 2421 (1994)] with  PBE correlation [Phys. Rev. Lett. 77, 3865 (1996)], MLXC-NNLDA (LDA-PW + NN-LDA), MLXC-NNGGA (GGA-PBE + NN-GGA), MLXC-NNLLMGGA (GGA-PBE + NN Laplacian level MGGA). Caution: MLXC options are experimental.)");
 
         prm.declare_entry(
           "MODEL XC INPUT FILE",
           "",
           dealii::Patterns::Anything(),
-          "[Developer] File that contains both the pytorch ML-XC NN model (.ptc file) and the tolerances. This is an experimental feature to test out any new XC functional developed using machine learning.");
+          "[Developer] File that contains both the pytorch MLXC NN model (.ptc file) and the tolerances. This is an experimental feature to test out any new XC functional developed using machine learning.");
 
+        prm.declare_entry(
+          "AUX BASIS TYPE",
+          "FE",
+          dealii::Patterns::Selection("FE|SLATER|PW"),
+          "[Developer] Auxiliary basis for projecting the Kohn-Sham density or density matrix for XC evaluation. FE is the default option.");
+
+        prm.declare_entry(
+          "AUX BASIS DATA",
+          "",
+          dealii::Patterns::Anything(),
+          "[Developer] File that contains additional information for the Auxiliary basis selected in AUX BASIS TYPE.");
 
         prm.declare_entry(
           "NET CHARGE",
@@ -1066,7 +1093,7 @@ namespace dftfe
                           "[Advanced] Toggle GPU MODE in Poisson solve.");
 
         prm.declare_entry("VSELF GPU MODE",
-                          "false",
+                          "true",
                           dealii::Patterns::Bool(),
                           "[Advanced] Toggle GPU MODE in vself Poisson solve.");
       }
@@ -1163,9 +1190,11 @@ namespace dftfe
     finiteElementPolynomialOrderElectrostatics = 1;
     n_refinement_steps                         = 1;
     numberEigenValues                          = 1;
-    xc_id                                      = 1;
+    XCType                                     = "GGA-PBE";
     spinPolarized                              = 0;
     modelXCInputFile                           = "";
+    auxBasisTypeXC                             = "";
+    auxBasisDataXC                             = "";
     nkx                                        = 1;
     nky                                        = 1;
     nkz                                        = 1;
@@ -1177,10 +1206,12 @@ namespace dftfe
     numSCFIterations                           = 1;
     maxLinearSolverIterations                  = 1;
     poissonGPU                                 = true;
+    vselfGPU                                   = true;
     mixingHistory                              = 1;
     npool                                      = 1;
     maxLinearSolverIterationsHelmholtz         = 1;
 
+    functionalTestName                = "";
     radiusAtomBall                    = 0.0;
     mixingParameter                   = 0.5;
     spinMixingEnhancementFactor       = 4.0;
@@ -1249,6 +1280,7 @@ namespace dftfe
     startingWFCType                                = "";
     restrictToOnePass                              = false;
     writeWfcSolutionFields                         = false;
+    printKE                                        = false;
     writeDensitySolutionFields                     = false;
     writeDensityQuadData                           = false;
     wfcBlockSize                                   = 400;
@@ -1395,6 +1427,7 @@ namespace dftfe
     prm.enter_subsection("Post-processing Options");
     {
       writeWfcSolutionFields     = prm.get_bool("WRITE WFC FE MESH");
+      printKE                    = prm.get_bool("PRINT KINETIC ENERGY");
       writeDensitySolutionFields = prm.get_bool("WRITE DENSITY FE MESH");
       writeDensityQuadData       = prm.get_bool("WRITE DENSITY QUAD DATA");
       writeDosFile               = prm.get_bool("WRITE DENSITY OF STATES");
@@ -1408,6 +1441,11 @@ namespace dftfe
     }
     prm.leave_subsection();
 
+    prm.enter_subsection("FunctionalTest");
+    {
+      functionalTestName = prm.get("TEST NAME");
+    }
+    prm.leave_subsection();
     prm.enter_subsection("Parallelization");
     {
       npool        = prm.get_integer("NPKPT");
@@ -1556,9 +1594,11 @@ namespace dftfe
       isPseudopotential     = prm.get_bool("PSEUDOPOTENTIAL CALCULATION");
       pseudoTestsFlag       = prm.get_bool("PSEUDO TESTS FLAG");
       pseudoPotentialFile   = prm.get("PSEUDOPOTENTIAL FILE NAMES LIST");
-      xc_id                 = prm.get_integer("EXCHANGE CORRELATION TYPE");
+      XCType                = prm.get("EXCHANGE CORRELATION TYPE");
       spinPolarized         = prm.get_integer("SPIN POLARIZATION");
       modelXCInputFile      = prm.get("MODEL XC INPUT FILE");
+      auxBasisTypeXC        = prm.get("AUX BASIS TYPE");
+      auxBasisDataXC        = prm.get("AUX BASIS DATA");
       start_magnetization   = prm.get_double("START MAGNETIZATION");
       pspCutoffImageCharges = prm.get_double("PSP CUTOFF IMAGE CHARGES");
       netCharge             = prm.get_double("NET CHARGE");
