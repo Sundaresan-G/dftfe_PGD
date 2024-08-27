@@ -1724,11 +1724,14 @@ namespace dftfe
                           [](auto &a) { return a; });
 
                         // std::memcpy(
-                        //     &tempVec[d_numberWaveFunctions * alpha], // destination
-                        //     &sphericalFunctionKetTimesVectorParFlattened[localId * d_numberWaveFunctions], // source
-                        //     d_numberWaveFunctions * sizeof(sphericalFunctionKetTimesVectorParFlattened[0]) // number of bytes to copy
+                        //     &tempVec[d_numberWaveFunctions * alpha], //
+                        //     destination
+                        //     &sphericalFunctionKetTimesVectorParFlattened[localId
+                        //     * d_numberWaveFunctions], // source
+                        //     d_numberWaveFunctions *
+                        //     sizeof(sphericalFunctionKetTimesVectorParFlattened[0])
+                        //     // number of bytes to copy
                         // );
-
                       }
 
                     extractedAtomicMap[atomId] = tempVec;
@@ -2295,7 +2298,7 @@ namespace dftfe
                       numberSphericalFunctions,
                       &one,
                       &Xout[(iElem - cellRange.first) *
-                            d_numberNodesPerElement * d_numberNodesPerElement],
+                            d_numberNodesPerElement * d_numberWaveFunctions],
                       d_numberWaveFunctions);
 
                   } // iAtom

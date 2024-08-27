@@ -41,7 +41,7 @@ namespace dftfe
     const dftParameters *dftParamsPtr)
   {
     double sigma = C_kb * dftParamsPtr->smearTval;
-    double arg = std::min((x / sigma) * (x / sigma), 200.0);
+    double arg   = std::min((x / sigma) * (x / sigma), 200.0);
     return (std::exp(-arg) / sqrt(M_PI)) / (sigma * C_haToeV);
   }
 
@@ -67,15 +67,15 @@ namespace dftfe
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
       BLASWrapperPtrDevice,
 #endif
-    unsigned int                            densityQuadratureId,
-    unsigned int                            localContributionQuadratureId,
-    unsigned int                            sparsityPatternQuadratureId,
-    unsigned int                            nlpspQuadratureId,
-    unsigned int                            densityQuadratureIdElectro,
-    std::shared_ptr<excManager>             excFunctionalPtr,
-    const std::vector<std::vector<double>> &atomLocations,
-    unsigned int                            numEigenValues,
-    const bool                              singlePrecNonLocalOperator)
+    unsigned int                             densityQuadratureId,
+    unsigned int                             localContributionQuadratureId,
+    unsigned int                             sparsityPatternQuadratureId,
+    unsigned int                             nlpspQuadratureId,
+    unsigned int                             densityQuadratureIdElectro,
+    std::shared_ptr<excManager<memorySpace>> excFunctionalPtr,
+    const std::vector<std::vector<double>> & atomLocations,
+    unsigned int                             numEigenValues,
+    const bool                               singlePrecNonLocalOperator)
   {
     MPI_Barrier(d_mpiCommParent);
     d_BasisOperatorHostPtr = basisOperationsHostPtr;
@@ -401,7 +401,7 @@ namespace dftfe
     std::map<unsigned int, unsigned int> numberSphericalFunctionsMap;
 
     std::vector<unsigned int> atomicNumbers =
-          d_atomicOrbitalFnsContainer->getAtomicNumbers();
+      d_atomicOrbitalFnsContainer->getAtomicNumbers();
 
     // spin,kpoint,atomId, beta x numWfc vector
     std::vector<std::vector<std::map<unsigned int, std::vector<double>>>>
@@ -757,32 +757,6 @@ namespace dftfe
 
       } // spinIndex
 
-    // int rank, size;
-    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    // MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-    // for (int i = 0; i < size; ++i) {
-    //     if (rank == i) {
-    //         std::cout << "Processor " << rank << " performing operation:" << std::endl;
-    //         for (auto i : mpiVectorSummedOverBlocks)
-    //         // for (auto i : summedOverBlocks[0][0])
-    //           if (i > 1e-05)
-    //             {
-    //               std::cout <<"iVal :" << i << std::endl;
-    //             } 
-    //     }
-    //     MPI_Barrier(MPI_COMM_WORLD); // Synchronize processors
-    // }
-
-    // //This allreduce won't work because there would be non zero entries for an atom in diferent tasks 
-    // MPI_Allreduce(MPI_IN_PLACE,
-    //               &mpiVectorSummedOverBlocks[0],
-    //               cumulativeNumAtomicOrbitals[dftParamsPtr->natoms - 1] *
-    //                 numberIntervals,
-    //               dataTypes::mpi_type_id(&mpiVectorSummedOverBlocks[0]),
-    //               MPI_SUM,
-    //               interpoolComm);
-    
     MPI_Allreduce(MPI_IN_PLACE,
                   &mpiVectorSummedOverBlocks[0],
                   cumulativeNumAtomicOrbitals[dftParamsPtr->natoms - 1] *

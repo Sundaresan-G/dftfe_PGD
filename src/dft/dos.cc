@@ -174,8 +174,7 @@ namespace dftfe
     std::sort(eigenValuesAllkPoints.begin(), eigenValuesAllkPoints.end());
 
     const double totalEigenValues  = eigenValuesAllkPoints.size();
-    const double intervalSize =
-      d_dftParamsPtr->intervalSize / C_haToeV;
+    const double intervalSize      = d_dftParamsPtr->intervalSize / C_haToeV;
     const double sigma             = C_kb * d_dftParamsPtr->TVal;
     double       lowerBoundEpsilon = eigenValuesAllkPoints[0];
     double upperBoundEpsilon = eigenValuesAllkPoints[totalEigenValues - 1];
