@@ -142,6 +142,17 @@ namespace dftfe
           "false",
           dealii::Patterns::Bool(),
           R"([Standard] Computes projected density of states on each atom using Lorentzians. Uses specified Temperature for SCF as the broadening parameter. Outputs a file name 'pdosData\_x' with x denoting atomID. This file contains columns with first column indicating the energy in eV and all other columns indicating projected density of states corresponding to single atom wavefunctions.)");
+        prm.declare_entry(
+          "SMEAR TEMPERATURE",
+          "500",
+          dealii::Patterns::Double(),
+          "[standard] Gaussian smearing temperature for DOS, PDOS and LDOS calculation");
+
+        prm.declare_entry(
+          "DELTA ENERGY",
+          "0.01",
+          dealii::Patterns::Double(),
+          "[standard] Interval size of energy spectrum (in eV), for DOS, PDOS and LDOS calculation");
 
         prm.declare_entry(
           "READ ATOMIC WFC PDOS FROM PSP FILE",
@@ -1237,6 +1248,8 @@ namespace dftfe
     writeDosFile                = false;
     writeLdosFile               = false;
     writePdosFile               = false;
+    smearTval                   = 500;
+    intervalSize                = 0.01;
     writeLocalizationLengths    = false;
     writeBandsFile              = false;
     std::string coordinatesFile = "";
@@ -1433,6 +1446,8 @@ namespace dftfe
       writeDosFile               = prm.get_bool("WRITE DENSITY OF STATES");
       writeLdosFile = prm.get_bool("WRITE LOCAL DENSITY OF STATES");
       writePdosFile = prm.get_bool("WRITE PROJECTED DENSITY OF STATES");
+      smearTval     = prm.get_double("SMEAR TEMPERATURE");
+      intervalSize  = prm.get_double("DELTA ENERGY");
       writeLocalizationLengths = prm.get_bool("WRITE LOCALIZATION LENGTHS");
       readWfcForPdosPspFile =
         prm.get_bool("READ ATOMIC WFC PDOS FROM PSP FILE");

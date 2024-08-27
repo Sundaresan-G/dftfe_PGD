@@ -1722,11 +1722,16 @@ namespace dftfe
                             d_numberWaveFunctions,
                           tempVec.begin() + d_numberWaveFunctions * alpha,
                           [](auto &a) { return a; });
+
+                        // std::memcpy(
+                        //     &tempVec[d_numberWaveFunctions * alpha], // destination
+                        //     &sphericalFunctionKetTimesVectorParFlattened[localId * d_numberWaveFunctions], // source
+                        //     d_numberWaveFunctions * sizeof(sphericalFunctionKetTimesVectorParFlattened[0]) // number of bytes to copy
+                        // );
+
                       }
 
                     extractedAtomicMap[atomId] = tempVec;
-                    // pcout <<"Size of tempVec After " <<tempVec.size()<<
-                    // std::endl;
                   }
               }
           }
@@ -2472,14 +2477,6 @@ namespace dftfe
     getFlattenedNonLocalCellDofIndexToProcessDofIndexMap() const
   {
     return (d_flattenedNonLocalCellDofIndexToProcessDofIndexMap);
-  }
-
-  template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  std::shared_ptr<AtomCenteredSphericalFunctionContainer>
-  AtomicCenteredNonLocalOperator<ValueType,
-                                 memorySpace>::getSphericalFunctionContainer()
-  {
-    return (d_atomCenteredSphericalFunctionContainer);
   }
 
 

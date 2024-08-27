@@ -1916,14 +1916,11 @@ namespace dftfe
     else if (d_dftParamsPtr->solverMode == "NSCF")
       {
         solveNoSCF();
-        if (d_dftParamsPtr->writeBandsFile)
-          writeBands();
-
         if (d_dftParamsPtr->writePdosFile)
           {
             d_atomCenteredOrbitalsPostProcessingPtr->computeAtomCenteredEntries(
               &d_eigenVectorsFlattenedHost,
-              d_dftParamsPtr->numberEigenValues,
+              d_numEigenValues,
               eigenValues,
               d_basisOperationsPtrHost,
               d_BLASWrapperPtrHost,
@@ -1932,9 +1929,11 @@ namespace dftfe
               interBandGroupComm,
               interpoolcomm,
               d_dftParamsPtr,
-              d_dftParamsPtr->highestStateOfInterestForChebFiltering,
-              fermiEnergy);
+              fermiEnergy,
+              d_highestStateForNscfCalculation);
           }
+        if (d_dftParamsPtr->writeBandsFile)
+          writeBands();
       }
 
     if (d_dftParamsPtr->writeStructreEnergyForcesFileForPostProcess)
