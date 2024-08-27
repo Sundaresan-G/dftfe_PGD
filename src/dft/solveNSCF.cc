@@ -41,11 +41,11 @@ namespace dftfe
       matrix_free_data.get_quadrature(d_densityQuadratureId);
 
     // computingTimerStandard.enter_subsection("Total scf solve");
-    energyCalculator energyCalc(d_mpiCommParent,
-                                mpi_communicator,
-                                interpoolcomm,
-                                interBandGroupComm,
-                                *d_dftParamsPtr);
+    energyCalculator<memorySpace> energyCalc(d_mpiCommParent,
+                                             mpi_communicator,
+                                             interpoolcomm,
+                                             interBandGroupComm,
+                                             *d_dftParamsPtr);
 
 
     // set up linear solver
@@ -375,10 +375,7 @@ namespace dftfe
                                  d_gradDensityInQuadValues,
                                  d_rhoCore,
                                  d_gradRhoCore,
-                                 d_eigenVectorsFlattenedHost,
-#ifdef DFTFE_WITH_DEVICE
-                                 d_eigenVectorsFlattenedDevice,
-#endif
+                                 getEigenVectors(),
                                  eigenValues,
                                  fermiEnergy,
                                  fermiEnergyUp,
@@ -665,10 +662,7 @@ namespace dftfe
                                  d_gradDensityInQuadValues,
                                  d_rhoCore,
                                  d_gradRhoCore,
-                                 d_eigenVectorsFlattenedHost,
-#ifdef DFTFE_WITH_DEVICE
-                                 d_eigenVectorsFlattenedDevice,
-#endif
+                                 getEigenVectors(),
                                  eigenValues,
                                  fermiEnergy,
                                  fermiEnergyUp,
@@ -893,10 +887,7 @@ namespace dftfe
                              d_gradDensityOutQuadValues,
                              d_rhoCore,
                              d_gradRhoCore,
-                             d_eigenVectorsFlattenedHost,
-#ifdef DFTFE_WITH_DEVICE
-                             d_eigenVectorsFlattenedDevice,
-#endif
+                             getEigenVectors(),
                              eigenValues,
                              fermiEnergy,
                              fermiEnergyUp,

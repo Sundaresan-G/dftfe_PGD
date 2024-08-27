@@ -20,7 +20,7 @@
 #include <vector>
 #include <dft.h>
 #include <linearAlgebraOperations.h>
-
+#include <linearAlgebraOperationsCPU.h>
 namespace dftfe
 {
   namespace internal
@@ -144,8 +144,22 @@ namespace dftfe
     // //
     // // compute Veff
     // //
-    // if (d_excManagerPtr->getDensityBasedFamilyType() ==
-    // densityFamilyType::LDA)
+    //    bool isGradDensityDataDependent = false;
+    //    if (d_excManagerPtr->getXCPrimaryVariable() ==
+    //    XCPrimaryVariable::DENSITY)
+    //      {
+    //        isGradDensityDataDependent =
+    //        (d_excManagerPtr->getExcDensityObj()->getDensityBasedFamilyType()
+    //        == densityFamilyType::GGA) ;
+    //      }
+    //    else if (d_excManagerPtr->getXCPrimaryVariable() ==
+    //    XCPrimaryVariable::SSDETERMINANT)
+    //      {
+    //        isGradDensityDataDependent =
+    //        (d_excManagerPtr->getExcSSDFunctionalObj()->getDensityBasedFamilyType()
+    //        == densityFamilyType::GGA) ;
+    //      }
+    // if (!isGradDensityDataDependent)
     //   {
     //     kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
     //                                          phiInValues,
@@ -153,8 +167,7 @@ namespace dftfe
     //                                          d_rhoCore,
     //                                          d_lpspQuadratureId);
     //   }
-    // else if (d_excManagerPtr->getDensityBasedFamilyType() ==
-    //          densityFamilyType::GGA)
+    // else if (isGradDensityDataDependent)
     //   {
     //     kohnShamDFTEigenOperator.computeVEff(d_densityInQuadValues,
     //                                          d_gradDensityInQuadValues,
@@ -989,7 +1002,7 @@ namespace dftfe
     maxHighestOccupiedStateResNorm =
       dealii::Utilities::MPI::max(maxHighestOccupiedStateResNorm,
                                   interpoolcomm);
-    d_highestStateForNscfCalculation  = highestState; 
+    d_highestStateForNscfCalculation = highestState;
     return maxHighestOccupiedStateResNorm;
   }
   // compute the maximum of the residual norm of the highest occupied state
@@ -1064,8 +1077,10 @@ namespace dftfe
             d_highestStateForNscfCalculation = std::min(
               d_numEigenValues - 1,
               std::max(static_cast<unsigned int>(highestOccupiedState * 1.2),
-                       highestOccupiedState + 5)); // 5 buffer states for dos and pdos plot 
-            //(We need to take a call on this because the residual norm converges slowly if we go far from fermi energy)
+                       highestOccupiedState +
+                         5)); // 5 buffer states for dos and pdos plot
+            //(We need to take a call on this because the residual norm
+            //converges slowly if we go far from fermi energy)
             for (unsigned int i = 0; i <= d_highestStateForNscfCalculation; i++)
               {
                 if (residualNormWaveFunctionsAllkPoints[kPoint][i] >
