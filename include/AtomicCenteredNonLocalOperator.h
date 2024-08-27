@@ -314,8 +314,6 @@ namespace dftfe
     applyCOnVCconjtransX(ValueType *                                 Xout,
                          const std::pair<unsigned int, unsigned int> cellRange);
 
-    std::shared_ptr<AtomCenteredSphericalFunctionContainer>
-    getSphericalFunctionContainer();
     /**
      * @brief Called only for GPU runs where the coupling matrix has to be padded
      * @param[in] entries COupling matrix entries without padding in the atomId

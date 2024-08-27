@@ -164,24 +164,21 @@ namespace dftfe
             }
         }
 
-    const unsigned int highestStateOfInterestUsed =
-      (highestStateOfInterest == 0) ? indexFermiEnergy : highestStateOfInterest;
-
     // from 0th spin as this is only to get a printing range
     std::vector<double> eigenValuesAllkPoints;
     for (int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
-      for (int statesIter = 0; statesIter < highestStateOfInterestUsed;
+      for (int statesIter = 0; statesIter <= d_highestStateForNscfCalculation;
            ++statesIter)
         eigenValuesAllkPoints.push_back(eigenValuesInput[kPoint][statesIter]);
 
     std::sort(eigenValuesAllkPoints.begin(), eigenValuesAllkPoints.end());
 
     const double totalEigenValues  = eigenValuesAllkPoints.size();
-    const double intervalSize      = 0.001;
+    const double intervalSize =
+      d_dftParamsPtr->intervalSize / C_haToeV;
     const double sigma             = C_kb * d_dftParamsPtr->TVal;
-    double       lowerBoundEpsilon = 1.5 * eigenValuesAllkPoints[0];
-    double       upperBoundEpsilon =
-      eigenValuesAllkPoints[totalEigenValues - 1] * 1.5;
+    double       lowerBoundEpsilon = eigenValuesAllkPoints[0];
+    double upperBoundEpsilon = eigenValuesAllkPoints[totalEigenValues - 1];
 
     MPI_Allreduce(MPI_IN_PLACE,
                   &lowerBoundEpsilon,
@@ -196,6 +193,11 @@ namespace dftfe
                   dataTypes::mpi_type_id(&upperBoundEpsilon),
                   MPI_MAX,
                   interpoolcomm);
+
+    lowerBoundEpsilon =
+      lowerBoundEpsilon - 0.1 * (upperBoundEpsilon - lowerBoundEpsilon);
+    upperBoundEpsilon =
+      upperBoundEpsilon + 0.1 * (upperBoundEpsilon - lowerBoundEpsilon);
 
     const unsigned int numberIntervals =
       std::ceil((upperBoundEpsilon - lowerBoundEpsilon) / intervalSize);
@@ -217,7 +219,7 @@ namespace dftfe
                      ++spinType)
                   {
                     for (unsigned int statesIter = 0;
-                         statesIter < highestStateOfInterestUsed;
+                         statesIter <= d_highestStateForNscfCalculation;
                          ++statesIter)
                       {
                         double term1 =
@@ -227,13 +229,13 @@ namespace dftfe
                                             statesIter]);
                         double denom = term1 * term1 + sigma * sigma;
                         if (spinType == 0)
-                          densityOfStatesUp[epsInt] +=
-                            d_kPointWeights[kPoint] * (sigma / M_PI) *
-                            (1.0 / denom) / d_domainVolume;
+                          densityOfStatesUp[epsInt] += d_kPointWeights[kPoint] *
+                                                       (sigma / M_PI) *
+                                                       (1.0 / denom);
                         else
                           densityOfStatesDown[epsInt] +=
                             d_kPointWeights[kPoint] * (sigma / M_PI) *
-                            (1.0 / denom) / d_domainVolume;
+                            (1.0 / denom);
                       }
                   }
               }
@@ -262,15 +264,15 @@ namespace dftfe
             for (int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
               {
                 for (unsigned int statesIter = 0;
-                     statesIter < highestStateOfInterestUsed;
+                     statesIter <= d_highestStateForNscfCalculation;
                      ++statesIter)
                   {
                     double term1 =
                       (epsValue - eigenValuesInput[kPoint][statesIter]);
-                    double denom = term1 * term1 + sigma * sigma;
-                    densityOfStates[epsInt] += 2.0 * d_kPointWeights[kPoint] *
-                                               (sigma / M_PI) * (1.0 / denom) /
-                                               d_domainVolume;
+                    densityOfStates[epsInt] +=
+                      2.0 * d_kPointWeights[kPoint] *
+                      d_atomCenteredOrbitalsPostProcessingPtr->smearFunction(
+                        term1, d_dftParamsPtr);
                   }
               }
           }
@@ -288,9 +290,9 @@ namespace dftfe
       {
         pcout << "Writing tdos File..." << std::endl;
         if (d_dftParamsPtr->spinPolarized)
-          pcout << "epsValue          SpinUpDos SpinDownDos" << std::endl;
+          pcout << "E(eV)          SpinUpDos SpinDownDos" << std::endl;
         else
-          pcout << "epsValue          Dos" << std::endl;
+          pcout << "E(eV)          Dos" << std::endl;
       }
 
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
@@ -305,8 +307,7 @@ namespace dftfe
                 for (unsigned int epsInt = 0; epsInt < numberIntervals;
                      ++epsInt)
                   {
-                    double epsValue =
-                      lowerBoundEpsilon + epsInt * intervalSize - fermiEnergy;
+                    double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
                     outFile << std::setprecision(18) << epsValue * 27.21138602
                             << "  " << densityOfStatesUp[epsInt] << " "
                             << densityOfStatesDown[epsInt] << std::endl;
@@ -314,10 +315,10 @@ namespace dftfe
                         d_dftParamsPtr->verbosity == 0)
                       {
                         double epsValueTrunc =
-                          std::floor(1000000000 *
-                                     (lowerBoundEpsilon +
-                                      epsInt * intervalSize - fermiEnergy) *
-                                     27.21138602) /
+                          std::floor(
+                            1000000000 *
+                            (lowerBoundEpsilon + epsInt * intervalSize) *
+                            27.21138602) /
                           1000000000.0;
                         double dosSpinUpTrunc =
                           std::floor(1000000000 * densityOfStatesUp[epsInt]) /
@@ -339,8 +340,7 @@ namespace dftfe
                 for (unsigned int epsInt = 0; epsInt < numberIntervals;
                      ++epsInt)
                   {
-                    double epsValue =
-                      lowerBoundEpsilon + epsInt * intervalSize - fermiEnergy;
+                    double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
                     outFile << std::setprecision(18) << epsValue * 27.21138602
                             << "  " << densityOfStates[epsInt] << std::endl;
 
@@ -348,10 +348,10 @@ namespace dftfe
                         d_dftParamsPtr->verbosity == 0)
                       {
                         double epsValueTrunc =
-                          std::floor(1000000000 *
-                                     (lowerBoundEpsilon +
-                                      epsInt * intervalSize - fermiEnergy) *
-                                     27.21138602) /
+                          std::floor(
+                            1000000000 *
+                            (lowerBoundEpsilon + epsInt * intervalSize) *
+                            27.21138602) /
                           1000000000.0;
                         double dosTrunc =
                           std::floor(1000000000 * densityOfStates[epsInt]) /

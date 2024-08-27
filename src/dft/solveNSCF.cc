@@ -317,6 +317,7 @@ namespace dftfe
     //
     // eigen solve
     //
+    // if writeBandsFile == true, get the fermi energy from the fermiEnergy.out
     if (d_dftParamsPtr->writeBandsFile)
       {
         std::ifstream file("fermiEnergy.out");

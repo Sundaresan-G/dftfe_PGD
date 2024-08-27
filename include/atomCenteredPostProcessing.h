@@ -1,3 +1,6 @@
+#ifndef ATOMCENTEREDOORBTIALPOSTPROCESING_H
+#define ATOMCENTEREDOORBTIALPOSTPROCESING_H
+
 #include "vector"
 #include "map"
 #include "AtomCenteredSphericalFunctionValenceDensitySpline.h"
@@ -130,8 +133,8 @@ namespace dftfe
       const MPI_Comm &           interBandGroupComm,
       const MPI_Comm &           interpoolComm,
       const dftParameters *      dftParamsPtr,
-      const unsigned int         highestStateOfInterest,
-      double                     fermiEnergy);
+      double                     fermiEnergy,
+      unsigned int               highestStateNscfSolve);
 
   private:
     const MPI_Comm                       d_mpiCommParent;
@@ -195,3 +198,5 @@ namespace dftfe
 
 
 } // namespace dftfe
+
+#endif

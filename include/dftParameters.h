@@ -54,7 +54,7 @@ namespace dftfe
     bool   adaptAndersonMixingParameter;
     double absLinearSolverTolerance, selfConsistentSolverTolerance, TVal,
       selfConsistentSolverEnergyTolerance, start_magnetization,
-      absLinearSolverToleranceHelmholtz;
+      absLinearSolverToleranceHelmholtz, smearTval, intervalSize;
 
     bool isPseudopotential, periodicX, periodicY, periodicZ, useSymm,
       timeReversal, pseudoTestsFlag, constraintMagnetization, writeDosFile,

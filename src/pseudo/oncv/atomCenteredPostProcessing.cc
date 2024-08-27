@@ -1,6 +1,7 @@
 #include <atomCenteredPostProcessing.h>
 #include <deviceKernelsGeneric.h>
-// #include <dft.h>
+#include <constants.h>
+#include <cassert>
 
 namespace dftfe
 {
@@ -39,9 +40,9 @@ namespace dftfe
     double               x,
     const dftParameters *dftParamsPtr)
   {
-    double sigma = 3.166811429e-06 * dftParamsPtr->TVal;
-    double denom = x * x + sigma * sigma;
-    return ((sigma / M_PI) * (1.0 / denom));
+    double sigma = C_kb * dftParamsPtr->smearTval;
+    double arg = std::min((x / sigma) * (x / sigma), 200.0);
+    return (std::exp(-arg) / sqrt(M_PI)) / (sigma * C_haToeV);
   }
 
 
@@ -280,7 +281,7 @@ namespace dftfe
               std::make_shared<AtomCenteredSphericalFunctionProjectorSpline>(
                 waveFunctionFileName,
                 lQuantumNumber,
-                -1,
+                -1, // radial power
                 1,
                 2,
                 1E-12); // we should pass the radial power as a parameter to the
@@ -307,8 +308,8 @@ namespace dftfe
       const MPI_Comm &           interBandGroupComm,
       const MPI_Comm &           interpoolComm,
       const dftParameters *      dftParamsPtr,
-      const unsigned int         highestStateOfInterest,
-      double                     fermiEnergy)
+      double                     fermiEnergy,
+      unsigned int               highestStateNscfSolve)
   {
     const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
     unsigned int       numSpinComponents;
@@ -354,16 +355,11 @@ namespace dftfe
               break;
             }
         }
-
-    const unsigned int highestStateOfInterestUsed =
-      (highestStateOfInterest == 0) ? (indexFermiEnergy * 1.1) :
-                                      highestStateOfInterest;
-
     std::vector<double> eigenValuesAllkPoints;
 
     for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
       {
-        for (int statesIter = 0; statesIter < highestStateOfInterestUsed;
+        for (int statesIter = 0; statesIter <= highestStateNscfSolve;
              ++statesIter)
           {
             eigenValuesAllkPoints.push_back(eigenValues[kPoint][statesIter]);
@@ -373,12 +369,11 @@ namespace dftfe
     std::sort(eigenValuesAllkPoints.begin(), eigenValuesAllkPoints.end());
 
     const double totalEigenValues = eigenValuesAllkPoints.size();
-    const double intervalSize     = 0.001; // to be changed later
-    double       sigma            = 3.166811429e-06 * dftParamsPtr->TVal;
+    const double intervalSize =
+      dftParamsPtr->intervalSize / C_haToeV; // eV to Ha
 
-    double lowerBoundEpsilon = 1.5 * eigenValuesAllkPoints[0];
-    double upperBoundEpsilon =
-      eigenValuesAllkPoints[totalEigenValues - 1] * 1.5;
+    double lowerBoundEpsilon = eigenValuesAllkPoints[0];
+    double upperBoundEpsilon = eigenValuesAllkPoints[totalEigenValues - 1];
 
     MPI_Allreduce(MPI_IN_PLACE,
                   &lowerBoundEpsilon,
@@ -394,14 +389,19 @@ namespace dftfe
                   MPI_MAX,
                   interpoolComm);
 
+    lowerBoundEpsilon =
+      lowerBoundEpsilon - 0.1 * (upperBoundEpsilon - lowerBoundEpsilon);
+    upperBoundEpsilon =
+      upperBoundEpsilon + 0.1 * (upperBoundEpsilon - lowerBoundEpsilon);
+
     const unsigned int numberIntervals =
       std::ceil((upperBoundEpsilon - lowerBoundEpsilon) / intervalSize);
 
-    // pcout << "UB, LB: " << upperBoundEpsilon << "," << lowerBoundEpsilon
-    //       << std::endl;
-
     // maps atomId to number of sphericalfunctions
     std::map<unsigned int, unsigned int> numberSphericalFunctionsMap;
+
+    std::vector<unsigned int> atomicNumbers =
+          d_atomicOrbitalFnsContainer->getAtomicNumbers();
 
     // spin,kpoint,atomId, beta x numWfc vector
     std::vector<std::vector<std::map<unsigned int, std::vector<double>>>>
@@ -513,7 +513,8 @@ namespace dftfe
                           }
                       } // iblock
                     // This is not actually an allreduce. It simply does
-                    // boundary communication.
+                    // boundary communication. After this, the values for one
+                    // atom is shared across the boundary
                     d_nonLocalOperator->applyAllReduceOnCconjtransX(resVec);
 
                     // contains for every atomId a matrix of size beta_a x
@@ -562,16 +563,6 @@ namespace dftfe
                             return std::abs(a) * std::abs(a);
                           });
 
-                        // pcout
-                        //   << "Size is"
-                        //   <<
-                        //   (pdosKernelWithoutSmearFunctionSpinKpoint[atomId])
-                        //        .size()
-                        //   << std::endl;
-
-                        // pcout << <<
-                        // extractedAtomicMapSquaredBlock[atomId].size() <<
-                        // std::endl;
                         std::memcpy(
                           &pdosKernelWithoutSmearFunctionSpinKpoint
                             [atomId]
@@ -591,10 +582,9 @@ namespace dftfe
 
     std::vector<double> smearedValues;
     // spin, (atomId, beta x numEnergies)
-    // summed over kpoints as well
+    // summed over wfc blocks and kpoints
     std::vector<std::map<unsigned int, std::vector<double>>> summedOverBlocks;
     summedOverBlocks.resize(numSpinComponents);
-
 
     std::vector<double> numTotalAtomicOrbitals;
     std::vector<double> cumulativeNumAtomicOrbitals;
@@ -608,8 +598,6 @@ namespace dftfe
 
         // 2 different prpocesses can have the same atomIDs.
         numTotalAtomicOrbitals[atomId] = numberSphericalFunctionsMap[atomId];
-        // std::cout << "Atomic Orbitals Individual: "<<
-        // numTotalAtomicOrbitals[atomId]<<std::endl;
       }
 
     // Do an MPI_allreduce to get the atomIDs in one vector;
@@ -661,8 +649,32 @@ namespace dftfe
                     double eigenValue =
                       eigenValues[kPoint][totalNumWaveFunctions * spinIndex +
                                           iEigenVec];
-                    smearedValues.push_back(
-                      smearFunction(epsValue - eigenValue, dftParamsPtr));
+                    if (numSpinComponents == 2)
+                      {
+                        if (iEigenVec > highestStateNscfSolve)
+                          {
+                            smearedValues.push_back(0.0);
+                          }
+                        else
+                          {
+                            smearedValues.push_back(
+                              (smearFunction(epsValue - eigenValue,
+                                             dftParamsPtr)));
+                          }
+                      }
+                    else
+                      {
+                        if (iEigenVec > highestStateNscfSolve)
+                          {
+                            smearedValues.push_back(0.0);
+                          }
+                        else
+                          {
+                            smearedValues.push_back(
+                              (2 * smearFunction(epsValue - eigenValue,
+                                                 dftParamsPtr)));
+                          }
+                      }
                   }
                 for (auto &pair : spinKpointKernel)
                   {
@@ -744,29 +756,58 @@ namespace dftfe
           }
 
       } // spinIndex
-    // pcout << "Total Number of Atomic Orbitals: "
-    //       << cumulativeNumAtomicOrbitals[dftParamsPtr->natoms - 1] <<
-    //       std::endl;
 
+    // int rank, size;
+    // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    // MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // for (int i = 0; i < size; ++i) {
+    //     if (rank == i) {
+    //         std::cout << "Processor " << rank << " performing operation:" << std::endl;
+    //         for (auto i : mpiVectorSummedOverBlocks)
+    //         // for (auto i : summedOverBlocks[0][0])
+    //           if (i > 1e-05)
+    //             {
+    //               std::cout <<"iVal :" << i << std::endl;
+    //             } 
+    //     }
+    //     MPI_Barrier(MPI_COMM_WORLD); // Synchronize processors
+    // }
+
+    // //This allreduce won't work because there would be non zero entries for an atom in diferent tasks 
+    // MPI_Allreduce(MPI_IN_PLACE,
+    //               &mpiVectorSummedOverBlocks[0],
+    //               cumulativeNumAtomicOrbitals[dftParamsPtr->natoms - 1] *
+    //                 numberIntervals,
+    //               dataTypes::mpi_type_id(&mpiVectorSummedOverBlocks[0]),
+    //               MPI_SUM,
+    //               interpoolComm);
+    
     MPI_Allreduce(MPI_IN_PLACE,
                   &mpiVectorSummedOverBlocks[0],
                   cumulativeNumAtomicOrbitals[dftParamsPtr->natoms - 1] *
                     numberIntervals,
                   dataTypes::mpi_type_id(&mpiVectorSummedOverBlocks[0]),
-                  MPI_SUM,
-                  interpoolComm);
-
-    pcout << "Writing PDOS File... (shifted wrt Fermi Energy)" << std::endl;
+                  MPI_MAX,
+                  d_mpiCommParent);
 
 
+    pcout << "Writing PDOS File... (No shift in Energy)" << std::endl;
 
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {
-        std::string   pdosFileName = "PDOS.dat";
+        std::string   pdosFileName = "PDOS.out";
         std::ofstream outFile(pdosFileName.c_str());
         outFile.setf(std::ios_base::fixed);
         outFile << std::setprecision(18);
-        // pcout << "Number of intervals: " << numberIntervals << std::endl;
+        std::set<unsigned int> lNums;
+        for (auto &pair : d_atomicOrbitalFnsContainer->getSphericalFunctions())
+          {
+            lNums.insert(pair.second->getQuantumNumberl());
+          }
+
+        std::vector<unsigned int> atomicNumbers =
+          d_atomicOrbitalFnsContainer->getAtomicNumbers();
 
         if (outFile.is_open())
           {
@@ -776,36 +817,21 @@ namespace dftfe
             else
               {
                 outFile
-                  << "epsValue          s  py  pz  px  dxy  dyz  dz2  dxz  dx2-y2  "
+                  << "E (eV)          s  py  pz  px  dxy  dyz  dz2  dxz  dx2-y2  "
                   << std::endl;
                 for (auto atomId = 0; atomId < dftParamsPtr->natoms; atomId++)
                   {
                     outFile << "Atom ID: " << atomId << std::endl;
 
-                    std::vector<unsigned int> atomicNumbers =
-                      d_nonLocalOperator->getSphericalFunctionContainer()
-                        ->getAtomicNumbers();
                     unsigned int atomicNum = atomicNumbers[atomId];
-
-                    // std::set<unsigned int> lNums;
-
-
-                    // for (auto &pair: d_nonLocalOperator->getSphericalFunctionContainer()->getSphericalFunctions())
-                    //   {
-                    //     lNums.insert(pair.second->getQuantumNumberl());
-                    //   }
-
-                    // std::cout <<"Lnums: " <<lNums.size()<<std::endl;
 
                     for (unsigned int epsInt = 0; epsInt < numberIntervals;
                          ++epsInt)
                       {
-                        double epsValue = lowerBoundEpsilon +
-                                          epsInt * intervalSize - fermiEnergy;
+                        double epsValue =
+                          lowerBoundEpsilon + epsInt * intervalSize;
 
-                        // pcout << "eps val: " << epsValue << std::endl;
-
-                        outFile << epsValue * 27.21138602;
+                        outFile << epsValue * C_haToeV;
                         std::vector<double>::iterator startIt;
                         if (atomId != 0)
                           startIt = mpiVectorSummedOverBlocks.begin() +
@@ -828,6 +854,7 @@ namespace dftfe
               }
           }
       }
+    pcout << "PDOS computation completed" << std::endl;
   }
 
   template class atomCenteredOrbitalsPostProcessing<

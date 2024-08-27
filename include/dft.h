@@ -287,7 +287,7 @@ namespace dftfe
      * @brief Number of Kohn-Sham eigen values to be computed
      */
     unsigned int d_numEigenValues;
-
+    unsigned int d_highestStateForNscfCalculation;
     /**
      * @brief Number of Kohn-Sham eigen values to be computed in the Rayleigh-Ritz step
      * after spectrum splitting.
