@@ -1080,7 +1080,7 @@ namespace dftfe
                        highestOccupiedState +
                          5)); // 5 buffer states for dos and pdos plot
             //(We need to take a call on this because the residual norm
-            //converges slowly if we go far from fermi energy)
+            // converges slowly if we go far from fermi energy)
             for (unsigned int i = 0; i <= d_highestStateForNscfCalculation; i++)
               {
                 if (residualNormWaveFunctionsAllkPoints[kPoint][i] >

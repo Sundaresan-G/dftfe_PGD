@@ -1928,19 +1928,43 @@ namespace dftfe
         solveNoSCF();
         if (d_dftParamsPtr->writePdosFile)
           {
-            d_atomCenteredOrbitalsPostProcessingPtr->computeAtomCenteredEntries(
-              &d_eigenVectorsFlattenedHost,
-              d_numEigenValues,
-              eigenValues,
-              d_basisOperationsPtrHost,
-              d_BLASWrapperPtrHost,
-              d_lpspQuadratureId,
-              d_kPointWeights,
-              interBandGroupComm,
-              interpoolcomm,
-              d_dftParamsPtr,
-              fermiEnergy,
-              d_highestStateForNscfCalculation);
+            if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
+              {
+                d_atomCenteredOrbitalsPostProcessingPtr
+                  ->computeAtomCenteredEntries(
+                    &d_eigenVectorsFlattenedHost,
+                    d_numEigenValues,
+                    eigenValues,
+                    d_basisOperationsPtrHost,
+                    d_BLASWrapperPtrHost,
+                    d_lpspQuadratureId,
+                    d_kPointWeights,
+                    interBandGroupComm,
+                    interpoolcomm,
+                    d_dftParamsPtr,
+                    fermiEnergy,
+                    d_highestStateForNscfCalculation);
+              }
+#ifdef DFTFE_WITH_DEVICE
+            else if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+              {
+                d_atomCenteredOrbitalsPostProcessingPtr
+                  ->computeAtomCenteredEntries(
+                    &d_eigenVectorsFlattenedDevice,
+                    d_numEigenValues,
+                    eigenValues,
+                    d_basisOperationsPtrDevice,
+                    d_BLASWrapperPtr,
+                    d_lpspQuadratureId,
+                    d_kPointWeights,
+                    interBandGroupComm,
+                    interpoolcomm,
+                    d_dftParamsPtr,
+                    fermiEnergy,
+                    d_highestStateForNscfCalculation);
+              }
+
+#endif
           }
         if (d_dftParamsPtr->writeBandsFile)
           writeBands();
