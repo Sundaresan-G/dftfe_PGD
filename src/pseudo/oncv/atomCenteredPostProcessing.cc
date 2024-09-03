@@ -459,16 +459,14 @@ namespace dftfe
                                     currentBlockSize * sizeof(ValueType));
 #if defined(DFTFE_WITH_DEVICE)
                     else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-                      dftfe::utils::deviceKernelsGeneric::
-                        stridedCopyToBlockConstantStride(
-                          currentBlockSize,
-                          totalNumWaveFunctions,
-                          numLocalDofs,
-                          jvec,
-                          X->data() +
-                            numLocalDofs * totalNumWaveFunctions *
-                              (numSpinComponents * kPoint + spinIndex),
-                          flattenedArrayBlock->data());
+                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
+                        currentBlockSize,
+                        totalNumWaveFunctions,
+                        numLocalDofs,
+                        jvec,
+                        X->data() + numLocalDofs * totalNumWaveFunctions *
+                                      (numSpinComponents * kPoint + spinIndex),
+                        flattenedArrayBlock->data());
 #endif
                     basisOperationsPtr->reinit(currentBlockSize,
                                                cellsBlockSize,
@@ -835,13 +833,11 @@ namespace dftfe
     dataTypes::number,
     dftfe::utils::MemorySpace::HOST>;
 
-  // *********apply for the device as well***********
-
-  // #if defined(DFTFE_WITH_DEVICE)
-  //   template class atomCenteredOrbitalsPostProcessing<
-  //     dataTypes::number,
-  //     dftfe::utils::MemorySpace::DEVICE>;
-  // #endif
+#if defined(DFTFE_WITH_DEVICE)
+  template class atomCenteredOrbitalsPostProcessing<
+    dataTypes::number,
+    dftfe::utils::MemorySpace::DEVICE>;
+#endif
 
 
 } // namespace dftfe
