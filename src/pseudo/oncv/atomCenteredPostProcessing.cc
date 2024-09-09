@@ -317,7 +317,7 @@ namespace dftfe
     const unsigned int numLocalDofs = basisOperationsPtr->nOwnedDofs();
 
     const unsigned int cellsBlockSize =
-      memorySpace == dftfe::utils::MemorySpace::DEVICE ? 50 : 1;
+      memorySpace == dftfe::utils::MemorySpace::DEVICE ? totalLocallyOwnedCells : 1;
     const unsigned int numCellBlocks = totalLocallyOwnedCells / cellsBlockSize;
     const unsigned int remCellBlockSize =
       totalLocallyOwnedCells - numCellBlocks * cellsBlockSize;
@@ -515,30 +515,85 @@ namespace dftfe
                     // atom is shared across the boundary
                     d_nonLocalOperator->applyAllReduceOnCconjtransX(resVec);
 
+                    dftfe::utils::MemoryStorage<double, memorySpace> scalingVec;
+                    scalingVec.resize(currentBlockSize, 1.0);
+                    d_nonLocalOperator
+                      ->copyBackFromDistributedVectorToLocalDataStructure(
+                        resVec, scalingVec);
+
                     // contains for every atomId a matrix of size beta_a x
                     // currentblocksize
-                    std::map<unsigned int, std::vector<ValueType>>
-                      extractedAtomicMap =
-                        d_nonLocalOperator
-                          ->extractLocallyOwnedAtomFromDistributedVector(
-                            resVec);
+                    // std::map<unsigned int, std::vector<ValueType>>
+                    //   extractedAtomicMap;
+
+                    // in fact we don't need extracted atomicMap. we can access
+                    // the value from d_sphericalFnTimesWavefunMatrix It's
+                    // exactly same
+                    const std::vector<unsigned int> atomIdsInProcessor =
+                      d_atomicOrbitalFnsContainer->getAtomIdsInCurrentProcess();
+                    const std::vector<unsigned int> &atomicNumber =
+                      d_atomicOrbitalFnsContainer->getAtomicNumbers();
+
+                    // for (unsigned int iAtom = 0;
+                    //      iAtom <
+                    //      d_nonLocalOperator->getTotalAtomInCurrentProcessor();
+                    //      iAtom++)
+                    //   {
+                    //     unsigned int atomId = atomIdsInProcessor[iAtom];
+                    //     unsigned int Znum   = atomicNumber[atomId];
+                    //     unsigned int numberSphericalFunctions =
+                    //       d_atomicOrbitalFnsContainer
+                    //         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+                    //     auto temp =
+                    //       d_nonLocalOperator->getCconjtansXLocalDataStructure(
+                    //         iAtom);
+
+                    //     extractedAtomicMap[atomId].resize(
+                    //       numberSphericalFunctions * currentBlockSize);
+                    //     std::memcpy(&(extractedAtomicMap[atomId][0]),
+                    //                 temp,
+                    //                 sizeof(ValueType) *
+                    //                 numberSphericalFunctions *
+                    //                   currentBlockSize);
+                    //   }
+
+
+                    // std::map<unsigned int, std::vector<ValueType>>
+                    //   extractedAtomicMap =
+                    //     d_nonLocalOperator
+                    //       ->extractLocallyOwnedAtomFromDistributedVector(
+                    //         resVec);
 
                     std::map<unsigned int, std::vector<double>>
                       extractedAtomicMapSquaredBlock;
 
-                    for (const auto &pair : extractedAtomicMap)
+                    for (unsigned int iAtom = 0;
+                         iAtom <
+                         d_nonLocalOperator->getTotalAtomInCurrentProcessor();
+                         iAtom++)
                       {
-                        unsigned int atomId = pair.first; // globa Id
+                        unsigned int atomId =
+                          atomIdsInProcessor[iAtom]; // globa Id
+                        unsigned int Znum = atomicNumber[atomId];
+                        unsigned int numberSphericalFunctions =
+                          d_atomicOrbitalFnsContainer
+                            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
                         // size beta x currentblocksize (row major)
-                        std::vector<ValueType> tempVec = pair.second;
+                        std::vector<ValueType> tempVec;
+                        tempVec.resize(numberSphericalFunctions *
+                                       currentBlockSize);
+
+                        std::memcpy(tempVec.data(),
+                                    d_nonLocalOperator
+                                      ->getCconjtansXLocalDataStructure(iAtom),
+                                    numberSphericalFunctions *
+                                      currentBlockSize * sizeof(ValueType));
 
                         // needed to be filled only once per spin
                         if (kPoint == 0 && jvec == 0)
                           {
-                            const unsigned int numSphericalFunctions =
-                              tempVec.size() / currentBlockSize;
                             numberSphericalFunctionsMap[atomId] =
-                              numSphericalFunctions;
+                              numberSphericalFunctions;
                           }
                         if (jvec == 0)
                           {
