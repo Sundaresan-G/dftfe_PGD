@@ -204,12 +204,6 @@ namespace dftfe
     const std::vector<unsigned int> &
     getSphericalFnTimesVectorFlattenedVectorLocalIds() const;
 
-    std::map<unsigned int, std::vector<ValueType>>
-    extractLocallyOwnedAtomFromDistributedVector(
-      dftfe::linearAlgebra::MultiVector<ValueType, memorySpace>
-        &sphericalFunctionKetTimesVectorParFlattened);
-
-
     const std::vector<unsigned int> &
     getOwnedAtomIdsInCurrentProcessor() const;
 

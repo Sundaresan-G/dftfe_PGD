@@ -17,12 +17,20 @@ namespace dftfe
       const std::map<unsigned int, unsigned int> &atomAttributes,
       const bool                                  reproducibleOutput,
       const int                                   verbosity,
-      const bool                                  useDevice)
+      const bool                                  useDevice,
+      const dftParameters *                       dftParamsPtr)
     : d_mpiCommParent(mpi_comm_parent)
     , d_this_mpi_process(
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
+    , computing_timer(mpi_comm_parent,
+                      pcout,
+                      dftParamsPtr->reproducible_output ||
+                          dftParamsPtr->verbosity < 4 ?
+                        dealii::TimerOutput::never :
+                        dealii::TimerOutput::every_call_and_summary,
+                      dealii::TimerOutput::wall_times)
   {
     d_dftfeScratchFolderName = scratchFolderName;
     d_atomTypes              = atomTypes;
@@ -96,9 +104,8 @@ namespace dftfe
     d_densityQuadratureIdElectro    = densityQuadratureIdElectro;
     d_sparsityPatternQuadratureId   = sparsityPatternQuadratureId;
     d_nlpspQuadratureId             = nlpspQuadratureId;
-    // d_excManagerPtr                  = excFunctionalPtr;
-    d_numEigenValues             = numEigenValues;
-    d_singlePrecNonLocalOperator = singlePrecNonLocalOperator;
+    d_numEigenValues                = numEigenValues;
+    d_singlePrecNonLocalOperator    = singlePrecNonLocalOperator;
 
     createAtomCenteredSphericalFunctionsForOrbitals();
 
@@ -106,8 +113,6 @@ namespace dftfe
       std::make_shared<AtomCenteredSphericalFunctionContainer>();
 
     d_atomicOrbitalFnsContainer->init(atomicNumbers, d_atomicOrbitalFnsMap);
-
-    // understand the below part of d_useDevice
 
     if (!d_useDevice)
       {
@@ -176,21 +181,13 @@ namespace dftfe
                                                       periodicCoords,
                                                       imageIds);
 
-    if (updateNonlocalSparsity) // what is updateNonlocalSparsity?
+    if (updateNonlocalSparsity)
       {
         MPI_Barrier(d_mpiCommParent);
-        double InitTime = MPI_Wtime();
         d_atomicOrbitalFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
         MPI_Barrier(d_mpiCommParent);
-        double TotalTime = MPI_Wtime() - InitTime;
-        if (d_verbosity >= 2)
-          pcout
-            << "atomCenteredorbitalPostProcessing: Time taken for computeSparseStructure: "
-            << TotalTime << std::endl;
       }
-    // What does the other functions listed inside the
-    // below function do?
 
     d_nonLocalOperator->intitialisePartitionerKPointsAndComputeCMatrixEntries(
       updateNonlocalSparsity,
@@ -238,6 +235,8 @@ namespace dftfe
         std::string                   readLine;
         char                          waveFunctionFileName[512];
 
+        nlNumsMap[Znum].clear();
+
         if (!readPseudoDataFileNames.is_open())
           {
             std::cerr << "Failed to open file: " << pseudoAtomDataFile
@@ -249,25 +248,35 @@ namespace dftfe
           {
             if (readLine.find("psi") != std::string::npos)
               {
-                // This line contains "psi"
-
                 std::string nlPart =
                   readLine.substr(3,
-                                  readLine.size() - 7); // "20" from "psi20.inp"
-                // Assuming the format is always psiNL.inp, where N and L are
-                // single digits
+                                  readLine.size() - 7);
                 int nQuantumNumber = std::atoi(
-                  nlPart.substr(0, 1).c_str()); // Extracts '2' from "20"
+                  nlPart.substr(0, 1).c_str()); 
                 int lQuantumNumber = std::atoi(
-                  nlPart.substr(1, 1).c_str()); // Extracts '0' from "20"
+                  nlPart.substr(1, 1).c_str()); 
                 radFunctionIds.insert(
                   std::make_pair(nQuantumNumber, lQuantumNumber));
               }
           }
+        std::vector<std::pair<int, int>> tempVec(radFunctionIds.begin(),
+                                                 radFunctionIds.end());
+
+        // std::sort(tempVec.begin(),
+        //           tempVec.end(),
+        //           [](const std::pair<int, int> &a,
+        //              const std::pair<int, int> &b) {
+        //             if (a.second == b.second)
+        //               {
+        //                 return a.first < b.first;
+        //               }
+        //             return a.second < b.second;
+        //           });
+
         readPseudoDataFileNames.close();
         unsigned int alpha = 0;
-        for (std::set<std::pair<int, int>>::iterator i = radFunctionIds.begin();
-             i != radFunctionIds.end();
+        for (std::vector<std::pair<int, int>>::iterator i = tempVec.begin();
+             i != tempVec.end();
              ++i)
           {
             int nQuantumNumber = i->first;
@@ -277,6 +286,10 @@ namespace dftfe
                     "/psi" + std::to_string(nQuantumNumber) +
                     std::to_string(lQuantumNumber) + ".inp")
                      .c_str());
+
+            nlNumsMap[Znum].push_back(
+              std::make_pair(nQuantumNumber, lQuantumNumber));
+
             d_atomicOrbitalFnsMap[std::make_pair(Znum, alpha)] =
               std::make_shared<AtomCenteredSphericalFunctionProjectorSpline>(
                 waveFunctionFileName,
@@ -301,8 +314,14 @@ namespace dftfe
       std::shared_ptr<
         dftfe::basis::FEBasisOperations<ValueType, double, memorySpace>>
         &basisOperationsPtr,
-      std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-                                 BLASWrapperPtr,
+#if defined(DFTFE_WITH_DEVICE)
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        BLASWrapperPtrDevice,
+#endif
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+                                 BLASWrapperPtrHost,
       const unsigned int         quadratureIndex,
       const std::vector<double> &kPointWeights,
       const MPI_Comm &           interBandGroupComm,
@@ -311,13 +330,16 @@ namespace dftfe
       double                     fermiEnergy,
       unsigned int               highestStateNscfSolve)
   {
+    computing_timer.enter_subsection("PDOS computation");
     const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
     unsigned int       numSpinComponents;
     numSpinComponents               = dftParamsPtr->spinPolarized + 1;
     const unsigned int numLocalDofs = basisOperationsPtr->nOwnedDofs();
 
     const unsigned int cellsBlockSize =
-      memorySpace == dftfe::utils::MemorySpace::DEVICE ? totalLocallyOwnedCells : 1;
+      memorySpace == dftfe::utils::MemorySpace::DEVICE ?
+        totalLocallyOwnedCells :
+        1;
     const unsigned int numCellBlocks = totalLocallyOwnedCells / cellsBlockSize;
     const unsigned int remCellBlockSize =
       totalLocallyOwnedCells - numCellBlocks * cellsBlockSize;
@@ -397,9 +419,6 @@ namespace dftfe
     const unsigned int numberIntervals =
       std::ceil((upperBoundEpsilon - lowerBoundEpsilon) / intervalSize);
 
-    // maps atomId to number of sphericalfunctions
-    std::map<unsigned int, unsigned int> numberSphericalFunctionsMap;
-
     std::vector<unsigned int> atomicNumbers =
       d_atomicOrbitalFnsContainer->getAtomicNumbers();
 
@@ -438,6 +457,7 @@ namespace dftfe
                 // currentBlockSize*(number of atomic Orbitals for each
                 // atom) summed over all atoms that have compact support on
                 // the elements in the processor
+
                 d_nonLocalOperator->initialiseFlattenedDataStructure(
                   currentBlockSize, resVec);
 
@@ -459,7 +479,7 @@ namespace dftfe
                                     currentBlockSize * sizeof(ValueType));
 #if defined(DFTFE_WITH_DEVICE)
                     else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
+                      BLASWrapperPtrDevice->stridedCopyToBlockConstantStride(
                         currentBlockSize,
                         totalNumWaveFunctions,
                         numLocalDofs,
@@ -474,7 +494,6 @@ namespace dftfe
                                                false);
 
                     flattenedArrayBlock->updateGhostValues();
-                    // distribute applies the constraints
                     basisOperationsPtr->distribute(*(flattenedArrayBlock));
 
                     for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
@@ -493,6 +512,13 @@ namespace dftfe
                                 tempCellNodalData.resize(currentCellsBlockSize *
                                                          currentBlockSize *
                                                          numNodesPerElement);
+                                if constexpr (memorySpace ==
+                                              dftfe::utils::MemorySpace::DEVICE)
+                                  {
+                                    d_nonLocalOperator
+                                      ->initialiseCellWaveFunctionPointers(
+                                        tempCellNodalData);
+                                  }
                                 previousSize =
                                   currentCellsBlockSize * currentBlockSize;
                               }
@@ -510,9 +536,6 @@ namespace dftfe
                                 startingCellId + currentCellsBlockSize));
                           }
                       } // iblock
-                    // This is not actually an allreduce. It simply does
-                    // boundary communication. After this, the values for one
-                    // atom is shared across the boundary
                     d_nonLocalOperator->applyAllReduceOnCconjtransX(resVec);
 
                     dftfe::utils::MemoryStorage<double, memorySpace> scalingVec;
@@ -521,48 +544,9 @@ namespace dftfe
                       ->copyBackFromDistributedVectorToLocalDataStructure(
                         resVec, scalingVec);
 
-                    // contains for every atomId a matrix of size beta_a x
-                    // currentblocksize
-                    // std::map<unsigned int, std::vector<ValueType>>
-                    //   extractedAtomicMap;
 
-                    // in fact we don't need extracted atomicMap. we can access
-                    // the value from d_sphericalFnTimesWavefunMatrix It's
-                    // exactly same
                     const std::vector<unsigned int> atomIdsInProcessor =
                       d_atomicOrbitalFnsContainer->getAtomIdsInCurrentProcess();
-                    const std::vector<unsigned int> &atomicNumber =
-                      d_atomicOrbitalFnsContainer->getAtomicNumbers();
-
-                    // for (unsigned int iAtom = 0;
-                    //      iAtom <
-                    //      d_nonLocalOperator->getTotalAtomInCurrentProcessor();
-                    //      iAtom++)
-                    //   {
-                    //     unsigned int atomId = atomIdsInProcessor[iAtom];
-                    //     unsigned int Znum   = atomicNumber[atomId];
-                    //     unsigned int numberSphericalFunctions =
-                    //       d_atomicOrbitalFnsContainer
-                    //         ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
-                    //     auto temp =
-                    //       d_nonLocalOperator->getCconjtansXLocalDataStructure(
-                    //         iAtom);
-
-                    //     extractedAtomicMap[atomId].resize(
-                    //       numberSphericalFunctions * currentBlockSize);
-                    //     std::memcpy(&(extractedAtomicMap[atomId][0]),
-                    //                 temp,
-                    //                 sizeof(ValueType) *
-                    //                 numberSphericalFunctions *
-                    //                   currentBlockSize);
-                    //   }
-
-
-                    // std::map<unsigned int, std::vector<ValueType>>
-                    //   extractedAtomicMap =
-                    //     d_nonLocalOperator
-                    //       ->extractLocallyOwnedAtomFromDistributedVector(
-                    //         resVec);
 
                     std::map<unsigned int, std::vector<double>>
                       extractedAtomicMapSquaredBlock;
@@ -574,7 +558,7 @@ namespace dftfe
                       {
                         unsigned int atomId =
                           atomIdsInProcessor[iAtom]; // globa Id
-                        unsigned int Znum = atomicNumber[atomId];
+                        unsigned int Znum = atomicNumbers[atomId];
                         unsigned int numberSphericalFunctions =
                           d_atomicOrbitalFnsContainer
                             ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
@@ -589,22 +573,16 @@ namespace dftfe
                                     numberSphericalFunctions *
                                       currentBlockSize * sizeof(ValueType));
 
-                        // needed to be filled only once per spin
-                        if (kPoint == 0 && jvec == 0)
-                          {
-                            numberSphericalFunctionsMap[atomId] =
-                              numberSphericalFunctions;
-                          }
                         if (jvec == 0)
                           {
                             pdosKernelWithoutSmearFunctionSpinKpoint[atomId]
-                              .resize(numberSphericalFunctionsMap[atomId] *
+                              .resize(numberSphericalFunctions *
                                       totalNumWaveFunctions);
                           }
 
 
-                        // absolute value squared. Block refers to wavefunction
-                        // block
+                        // contains for every atomId a matrix of size beta_a x
+                        // currentblocksize (absolute value squared)
                         extractedAtomicMapSquaredBlock[atomId].clear();
                         extractedAtomicMapSquaredBlock[atomId].resize(
                           tempVec.size());
@@ -618,8 +596,7 @@ namespace dftfe
 
                         std::memcpy(
                           &pdosKernelWithoutSmearFunctionSpinKpoint
-                            [atomId]
-                            [jvec * numberSphericalFunctionsMap[atomId]],
+                            [atomId][jvec * numberSphericalFunctions],
                           &(extractedAtomicMapSquaredBlock[atomId][0]),
                           extractedAtomicMapSquaredBlock[atomId].size() *
                             sizeof(double));
@@ -630,8 +607,6 @@ namespace dftfe
       }             // spinIndex
 
     // Till now all the data has been collected
-    // In the above process be attentive about the band parallelization and the
-    // device implementations
 
     std::vector<double> smearedValues;
     // spin, (atomId, beta x numEnergies)
@@ -647,10 +622,13 @@ namespace dftfe
 
     for (auto pair : pdosKernelWithoutSmearFunction[0][0])
       {
-        unsigned atomId = pair.first;
-
-        // 2 different prpocesses can have the same atomIDs.
-        numTotalAtomicOrbitals[atomId] = numberSphericalFunctionsMap[atomId];
+        unsigned     atomId = pair.first;
+        unsigned int Znum   = atomicNumbers[atomId];
+        unsigned int numberSphericalFunctions =
+          d_atomicOrbitalFnsContainer
+            ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
+        // two different processes can have the same atomIDs.
+        numTotalAtomicOrbitals[atomId] = numberSphericalFunctions;
       }
 
     // Do an MPI_allreduce to get the atomIDs in one vector;
@@ -733,13 +711,15 @@ namespace dftfe
                   {
                     unsigned int        atomId      = pair.first;
                     std::vector<double> kernelValue = pair.second;
+                    unsigned int        Znum        = atomicNumbers[atomId];
+                    unsigned int        numberSphericalFunctions =
+                      d_atomicOrbitalFnsContainer
+                        ->getTotalNumberOfSphericalFunctionsPerAtom(Znum);
 
-                    const unsigned int numSphericalFunctions =
-                      numberSphericalFunctionsMap[atomId];
                     if (epsInt == 0)
                       {
                         summedOverBlocks[spinIndex][atomId].resize(
-                          numberIntervals * numSphericalFunctions);
+                          numberIntervals * numberSphericalFunctions);
                       }
 
                     const double zero(0.0), one(1.0);
@@ -751,20 +731,21 @@ namespace dftfe
                           std::min(BVec, totalNumWaveFunctions - jvec);
 
                         // In summedOverBlocks, summation of kpoints is done
-                        BLASWrapperPtr->xgemm(
+                        BLASWrapperPtrHost->xgemm(
                           'N',
                           'N',
                           1,
-                          numSphericalFunctions,
+                          numberSphericalFunctions,
                           currentBlockSize,
                           &kPointWeights[kPoint],
                           &smearedValues[jvec],
                           1,
-                          &kernelValue[jvec * numSphericalFunctions],
+                          &kernelValue[jvec * numberSphericalFunctions],
                           currentBlockSize,
                           &one,
                           &(summedOverBlocks[spinIndex][atomId]
-                                            [epsInt * numSphericalFunctions]),
+                                            [epsInt *
+                                             numberSphericalFunctions]),
                           1);
                       }
                   } // atomID
@@ -772,19 +753,9 @@ namespace dftfe
 
           } // kpoint
 
-        // for (std::vector<double>::iterator it =
-        //        (summedOverBlocks[spinIndex][0]).begin();
-        //      it < (summedOverBlocks[spinIndex][0]).end();
-        //      it++)
-        //   {
-        //     pcout << "Summed over blocks val:  " << *it << std::endl;
-        //   }
-
         for (auto pair : pdosKernelWithoutSmearFunction[spinIndex][0])
           {
-            unsigned int atomId         = pair.first;
-            double numSphericalFunction = numberSphericalFunctionsMap[atomId];
-
+            unsigned int atomId = pair.first;
             if (atomId != 0)
               {
                 std::memcpy(
@@ -818,23 +789,12 @@ namespace dftfe
                   MPI_MAX,
                   d_mpiCommParent);
 
-
-    pcout << "Writing PDOS File... (No shift in Energy)" << std::endl;
-
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {
         std::string   pdosFileName = "PDOS.out";
         std::ofstream outFile(pdosFileName.c_str());
         outFile.setf(std::ios_base::fixed);
         outFile << std::setprecision(18);
-        std::set<unsigned int> lNums;
-        for (auto &pair : d_atomicOrbitalFnsContainer->getSphericalFunctions())
-          {
-            lNums.insert(pair.second->getQuantumNumberl());
-          }
-
-        std::vector<unsigned int> atomicNumbers =
-          d_atomicOrbitalFnsContainer->getAtomicNumbers();
 
         if (outFile.is_open())
           {
@@ -850,11 +810,25 @@ namespace dftfe
                   {
                     outFile << "Atom ID: " << atomId << std::endl;
 
-                    unsigned int atomicNum = atomicNumbers[atomId];
+                    unsigned int              Znum = atomicNumbers[atomId];
+                    std::vector<unsigned int> nQuantumNums;
+                    std::vector<unsigned int> lQuantumNums;
+                    for (auto i : nlNumsMap[Znum])
+                      {
+                        nQuantumNums.push_back(i.first);
+                        lQuantumNums.push_back(i.second);
+                      }
+
+                    auto maxElem = std::max_element(lQuantumNums.begin(),
+                                                    lQuantumNums.end());
+                    unsigned int maxLQnum = *maxElem;
 
                     for (unsigned int epsInt = 0; epsInt < numberIntervals;
                          ++epsInt)
                       {
+                        std::vector<double> pdosVec;
+                        pdosVec.resize(maxLQnum * maxLQnum + 2 * maxLQnum + 1,
+                                       0.0);
                         double epsValue =
                           lowerBoundEpsilon + epsInt * intervalSize;
 
@@ -871,7 +845,30 @@ namespace dftfe
                                     epsInt * numTotalAtomicOrbitals[atomId];
 
                         auto endIt = startIt + numTotalAtomicOrbitals[atomId];
-                        for (auto it = startIt; it < endIt; it++)
+
+                        unsigned int totalAtomicOrbitlals = 0;
+                        for (auto it = nlNumsMap[Znum].begin();
+                             it != nlNumsMap[Znum].end();
+                             ++it)
+                          {
+                            unsigned int nQNum = it->first;
+                            unsigned int lQNum = it->second;
+
+                            for (int j = lQNum * lQNum;
+                                 j < (lQNum + 1) * (lQNum + 1);
+                                 j++)
+                              {
+                                pdosVec[j] += *startIt;
+                                startIt += 1;
+                                totalAtomicOrbitlals += 1;
+                              }
+                          }
+
+                        assert(totalAtomicOrbitlals ==
+                               numTotalAtomicOrbitals[atomId]);
+
+                        for (auto it = pdosVec.begin(); it != pdosVec.end();
+                             it++)
                           {
                             outFile << "  " << *it;
                           }
@@ -881,7 +878,7 @@ namespace dftfe
               }
           }
       }
-    pcout << "PDOS computation completed" << std::endl;
+    computing_timer.leave_subsection("PDOS computation");
   }
 
   template class atomCenteredOrbitalsPostProcessing<
@@ -893,6 +890,4 @@ namespace dftfe
     dataTypes::number,
     dftfe::utils::MemorySpace::DEVICE>;
 #endif
-
-
 } // namespace dftfe

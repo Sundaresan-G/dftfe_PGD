@@ -38,7 +38,8 @@ namespace dftfe
       const std::map<unsigned int, unsigned int> &atomAttributes,
       const bool                                  reproducibleOutput,
       const int                                   verbosity,
-      const bool                                  useDevice);
+      const bool                                  useDevice,
+      const dftParameters *                       dftParamsPtr);
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
      * @param[in] densityQuadratureId quadratureId for density.
@@ -54,9 +55,6 @@ namespace dftfe
      * @param[in] imageIds image IDs of periodic cell
      * @param[in] periodicCoords coordinates of image atoms
      */
-
-    double
-    smearFunction(double x, const dftParameters *dftParamsPtr);
 
     void
     initialise(
@@ -89,6 +87,7 @@ namespace dftfe
       unsigned int                             numEigenValues,
       const bool                               singlePrecNonLocalOperator);
 
+
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
      * @param[in] densityQuadratureId quadratureId for density.
@@ -118,6 +117,9 @@ namespace dftfe
       AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
     getNonLocalOperator();
 
+    double
+    smearFunction(double x, const dftParameters *dftParamsPtr);
+
     void
     computeAtomCenteredEntries(
       const dftfe::utils::MemoryStorage<ValueType, memorySpace> *X,
@@ -126,8 +128,14 @@ namespace dftfe
       std::shared_ptr<
         dftfe::basis::FEBasisOperations<ValueType, double, memorySpace>>
         &basisOperationsPtr,
-      std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-                                 BLASWrapperPtr,
+#if defined(DFTFE_WITH_DEVICE)
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        BLASWrapperPtrDevice,
+#endif
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+                                 BLASWrapperPtrHost,
       const unsigned int         quadratureIndex,
       const std::vector<double> &kPointWeights,
       const MPI_Comm &           interBandGroupComm,
@@ -160,6 +168,9 @@ namespace dftfe
     void
     createAtomCenteredSphericalFunctionsForOrbitals();
 
+    std::map<unsigned int, std::vector<std::pair<unsigned int, unsigned int>>>
+                        nlNumsMap;
+    dealii::TimerOutput computing_timer;
 
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
       d_atomicOrbitalFnsContainer;
