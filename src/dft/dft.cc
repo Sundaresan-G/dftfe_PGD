@@ -892,7 +892,8 @@ namespace dftfe
               d_atomTypeAtributes,
               d_dftParamsPtr->reproducible_output,
               d_dftParamsPtr->verbosity,
-              d_dftParamsPtr->useDevice);
+              d_dftParamsPtr->useDevice,
+              d_dftParamsPtr);
           }
       }
 
@@ -1913,6 +1914,9 @@ namespace dftfe
                     d_numEigenValues,
                     eigenValues,
                     d_basisOperationsPtrHost,
+#if defined(DFTFE_WITH_DEVICE)
+                    d_BLASWrapperPtr,
+#endif
                     d_BLASWrapperPtrHost,
                     d_lpspQuadratureId,
                     d_kPointWeights,
@@ -1932,6 +1936,7 @@ namespace dftfe
                     eigenValues,
                     d_basisOperationsPtrDevice,
                     d_BLASWrapperPtr,
+                    d_BLASWrapperPtrHost,
                     d_lpspQuadratureId,
                     d_kPointWeights,
                     interBandGroupComm,

@@ -43,11 +43,12 @@ namespace dftfe
       for (unsigned int index = globalThreadId; index < numberEntries;
            index += blockDim.x * gridDim.x)
         {
-          
-	   const unsigned int iAtom = index/(maxSingleAtomPseudoWfc*numWfcs);
-                const unsigned int iOrb = (index - iAtom*maxSingleAtomPseudoWfc*numWfcs)/numWfcs;
-                const unsigned int wfcIndex = (index - iAtom*maxSingleAtomPseudoWfc*numWfcs)%numWfcs;
-	  const double alpha = scalingVector[wfcIndex];
+          const unsigned int iAtom = index / (maxSingleAtomPseudoWfc * numWfcs);
+          const unsigned int iOrb =
+            (index - iAtom * maxSingleAtomPseudoWfc * numWfcs) / numWfcs;
+          const unsigned int wfcIndex =
+            (index - iAtom * maxSingleAtomPseudoWfc * numWfcs) % numWfcs;
+          const double alpha = scalingVector[wfcIndex];
           dftfe::utils::copyValue(
             sphericalFnTimesWfcPadded + index,
             dftfe::utils::mult(alpha, sphericalFnTimesWfcPadded[index]));
@@ -516,10 +517,10 @@ namespace dftfe
 
     template void
     sqrtAlphaScalingWaveFunctionEntries(
-      const unsigned int maxSingleAtomContribution,
-      const unsigned int numWfcs,
-      const unsigned int totalAtomsInCurrentProcessor,
-      const double *     scalingVector,
+      const unsigned int     maxSingleAtomContribution,
+      const unsigned int     numWfcs,
+      const unsigned int     totalAtomsInCurrentProcessor,
+      const double *         scalingVector,
       dataTypes::numberFP32 *sphericalFnTimesWfcPadded);
 
 

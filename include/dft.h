@@ -1174,10 +1174,6 @@ namespace dftfe
     compute_ldos(const std::vector<std::vector<double>> &eigenValuesInput,
                  const std::string &                     fileName);
 
-    // void
-    // compute_pdos(const std::vector<std::vector<double>> &eigenValuesInput,
-    //              const std::string &                     fileName);
-
     /**
      *@brief compute localization length
      */
