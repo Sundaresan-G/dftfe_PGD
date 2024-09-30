@@ -226,15 +226,16 @@ namespace dftfe
                            eigenValuesInput[kPoint]
                                            [spinType * d_numEigenValues +
                                             statesIter]);
-                        double denom = term1 * term1 + sigma * sigma;
                         if (spinType == 0)
-                          densityOfStatesUp[epsInt] += d_kPointWeights[kPoint] *
-                                                       (sigma / M_PI) *
-                                                       (1.0 / denom);
+                          densityOfStatesUp[epsInt] +=
+                            d_kPointWeights[kPoint] *
+                            d_atomCenteredOrbitalsPostProcessingPtr
+                              ->smearFunction(term1, d_dftParamsPtr);
                         else
                           densityOfStatesDown[epsInt] +=
-                            d_kPointWeights[kPoint] * (sigma / M_PI) *
-                            (1.0 / denom);
+                            d_kPointWeights[kPoint] *
+                            d_atomCenteredOrbitalsPostProcessingPtr
+                              ->smearFunction(term1, d_dftParamsPtr);
                       }
                   }
               }

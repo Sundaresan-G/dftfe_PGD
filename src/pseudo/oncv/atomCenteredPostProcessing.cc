@@ -248,13 +248,9 @@ namespace dftfe
           {
             if (readLine.find("psi") != std::string::npos)
               {
-                std::string nlPart =
-                  readLine.substr(3,
-                                  readLine.size() - 7);
-                int nQuantumNumber = std::atoi(
-                  nlPart.substr(0, 1).c_str()); 
-                int lQuantumNumber = std::atoi(
-                  nlPart.substr(1, 1).c_str()); 
+                std::string nlPart = readLine.substr(3, readLine.size() - 7);
+                int nQuantumNumber = std::atoi(nlPart.substr(0, 1).c_str());
+                int lQuantumNumber = std::atoi(nlPart.substr(1, 1).c_str());
                 radFunctionIds.insert(
                   std::make_pair(nQuantumNumber, lQuantumNumber));
               }
@@ -435,7 +431,6 @@ namespace dftfe
       {
         for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); kPoint++)
           {
-            // what does this do?
             d_nonLocalOperator->initialiseOperatorActionOnX(kPoint);
 
             std::map<unsigned int, std::vector<double>>
@@ -548,8 +543,6 @@ namespace dftfe
                     const std::vector<unsigned int> atomIdsInProcessor =
                       d_atomicOrbitalFnsContainer->getAtomIdsInCurrentProcess();
 
-                    std::map<unsigned int, std::vector<double>>
-                      extractedAtomicMapSquaredBlock;
 
                     for (unsigned int iAtom = 0;
                          iAtom <
@@ -582,7 +575,9 @@ namespace dftfe
 
 
                         // contains for every atomId a matrix of size beta_a x
-                        // currentblocksize (absolute value squared)
+                        // currentblocksize (absolute value squared value)
+                        std::map<unsigned int, std::vector<double>>
+                          extractedAtomicMapSquaredBlock;
                         extractedAtomicMapSquaredBlock[atomId].clear();
                         extractedAtomicMapSquaredBlock[atomId].resize(
                           tempVec.size());
@@ -798,30 +793,30 @@ namespace dftfe
 
         if (outFile.is_open())
           {
-            if (dftParamsPtr->spinPolarized == 1)
+            outFile
+              << "E (eV)          s  py  pz  px  dxy  dyz  dz2  dxz  dx2-y2  "
+              << std::endl;
+            for (auto atomId = 0; atomId < dftParamsPtr->natoms; atomId++)
               {
-              }
-            else
-              {
-                outFile
-                  << "E (eV)          s  py  pz  px  dxy  dyz  dz2  dxz  dx2-y2  "
-                  << std::endl;
-                for (auto atomId = 0; atomId < dftParamsPtr->natoms; atomId++)
+                outFile << "Atom ID: " << atomId << std::endl;
+
+                unsigned int              Znum = atomicNumbers[atomId];
+                std::vector<unsigned int> nQuantumNums;
+                std::vector<unsigned int> lQuantumNums;
+                for (auto i : nlNumsMap[Znum])
                   {
-                    outFile << "Atom ID: " << atomId << std::endl;
+                    nQuantumNums.push_back(i.first);
+                    lQuantumNums.push_back(i.second);
+                  }
 
-                    unsigned int              Znum = atomicNumbers[atomId];
-                    std::vector<unsigned int> nQuantumNums;
-                    std::vector<unsigned int> lQuantumNums;
-                    for (auto i : nlNumsMap[Znum])
-                      {
-                        nQuantumNums.push_back(i.first);
-                        lQuantumNums.push_back(i.second);
-                      }
+                auto maxElem =
+                  std::max_element(lQuantumNums.begin(), lQuantumNums.end());
+                unsigned int maxLQnum = *maxElem;
 
-                    auto maxElem = std::max_element(lQuantumNums.begin(),
-                                                    lQuantumNums.end());
-                    unsigned int maxLQnum = *maxElem;
+                for (int spinIndex = 0; spinIndex < numSpinComponents;
+                     spinIndex++)
+                  {
+                    outFile << "spin: " << spinIndex << std::endl;
 
                     for (unsigned int epsInt = 0; epsInt < numberIntervals;
                          ++epsInt)
@@ -835,14 +830,24 @@ namespace dftfe
                         outFile << epsValue * C_haToeV;
                         std::vector<double>::iterator startIt;
                         if (atomId != 0)
-                          startIt = mpiVectorSummedOverBlocks.begin() +
-                                    cumulativeNumAtomicOrbitals[atomId - 1] *
-                                      numberIntervals +
-                                    epsInt * numTotalAtomicOrbitals[atomId];
+                          startIt =
+                            mpiVectorSummedOverBlocks.begin() +
+                            spinIndex *
+                              cumulativeNumAtomicOrbitals[dftParamsPtr->natoms -
+                                                          1] *
+                              numberIntervals +
+                            cumulativeNumAtomicOrbitals[atomId - 1] *
+                              numberIntervals +
+                            epsInt * numTotalAtomicOrbitals[atomId];
 
                         else
-                          startIt = mpiVectorSummedOverBlocks.begin() +
-                                    epsInt * numTotalAtomicOrbitals[atomId];
+                          startIt =
+                            mpiVectorSummedOverBlocks.begin() +
+                            spinIndex *
+                              cumulativeNumAtomicOrbitals[dftParamsPtr->natoms -
+                                                          1] *
+                              numberIntervals +
+                            epsInt * numTotalAtomicOrbitals[atomId];
 
                         auto endIt = startIt + numTotalAtomicOrbitals[atomId];
 
