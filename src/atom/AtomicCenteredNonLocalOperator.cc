@@ -672,8 +672,6 @@ namespace dftfe
 
           } // element loop
 
-
-
         const char         transA = 'N', transB = 'N';
         const double       scalarCoeffAlpha = 1.0, scalarCoeffBeta = 0.0;
         const unsigned int inc = 1;
@@ -1785,6 +1783,7 @@ namespace dftfe
               d_sphericalFnTimesVectorDevice);
 
             // scaling kernel
+            // TODO this function does not takes sqrt of the alpha
             dftfe::AtomicCenteredNonLocalOperatorKernelsDevice::
               sqrtAlphaScalingWaveFunctionEntries(
                 d_maxSingleAtomContribution,
@@ -1793,6 +1792,14 @@ namespace dftfe
                 scalingVector.data(),
                 d_sphericalFnTimesVectorDevice.data());
             // storing in d_sphericalFnTimesWavefunctionMatrix
+
+            dftfe::utils::MemoryStorage<ValueType,
+                                        dftfe::utils::MemorySpace::HOST>
+              sphericalFnTimesVectorHostTemp;
+            sphericalFnTimesVectorHostTemp.resize(
+              d_sphericalFnTimesVectorDevice.size());
+            sphericalFnTimesVectorHostTemp.copyFrom(
+              d_sphericalFnTimesVectorDevice);
           }
 #endif
       }
@@ -1957,14 +1964,6 @@ namespace dftfe
                       &beta,
                       &d_sphericalFnTimesWavefunMatrix[atomId][0],
                       d_numberWaveFunctions);
-                    // std::cout << "Scaled Matrix " <<atomId<<" rank:
-                    // "<<d_this_mpi_process<< std::endl;
-                    // for (int i = 0; i < inputMatrix.size(); i++)
-                    //   std::cout <<"Scaled Matrix: "<< inputMatrix[i] << " "
-                    //         << d_sphericalFnTimesWavefunMatrix[atomId][i]<<"
-                    //         "
-                    //         << atomId<<" rank: "<<d_this_mpi_process<<
-                    //         std::endl;
                     if (!flagCopyResultsToMatrix)
                       {
                         d_BLASWrapperPtr->xcopy(
@@ -2154,6 +2153,8 @@ namespace dftfe
           d_atomCenteredSphericalFunctionContainer->getAtomicNumbers();
         const std::map<unsigned int, std::vector<int>> sparsityPattern =
           d_atomCenteredSphericalFunctionContainer->getSparsityPattern();
+
+        double integValue = 0.0;
         for (int iElem = cellRange.first; iElem < cellRange.second; iElem++)
           {
             if (atomSupportInElement(iElem))
@@ -2190,6 +2191,14 @@ namespace dftfe
                       &one,
                       &d_sphericalFnTimesWavefunMatrix[atomId][0],
                       d_numberWaveFunctions);
+
+                    //                    for ( unsigned int iOrb = 0; iOrb <
+                    //                    d_CMatrixEntriesConjugate[atomId][nonZeroElementMatrixId].size();
+                    //                        iOrb++)
+                    //                      {
+                    //                        integValue +=
+                    //                        d_CMatrixEntriesConjugate[atomId][nonZeroElementMatrixId][iOrb];
+                    //                      }
 
                   } // iAtom
               }
@@ -2297,6 +2306,12 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     else
       {
+        Assert(
+          d_basisOperatorPtr->nVectors() == d_numberWaveFunctions,
+          dealii::ExcMessage(
+            "DFT-FE Error: d_BasisOperatorMemPtr in Atomic non local operator is not set with correct input size."));
+
+
         d_BLASWrapperPtr->stridedCopyFromBlock(
           d_numberWaveFunctions,
           d_locallyOwnedCells * d_numberNodesPerElement,
@@ -2391,6 +2406,12 @@ namespace dftfe
         initialiseCellWaveFunctionPointers(cellWaveFunctionMatrix);
         if (d_totalNonlocalElems > 0)
           {
+            Assert(
+              d_basisOperatorPtr->nVectors() == d_numberWaveFunctions,
+              dealii::ExcMessage(
+                "DFT-FE Error: d_BasisOperatorMemPtr in Atomic non local operator is not set with correct input size."));
+
+
             d_BLASWrapperPtr->stridedCopyToBlock(
               d_numberWaveFunctions,
               d_locallyOwnedCells * d_numberNodesPerElement,
