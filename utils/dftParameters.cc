@@ -129,7 +129,7 @@ namespace dftfe
           "WRITE DENSITY OF STATES",
           "false",
           dealii::Patterns::Bool(),
-          "[Standard] Computes density of states using Lorentzians. Uses specified Temperature for SCF as the broadening parameter. Outputs a file name 'dosData.out' containing two columns with first column indicating the energy in eV relative to the Fermi energy and second column indicating the density of states. In case of collinear spin polarization, the second and third columns indicate the spin-up and spin-down density of states.");
+          "[Standard] Computes density of states using Gaussian smearing. Uses specified 'DOS SMEAR TEMPERATURE' as broadening parameter. Outputs a file name 'dosData.out' containing two columns with first column indicating the energy in eV (without shift wrt Fermi energy. Fermi energy can be obtained from the file'fermiEnergy.out' that is generated when 'SAVE RHO DATA = true' in 'GS' calculation) and second column indicating the density of states. In case of collinear spin polarization, the second and third columns indicate the spin-up and spin-down density of states.");
 
         prm.declare_entry(
           "WRITE LOCAL DENSITY OF STATES",
@@ -141,12 +141,14 @@ namespace dftfe
           "WRITE PROJECTED DENSITY OF STATES",
           "false",
           dealii::Patterns::Bool(),
-          R"([Standard] Computes projected density of states on each atom using Lorentzians. Uses specified Temperature for SCF as the broadening parameter. Outputs a file name 'pdosData\_x' with x denoting atomID. This file contains columns with first column indicating the energy in eV and all other columns indicating projected density of states corresponding to single atom wavefunctions.)");
+          R"([Standard] Computes projected density of states on each atomic orbital using Gaussian smearing. Uses specified 'DOS SMEAR TEMPERATURE' as the broadening parameter. Outputs files with name format 'pdosData_atom#{atom number}_wfc#{wfc number}({wfc name}).out'. For colinear, spin-unpolarized case, each of these file contain columns with format 'E sumPDOS  PDOS_0 .... PDOS_(2l)', where E: the energy is eV (without shift wrt Fermi energy. Fermi energy can be obtained from the file'fermiEnergy.out' that is generated when 'SAVE RHO DATA = true'in 'GS' calculation),l: azimuthal quantum number, sumPDOS: PDOS_0 + .. +PDOS_(2l).
+          For colinear, spin-polarized case, the columns has format 'E sumPDOS_up sumPDOS_down PDOS_0_up PDOS_0_down .... PDOS_(2l)_up PDOS_(2l)_down', where 'up' and 'down' refer to the spin up and spin down case with all other terms having the same meaning as of the spin-unpolarized case.)");
+
         prm.declare_entry(
-          "SMEAR TEMPERATURE",
+          "DOS SMEAR TEMPERATURE",
           "500",
           dealii::Patterns::Double(),
-          "[standard] Gaussian smearing temperature for DOS, PDOS and LDOS calculation");
+          "[standard] Gaussian smearing temperature (in K) for DOS, PDOS and LDOS calculation");
 
         prm.declare_entry(
           "DELTA ENERGY",
@@ -1467,7 +1469,7 @@ namespace dftfe
       writeDosFile               = prm.get_bool("WRITE DENSITY OF STATES");
       writeLdosFile = prm.get_bool("WRITE LOCAL DENSITY OF STATES");
       writePdosFile = prm.get_bool("WRITE PROJECTED DENSITY OF STATES");
-      smearTval     = prm.get_double("SMEAR TEMPERATURE");
+      smearTval     = prm.get_double("DOS SMEAR TEMPERATURE");
       intervalSize  = prm.get_double("DELTA ENERGY");
       writeLocalizationLengths = prm.get_bool("WRITE LOCALIZATION LENGTHS");
       readWfcForPdosPspFile =

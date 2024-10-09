@@ -2,23 +2,20 @@
 #include <deviceKernelsGeneric.h>
 #include <constants.h>
 #include <cassert>
+#include <iomanip>
 
 namespace dftfe
 {
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
 
   atomCenteredOrbitalsPostProcessing<ValueType, memorySpace>::
-    atomCenteredOrbitalsPostProcessing(
-      const MPI_Comm &                            mpi_comm_parent,
-      const std::string &                         scratchFolderName,
-      const std::set<unsigned int> &              atomTypes,
-      const bool                                  floatingNuclearCharges,
-      const unsigned int                          nOMPThreads,
-      const std::map<unsigned int, unsigned int> &atomAttributes,
-      const bool                                  reproducibleOutput,
-      const int                                   verbosity,
-      const bool                                  useDevice,
-      const dftParameters *                       dftParamsPtr)
+    atomCenteredOrbitalsPostProcessing(const MPI_Comm &   mpi_comm_parent,
+                                       const std::string &scratchFolderName,
+                                       const std::set<unsigned int> &atomTypes,
+                                       const bool           reproducibleOutput,
+                                       const int            verbosity,
+                                       const bool           useDevice,
+                                       const dftParameters *dftParamsPtr)
     : d_mpiCommParent(mpi_comm_parent)
     , d_this_mpi_process(
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
@@ -34,11 +31,8 @@ namespace dftfe
   {
     d_dftfeScratchFolderName = scratchFolderName;
     d_atomTypes              = atomTypes;
-    d_floatingNuclearCharges = floatingNuclearCharges;
-    d_nOMPThreads            = nOMPThreads;
     d_reproducible_output    = reproducibleOutput;
     d_verbosity              = verbosity;
-    d_atomTypeAtributes      = atomAttributes;
     d_useDevice              = useDevice;
   }
 
@@ -75,15 +69,10 @@ namespace dftfe
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
       BLASWrapperPtrDevice,
 #endif
-    unsigned int                             densityQuadratureId,
-    unsigned int                             localContributionQuadratureId,
-    unsigned int                             sparsityPatternQuadratureId,
-    unsigned int                             nlpspQuadratureId,
-    unsigned int                             densityQuadratureIdElectro,
-    std::shared_ptr<excManager<memorySpace>> excFunctionalPtr,
-    const std::vector<std::vector<double>> & atomLocations,
-    unsigned int                             numEigenValues,
-    const bool                               singlePrecNonLocalOperator)
+    unsigned int                            sparsityPatternQuadratureId,
+    unsigned int                            nlpspQuadratureId,
+    const std::vector<std::vector<double>> &atomLocations,
+    unsigned int                            numEigenValues)
   {
     MPI_Barrier(d_mpiCommParent);
     d_BasisOperatorHostPtr = basisOperationsHostPtr;
@@ -99,13 +88,9 @@ namespace dftfe
         atomicNumbers.push_back(atomLocations[iAtom][0]);
       }
 
-    d_densityQuadratureId           = densityQuadratureId;
-    d_localContributionQuadratureId = localContributionQuadratureId;
-    d_densityQuadratureIdElectro    = densityQuadratureIdElectro;
-    d_sparsityPatternQuadratureId   = sparsityPatternQuadratureId;
-    d_nlpspQuadratureId             = nlpspQuadratureId;
-    d_numEigenValues                = numEigenValues;
-    d_singlePrecNonLocalOperator    = singlePrecNonLocalOperator;
+    d_sparsityPatternQuadratureId = sparsityPatternQuadratureId;
+    d_nlpspQuadratureId           = nlpspQuadratureId;
+    d_numEigenValues              = numEigenValues;
 
     createAtomCenteredSphericalFunctionsForOrbitals();
 
@@ -123,15 +108,6 @@ namespace dftfe
             d_BasisOperatorHostPtr,
             d_atomicOrbitalFnsContainer,
             d_mpiCommParent);
-        if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
-          if (d_singlePrecNonLocalOperator)
-            d_nonLocalOperatorSinglePrec =
-              std::make_shared<AtomicCenteredNonLocalOperator<
-                typename dftfe::dataTypes::singlePrecType<ValueType>::type,
-                memorySpace>>(d_BLASWrapperHostPtr,
-                              d_BasisOperatorHostPtr,
-                              d_atomicOrbitalFnsContainer,
-                              d_mpiCommParent);
       }
 #if defined(DFTFE_WITH_DEVICE)
     else
@@ -143,15 +119,6 @@ namespace dftfe
             d_BasisOperatorDevicePtr,
             d_atomicOrbitalFnsContainer,
             d_mpiCommParent);
-        if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
-          if (d_singlePrecNonLocalOperator)
-            d_nonLocalOperatorSinglePrec =
-              std::make_shared<AtomicCenteredNonLocalOperator<
-                typename dftfe::dataTypes::singlePrecType<ValueType>::type,
-                memorySpace>>(d_BLASWrapperDevicePtr,
-                              d_BasisOperatorDevicePtr,
-                              d_atomicOrbitalFnsContainer,
-                              d_mpiCommParent);
       }
 #endif
   }
@@ -195,15 +162,6 @@ namespace dftfe
       kPointCoordinates,
       d_BasisOperatorHostPtr,
       d_nlpspQuadratureId);
-
-    if (d_singlePrecNonLocalOperator)
-      d_nonLocalOperatorSinglePrec
-        ->intitialisePartitionerKPointsAndComputeCMatrixEntries(
-          updateNonlocalSparsity,
-          kPointWeights,
-          kPointCoordinates,
-          d_BasisOperatorHostPtr,
-          d_nlpspQuadratureId);
   }
 
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
@@ -751,6 +709,15 @@ namespace dftfe
         for (auto pair : pdosKernelWithoutSmearFunction[spinIndex][0])
           {
             unsigned int atomId = pair.first;
+
+            MPI_Allreduce(MPI_IN_PLACE,
+                          &summedOverBlocks[spinIndex][atomId][0],
+                          summedOverBlocks[spinIndex][atomId].size(),
+                          dataTypes::mpi_type_id(
+                            &summedOverBlocks[spinIndex][atomId][0]),
+                          MPI_SUM,
+                          interpoolComm);
+
             if (atomId != 0)
               {
                 std::memcpy(
@@ -786,100 +753,195 @@ namespace dftfe
 
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {
-        std::string   pdosFileName = "PDOS.out";
-        std::ofstream outFile(pdosFileName.c_str());
-        outFile.setf(std::ios_base::fixed);
-        outFile << std::setprecision(18);
+        LQnumToNameMap = {{0, "s"}, {1, "p"}, {2, "d"}, {3, "f"}};
+        double epsValue;
+        double pdosSumUp;
+        double pdosSumDown;
 
-        if (outFile.is_open())
+        for (unsigned int atomId = 0; atomId < dftParamsPtr->natoms; atomId++)
           {
-            outFile
-              << "E (eV)          s  py  pz  px  dxy  dyz  dz2  dxz  dx2-y2  "
-              << std::endl;
-            for (auto atomId = 0; atomId < dftParamsPtr->natoms; atomId++)
+            unsigned int              Znum = atomicNumbers[atomId];
+            std::vector<unsigned int> nQuantumNums;
+            std::vector<unsigned int> lQuantumNums;
+
+            unsigned int wfc_number    = 0;
+            unsigned int wfcStartIndex = 0;
+            for (auto i : nlNumsMap[Znum])
               {
-                outFile << "Atom ID: " << atomId << std::endl;
+                unsigned int       nQuantumNum = i.first;
+                unsigned int       lQuantumNum = i.second;
+                std::ostringstream pdosFileName;
 
-                unsigned int              Znum = atomicNumbers[atomId];
-                std::vector<unsigned int> nQuantumNums;
-                std::vector<unsigned int> lQuantumNums;
-                for (auto i : nlNumsMap[Znum])
+                pdosFileName << "pdosData_atom#" << atomId << "_wfc#"
+                             << wfc_number << "(" << nQuantumNum
+                             << LQnumToNameMap[lQuantumNum] << ")"
+                             << ".out";
+                std::ofstream outFile(pdosFileName.str());
+                outFile.setf(std::ios_base::fixed);
+                outFile << std::setprecision(18);
+                wfc_number += 1;
+                if (outFile.is_open())
                   {
-                    nQuantumNums.push_back(i.first);
-                    lQuantumNums.push_back(i.second);
-                  }
+                    if (numSpinComponents == 1)
+                      {
+                        outFile << std::setw(15) << "# E(eV)" << std::setw(15)
+                                << "sumPDOS";
+                        if (lQuantumNum == 0)
+                          {
+                            outFile << std::setw(15) << "s" << std::endl;
+                          }
+                        else if (lQuantumNum == 1)
+                          {
+                            outFile << std::setw(15) << "py" << std::setw(15)
+                                    << "pz" << std::setw(15) << "px"
+                                    << std::endl;
+                          }
 
-                auto maxElem =
-                  std::max_element(lQuantumNums.begin(), lQuantumNums.end());
-                unsigned int maxLQnum = *maxElem;
+                        else if (lQuantumNum == 2)
+                          {
+                            outFile << std::setw(15) << "dxy" << std::setw(15)
+                                    << "dxy" << std::setw(15) << "dyz"
+                                    << std::setw(15) << "dz2" << std::setw(15)
+                                    << "dxz" << std::setw(15) << "dx2-y2"
+                                    << std::endl;
+                          }
 
-                for (int spinIndex = 0; spinIndex < numSpinComponents;
-                     spinIndex++)
-                  {
-                    outFile << "spin: " << spinIndex << std::endl;
+                        else if (lQuantumNum == 3)
+                          {
+                            outFile << std::setw(15) << "fy(3x2-y2)"
+                                    << std::setw(15) << "fxyz" << std::setw(15)
+                                    << "fyz2" << std::setw(15) << "fz3"
+                                    << std::setw(15) << "fxz2" << std::setw(15)
+                                    << "fz(x2-y2)" << std::setw(15)
+                                    << "fx(x2-3y2)" << std::endl;
+                          }
+                      }
+                    else
+                      {
+                        outFile << std::setw(15) << "# E(eV)" << std::setw(15)
+                                << "sumPDOS_up" << std::setw(15)
+                                << "sumPDOS_down";
 
+                        if (lQuantumNum == 0)
+                          {
+                            outFile << std::setw(15) << "s_up" << std::setw(15)
+                                    << "s_down" << std::endl;
+                          }
+                        else if (lQuantumNum == 1)
+                          {
+                            outFile << std::setw(15) << "py_up" << std::setw(15)
+                                    << "py_down" << std::setw(15) << "pz_up"
+                                    << std::setw(15) << "pz_down"
+                                    << std::setw(15) << "px_up" << std::setw(15)
+                                    << "px_down" << std::endl;
+                          }
+
+                        else if (lQuantumNum == 2)
+                          {
+                            outFile
+                              << std::setw(15) << "dxy_up" << std::setw(15)
+                              << "dxy_down" << std::setw(15) << "dyz_up"
+                              << std::setw(15) << "dyz_down" << std::setw(15)
+                              << "dz2_up" << std::setw(15) << "dz2_down"
+                              << std::setw(15) << "dxz_up" << std::setw(15)
+                              << "dxz_down" << std::setw(15) << "dx2-y2_up"
+                              << std::setw(15) << "dx2-y2_down" << std::endl;
+                          }
+
+                        else if (lQuantumNum == 3)
+                          {
+                            outFile
+                              << std::setw(15) << "fy(3x2-y2)_up"
+                              << std::setw(15) << "fy(3x2-y2)_down"
+                              << std::setw(15) << "fxyz_up" << std::setw(15)
+                              << "fxz_down" << std::setw(15) << "fyz2_up"
+                              << std::setw(15) << "fyz2_down" << std::setw(15)
+                              << "fz3_up" << std::setw(15) << "fz3_down"
+                              << std::setw(15) << "fxz2_up" << std::setw(15)
+                              << "fxz2_down" << std::setw(15) << "fz(x2-y2)_up"
+                              << std::setw(15) << "fz(x2-y2)_down"
+                              << std::setw(15) << "fx(x2-3y2)_up"
+                              << std::setw(15) << "fx(x2-3y2)_down"
+                              << std::endl;
+                          }
+                      }
                     for (unsigned int epsInt = 0; epsInt < numberIntervals;
                          ++epsInt)
                       {
+                        pdosSumUp   = 0.0;
+                        pdosSumDown = 0.0;
+                        epsValue    = lowerBoundEpsilon + epsInt * intervalSize;
+
+                        outFile << std::setw(15) << epsValue * C_haToeV << "\t";
+
                         std::vector<double> pdosVec;
-                        pdosVec.resize(maxLQnum * maxLQnum + 2 * maxLQnum + 1,
-                                       0.0);
-                        double epsValue =
-                          lowerBoundEpsilon + epsInt * intervalSize;
 
-                        outFile << epsValue * C_haToeV;
-                        std::vector<double>::iterator startIt;
-                        if (atomId != 0)
-                          startIt =
-                            mpiVectorSummedOverBlocks.begin() +
-                            spinIndex *
-                              cumulativeNumAtomicOrbitals[dftParamsPtr->natoms -
-                                                          1] *
-                              numberIntervals +
-                            cumulativeNumAtomicOrbitals[atomId - 1] *
-                              numberIntervals +
-                            epsInt * numTotalAtomicOrbitals[atomId];
-
-                        else
-                          startIt =
-                            mpiVectorSummedOverBlocks.begin() +
-                            spinIndex *
-                              cumulativeNumAtomicOrbitals[dftParamsPtr->natoms -
-                                                          1] *
-                              numberIntervals +
-                            epsInt * numTotalAtomicOrbitals[atomId];
-
-                        auto endIt = startIt + numTotalAtomicOrbitals[atomId];
-
-                        unsigned int totalAtomicOrbitlals = 0;
-                        for (auto it = nlNumsMap[Znum].begin();
-                             it != nlNumsMap[Znum].end();
-                             ++it)
+                        for (int spinIndex = 0; spinIndex < numSpinComponents;
+                             spinIndex++)
                           {
-                            unsigned int nQNum = it->first;
-                            unsigned int lQNum = it->second;
+                            std::vector<double>::iterator startIt;
+                            if (atomId != 0)
+                              startIt =
+                                mpiVectorSummedOverBlocks.begin() +
+                                spinIndex *
+                                  cumulativeNumAtomicOrbitals
+                                    [dftParamsPtr->natoms - 1] *
+                                  numberIntervals +
+                                cumulativeNumAtomicOrbitals[atomId - 1] *
+                                  numberIntervals +
+                                epsInt * numTotalAtomicOrbitals[atomId];
 
-                            for (int j = lQNum * lQNum;
-                                 j < (lQNum + 1) * (lQNum + 1);
+                            else
+                              startIt = mpiVectorSummedOverBlocks.begin() +
+                                        spinIndex *
+                                          cumulativeNumAtomicOrbitals
+                                            [dftParamsPtr->natoms - 1] *
+                                          numberIntervals +
+                                        epsInt * numTotalAtomicOrbitals[atomId];
+
+                            auto endIt =
+                              startIt + numTotalAtomicOrbitals[atomId];
+
+                            for (int j = wfcStartIndex;
+                                 j < wfcStartIndex + 2 * lQuantumNum + 1;
                                  j++)
                               {
-                                pdosVec[j] += *startIt;
-                                startIt += 1;
-                                totalAtomicOrbitlals += 1;
+                                pdosVec.push_back(*(startIt + j));
+                                if (spinIndex == 0)
+                                  pdosSumUp += *(startIt + j);
+                                else if (spinIndex == 1)
+                                  pdosSumDown += *(startIt + j);
                               }
                           }
 
-                        assert(totalAtomicOrbitlals ==
-                               numTotalAtomicOrbitals[atomId]);
-
-                        for (auto it = pdosVec.begin(); it != pdosVec.end();
-                             it++)
+                        if (numSpinComponents == 1)
                           {
-                            outFile << "  " << *it;
+                            outFile << std::setw(15) << pdosSumUp << "\t";
+                            for (auto it = pdosVec.begin(); it != pdosVec.end();
+                                 ++it)
+                              {
+                                outFile << std::setw(15) << *it << "\t";
+                              }
+                            outFile << std::endl;
                           }
-                        outFile << std::endl;
+                        else
+                          {
+                            outFile << std::setw(15) << pdosSumUp << "\t";
+                            outFile << std::setw(15) << pdosSumDown << "\t";
+
+                            for (auto it = pdosVec.begin();
+                                 it != pdosVec.begin() + pdosVec.size() / 2;
+                                 ++it)
+                              {
+                                outFile << std::setw(15) << *it << "\t"
+                                        << std::setw(15)
+                                        << *(it + pdosVec.size() / 2) << "\t";
+                              }
+                            outFile << std::endl;
+                          }
                       }
                   }
+                wfcStartIndex = wfcStartIndex + 2 * lQuantumNum + 1;
               }
           }
       }
