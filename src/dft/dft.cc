@@ -544,7 +544,7 @@ namespace dftfe
         d_numEigenValues =
           std::max(d_dftParamsPtr->highestStateOfInterestForChebFiltering * 1.1,
                    d_dftParamsPtr->highestStateOfInterestForChebFiltering +
-                     10.0);
+                     10.0); // should we add this 10?
 
         if (d_dftParamsPtr->verbosity >= 1)
           {
@@ -894,9 +894,6 @@ namespace dftfe
               mpi_communicator,
               d_dftfeScratchFolderName,
               atomTypes,
-              d_dftParamsPtr->floatingNuclearCharges,
-              d_nOMPThreads,
-              d_atomTypeAtributes,
               d_dftParamsPtr->reproducible_output,
               d_dftParamsPtr->verbosity,
               d_dftParamsPtr->useDevice,
@@ -1274,15 +1271,10 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
               d_BLASWrapperPtr,
 #endif
-              d_densityQuadratureId,
-              d_lpspQuadratureId,
               d_sparsityPatternQuadratureId,
               d_nlpspQuadratureId,
-              d_densityQuadratureIdElectro,
-              d_excManagerPtr,
               atomLocations,
-              d_numEigenValues,
-              d_dftParamsPtr->useSinglePrecCheby);
+              d_numEigenValues);
           }
       }
     //
@@ -3845,7 +3837,7 @@ namespace dftfe
               {
                 FILE *fermiFile;
                 fermiFile = fopen("fermiEnergy.out", "w");
-                if (d_dftParamsPtr->constraintMagnetization)
+                if (d_dftParamsPtr->spinPolarized)
                   {
                     fprintf(fermiFile,
                             "%.14g\n%.14g\n%.14g\n ",
@@ -4569,12 +4561,13 @@ namespace dftfe
   void
   dftClass<FEOrder, FEOrderElectro, memorySpace>::writeBands()
   {
-    int numkPoints =
-      (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
+    int                 numkPoints = d_kPointWeights.size();
     std::vector<double> eigenValuesFlattened;
     //
     for (unsigned int kPoint = 0; kPoint < numkPoints; ++kPoint)
-      for (unsigned int iWave = 0; iWave < d_numEigenValues; ++iWave)
+      for (unsigned int iWave = 0;
+           iWave < d_numEigenValues * (1 + d_dftParamsPtr->spinPolarized);
+           ++iWave)
         eigenValuesFlattened.push_back(eigenValues[kPoint][iWave]);
     //
     //
@@ -4582,9 +4575,8 @@ namespace dftfe
     int totkPoints = dealii::Utilities::MPI::sum(numkPoints, interpoolcomm);
     std::vector<int> numkPointsArray(d_dftParamsPtr->npool),
       mpi_offsets(d_dftParamsPtr->npool, 0);
-    std::vector<double> eigenValuesFlattenedGlobal(totkPoints *
-                                                     d_numEigenValues,
-                                                   0.0);
+    std::vector<double> eigenValuesFlattenedGlobal(
+      totkPoints * d_numEigenValues * (1 + d_dftParamsPtr->spinPolarized), 0.0);
     //
     MPI_Gather(&numkPoints,
                1,
@@ -4595,16 +4587,21 @@ namespace dftfe
                0,
                interpoolcomm);
     //
-    numkPointsArray[0] = d_numEigenValues * numkPointsArray[0];
+    numkPointsArray[0] = d_numEigenValues *
+                         (1 + d_dftParamsPtr->spinPolarized) *
+                         numkPointsArray[0];
     for (unsigned int ipool = 1; ipool < d_dftParamsPtr->npool; ++ipool)
       {
-        numkPointsArray[ipool] = d_numEigenValues * numkPointsArray[ipool];
+        numkPointsArray[ipool] = d_numEigenValues *
+                                 (1 + d_dftParamsPtr->spinPolarized) *
+                                 numkPointsArray[ipool];
         mpi_offsets[ipool] =
           mpi_offsets[ipool - 1] + numkPointsArray[ipool - 1];
       }
     //
     MPI_Gatherv(&(eigenValuesFlattened[0]),
-                numkPoints * d_numEigenValues,
+                numkPoints * d_numEigenValues *
+                  (1 + d_dftParamsPtr->spinPolarized),
                 MPI_DOUBLE,
                 &(eigenValuesFlattenedGlobal[0]),
                 &(numkPointsArray[0]),
@@ -4623,19 +4620,53 @@ namespace dftfe
           pcout << "EigenValue" << std::endl;
       }
 
-    double FE = d_dftParamsPtr->spinPolarized ?
-                  std::max(fermiEnergyDown, fermiEnergyUp) :
-                  fermiEnergy;
+    std::ifstream file("fermiEnergy.out");
+    std::string   line;
+
+    if (file.is_open())
+      {
+        if (d_dftParamsPtr->constraintMagnetization)
+          {
+            std::vector<double> temp;
+            while (getline(file, line))
+              {
+                if (!line.empty())
+                  {
+                    std::istringstream iss(line);
+                    double             temp1;
+                    while (iss >> temp1)
+                      {
+                        temp.push_back(temp1);
+                      }
+                  }
+              }
+            fermiEnergy     = temp[0];
+            fermiEnergyUp   = temp[1];
+            fermiEnergyDown = temp[2];
+          }
+        else
+          {
+            getline(file, line);
+            std::istringstream iss(line);
+            iss >> fermiEnergy;
+          }
+      }
+    else
+      {
+        pcout
+          << "Unable to open file fermiEnergy.out. Check if it is present.";
+      }
+    double FE = fermiEnergy;
     pcout << "Fermi Energy: " << FE << std::endl;
     unsigned int        maxeigenIndex = d_numEigenValues;
-    std::vector<double> occupationVector(totkPoints, 0.0);
+    std::vector<double> occupationVector(totkPoints *
+                                           (1 + d_dftParamsPtr->spinPolarized),
+                                         0.0);
 
     for (int iWave = 1; iWave < d_numEigenValues; iWave++)
       {
         double maxOcc = -1.0;
-        for (unsigned int kPoint = 0;
-             kPoint < totkPoints / (1 + d_dftParamsPtr->spinPolarized);
-             ++kPoint)
+        for (unsigned int kPoint = 0; kPoint < totkPoints; ++kPoint)
           {
             if (d_dftParamsPtr->spinPolarized)
               {
@@ -4677,16 +4708,15 @@ namespace dftfe
 
     unsigned int numberEigenValues =
       d_dftParamsPtr->highestStateOfInterestForChebFiltering == 0 ?
-        std::min(d_numEigenValues, maxeigenIndex + 10) :
+        std::min(d_numEigenValues,
+                 maxeigenIndex + 10) : // Are we solving these many states accurately?
         d_dftParamsPtr->highestStateOfInterestForChebFiltering;
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {
         FILE *pFile;
         pFile = fopen("bands.out", "w");
         fprintf(pFile, "%d %d \n", totkPoints, numberEigenValues);
-        for (unsigned int kPoint = 0;
-             kPoint < totkPoints / (1 + d_dftParamsPtr->spinPolarized);
-             ++kPoint)
+        for (unsigned int kPoint = 0; kPoint < totkPoints; ++kPoint)
           {
             for (unsigned int iWave = 0; iWave < numberEigenValues; ++iWave)
               {

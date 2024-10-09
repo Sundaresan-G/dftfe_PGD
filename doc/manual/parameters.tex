@@ -2175,7 +2175,7 @@
 {\it Default:} false
 
 
-{\it Description:} [Standard] Computes density of states using Lorentzians. Uses specified Temperature for SCF as the broadening parameter. Outputs a file name 'dosData.out' containing two columns with first column indicating the energy in eV relative to the Fermi energy and second column indicating the density of states. In case of collinear spin polarization, the second and third columns indicate the spin-up and spin-down density of states.
+{\it Description:} [Standard] Computes density of states using Gaussian smearing. Uses specified 'DOS SMEAR TEMPERATURE' as broadening parameter. Outputs a file name 'dosData.out' containing two columns with first column indicating the energy in eV (without shift wrt Fermi energy. Fermi energy can be obtained from the file 'fermiEnergy.out' that is generated when 'SAVE RHO DATA = true' in 'GS' calculation.) and second column indicating the density of states. In case of collinear spin polarization, the second and third columns indicate the spin-up and spin-down density of states.
 
 
 {\it Possible values:} A boolean value (true or false)
@@ -2243,8 +2243,25 @@
 {\it Default:} false
 
 
-{\it Description:} [Standard] Computes projected density of states on each atom using Lorentzians. Uses specified Temperature for SCF as the broadening parameter. Outputs a file name 'pdosData\_x' with x denoting atomID. This file contains columns with first column indicating the energy in eV and all other columns indicating projected density of states corresponding to single atom wavefunctions.
+{\it Description:} [Standard] Computes projected density of states on each atomic orbital using Gaussian smearing. Uses specified 'DOS SMEAR TEMPERATURE' as the broadening parameter. Outputs files with name format 'pdosData_atom#{atom number}_wfc#{wfc number}({wfc name}).out'. For colinear, spin-unpolarized case, each of these file contain columns with format 'E sumPDOS  PDOS_0 .... PDOS_(2l)', where E: the energy is eV (without shift wrt Fermi energy. Fermi energy can be obtained from the file'fermiEnergy.out' that is generated when 'SAVE RHO DATA = true'in 'GS' calculation),l: azimuthal quantum number, sumPDOS: PDOS_0 + .. +PDOS_(2l).
+For colinear, spin-polarized case, the columns has format 'E sumPDOS_up sumPDOS_down PDOS_0_up PDOS_0_down .... PDOS_(2l)_up PDOS_(2l)_down', where 'up' and 'down' refer to the spin up and spin down case with all other terms having the same meaning as of the spin-unpolarized case.
 
+
+{\it Possible values:} A floating point value
+\item {\it Parameter name:} {\tt DOS SMEAR TEMPERATURE}
+\phantomsection\label{parameters:Post_2dprocessing Options/DOS SMEAR TEMPERATURE}
+\label{parameters:Post_2dprocessing_20Options/DOS_20SMEAR_20TEMPERATURE}
+
+
+\index[prmindex]{DOS SMEAR TEMPERATURE}
+\index[prmindexfull]{Post-processing Options!DOS SMEAR TEMPERATURE}
+{\it Value:} 500.0
+
+
+{\it Default:} 500.0
+
+
+{\it Description:}[Standard] Gaussian smearing temperature (in K) for DOS, PDOS and LDOS calculations.
 
 {\it Possible values:} A boolean value (true or false)
 \item {\it Parameter name:} {\tt WRITE WFC FE MESH}

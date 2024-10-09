@@ -29,27 +29,15 @@ namespace dftfe
   class atomCenteredOrbitalsPostProcessing
   {
   public:
-    atomCenteredOrbitalsPostProcessing(
-      const MPI_Comm &                            mpi_comm_parent,
-      const std::string &                         scratchFolderName,
-      const std::set<unsigned int> &              atomTypes,
-      const bool                                  floatingNuclearCharges,
-      const unsigned int                          nOMPThreads,
-      const std::map<unsigned int, unsigned int> &atomAttributes,
-      const bool                                  reproducibleOutput,
-      const int                                   verbosity,
-      const bool                                  useDevice,
-      const dftParameters *                       dftParamsPtr);
+    atomCenteredOrbitalsPostProcessing(const MPI_Comm &   mpi_comm_parent,
+                                       const std::string &scratchFolderName,
+                                       const std::set<unsigned int> &atomTypes,
+                                       const bool           reproducibleOutput,
+                                       const int            verbosity,
+                                       const bool           useDevice,
+                                       const dftParameters *dftParamsPtr);
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
-     * @param[in] densityQuadratureId quadratureId for density.
-     * @param[in] localContributionQuadratureId quadratureId for local/zero
-     * potential
-     * @param[in] nuclearChargeQuadratureIdElectro quadratureId for nuclear
-     * charges
-     * @param[in] densityQuadratureIdElectro quadratureId for density in
-     * Electrostatics mesh
-     * @param[in] excFunctionalPtr address XC functional pointer
      * @param[in] numEigenValues number of eigenvalues
      * @param[in] atomLocations atomic Coordinates
      * @param[in] imageIds image IDs of periodic cell
@@ -77,29 +65,14 @@ namespace dftfe
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
         BLASWrapperPtrDevice,
 #endif
-      unsigned int                             densityQuadratureId,
-      unsigned int                             localContributionQuadratureId,
-      unsigned int                             sparsityPatternQuadratureId,
-      unsigned int                             nlpspQuadratureId,
-      unsigned int                             densityQuadratureIdElectro,
-      std::shared_ptr<excManager<memorySpace>> excFunctionalPtr,
-      const std::vector<std::vector<double>> & atomLocations,
-      unsigned int                             numEigenValues,
-      const bool                               singlePrecNonLocalOperator);
+      unsigned int                            sparsityPatternQuadratureId,
+      unsigned int                            nlpspQuadratureId,
+      const std::vector<std::vector<double>> &atomLocations,
+      unsigned int                            numEigenValues);
 
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
-     * @param[in] densityQuadratureId quadratureId for density.
-     * @param[in] localContributionQuadratureId quadratureId for local/zero
-     * potential
-     * @param[in] nuclearChargeQuadratureIdElectro quadratureId for nuclear
-     * charges
-     * @param[in] densityQuadratureIdElectro quadratureId for density in
-     * Electrostatics mesh
-     * @param[in] bQuadValuesAllAtoms address of nuclear charge field
-     * @param[in] excFunctionalPtr address XC functional pointer
-     * @param[in] numEigenValues number of eigenvalues
      * @param[in] atomLocations atomic Coordinates
      * @param[in] imageIds image IDs of periodic cell
      * @param[in] periodicCoords coordinates of image atoms
@@ -119,6 +92,8 @@ namespace dftfe
 
     double
     smearFunction(double x, const dftParameters *dftParamsPtr);
+
+    std::unordered_map<unsigned int, std::string> LQnumToNameMap;
 
     void
     computeAtomCenteredEntries(
@@ -145,25 +120,17 @@ namespace dftfe
       unsigned int               highestStateNscfSolve);
 
   private:
-    const MPI_Comm                       d_mpiCommParent;
-    const unsigned int                   d_this_mpi_process;
-    std::string                          d_dftfeScratchFolderName;
-    std::set<unsigned int>               d_atomTypes;
-    bool                                 d_floatingNuclearCharges;
-    unsigned int                         d_nOMPThreads;
-    bool                                 d_reproducible_output;
-    unsigned int                         d_verbosity;
-    std::map<unsigned int, unsigned int> d_atomTypeAtributes;
-    bool                                 d_useDevice;
-    dealii::ConditionalOStream           pcout;
-    bool                                 d_singlePrecNonLocalOperator;
-    unsigned int                         d_sparsityPatternQuadratureId;
-    unsigned int                         d_nlpspQuadratureId;
-    unsigned int                         d_densityQuadratureId;
-    unsigned int                         d_localContributionQuadratureId;
-    unsigned int                         d_nuclearChargeQuadratureIdElectro;
-    unsigned int                         d_densityQuadratureIdElectro;
-    unsigned int                         d_numEigenValues;
+    const MPI_Comm             d_mpiCommParent;
+    const unsigned int         d_this_mpi_process;
+    std::string                d_dftfeScratchFolderName;
+    std::set<unsigned int>     d_atomTypes;
+    bool                       d_reproducible_output;
+    unsigned int               d_verbosity;
+    bool                       d_useDevice;
+    dealii::ConditionalOStream pcout;
+    unsigned int               d_sparsityPatternQuadratureId;
+    unsigned int               d_nlpspQuadratureId;
+    unsigned int               d_numEigenValues;
 
     void
     createAtomCenteredSphericalFunctionsForOrbitals();
@@ -181,11 +148,6 @@ namespace dftfe
 
     std::shared_ptr<AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
       d_nonLocalOperator;
-
-    std::shared_ptr<AtomicCenteredNonLocalOperator<
-      typename dftfe::dataTypes::singlePrecType<ValueType>::type,
-      memorySpace>>
-      d_nonLocalOperatorSinglePrec;
 
     std::shared_ptr<
       dftfe::basis::
@@ -206,8 +168,6 @@ namespace dftfe
       d_BasisOperatorDevicePtr;
 #endif
   };
-
-
 } // namespace dftfe
 
 #endif

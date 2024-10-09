@@ -302,6 +302,10 @@ namespace dftfe
 
         if (outFile.is_open())
           {
+            if (d_dftParamsPtr->spinPolarized)
+              outFile << "# E(eV)          SpinUpDos SpinDownDos" << std::endl;
+            else
+              outFile << "# E(eV)          Dos" << std::endl;
             if (d_dftParamsPtr->spinPolarized == 1)
               {
                 for (unsigned int epsInt = 0; epsInt < numberIntervals;
