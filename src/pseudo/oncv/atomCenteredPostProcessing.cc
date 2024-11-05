@@ -800,8 +800,7 @@ namespace dftfe
                         else if (lQuantumNum == 2)
                           {
                             outFile << std::setw(15) << "dxy" << std::setw(15)
-                                    << "dxy" << std::setw(15) << "dyz"
-                                    << std::setw(15) << "dz2" << std::setw(15)
+                                    << "dyz" << std::setw(15) << "dz2" << std::setw(15)
                                     << "dxz" << std::setw(15) << "dx2-y2"
                                     << std::endl;
                           }
