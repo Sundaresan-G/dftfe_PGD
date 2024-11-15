@@ -1043,6 +1043,7 @@ namespace dftfe
                   residualNormWaveFunctionsAllkPoints[kPoint]
                                                      [highestOccupiedState];
               }
+            d_highestStateForNscfCalculation = highestOccupiedState;
           }
       }
     else

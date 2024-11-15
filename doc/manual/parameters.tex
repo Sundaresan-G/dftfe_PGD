@@ -2738,7 +2738,7 @@ For colinear, spin-polarized case, the columns has format 'E sumPDOS_up sumPDOS_
 {\it Default:} 0
 
 
-{\it Description:} [Standard] The highest state till which the Kohn Sham wavefunctions are computed accurately during Chebyshev filtering in a NSCF calculation. By default, this is set to the state corresponding to Fermi energy. It is strongly encouraged to have 10-15 percent buffer between this parameter and the total number of wavefunctions employed for the SCF calculation 
+{\it Description:} [Standard] The highest state till which the Kohn Sham wavefunctions are computed accurately during Chebyshev filtering in a NSCF calculation. By default, this is set to the state corresponding to Fermi energy. It is strongly encouraged to have 10-15 percent buffer between this parameter and the total number of wavefunctions employed for the SCF calculation. For DOS/PDOS calculations, the value of this parameter should be large enough to ensure sufficient number of buffer states beyond the 'Fermi level'.
 
 
 {\it Possible values:} An integer $n$ such that $0\leq n \leq 2147483647$

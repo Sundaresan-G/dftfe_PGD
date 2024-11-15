@@ -10,13 +10,15 @@ namespace dftfe
 
   atomCenteredOrbitalsPostProcessing<ValueType, memorySpace>::
     atomCenteredOrbitalsPostProcessing(const MPI_Comm &   mpi_comm_parent,
+                                       const MPI_Comm &   mpi_comm_domain,
                                        const std::string &scratchFolderName,
                                        const std::set<unsigned int> &atomTypes,
                                        const bool           reproducibleOutput,
                                        const int            verbosity,
                                        const bool           useDevice,
                                        const dftParameters *dftParamsPtr)
-    : d_mpiCommParent(mpi_comm_parent)
+    : d_mpiCommParentPostProcessing(mpi_comm_parent)
+    , d_mpiCommDomain(mpi_comm_domain)
     , d_this_mpi_process(
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent))
     , pcout(std::cout,
@@ -74,7 +76,7 @@ namespace dftfe
     const std::vector<std::vector<double>> &atomLocations,
     unsigned int                            numEigenValues)
   {
-    MPI_Barrier(d_mpiCommParent);
+    MPI_Barrier(d_mpiCommDomain);
     d_BasisOperatorHostPtr = basisOperationsHostPtr;
     d_BLASWrapperHostPtr   = BLASWrapperPtrHost;
 #if defined(DFTFE_WITH_DEVICE)
@@ -107,7 +109,7 @@ namespace dftfe
             d_BLASWrapperHostPtr,
             d_BasisOperatorHostPtr,
             d_atomicOrbitalFnsContainer,
-            d_mpiCommParent);
+            d_mpiCommDomain);
       }
 #if defined(DFTFE_WITH_DEVICE)
     else
@@ -118,7 +120,7 @@ namespace dftfe
             d_BLASWrapperDevicePtr,
             d_BasisOperatorDevicePtr,
             d_atomicOrbitalFnsContainer,
-            d_mpiCommParent);
+            d_mpiCommDomain);
       }
 #endif
   }
@@ -150,10 +152,10 @@ namespace dftfe
 
     if (updateNonlocalSparsity)
       {
-        MPI_Barrier(d_mpiCommParent);
+        MPI_Barrier(d_mpiCommDomain);
         d_atomicOrbitalFnsContainer->computeSparseStructure(
           d_BasisOperatorHostPtr, d_sparsityPatternQuadratureId, 1E-8, 0);
-        MPI_Barrier(d_mpiCommParent);
+        MPI_Barrier(d_mpiCommDomain);
       }
 
     d_nonLocalOperator->intitialisePartitionerKPointsAndComputeCMatrixEntries(
@@ -251,8 +253,7 @@ namespace dftfe
                 -1, // radial power
                 1,
                 2,
-                1E-12); // we should pass the radial power as a parameter to the
-                        // user?
+                1E-12);
             alpha++;
           }
       }
@@ -321,16 +322,6 @@ namespace dftfe
     std::vector<double> eigenValuesBlock;
     std::vector<double> smearedComponentBlock;
 
-    int indexFermiEnergy = -1.0;
-    for (int i = 0; i < totalNumWaveFunctions; ++i)
-      if (eigenValues[0][i] >= fermiEnergy)
-        {
-          if (i > indexFermiEnergy)
-            {
-              indexFermiEnergy = i;
-              break;
-            }
-        }
     std::vector<double> eigenValuesAllkPoints;
 
     for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
@@ -592,7 +583,7 @@ namespace dftfe
                   dftParamsPtr->natoms,
                   dataTypes::mpi_type_id(&numTotalAtomicOrbitals[0]),
                   MPI_MAX,
-                  d_mpiCommParent);
+                  d_mpiCommDomain);
 
     for (unsigned int i = 0; i < dftParamsPtr->natoms; i++)
       {
@@ -749,14 +740,20 @@ namespace dftfe
                     numberIntervals,
                   dataTypes::mpi_type_id(&mpiVectorSummedOverBlocks[0]),
                   MPI_MAX,
-                  d_mpiCommParent);
+                  d_mpiCommDomain);
 
-    if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
+    if (dealii::Utilities::MPI::this_mpi_process(
+          d_mpiCommParentPostProcessing) == 0)
       {
         LQnumToNameMap = {{0, "s"}, {1, "p"}, {2, "d"}, {3, "f"}};
         double epsValue;
         double pdosSumUp;
         double pdosSumDown;
+
+        if (dftParamsPtr->reproducible_output && dftParamsPtr->verbosity == 0)
+          {
+            pcout << "Writing PDOS outputs..." << std::endl;
+          }
 
         for (unsigned int atomId = 0; atomId < dftParamsPtr->natoms; atomId++)
           {
@@ -776,6 +773,15 @@ namespace dftfe
                              << wfc_number << "(" << nQuantumNum
                              << LQnumToNameMap[lQuantumNum] << ")"
                              << ".out";
+                if (dftParamsPtr->reproducible_output &&
+                    dftParamsPtr->verbosity == 0 && atomId == 0)
+                  {
+                    pcout << "File: "
+                          << "pdosData_atom#" << atomId << "_wfc#" << wfc_number
+                          << "(" << nQuantumNum << LQnumToNameMap[lQuantumNum]
+                          << ")"
+                          << ".out" << std::endl;
+                  }
                 std::ofstream outFile(pdosFileName.str());
                 outFile.setf(std::ios_base::fixed);
                 outFile << std::setprecision(18);
@@ -800,9 +806,9 @@ namespace dftfe
                         else if (lQuantumNum == 2)
                           {
                             outFile << std::setw(15) << "dxy" << std::setw(15)
-                                    << "dyz" << std::setw(15) << "dz2" << std::setw(15)
-                                    << "dxz" << std::setw(15) << "dx2-y2"
-                                    << std::endl;
+                                    << "dyz" << std::setw(15) << "dz2"
+                                    << std::setw(15) << "dxz" << std::setw(15)
+                                    << "dx2-y2" << std::endl;
                           }
 
                         else if (lQuantumNum == 3)
@@ -813,6 +819,42 @@ namespace dftfe
                                     << std::setw(15) << "fxz2" << std::setw(15)
                                     << "fz(x2-y2)" << std::setw(15)
                                     << "fx(x2-3y2)" << std::endl;
+                          }
+
+                        if (dftParamsPtr->reproducible_output &&
+                            dftParamsPtr->verbosity == 0 && atomId == 0)
+                          {
+                            pcout << std::setw(15) << "# E(eV)" << std::setw(15)
+                                  << "sumPDOS";
+                            if (lQuantumNum == 0)
+                              {
+                                pcout << std::setw(15) << "s" << std::endl;
+                              }
+                            else if (lQuantumNum == 1)
+                              {
+                                pcout << std::setw(15) << "py" << std::setw(15)
+                                      << "pz" << std::setw(15) << "px"
+                                      << std::endl;
+                              }
+
+                            else if (lQuantumNum == 2)
+                              {
+                                pcout << std::setw(15) << "dxy" << std::setw(15)
+                                      << "dyz" << std::setw(15) << "dz2"
+                                      << std::setw(15) << "dxz" << std::setw(15)
+                                      << "dx2-y2" << std::endl;
+                              }
+
+                            else if (lQuantumNum == 3)
+                              {
+                                pcout << std::setw(15) << "fy(3x2-y2)"
+                                      << std::setw(15) << "fxyz"
+                                      << std::setw(15) << "fyz2"
+                                      << std::setw(15) << "fz3" << std::setw(15)
+                                      << "fxz2" << std::setw(15) << "fz(x2-y2)"
+                                      << std::setw(15) << "fx(x2-3y2)"
+                                      << std::endl;
+                              }
                           }
                       }
                     else
@@ -863,6 +905,60 @@ namespace dftfe
                               << std::setw(15) << "fx(x2-3y2)_down"
                               << std::endl;
                           }
+
+                        if (dftParamsPtr->reproducible_output &&
+                            dftParamsPtr->verbosity == 0 && atomId == 0)
+                          {
+                            pcout << std::setw(15) << "# E(eV)" << std::setw(15)
+                                  << "sumPDOS_up" << std::setw(15)
+                                  << "sumPDOS_down";
+                            if (lQuantumNum == 0)
+                              {
+                                pcout << std::setw(15) << "s_up"
+                                      << std::setw(15) << "s_down" << std::endl;
+                              }
+                            else if (lQuantumNum == 1)
+                              {
+                                pcout
+                                  << std::setw(15) << "py_up" << std::setw(15)
+                                  << "py_down" << std::setw(15) << "pz_up"
+                                  << std::setw(15) << "pz_down" << std::setw(15)
+                                  << "px_up" << std::setw(15) << "px_down"
+                                  << std::endl;
+                              }
+
+                            else if (lQuantumNum == 2)
+                              {
+                                pcout
+                                  << std::setw(15) << "dxy_up" << std::setw(15)
+                                  << "dxy_down" << std::setw(15) << "dyz_up"
+                                  << std::setw(15) << "dyz_down"
+                                  << std::setw(15) << "dz2_up" << std::setw(15)
+                                  << "dz2_down" << std::setw(15) << "dxz_up"
+                                  << std::setw(15) << "dxz_down"
+                                  << std::setw(15) << "dx2-y2_up"
+                                  << std::setw(15) << "dx2-y2_down"
+                                  << std::endl;
+                              }
+
+                            else if (lQuantumNum == 3)
+                              {
+                                pcout
+                                  << std::setw(15) << "fy(3x2-y2)_up"
+                                  << std::setw(15) << "fy(3x2-y2)_down"
+                                  << std::setw(15) << "fxyz_up" << std::setw(15)
+                                  << "fxz_down" << std::setw(15) << "fyz2_up"
+                                  << std::setw(15) << "fyz2_down"
+                                  << std::setw(15) << "fz3_up" << std::setw(15)
+                                  << "fz3_down" << std::setw(15) << "fxz2_up"
+                                  << std::setw(15) << "fxz2_down"
+                                  << std::setw(15) << "fz(x2-y2)_up"
+                                  << std::setw(15) << "fz(x2-y2)_down"
+                                  << std::setw(15) << "fx(x2-3y2)_up"
+                                  << std::setw(15) << "fx(x2-3y2)_down"
+                                  << std::endl;
+                              }
+                          }
                       }
                     for (unsigned int epsInt = 0; epsInt < numberIntervals;
                          ++epsInt)
@@ -872,6 +968,15 @@ namespace dftfe
                         epsValue    = lowerBoundEpsilon + epsInt * intervalSize;
 
                         outFile << std::setw(15) << epsValue * C_haToeV << "\t";
+
+                        if (dftParamsPtr->reproducible_output &&
+                            dftParamsPtr->verbosity == 0 && atomId == 0)
+                          {
+                            double epsValueTrunc =
+                              std::floor(100000000 * epsValue * C_haToeV) /
+                              100000000;
+                            pcout << std::setw(15) << epsValueTrunc << "\t";
+                          }
 
                         std::vector<double> pdosVec;
 
@@ -922,6 +1027,25 @@ namespace dftfe
                                 outFile << std::setw(15) << *it << "\t";
                               }
                             outFile << std::endl;
+
+                            if (dftParamsPtr->reproducible_output &&
+                                dftParamsPtr->verbosity == 0 && atomId == 0)
+                              {
+                                pcout << std::setw(15)
+                                      << std::floor(100000000 * pdosSumUp) /
+                                           100000000
+                                      << "\t";
+                                for (auto it = pdosVec.begin();
+                                     it != pdosVec.end();
+                                     ++it)
+                                  {
+                                    outFile << std::setw(15)
+                                            << std::floor((*it) * 100000000) /
+                                                 100000000
+                                            << "\t";
+                                  }
+                                pcout << std::endl;
+                              }
                           }
                         else
                           {
@@ -937,6 +1061,33 @@ namespace dftfe
                                         << *(it + pdosVec.size() / 2) << "\t";
                               }
                             outFile << std::endl;
+
+                            if (dftParamsPtr->reproducible_output &&
+                                dftParamsPtr->verbosity == 0 && atomId == 0)
+                              {
+                                pcout << std::setw(15)
+                                      << std::floor(pdosSumUp * 100000000) /
+                                           100000000
+                                      << "\t";
+                                pcout << std::setw(15)
+                                      << std::floor(pdosSumDown * 100000000) /
+                                           100000000
+                                      << "\t";
+
+                                for (auto it = pdosVec.begin();
+                                     it != pdosVec.begin() + pdosVec.size() / 2;
+                                     ++it)
+                                  {
+                                    pcout << std::setw(15) << *it << "\t"
+                                          << std::setw(15)
+                                          << std::floor(
+                                               (*(it + pdosVec.size() / 2)) *
+                                               100000000) /
+                                               100000000
+                                          << "\t";
+                                  }
+                                pcout << std::endl;
+                              }
                           }
                       }
                   }

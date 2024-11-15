@@ -30,6 +30,7 @@ namespace dftfe
   {
   public:
     atomCenteredOrbitalsPostProcessing(const MPI_Comm &   mpi_comm_parent,
+                                       const MPI_Comm &   mpi_comm_domain,
                                        const std::string &scratchFolderName,
                                        const std::set<unsigned int> &atomTypes,
                                        const bool           reproducibleOutput,
@@ -120,7 +121,8 @@ namespace dftfe
       unsigned int               highestStateNscfSolve);
 
   private:
-    const MPI_Comm             d_mpiCommParent;
+    const MPI_Comm             d_mpiCommParentPostProcessing;
+    const MPI_Comm             d_mpiCommDomain;
     const unsigned int         d_this_mpi_process;
     std::string                d_dftfeScratchFolderName;
     std::set<unsigned int>     d_atomTypes;
