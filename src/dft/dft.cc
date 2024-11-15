@@ -538,8 +538,7 @@ namespace dftfe
         d_numEigenValues =
           std::max(d_dftParamsPtr->highestStateOfInterestForChebFiltering * 1.1,
                    d_dftParamsPtr->highestStateOfInterestForChebFiltering +
-                     10.0); // should we add this 10?
-
+                     10.0);
         if (d_dftParamsPtr->verbosity >= 1)
           {
             pcout
@@ -884,6 +883,7 @@ namespace dftfe
             d_atomCenteredOrbitalsPostProcessingPtr = std::make_shared<
               dftfe::atomCenteredOrbitalsPostProcessing<dataTypes::number,
                                                         memorySpace>>(
+              d_mpiCommParent,
               mpi_communicator,
               d_dftfeScratchFolderName,
               atomTypes,
@@ -4702,8 +4702,7 @@ namespace dftfe
       }
     else
       {
-        pcout
-          << "Unable to open file fermiEnergy.out. Check if it is present.";
+        pcout << "Unable to open file fermiEnergy.out. Check if it is present.";
       }
     double FE = fermiEnergy;
     pcout << "Fermi Energy: " << FE << std::endl;
@@ -4757,8 +4756,7 @@ namespace dftfe
 
     unsigned int numberEigenValues =
       d_dftParamsPtr->highestStateOfInterestForChebFiltering == 0 ?
-        std::min(d_numEigenValues,
-                 maxeigenIndex + 10) : // Are we solving these many states accurately?
+        std::min(d_numEigenValues, maxeigenIndex + 10) :
         d_dftParamsPtr->highestStateOfInterestForChebFiltering;
     if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {

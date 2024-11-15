@@ -152,18 +152,6 @@ namespace dftfe
   {
     computing_timer.enter_subsection("DOS computation");
 
-    // from 0th kpoint and 0th spin index
-    int indexFermiEnergy = -1.0;
-    for (int i = 0; i < d_numEigenValues; ++i)
-      if (eigenValuesInput[0][i] >= fermiEnergy)
-        {
-          if (i > indexFermiEnergy)
-            {
-              indexFermiEnergy = i;
-              break;
-            }
-        }
-
     // from 0th spin as this is only to get a printing range
     std::vector<double> eigenValuesAllkPoints;
     for (int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
@@ -285,7 +273,6 @@ namespace dftfe
                       interpoolcomm);
       }
 
-
     if (d_dftParamsPtr->reproducible_output && d_dftParamsPtr->verbosity == 0)
       {
         pcout << "Writing tdos File..." << std::endl;
@@ -312,7 +299,7 @@ namespace dftfe
                      ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
-                    outFile << std::setprecision(18) << epsValue * 27.21138602
+                    outFile << std::setprecision(18) << epsValue * C_haToeV
                             << "  " << densityOfStatesUp[epsInt] << " "
                             << densityOfStatesDown[epsInt] << std::endl;
                     if (d_dftParamsPtr->reproducible_output &&
@@ -322,7 +309,7 @@ namespace dftfe
                           std::floor(
                             1000000000 *
                             (lowerBoundEpsilon + epsInt * intervalSize) *
-                            27.21138602) /
+                            C_haToeV) /
                           1000000000.0;
                         double dosSpinUpTrunc =
                           std::floor(1000000000 * densityOfStatesUp[epsInt]) /
@@ -345,7 +332,7 @@ namespace dftfe
                      ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
-                    outFile << std::setprecision(18) << epsValue * 27.21138602
+                    outFile << std::setprecision(18) << epsValue * C_haToeV
                             << "  " << densityOfStates[epsInt] << std::endl;
 
                     if (d_dftParamsPtr->reproducible_output &&
@@ -355,7 +342,7 @@ namespace dftfe
                           std::floor(
                             1000000000 *
                             (lowerBoundEpsilon + epsInt * intervalSize) *
-                            27.21138602) /
+                            C_haToeV) /
                           1000000000.0;
                         double dosTrunc =
                           std::floor(1000000000 * densityOfStates[epsInt]) /
@@ -735,7 +722,7 @@ namespace dftfe
                      ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
-                    outFile << std::setprecision(18) << epsValue * 27.21138602
+                    outFile << std::setprecision(18) << epsValue * C_haToeV
                             << " ";
                     for (unsigned int iAtom = 0; iAtom < numberGlobalAtoms;
                          ++iAtom)
@@ -766,7 +753,7 @@ namespace dftfe
                      ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
-                    outFile << std::setprecision(18) << epsValue * 27.21138602
+                    outFile << std::setprecision(18) << epsValue * C_haToeV
                             << " ";
                     for (unsigned int iAtom = 0; iAtom < numberGlobalAtoms;
                          ++iAtom)
