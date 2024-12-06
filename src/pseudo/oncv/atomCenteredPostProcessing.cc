@@ -339,8 +339,8 @@ namespace dftfe
     const double intervalSize =
       dftParamsPtr->intervalSize / C_haToeV; // eV to Ha
 
-    double lowerBoundEpsilon = eigenValuesAllkPoints[0];
-    double upperBoundEpsilon = eigenValuesAllkPoints[totalEigenValues - 1];
+    double lowerBoundEpsilon = std::floor(eigenValuesAllkPoints[0]*100)/100;
+    double upperBoundEpsilon = std::ceil(eigenValuesAllkPoints[totalEigenValues - 1]*100)/100;
 
     MPI_Allreduce(MPI_IN_PLACE,
                   &lowerBoundEpsilon,
@@ -973,9 +973,9 @@ namespace dftfe
                             dftParamsPtr->verbosity == 0 && atomId == 0)
                           {
                             double epsValueTrunc =
-                              std::floor(100000000 * epsValue * C_haToeV) /
-                              100000000;
-                            pcout << std::setw(15) << epsValueTrunc << "\t";
+                              std::floor(100000 * epsValue * C_haToeV) /
+                              100000;
+                            pcout << std::fixed << std::setprecision(5) << std::setw(15) << epsValueTrunc << "\t";
                           }
 
                         std::vector<double> pdosVec;
@@ -1032,16 +1032,16 @@ namespace dftfe
                                 dftParamsPtr->verbosity == 0 && atomId == 0)
                               {
                                 pcout << std::setw(15)
-                                      << std::floor(100000000 * pdosSumUp) /
-                                           100000000
+                                      << std::floor(100000 * pdosSumUp) /
+                                           100000
                                       << "\t";
                                 for (auto it = pdosVec.begin();
                                      it != pdosVec.end();
                                      ++it)
                                   {
-                                    outFile << std::setw(15)
-                                            << std::floor((*it) * 100000000) /
-                                                 100000000
+                                    pcout << std::setw(15)
+                                            << std::floor((*it) * 100000) /
+                                                 100000
                                             << "\t";
                                   }
                                 pcout << std::endl;
@@ -1066,12 +1066,12 @@ namespace dftfe
                                 dftParamsPtr->verbosity == 0 && atomId == 0)
                               {
                                 pcout << std::setw(15)
-                                      << std::floor(pdosSumUp * 100000000) /
-                                           100000000
+                                      << std::floor(pdosSumUp * 100000) /
+                                           100000
                                       << "\t";
                                 pcout << std::setw(15)
-                                      << std::floor(pdosSumDown * 100000000) /
-                                           100000000
+                                      << std::floor(pdosSumDown * 100000) /
+                                           100000
                                       << "\t";
 
                                 for (auto it = pdosVec.begin();
@@ -1082,8 +1082,8 @@ namespace dftfe
                                           << std::setw(15)
                                           << std::floor(
                                                (*(it + pdosVec.size() / 2)) *
-                                               100000000) /
-                                               100000000
+                                               100000) /
+                                               100000
                                           << "\t";
                                   }
                                 pcout << std::endl;
