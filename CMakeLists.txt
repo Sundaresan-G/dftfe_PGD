@@ -203,7 +203,8 @@ SET(TARGET_SRC
   ./utils/NodalData.cpp
   ./utils/functionalTests/testMultiVectorCGForPoisson.cpp
   ./utils/functionalTests/testDataTransfer.cpp
-  ./src/pseudo/oncv/oncvClass.cc)
+  ./src/pseudo/oncv/oncvClass.cc
+  ./src/pseudo/oncv/atomCenteredPostProcessing.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 
