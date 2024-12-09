@@ -2002,7 +2002,7 @@ namespace dftfe
                     interpoolcomm,
                     d_dftParamsPtr,
                     fermiEnergy,
-                    d_highestStateForNscfCalculation);
+                    d_highestStateForResidualComputation);
               }
 #ifdef DFTFE_WITH_DEVICE
             else if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
@@ -2021,7 +2021,7 @@ namespace dftfe
                     interpoolcomm,
                     d_dftParamsPtr,
                     fermiEnergy,
-                    d_highestStateForNscfCalculation);
+                    d_highestStateForResidualComputation);
               }
 
 #endif
@@ -2052,9 +2052,7 @@ namespace dftfe
       writeGSElectronDensity("densityQuadData.txt");
 
     if (d_dftParamsPtr->writeDosFile)
-      compute_tdos(eigenValues,
-                   d_dftParamsPtr->highestStateOfInterestForChebFiltering,
-                   "dosData.out");
+      compute_tdos(eigenValues, "dosData.out");
 
     if (d_dftParamsPtr->writeLdosFile)
       compute_ldos(eigenValues, "ldosData.out");
