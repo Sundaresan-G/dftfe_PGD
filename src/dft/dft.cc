@@ -532,13 +532,13 @@ namespace dftfe
       pcout << "Setting netcharge " << d_dftParamsPtr->netCharge << std::endl;
 
     if (d_dftParamsPtr->solverMode == "NSCF" &&
-        d_dftParamsPtr->numberEigenValues == 0 &&
         d_dftParamsPtr->highestStateOfInterestForChebFiltering != 0)
       {
-        d_numEigenValues =
+        d_numEigenValues = std::max(
+          static_cast<double>(d_dftParamsPtr->numberEigenValues),
           std::max(d_dftParamsPtr->highestStateOfInterestForChebFiltering * 1.1,
                    d_dftParamsPtr->highestStateOfInterestForChebFiltering +
-                     10.0);
+                     10.0));
         if (d_dftParamsPtr->verbosity >= 1)
           {
             pcout
@@ -2002,7 +2002,7 @@ namespace dftfe
                     interpoolcomm,
                     d_dftParamsPtr,
                     fermiEnergy,
-                    d_highestStateForNscfCalculation);
+                    d_highestStateForResidualComputation);
               }
 #ifdef DFTFE_WITH_DEVICE
             else if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
@@ -2021,7 +2021,7 @@ namespace dftfe
                     interpoolcomm,
                     d_dftParamsPtr,
                     fermiEnergy,
-                    d_highestStateForNscfCalculation);
+                    d_highestStateForResidualComputation);
               }
 
 #endif
@@ -2052,9 +2052,7 @@ namespace dftfe
       writeGSElectronDensity("densityQuadData.txt");
 
     if (d_dftParamsPtr->writeDosFile)
-      compute_tdos(eigenValues,
-                   d_dftParamsPtr->highestStateOfInterestForChebFiltering,
-                   "dosData.out");
+      compute_tdos(eigenValues, "dosData.out");
 
     if (d_dftParamsPtr->writeLdosFile)
       compute_ldos(eigenValues, "ldosData.out");
