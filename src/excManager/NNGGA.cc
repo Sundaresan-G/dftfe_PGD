@@ -435,17 +435,17 @@ namespace dftfe
 
     // check if all required keys are found
     for (unsigned int i = 0; i < keysToFind.size(); ++i)
+    {
+      bool found = false;
+      for (auto it = modelKeyValues.begin(); it != modelKeyValues.end(); ++it)
       {
-        bool found = false;
-        for (auto it = modelKeyValues.begin(); it != modelKeyValues.end(); ++it)
-          {
-            if (keysToFind[i] == it->first)
-              found = true;
-          }
-        utils::throwException(found,
-                              "Unable to find the key " + keysToFind[i] +
-                                " in file " + d_modelFilename);
+        if (keysToFind[i] == it->first)
+          found = true;
       }
+      utils::throwException(found,
+                            "Unable to find the key " + keysToFind[i] +
+                            " in file " + d_modelFilename);
+    }
 
     d_ptcFilename = modelKeyValues["PTC_FILE"];
     d_rhoTol      = std::stod(modelKeyValues["RHO_TOL"]);

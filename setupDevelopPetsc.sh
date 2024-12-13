@@ -46,7 +46,7 @@ withGPUAwareMPI=OFF #Please use this option with care
 #Option to link to DCCL library (Only for GPU compilation)
 withDCCL=OFF
 withMDI=OFF
-withTorch=OFF
+withTorch=ON
 withCustomizedDealii=OFF
 
 #Compiler options and flags
@@ -67,7 +67,7 @@ withHigherQuadPSP=OFF
 build_type=Release
 
 testing=ON
-minimal_compile=ON
+minimal_compile=OFF
 ###########################################################################
 #Usually, no changes are needed below this line
 #
