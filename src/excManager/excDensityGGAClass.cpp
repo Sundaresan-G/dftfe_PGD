@@ -227,7 +227,8 @@ namespace dftfe
                                 &pdexcDescriptorValuesFromNN[0]);
         for (size_t i = 0; i < nquad; i++)
           {
-            exValues[i] += excValuesFromNN[i] * (densityValues[2 * i + 0] + densityValues[2 * i + 1]);
+            exValues[i] += excValuesFromNN[i] * (densityValues[2 * i + 0] +
+                                                 densityValues[2 * i + 1]);
             pdexDensitySpinUpValues[i] +=
               pdexcDescriptorValuesFromNN[numDescriptors * i + 0];
             pdexDensitySpinDownValues[i] +=

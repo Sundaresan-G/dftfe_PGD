@@ -291,26 +291,24 @@ namespace dftfe
     , d_isSpinPolarized(isSpinPolarized)
     , d_densityPositivityCheckType(densityPositivityCheckType)
   {
-
     std::map<std::string, std::string> modelKeyValues =
       getKeyValuePairs(d_modelFilename, "=");
 
-    std::vector<std::string> keysToFind = {"PTC_FILE",
-                                           "RHO_TOL"};
+    std::vector<std::string> keysToFind = {"PTC_FILE", "RHO_TOL"};
 
     // check if all required keys are found
     for (unsigned int i = 0; i < keysToFind.size(); ++i)
-    {
-      bool found = false;
-      for (auto it = modelKeyValues.begin(); it != modelKeyValues.end(); ++it)
       {
-        if (keysToFind[i] == it->first)
-          found = true;
+        bool found = false;
+        for (auto it = modelKeyValues.begin(); it != modelKeyValues.end(); ++it)
+          {
+            if (keysToFind[i] == it->first)
+              found = true;
+          }
+        utils::throwException(found,
+                              "Unable to find the key " + keysToFind[i] +
+                                " in file " + d_modelFilename);
       }
-      utils::throwException(found,
-                            "Unable to find the key " + keysToFind[i] +
-                            " in file " + d_modelFilename);
-    }
 
     d_ptcFilename = modelKeyValues["PTC_FILE"];
     d_rhoTol      = std::stod(modelKeyValues["RHO_TOL"]);
