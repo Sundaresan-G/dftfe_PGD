@@ -217,8 +217,7 @@ namespace dftfe
     if (d_NNGGAPtr != nullptr)
       {
         std::vector<double> excValuesFromNN(nquad, 0);
-        const size_t        numDescriptors =
-          this->d_densityDescriptorAttributesList.size();
+        const size_t        numDescriptors = 5;
         std::vector<double> pdexcDescriptorValuesFromNN(numDescriptors * nquad,
                                                         0);
         d_NNGGAPtr->evaluatevxc(&(densityValues[0]),
@@ -228,7 +227,8 @@ namespace dftfe
                                 &pdexcDescriptorValuesFromNN[0]);
         for (size_t i = 0; i < nquad; i++)
           {
-            exValues[i] += excValuesFromNN[i];
+            exValues[i] += excValuesFromNN[i] * (densityValues[2 * i + 0] +
+                                                 densityValues[2 * i + 1]);
             pdexDensitySpinUpValues[i] +=
               pdexcDescriptorValuesFromNN[numDescriptors * i + 0];
             pdexDensitySpinDownValues[i] +=
