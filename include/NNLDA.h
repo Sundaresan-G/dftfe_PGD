@@ -13,7 +13,7 @@ namespace dftfe
           const bool                           isSpinPolarized = false,
           const excDensityPositivityCheckTypes densityPositivityCheckType =
             excDensityPositivityCheckTypes::MAKE_POSITIVE);
-    
+
     ~NNLDA();
     void
     evaluateexc(const double *rho, const unsigned int numPoints, double *exc);
@@ -28,7 +28,7 @@ namespace dftfe
     std::string                          d_ptcFilename;
     torch::jit::script::Module *         d_model;
     const bool                           d_isSpinPolarized;
-    double                         d_rhoTol;
+    double                               d_rhoTol;
     const excDensityPositivityCheckTypes d_densityPositivityCheckType;
   };
 } // namespace dftfe
