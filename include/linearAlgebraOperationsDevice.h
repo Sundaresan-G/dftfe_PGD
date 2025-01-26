@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2017-2022  The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025  The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -97,7 +97,7 @@ namespace dftfe
 
     void
     chebyshevFilterOverlapComputeCommunicationSinglePrec(
-      const std::shared_ptr<
+      std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
         &                                                  BLASWrapperPtr,
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
@@ -138,7 +138,9 @@ namespace dftfe
       const dataTypes::number *                        HX,
       const std::size_t                                M,
       const std::size_t                                N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommIntraPool,
       const MPI_Comm &                                 interBandGroupComm,
@@ -154,7 +156,9 @@ namespace dftfe
       const dataTypes::number *                        HX,
       const std::size_t                                M,
       const std::size_t                                N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommIntraPool,
       const MPI_Comm &                                 interBandGroupComm,
@@ -166,10 +170,12 @@ namespace dftfe
       
     void
     fillParallelOverlapMatScalapack(
-      const dataTypes::number *                        X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      const dataTypes::number *X,
+      const unsigned int       M,
+      const unsigned int       N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
       const MPI_Comm &                                 interBandGroupComm,
@@ -185,10 +191,12 @@ namespace dftfe
      */
     void
     fillParallelOverlapMatScalapackAsyncComputeCommun(
-      const dataTypes::number *                        X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      const dataTypes::number *X,
+      const unsigned int       M,
+      const unsigned int       N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
       const MPI_Comm &                                 interBandGroupComm,
@@ -204,10 +212,12 @@ namespace dftfe
      */
     void
     fillParallelOverlapMatMixedPrecScalapackAsyncComputeCommun(
-      const dataTypes::number *                        X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      const dataTypes::number *X,
+      const unsigned int       M,
+      const unsigned int       N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
       const MPI_Comm &                                 interBandGroupComm,
@@ -221,10 +231,12 @@ namespace dftfe
      */
     void
     fillParallelOverlapMatMixedPrecCommunScalapackAsyncComputeCommun(
-      const dataTypes::number *                        X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      const dataTypes::number *X,
+      const unsigned int       M,
+      const unsigned int       N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
       const MPI_Comm &                                 interBandGroupComm,
@@ -238,10 +250,12 @@ namespace dftfe
      */
     void
     fillParallelOverlapMatMixedPrecScalapack(
-      const dataTypes::number *                        X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      const dataTypes::number *X,
+      const unsigned int       M,
+      const unsigned int       N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
       const MPI_Comm &                                 interBandGroupComm,
@@ -255,24 +269,28 @@ namespace dftfe
      */
     void
     pseudoGramSchmidtOrthogonalization(
-      elpaScalaManager &                elpaScala,
-      dataTypes::number *               X,
-      const unsigned int                M,
-      const unsigned int                N,
-      const MPI_Comm &                  mpiCommParent,
-      const MPI_Comm &                  mpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
-      const MPI_Comm &                  interBandGroupComm,
-      dftfe::utils::deviceBlasHandle_t &handle,
-      const dftParameters &             dftParams,
-      const bool                        useMixedPrecOverall = false);
+      elpaScalaManager &       elpaScala,
+      dataTypes::number *      X,
+      const unsigned int       M,
+      const unsigned int       N,
+      const MPI_Comm &         mpiCommParent,
+      const MPI_Comm &         mpiCommDomain,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
+      const dftParameters &dftParams,
+      const bool           useMixedPrecOverall = false);
 
     void
     subspaceRotationScalapack(
-      dataTypes::number *                              X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      dataTypes::number *X,
+      const unsigned int M,
+      const unsigned int N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
@@ -285,12 +303,14 @@ namespace dftfe
 
     void
     subspaceRotationSpectrumSplitScalapack(
-      const dataTypes::number *                        X,
-      dataTypes::number *                              XFrac,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      const unsigned int                               Nfr,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      const dataTypes::number *X,
+      dataTypes::number *      XFrac,
+      const unsigned int       M,
+      const unsigned int       N,
+      const unsigned int       Nfr,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
@@ -300,10 +320,12 @@ namespace dftfe
 
     void
     subspaceRotationCGSMixedPrecScalapack(
-      dataTypes::number *                              X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      dataTypes::number *X,
+      const unsigned int M,
+      const unsigned int N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
@@ -315,10 +337,12 @@ namespace dftfe
 
     void
     subspaceRotationRRMixedPrecScalapack(
-      dataTypes::number *                              X,
-      const unsigned int                               M,
-      const unsigned int                               N,
-      dftfe::utils::deviceBlasHandle_t &               handle,
+      dataTypes::number *X,
+      const unsigned int M,
+      const unsigned int N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       const MPI_Comm &                                 mpiCommDomain,
       utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
@@ -339,12 +363,14 @@ namespace dftfe
       const unsigned int                                   N,
       const MPI_Comm &                                     mpiCommParent,
       const MPI_Comm &                                     mpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
-      const MPI_Comm &                  interBandGroupComm,
-      std::vector<double> &             eigenValues,
-      dftfe::utils::deviceBlasHandle_t &handle,
-      const dftParameters &             dftParams,
-      const bool                        useMixedPrecOverall = false);
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      std::vector<double> &    eigenValues,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
+      const dftParameters &dftParams,
+      const bool           useMixedPrecOverall = false);
 
     void
     rayleighRitzGEP(
@@ -357,12 +383,14 @@ namespace dftfe
       const unsigned int                                   N,
       const MPI_Comm &                                     mpiCommParent,
       const MPI_Comm &                                     mpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
-      const MPI_Comm &                  interBandGroupComm,
-      std::vector<double> &             eigenValues,
-      dftfe::utils::deviceBlasHandle_t &handle,
-      const dftParameters &             dftParams,
-      const bool                        useMixedPrecOverall = false);
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      std::vector<double> &    eigenValues,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
+      const dftParameters &dftParams,
+      const bool           useMixedPrecOverall = false);
 
     void
     rayleighRitzGEP(
@@ -384,7 +412,9 @@ namespace dftfe
       const MPI_Comm &                  interBandGroupComm,
       const MPI_Comm &                  intrapoolcomm,
       std::vector<double> &             eigenValues,
-      dftfe::utils::deviceBlasHandle_t &handle,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
       const dftParameters &             dftParams,
       const bool                        useMixedPrecOverall = false);
 
@@ -401,12 +431,14 @@ namespace dftfe
       const unsigned int                                   Noc,
       const MPI_Comm &                                     mpiCommParent,
       const MPI_Comm &                                     mpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
-      const MPI_Comm &                  interBandGroupComm,
-      std::vector<double> &             eigenValues,
-      dftfe::utils::deviceBlasHandle_t &handle,
-      const dftParameters &             dftParams,
-      const bool                        useMixedPrecOverall = false);
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      const MPI_Comm &         interBandGroupComm,
+      std::vector<double> &    eigenValues,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
+      const dftParameters &dftParams,
+      const bool           useMixedPrecOverall = false);
 
 
     void
@@ -419,14 +451,16 @@ namespace dftfe
       const unsigned int                                   N,
       const MPI_Comm &                                     mpiCommParent,
       const MPI_Comm &                                     mpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
-      const MPI_Comm &                  interBandGroupComm,
-      const std::vector<double> &       eigenValues,
-      const double                      fermiEnergy,
-      std::vector<double> &             densityMatDerFermiEnergy,
-      dftfe::elpaScalaManager &         elpaScala,
-      dftfe::utils::deviceBlasHandle_t &handle,
-      const dftParameters &             dftParams);
+      utils::DeviceCCLWrapper &  devicecclMpiCommDomain,
+      const MPI_Comm &           interBandGroupComm,
+      const std::vector<double> &eigenValues,
+      const double               fermiEnergy,
+      std::vector<double> &      densityMatDerFermiEnergy,
+      dftfe::elpaScalaManager &  elpaScala,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
+      const dftParameters &dftParams);
 
     void
     computeEigenResidualNorm(
@@ -440,10 +474,12 @@ namespace dftfe
       const MPI_Comm &                                     mpiCommParent,
       const MPI_Comm &                                     mpiCommDomain,
       const MPI_Comm &                                     interBandGroupComm,
-      dftfe::utils::deviceBlasHandle_t &                   handle,
-      std::vector<double> &                                residualNorm,
-      const dftParameters &                                dftParams,
-      const bool useBandParal = false);
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                  BLASWrapperPtr,
+      std::vector<double> &residualNorm,
+      const dftParameters &dftParams,
+      const bool           useBandParal = false);
 
     void
     XtHX(operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
@@ -452,9 +488,11 @@ namespace dftfe
          distributedDeviceVec<dataTypes::number> &            HXBlock,
          const unsigned int                                   M,
          const unsigned int                                   N,
-         dftfe::utils::deviceBlasHandle_t &                   handle,
-         const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
-         dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
+         std::shared_ptr<
+           dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+           &                                              BLASWrapperPtr,
+         const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+         dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
          utils::DeviceCCLWrapper &devicecclMpiCommDomain,
          const MPI_Comm &         mpiCommDomain,
          const MPI_Comm &         interBandGroupComm,
@@ -470,13 +508,15 @@ namespace dftfe
       const unsigned int                                   M,
       const unsigned int                                   N,
       const unsigned int                                   Noc,
-      dftfe::utils::deviceBlasHandle_t &                   handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
-      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-      const MPI_Comm &         mpiCommDomain,
-      const MPI_Comm &         interBandGroupComm,
-      const dftParameters &    dftParams,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
@@ -487,13 +527,15 @@ namespace dftfe
       distributedDeviceVec<dataTypes::number> &            HXBlock,
       const unsigned int                                   M,
       const unsigned int                                   N,
-      dftfe::utils::deviceBlasHandle_t &                   handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
-      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-      const MPI_Comm &         mpiCommDomain,
-      const MPI_Comm &         interBandGroupComm,
-      const dftParameters &    dftParams,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
@@ -505,13 +547,15 @@ namespace dftfe
       const unsigned int                                   M,
       const unsigned int                                   N,
       const unsigned int                                   Noc,
-      dftfe::utils::deviceBlasHandle_t &                   handle,
-      const std::shared_ptr<const dftfe::ProcessGrid> &    processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &          projHamPar,
-      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-      const MPI_Comm &         mpiCommDomain,
-      const MPI_Comm &         interBandGroupComm,
-      const dftParameters &    dftParams,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 mpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftParameters &                            dftParams,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
   } // namespace linearAlgebraOperationsDevice

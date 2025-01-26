@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2017-2022 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -18,7 +18,6 @@
 
 #include <chebyshevOrthogonalizedSubspaceIterationSolverDevice.h>
 #include <dftUtils.h>
-#include <deviceKernelsGeneric.h>
 #include <DeviceAPICalls.h>
 #include <DeviceDataTypeOverloads.h>
 #include <DeviceKernelLauncherConstants.h>
@@ -154,7 +153,7 @@ namespace dftfe
   double
   chebyshevOrthogonalizedSubspaceIterationSolverDevice::solve(
     operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-    const std::shared_ptr<
+    std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
       &                      BLASWrapperPtr,
     elpaScalaManager &       elpaScala,
@@ -187,8 +186,6 @@ namespace dftfe
         dealii::TimerOutput::every_call,
       dealii::TimerOutput::wall_times);
 
-    dftfe::utils::deviceBlasHandle_t &deviceBlasHandle =
-      BLASWrapperPtr->getDeviceBlasHandle();
 
     //
     // allocate memory for full flattened array on device and fill it up
@@ -426,8 +423,7 @@ namespace dftfe
 
             // copy from vector containg all wavefunction vectors to current
             // wavefunction vectors block
-            dftfe::utils::deviceKernelsGeneric::
-              stridedCopyToBlockConstantStride(
+            BLASWrapperPtr->stridedCopyToBlockConstantStride(
                 BVec,
                 totalNumberWaveFunctions/numberBandGroups,
                 localVectorSize,
@@ -437,8 +433,7 @@ namespace dftfe
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
-              dftfe::utils::deviceKernelsGeneric::
-                stridedCopyToBlockConstantStride(
+              BLASWrapperPtr->stridedCopyToBlockConstantStride(
                   BVec,
                   totalNumberWaveFunctions/numberBandGroups,
                   localVectorSize,
@@ -605,8 +600,7 @@ namespace dftfe
 
             // copy current wavefunction vectors block to vector containing
             // all wavefunction vectors
-            dftfe::utils::deviceKernelsGeneric::
-              stridedCopyFromBlockConstantStride(
+            BLASWrapperPtr->stridedCopyFromBlockConstantStride(
                 totalNumberWaveFunctions/numberBandGroups,
                 BVec,
                 localVectorSize,
@@ -616,8 +610,7 @@ namespace dftfe
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
-              dftfe::utils::deviceKernelsGeneric::
-                stridedCopyFromBlockConstantStride(
+              BLASWrapperPtr->stridedCopyFromBlockConstantStride(
                   totalNumberWaveFunctions/numberBandGroups,
                   BVec,
                   localVectorSize,
@@ -713,7 +706,7 @@ namespace dftfe
     // scale the eigenVectors (initial guess of single atom wavefunctions or
     // previous guess) to convert into Lowden Orthonormalized FE basis
     // multiply by M^{1/2}
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
+    BLASWrapperPtr->stridedBlockScale(
       totalNumberWaveFunctions/numberBandGroups,
       localVectorSize,
       1.0,
@@ -755,7 +748,7 @@ namespace dftfe
           devicecclMpiCommDomain,
           interBandGroupComm,
           eigenValues,
-          deviceBlasHandle,
+          BLASWrapperPtr,
           d_dftParams,
           useMixedPrecOverall);
       }
@@ -772,7 +765,7 @@ namespace dftfe
               operatorMatrix.getMPICommunicatorDomain(),
               devicecclMpiCommDomain,
               interBandGroupComm,
-              deviceBlasHandle,
+              BLASWrapperPtr,
               d_dftParams,
               useMixedPrecOverall);
 
@@ -790,7 +783,7 @@ namespace dftfe
               devicecclMpiCommDomain,
               interBandGroupComm,
               eigenValues,
-              deviceBlasHandle,
+              BLASWrapperPtr,
               d_dftParams,
               useMixedPrecOverall);
           }
@@ -816,7 +809,7 @@ namespace dftfe
                 interBandGroupComm,
                 intrapoolcomm,
                 eigenValues,
-                deviceBlasHandle,
+                BLASWrapperPtr,
                 d_dftParams,
                 useMixedPrecOverall);
             else
@@ -833,7 +826,7 @@ namespace dftfe
               devicecclMpiCommDomain,
               interBandGroupComm,
               eigenValues,
-              deviceBlasHandle,
+              BLASWrapperPtr,
               d_dftParams,
               useMixedPrecOverall);
 
@@ -873,7 +866,7 @@ namespace dftfe
             d_mpiCommParent,
             operatorMatrix.getMPICommunicatorDomain(),
             interBandGroupComm,
-            deviceBlasHandle,
+            BLASWrapperPtr,
             residualNorms,
             d_dftParams);
         else
@@ -888,7 +881,7 @@ namespace dftfe
             d_mpiCommParent,
             operatorMatrix.getMPICommunicatorDomain(),
             interBandGroupComm,
-            deviceBlasHandle,
+            BLASWrapperPtr,
             residualNorms,
             d_dftParams,
             true);
@@ -909,7 +902,7 @@ namespace dftfe
     // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
     // the usual FE basis
     //
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
+    BLASWrapperPtr->stridedBlockScale(
       totalNumberWaveFunctions/numberBandGroups,
       localVectorSize,
       1.0,
@@ -918,7 +911,7 @@ namespace dftfe
 
 
     if (eigenValues.size() != totalNumberWaveFunctions)
-      dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
+      BLASWrapperPtr->stridedBlockScale(
         eigenValues.size(),
         localVectorSize,
         1.0,
@@ -934,7 +927,7 @@ namespace dftfe
   void
   chebyshevOrthogonalizedSubspaceIterationSolverDevice::solveNoRR(
     operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-    const std::shared_ptr<
+    std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
       &                      BLASWrapperPtr,
     elpaScalaManager &       elpaScala,
@@ -947,9 +940,6 @@ namespace dftfe
     const unsigned int       numberPasses,
     const bool               useMixedPrecOverall)
   {
-    dftfe::utils::deviceBlasHandle_t &deviceBlasHandle =
-      BLASWrapperPtr->getDeviceBlasHandle();
-
     //
     // allocate memory for full flattened array on device and fill it up
     //
@@ -1091,25 +1081,23 @@ namespace dftfe
                   {
                     // copy from vector containg all wavefunction vectors to
                     // current wavefunction vectors block
-                    dftfe::utils::deviceKernelsGeneric::
-                      stridedCopyToBlockConstantStride(
-                        BVec,
-                        totalNumberWaveFunctions,
-                        localVectorSize,
-                        jvec,
-                        eigenVectorsFlattenedDevice,
-                        (*XBlock).begin());
+                    BLASWrapperPtr->stridedCopyToBlockConstantStride(
+                      BVec,
+                      totalNumberWaveFunctions,
+                      localVectorSize,
+                      jvec,
+                      eigenVectorsFlattenedDevice,
+                      (*XBlock).begin());
 
                     if (d_dftParams.overlapComputeCommunCheby &&
                         numSimultaneousBlocksCurrent == 2)
-                      dftfe::utils::deviceKernelsGeneric::
-                        stridedCopyToBlockConstantStride(
-                          BVec,
-                          totalNumberWaveFunctions,
-                          localVectorSize,
-                          jvec + BVec,
-                          eigenVectorsFlattenedDevice,
-                          (*XBlock2).begin());
+                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
+                        BVec,
+                        totalNumberWaveFunctions,
+                        localVectorSize,
+                        jvec + BVec,
+                        eigenVectorsFlattenedDevice,
+                        (*XBlock2).begin());
 
                     //
                     // call Chebyshev filtering function only for the current
@@ -1193,25 +1181,23 @@ namespace dftfe
 
                     // copy current wavefunction vectors block to vector
                     // containing all wavefunction vectors
-                    dftfe::utils::deviceKernelsGeneric::
-                      stridedCopyFromBlockConstantStride(
-                        totalNumberWaveFunctions,
-                        BVec,
-                        localVectorSize,
-                        jvec,
-                        (*XBlock).begin(),
-                        eigenVectorsFlattenedDevice);
+                    BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+                      totalNumberWaveFunctions,
+                      BVec,
+                      localVectorSize,
+                      jvec,
+                      (*XBlock).begin(),
+                      eigenVectorsFlattenedDevice);
 
                     if (d_dftParams.overlapComputeCommunCheby &&
                         numSimultaneousBlocksCurrent == 2)
-                      dftfe::utils::deviceKernelsGeneric::
-                        stridedCopyFromBlockConstantStride(
-                          totalNumberWaveFunctions,
-                          BVec,
-                          localVectorSize,
-                          jvec + BVec,
-                          (*XBlock2).begin(),
-                          eigenVectorsFlattenedDevice);
+                      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+                        totalNumberWaveFunctions,
+                        BVec,
+                        localVectorSize,
+                        jvec + BVec,
+                        (*XBlock2).begin(),
+                        eigenVectorsFlattenedDevice);
                   }
                 else
                   {
@@ -1263,7 +1249,7 @@ namespace dftfe
           operatorMatrix.getMPICommunicatorDomain(),
           devicecclMpiCommDomain,
           interBandGroupComm,
-          deviceBlasHandle,
+          BLASWrapperPtr,
           d_dftParams,
           useMixedPrecOverall);
       }
@@ -1277,7 +1263,7 @@ namespace dftfe
   chebyshevOrthogonalizedSubspaceIterationSolverDevice::
     densityMatrixEigenBasisFirstOrderResponse(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-      const std::shared_ptr<
+      std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
         &                        BLASWrapperPtr,
       dataTypes::number *        eigenVectorsFlattenedDevice,
@@ -1302,8 +1288,6 @@ namespace dftfe
     computingTimerStandard.enter_subsection(
       "Density matrix first order response on Device");
 
-    dftfe::utils::deviceBlasHandle_t &deviceBlasHandle =
-      BLASWrapperPtr->getDeviceBlasHandle();
 
     //
     // allocate memory for full flattened array on device and fill it up
@@ -1324,12 +1308,11 @@ namespace dftfe
     // scale the eigenVectors (initial guess of single atom wavefunctions or
     // previous guess) to convert into Lowden Orthonormalized FE basis
     // multiply by M^{1/2}
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
-      totalNumberWaveFunctions,
-      localVectorSize,
-      1.0,
-      operatorMatrix.getSqrtMassVector().data(),
-      eigenVectorsFlattenedDevice);
+    BLASWrapperPtr->stridedBlockScale(totalNumberWaveFunctions,
+                                      localVectorSize,
+                                      1.0,
+                                      operatorMatrix.getSqrtMassVector().data(),
+                                      eigenVectorsFlattenedDevice);
 
 
 
@@ -1348,7 +1331,7 @@ namespace dftfe
       fermiEnergy,
       densityMatDerFermiEnergy,
       elpaScala,
-      deviceBlasHandle,
+      BLASWrapperPtr,
       d_dftParams);
 
 
@@ -1357,7 +1340,7 @@ namespace dftfe
     // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
     // the usual FE basis
     //
-    dftfe::utils::deviceKernelsGeneric::stridedBlockScale(
+    BLASWrapperPtr->stridedBlockScale(
       totalNumberWaveFunctions,
       localVectorSize,
       1.0,

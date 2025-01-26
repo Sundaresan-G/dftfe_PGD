@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2017-2022 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -21,6 +21,7 @@
 // deal.II header
 //
 #include <deal.II/base/data_out_base.h>
+#include <deal.II/base/multithread_info.h>
 #include <p4est_bits.h>
 
 #ifdef USE_PETSC

@@ -7,7 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 # Set the name of the project and target:
 SET(TARGET "dftfe_exe")
-SET(TARGETLIB "dftfe")
+IF (WITH_COMPLEX)
+  SET(TARGETLIB "dftfeComplex")
+ELSE()
+  SET(TARGETLIB "dftfeReal")
+ENDIF()
+
 SET(TARGET_VERSION "1.0-pre") # used in docs/Doxyfile.in
 
 add_definitions(-w)
@@ -50,23 +55,33 @@ SET(TARGET_SRC
   ./src/dft/dft.cc
   ./src/dft/vselfBinsManager.cc
   ./src/dft/energyCalculator.cc
+  ./src/dft/energyDensity.cc
   ./src/dft/densityCalculator.cc
+  ./src/dft/computeAuxProjectedDensityMatrixFromPSI.cc
   ./src/dft/densityFirstOrderResponseCalculator.cc
   ./src/dft/applyMultipoleDirichletBC.cc
-  ./src/excManager/excDensityBaseClass.cpp
   ./src/excManager/excDensityLDAClass.cpp
-  ./src/excManager/excWavefunctionBaseClass.cpp
   ./src/excManager/excDensityGGAClass.cpp
+  ./src/excManager/excDensityLLMGGAClass.cpp
   ./src/excManager/excManager.cpp
-  ./src/excManager/excWavefunctionNoneClass.cpp
+  ./src/excManager/AuxDensityMatrixAtomicBasis.cpp
+  ./src/excManager/AuxDensityMatrixFE.cpp
+  ./src/excManager/ExcDFTPlusU.cpp
+  ./src/excManager/AtomicBasisData.cpp
   ./src/excManager/NNGGA.cc
   ./src/excManager/NNLDA.cc
+  ./src/excManager/NNLLMGGA.cpp
+  ./src/excManager/AtomicBasisData.cpp
+  ./src/excManager/SlaterBasis.cpp
+  ./src/excManager/GaussianBasis.cpp
+  ./src/excManager/hubbardClass.cpp
   ./src/poisson/poissonSolverProblem.cc
+  ./src/poisson/MultiVectorPoissonLinearSolverProblem.cpp
   ./src/helmholtz/kerkerSolverProblem.cc
   ./src/dftOperator/KohnShamHamiltonianOperator.cc
   ./src/dftOperator/veffPrimeForLRDM.cc
   ./src/force/force.cc
-  ./src/force/forceWfcContractions.cc  
+  ./src/force/forceWfcContractions.cc
   ./src/force/eshelbyTensor/eshelbyTensor.cc
   ./src/force/eshelbyTensor/eshelbyTensorSpinPolarized.cc
   ./src/triangulation/meshMovement/meshMovement.cc
@@ -85,6 +100,7 @@ SET(TARGET_SRC
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolver.cc
   ./src/solvers/eigenSolver.cc
   ./src/linAlg/linearAlgebraOperationsOpt.cc
+  ./src/linAlg/linearAlgebraOperationsCPU.cc
   ./src/linAlg/linearAlgebraOperationsInternal.cc
   ./src/linAlg/elpaScalaManager.cc
   ./src/linAlg/scalapackWrapper.cc
@@ -92,6 +108,8 @@ SET(TARGET_SRC
   ./src/linAlg/mixingClass.cc
   ./src/solvers/dealiiLinearSolver.cc
   ./src/solvers/dealiiLinearSolverProblem.cc
+  ./src/solvers/MultiVectorCGSolver.cpp
+  ./src/solvers/MultiVectorMinResSolver.cpp
   ./src/md/molecularDynamicsClass.cc
   ./src/neb/nudgedElasticBandClass.cc
   ./src/geoOpt/geometryOptimizationClass.cc
@@ -111,6 +129,9 @@ SET(TARGET_SRC
   ./utils/MPIWriteOnFile.cpp
   ./utils/QuadDataCompositeWrite.cpp
   ./utils/PeriodicTable.cc
+  ./utils/FiniteDifference.cc
+  ./utils/StringOperations.cpp
+  ./utils/SphericalFunctionUtil.cpp
   ./src/dft/dftd.cc
   ./src/mdi/MDIEngine.cpp
   ./src/mdi/libraryMDI.cpp
@@ -132,6 +153,7 @@ SET(TARGET_SRC
   ./src/dft/moveAtoms.cc
   ./src/dft/moveMeshToAtoms.cc
   ./src/dft/kerker.cc
+  ./src/dft/kineticEnergyDensityCalculator.cc
   ./src/dft/pRefinedDoFHandler.cc
   ./src/dft/psiInitialGuess.cc
   ./src/dft/publicMethods.cc
@@ -157,7 +179,7 @@ SET(TARGET_SRC
   ./src/force/configurationalStressCompute/computeStressEself.cc
   ./src/force/configurationalStressCompute/stress.cc
   ./src/force/createBinObjectsForce.cc
-  ./src/force/locateAtomCoreNodesForce.cc  
+  ./src/force/locateAtomCoreNodesForce.cc
   ./utils/FEBasisOperationsKernelsInternalHost.cc
   ./utils/FEBasisOperations.cc
   ./utils/FEBasisOperationsKernels.cc
@@ -174,7 +196,15 @@ SET(TARGET_SRC
   ./src/atom/AtomCenteredSphericalFunctionCoreDensitySpline.cc
   ./src/atom/AtomCenteredSphericalFunctionLocalPotentialSpline.cc
   ./src/atom/AtomCenteredSphericalFunctionProjectorSpline.cc
-  ./src/pseudo/oncv/oncvClass.cc)
+        ./src/atom/AtomCenteredPseudoWavefunctionSpline.cpp
+  ./src/TransferBetweenMeshes/InterpolateFromCellToLocalPoints.cpp
+  ./src/TransferBetweenMeshes/TransferBetweenMeshesIncompatiblePartitioning.cpp
+  ./src/TransferBetweenMeshes/InterpolateCellWiseDataToPoints.cpp
+  ./utils/NodalData.cpp
+  ./utils/functionalTests/testMultiVectorCGForPoisson.cpp
+  ./utils/functionalTests/testDataTransfer.cpp
+  ./src/pseudo/oncv/oncvClass.cc
+  ./src/pseudo/oncv/atomCenteredPostProcessing.cc)
 
 IF ("${GPU_LANG}" STREQUAL "cuda")
 
@@ -185,6 +215,7 @@ SET(DEVICE_SRC
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dft/solveVselfInBinsDevice.cc
+  ./src/dft/kineticEnergyDensityCalculatorDeviceKernels.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
@@ -192,7 +223,6 @@ SET(DEVICE_SRC
   ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.cu.cc
-  ./utils/DeviceBlasWrapper.cu.cc
   ./utils/BLASWrapperDevice.cu.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
   ./src/solvers/linearSolverDevice.cc
@@ -213,6 +243,7 @@ SET(DEVICE_SRC
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dft/solveVselfInBinsDevice.cc
+  ./src/dft/kineticEnergyDensityCalculatorDeviceKernels.cc
   ./src/solvers/eigenSolvers/chebyshevOrthogonalizedSubspaceIterationSolverDevice.cc
   ./src/linAlg/linearAlgebraOperationsDevice.cc
   ./src/linAlg/pseudoGSDevice.cc
@@ -220,7 +251,6 @@ SET(DEVICE_SRC
   ./src/force/forceWfcContractionsDeviceKernels.cc
   ./utils/constraintMatrixInfoDevice.cc
   ./utils/DeviceAPICalls.hip.cc
-  ./utils/DeviceBlasWrapper.hip.cc
   ./utils/BLASWrapperDevice.hip.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
   ./src/solvers/linearSolverDevice.cc
@@ -318,7 +348,7 @@ ENDIF()
 #
 IF (WITH_GPU)
   ADD_DEFINITIONS(-DDFTFE_WITH_DEVICE)
-  
+
   IF ("${GPU_VENDOR}" STREQUAL "nvidia")
     ADD_DEFINITIONS(-DDFTFE_WITH_DEVICE_NVIDIA)
   ELSEIF ("${GPU_VENDOR}" STREQUAL "amd")
@@ -350,7 +380,7 @@ TARGET_LINK_LIBRARIES(${TARGETLIB} PUBLIC ${DFTFE_MPI_LIBRARIES})
 #Dependencies
 #
 
-FIND_PACKAGE(deal.II 9.1.0 REQUIRED
+FIND_PACKAGE(deal.II 9.5.1 REQUIRED
   HINTS ${deal.II_DIR} ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR}
   )
 IF(NOT ${deal.II_FOUND})
@@ -387,12 +417,11 @@ ENDIF()
 
 #DEAL_II_INITIALIZE_CACHED_VARIABLES()
 
-
-TARGET_INCLUDE_DIRECTORIES(${TARGETLIB} PUBLIC ${DEAL_II_INCLUDE_DIRS})
+TARGET_INCLUDE_DIRECTORIES(${TARGETLIB} PUBLIC ${DEAL_II_INCLUDE_RELDIR})
 IF("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    TARGET_LINK_LIBRARIES (${TARGETLIB} PUBLIC ${DEAL_II_LIBRARIES_RELEASE})
+    TARGET_LINK_LIBRARIES (${TARGETLIB} PUBLIC dealii::dealii_release)
 ELSE()
-   TARGET_LINK_LIBRARIES (${TARGETLIB} PUBLIC ${DEAL_II_LIBRARIES_DEBUG})
+   TARGET_LINK_LIBRARIES (${TARGETLIB} PUBLIC dealii::dealii_debug)
 ENDIF()
 
 IF (WITH_CUSTOMIZED_DEALII)
@@ -455,8 +484,8 @@ IF (WITH_TORCH)
 #
 # TORCH. Set with -DTORCH_DIR=/path/to/prefix
 #
-FIND_PACKAGE(Torch PATHS ${TORCH_DIR} Required) 
-target_link_libraries(${TARGETLIB} PUBLIC ${TORCH_LIBRARIES}) 
+FIND_PACKAGE(Torch PATHS ${TORCH_DIR} Required)
+target_link_libraries(${TARGETLIB} PUBLIC ${TORCH_LIBRARIES})
 ADD_DEFINITIONS(-DDFTFE_WITH_TORCH)
 ENDIF()
 
@@ -619,7 +648,7 @@ IF (WITH_TESTING)
   ENABLE_TESTING()
   INCLUDE(CTest)
   # default 600sec is not enough for some tests, increase:
-  SET (TEST_TIME_LIMIT 3600)
+  SET (TEST_TIME_LIMIT 5000)
   #
   IF (WITH_COMPLEX)
      ADD_SUBDIRECTORY(tests/dft/pseudopotential/complex)
