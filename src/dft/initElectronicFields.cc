@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2017-2022 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -99,28 +99,23 @@ namespace dftfe
 
     AssertThrow(
       (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
-          d_numEigenValuesPerBandGroup <
-        INT_MAX / matrix_free_data.get_vector_partitioner()->local_size(),
+          matrix_free_data.get_vector_partitioner()->locally_owned_size() <
+        INT_MAX / d_numEigenValuesPerBandGroup,
       dealii::ExcMessage(
         "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
 
-    for (unsigned int kPoint = 0;
-         kPoint < (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
-         ++kPoint)
+    d_eigenVectorsFlattenedHost.resize(
+      (d_numEigenValuesPerBandGroup *
+       matrix_free_data.get_vector_partitioner()->locally_owned_size()) *
+        (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
+      dataTypes::number(0.0));
+    if (d_numEigenValuesRR != d_numEigenValues)
       {
-        d_eigenVectorsFlattenedHost.resize(
-          ((d_numEigenValues/numberBandGroups) *
-           matrix_free_data.get_vector_partitioner()->local_size()) *
+        d_eigenVectorsRotFracDensityFlattenedHost.resize(
+          d_numEigenValuesRRPerBandGroup *
+            matrix_free_data.get_vector_partitioner()->locally_owned_size() *
             (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
           dataTypes::number(0.0));
-        if (d_numEigenValuesRR != d_numEigenValues)
-          {
-            d_eigenVectorsRotFracDensityFlattenedHost.resize(
-              (d_numEigenValuesRR/numberBandGroups) *
-                matrix_free_data.get_vector_partitioner()->local_size() *
-                (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
-              dataTypes::number(0.0));
-          }
       }
 
     pcout << std::endl
@@ -182,9 +177,7 @@ namespace dftfe
       }
 
     if (d_dftParamsPtr->verbosity >= 2 && d_dftParamsPtr->spinPolarized == 1)
-      pcout << std::endl
-            << "net magnetization: "
-            << totalMagnetization(d_densityInQuadValues[1]) << std::endl;
+      totalMagnetization(d_densityInQuadValues[1]);
   }
 #include "dft.inst.cc"
 } // namespace dftfe
