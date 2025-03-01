@@ -339,7 +339,8 @@ namespace dftfe
   {
     computing_timer.enter_subsection("Chebyshev solve");
 
-
+    const unsigned int spinorFactor =
+      (d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1;
     if (d_dftParamsPtr->verbosity >= 2)
       {
         pcout << "kPoint: " << kPointIndex << std::endl;
@@ -429,9 +430,11 @@ namespace dftfe
       d_eigenVectorsFlattenedHost.data() +
         ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
           d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          matrix_free_data.get_vector_partitioner()->locally_owned_size() *
+          spinorFactor,
       d_numEigenValues,
-      matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+      matrix_free_data.get_vector_partitioner()->locally_owned_size() *
+        spinorFactor,
       eigenValuesTemp,
       residualNormWaveFunctions,
       interBandGroupComm,
@@ -501,6 +504,9 @@ namespace dftfe
         if (d_dftParamsPtr->spinPolarized == 1)
           pcout << "spin: " << spinType + 1 << std::endl;
       }
+    const unsigned int spinorFactor =
+      (d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1;
+
     std::vector<double> eigenValuesTemp(d_numEigenValues, 0.0);
     if (d_dftParamsPtr->useSinglePrecCheby ||
         d_dftParamsPtr->useReformulatedChFSI)
@@ -529,9 +535,11 @@ namespace dftfe
         d_eigenVectorsFlattenedDevice.begin() +
           ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
             d_numEigenValues *
-            matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+            matrix_free_data.get_vector_partitioner()->locally_owned_size() *
+            spinorFactor,
         d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size(),
+          matrix_free_data.get_vector_partitioner()->locally_owned_size() *
+          spinorFactor,
         d_numEigenValues,
         eigenValuesTemp,
         residualNormWaveFunctions,
@@ -595,17 +603,6 @@ namespace dftfe
       }
 
 
-    //
-    // scale the eigenVectors to convert into Lowden Orthonormalized FE basis
-    // multiply by M^{1/2}
-    // internal::pointWiseScaleWithDiagonal(
-    //   kohnShamDFTEigenOperator.getSqrtMassVector().data(),
-    //   d_numEigenValues,
-    //   matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-    //   d_eigenVectorsDensityMatrixPrimeHost.data() +
-    //     ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-    //       d_numEigenValues *
-    //       matrix_free_data.get_vector_partitioner()->locally_owned_size());
 
     std::vector<double> eigenValuesTemp(d_numEigenValues, 0.0);
     for (unsigned int i = 0; i < d_numEigenValues; i++)
@@ -634,20 +631,6 @@ namespace dftfe
                                  spinType],
       elpaScala,
       *d_dftParamsPtr);
-
-
-    //
-    // scale the eigenVectors with M^{-1/2} to represent the wavefunctions in
-    // the usual FE basis
-    //
-    // internal::pointWiseScaleWithDiagonal(
-    //   kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-    //   d_numEigenValues,
-    //   matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-    //   d_eigenVectorsDensityMatrixPrimeHost.data() +
-    //     ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-    //       d_numEigenValues *
-    //       matrix_free_data.get_vector_partitioner()->locally_owned_size());
   }
 
 #ifdef DFTFE_WITH_DEVICE
@@ -723,19 +706,6 @@ namespace dftfe
         pcout << "spin: " << spinType + 1 << std::endl;
       }
 
-    //
-    // scale the eigenVectors (initial guess of single atom wavefunctions or
-    // previous guess) to convert into Lowden Orthonormalized FE basis multiply
-    // by M^{1/2}
-    // if (ipass == 1)
-    //   internal::pointWiseScaleWithDiagonal(
-    //     kohnShamDFTEigenOperator.getInverseSqrtMassVector().data(),
-    //     d_numEigenValues,
-    //     matrix_free_data.get_vector_partitioner()->locally_owned_size(),
-    //     d_eigenVectorsFlattenedHost.data() +
-    //       ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-    //         d_numEigenValues *
-    //         matrix_free_data.get_vector_partitioner()->locally_owned_size());
 
 
     std::vector<double> eigenValuesTemp(d_numEigenValues, 0.0);
@@ -961,13 +931,21 @@ namespace dftfe
                   {
                     double temp2 = 1.0 / (1.0 + exp(factor));
                     functionValue =
-                      (2.0 - d_dftParamsPtr->spinPolarized) * temp2;
+                      (2.0 - d_dftParamsPtr->spinPolarized -
+                       ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ?
+                          1.0 :
+                          0.0)) *
+                      temp2;
                   }
                 else
                   {
-                    double temp2  = 1.0 / (1.0 + exp(-factor));
-                    functionValue = (2.0 - d_dftParamsPtr->spinPolarized) *
-                                    exp(-factor) * temp2;
+                    double temp2 = 1.0 / (1.0 + exp(-factor));
+                    functionValue =
+                      (2.0 - d_dftParamsPtr->spinPolarized -
+                       ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ?
+                          1.0 :
+                          0.0)) *
+                      exp(-factor) * temp2;
                   }
                 if (functionValue > 1e-3)
                   highestOccupiedState = i;

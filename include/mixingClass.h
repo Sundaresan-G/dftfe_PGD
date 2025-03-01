@@ -34,6 +34,11 @@ namespace dftfe
     gradRho,
     magZ,
     gradMagZ,
+    magY,
+    gradMagY,
+    magX,
+    gradMagX,
+    gradPhi,
     hubbardOccupation
   };
 
