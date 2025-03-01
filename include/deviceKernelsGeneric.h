@@ -20,7 +20,6 @@
 
 #    include <dftfeDataTypes.h>
 #    include <MemorySpaceType.h>
-#    include <headers.h>
 #    include <TypeConfig.h>
 #    include <DeviceTypeConfig.h>
 
@@ -31,7 +30,7 @@ namespace dftfe
     namespace deviceKernelsGeneric
     {
       void
-      setupDevice();
+      setupDevice(const int &mpi_rank);
 
       template <typename ValueTypeComplex, typename ValueTypeReal>
       void
@@ -55,16 +54,6 @@ namespace dftfe
       //                                  const ValueType1 *     valueType1Arr,
       //                                  ValueType2 *           valueType2Arr,
       //                                  const deviceStream_t   streamId = 0);
-
-      template <typename ValueType1, typename ValueType2>
-      void
-      convertLayout(
-        ValueType2 *                   copyTo,
-        const ValueType1 *             copyFromVec,
-        const dftfe::global_size_type  blockSize,
-        const dftfe::global_size_type  initBlockRows,
-        const dftfe::global_size_type  initBlockCols,
-        const dftfe::utils::deviceStream_t   streamId = 0);
 
 
       // template <typename ValueType1, typename ValueType2>
@@ -193,7 +182,7 @@ namespace dftfe
       // The function takes the cell level nodal data
       // and interpolates it to the quad data in each cell
       // by multiplying with the shape function
-      // template <typename ValueType1, typename ValueType2>
+      template <typename ValueType1, typename ValueType2>
       void
       interpolateNodalDataToQuadDevice(
         const dftfe::size_type numDofsPerElem,

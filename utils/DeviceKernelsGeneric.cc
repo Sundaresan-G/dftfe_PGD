@@ -22,8 +22,6 @@
 #include <DeviceDataTypeOverloads.h>
 #include <DeviceKernelLauncherConstants.h>
 #include <DeviceAPICalls.h>
-#include <dftUtils.h>
-#include <headers.h>
 
 namespace dftfe
 {
@@ -81,42 +79,6 @@ namespace dftfe
         }
     }
 
-
-    template <typename ValueType1, typename ValueType2>
-    __global__ void
-    convertLayoutDeviceKernel(
-      ValueType2 *                   copyTo,
-      const ValueType1 *             copyFrom,
-      const dftfe::global_size_type  blockSize,
-      const dftfe::global_size_type  initBlockRows,
-      const dftfe::global_size_type  initBlockCols)
-    {
-      const dftfe::global_size_type globalThreadId =
-        blockIdx.x * blockDim.x + threadIdx.x;
-      const dftfe::global_size_type numberEntries = initBlockRows * initBlockCols * blockSize; 
-      const dftfe::global_size_type finalBlockRows = initBlockCols;
-      const dftfe::global_size_type finalBlockCols = initBlockRows;
-
-      for (dftfe::global_size_type index = globalThreadId; index < numberEntries;
-           index += blockDim.x * gridDim.x)
-        {
-          dftfe::global_size_type blockIndex = index / blockSize;
-          dftfe::global_size_type blockCol = blockIndex % initBlockCols;
-          dftfe::global_size_type blockRow = blockIndex / initBlockCols;
-          dftfe::global_size_type intraBlockIndex = index - blockIndex * blockSize;
-
-          dftfe::global_size_type new_blockRow = blockCol;
-          dftfe::global_size_type new_blockCol = blockRow;
-          dftfe::global_size_type new_blockIndex = new_blockRow * finalBlockCols + new_blockCol;
-
-          dftfe::global_size_type new_index = new_blockIndex * blockSize + intraBlockIndex;
-
-          dftfe::utils::copyValue(copyTo + new_index, copyFrom[index]);
-        }
-
-    }
-
-
     template <typename ValueType1, typename ValueType2>
     __global__ void
     interpolateNodalDataToQuadDeviceKernel(
@@ -169,13 +131,12 @@ namespace dftfe
     namespace deviceKernelsGeneric
     {
       void
-      setupDevice()
+      setupDevice(const int &mpi_rank)
       {
         int n_devices = 0;
         dftfe::utils::getDeviceCount(&n_devices);
         // std::cout<< "Number of Devices "<<n_devices<<std::endl;
-        int device_id =
-          dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) % n_devices;
+        int device_id = mpi_rank % n_devices;
         // std::cout<<"Device Id: "<<device_id<<" Task Id
         // "<<dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)<<std::endl;
         dftfe::utils::setDevice(device_id);
@@ -324,46 +285,6 @@ namespace dftfe
 #endif
       }
 
-      template <typename ValueType1, typename ValueType2>
-      void
-      convertLayout(
-        ValueType2 *                   copyTo,
-        const ValueType1 *             copyFrom,
-        const dftfe::global_size_type  blockSize,
-        const dftfe::global_size_type  initBlockRows,
-        const dftfe::global_size_type  initBlockCols,
-        const dftfe::utils::deviceStream_t   streamId)
-      {
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-        convertLayoutDeviceKernel<<<(initBlockRows *
-                                    initBlockCols * blockSize + dftfe::utils::DEVICE_BLOCK_SIZE - 1) /
-                                        dftfe::utils::DEVICE_BLOCK_SIZE,
-                                    dftfe::utils::DEVICE_BLOCK_SIZE,
-                                    0,
-                                    streamId>>>(
-                                  dftfe::utils::makeDataTypeDeviceCompatible(copyTo),
-                                  dftfe::utils::makeDataTypeDeviceCompatible(copyFrom),
-                                  blockSize,
-                                  initBlockRows,
-                                  initBlockCols);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-        hipLaunchKernelGGL(convertLayoutDeviceKernel,
-                            (initBlockRows *
-                                    initBlockCols * blockSize + dftfe::utils::DEVICE_BLOCK_SIZE - 1) /
-                                dftfe::utils::DEVICE_BLOCK_SIZE,
-                            dftfe::utils::DEVICE_BLOCK_SIZE,
-                            0,
-                            streamId,
-                          dftfe::utils::makeDataTypeDeviceCompatible(copyTo),
-                          dftfe::utils::makeDataTypeDeviceCompatible(copyFrom),
-                          blockSize,
-                          initBlockRows,
-                          initBlockCols);
-#endif
-
-      }
-
-
       template void
       interpolateNodalDataToQuadDevice(
         const dftfe::size_type numDofsPerElem,
@@ -417,15 +338,6 @@ namespace dftfe
            double *               x,
            const double           beta,
            const dftfe::size_type size);
-
-      template void
-      convertLayout(
-        double *                   copyTo,
-        const double *             copyFromVec,
-        const dftfe::global_size_type         blockSize,
-        const dftfe::global_size_type         initBlockRows,
-        const dftfe::global_size_type         initBlockCols,
-        const dftfe::utils::deviceStream_t   streamId);
 
     } // namespace deviceKernelsGeneric
   }   // namespace utils

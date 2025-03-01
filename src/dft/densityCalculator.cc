@@ -23,12 +23,6 @@
 #include <dftUtils.h>
 #include <vectorUtilities.h>
 #include <MemoryStorage.h>
-#include <DataTypeOverloads.h>
-#include <linearAlgebraOperationsDevice.h>
-#include <DeviceAPICalls.h>
-#include <DeviceDataTypeOverloads.h>
-#include <DeviceTypeConfig.h>
-#include <DeviceKernelLauncherConstants.h>
 
 
 namespace dftfe
@@ -71,6 +65,18 @@ namespace dftfe
     if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       dftfe::utils::deviceSynchronize();
 #endif
+
+    {
+      int size;
+      MPI_Comm_size(mpiCommParent, &size);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
+
     MPI_Barrier(mpiCommParent);
     double             computeRho_time = MPI_Wtime();
     const unsigned int numKPoints      = kPointWeights.size();
@@ -86,6 +92,10 @@ namespace dftfe
     dftUtils::createBandParallelizationIndices(interBandGroupComm,
                                                totalNumWaveFunctions,
                                                bandGroupLowHighPlusOneIndices);
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
 
     const unsigned int BVec =
       std::min(dftParams.chebyWfcBlockSize, bandGroupLowHighPlusOneIndices[1]);
@@ -157,6 +167,10 @@ namespace dftfe
 
     dftfe::linearAlgebra::MultiVector<NumberType, memorySpace>
       *flattenedArrayBlock;
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
 
     for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
       for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
@@ -246,6 +260,10 @@ namespace dftfe
                       flattenedArrayBlock->data());
 #endif
 
+                  if (this_process == 0){
+                    std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                  }
+
 
                   basisOperationsPtr->reinit(currentBlockSize,
                                              cellsBlockSize,
@@ -255,6 +273,10 @@ namespace dftfe
 
                   flattenedArrayBlock->updateGhostValues();
                   basisOperationsPtr->distribute(*(flattenedArrayBlock));
+
+                  if (this_process == 0){
+                    std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                  }
 
                   for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
                     {
@@ -276,13 +298,13 @@ namespace dftfe
                               startingCellId + currentCellsBlockSize));
 
                           computeRhoGradRhoFromInterpolatedValues(
-                            basisOperationsPtr,
                             BLASWrapperPtr,
                             std::pair<unsigned int, unsigned int>(
                               startingCellId,
                               startingCellId + currentCellsBlockSize),
                             std::pair<unsigned int, unsigned int>(
                               jvec, jvec + currentBlockSize),
+                            numQuadPoints,
                             partialOccupVec.data(),
                             wfcQuadPointData.data(),
                             gradWfcQuadPointData.data(),
@@ -296,8 +318,16 @@ namespace dftfe
                             isEvaluateGradRho);
                         } // non-trivial cell block check
                     }     // cells block loop
+
+                  if (this_process == 0){
+                    std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                  }
                 }
             }
+
+          if (this_process == 0){
+            std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          }
 
           if (spectrumSplit)
             for (unsigned int jvec = 0; jvec < Nfr; jvec += BVec)
@@ -405,13 +435,13 @@ namespace dftfe
                                 startingCellId + currentCellsBlockSize));
 
                             computeRhoGradRhoFromInterpolatedValues(
-                              basisOperationsPtr,
                               BLASWrapperPtr,
                               std::pair<unsigned int, unsigned int>(
                                 startingCellId,
                                 startingCellId + currentCellsBlockSize),
                               std::pair<unsigned int, unsigned int>(
                                 jvec, jvec + currentBlockSize),
+                              numQuadPoints,
                               partialOccupVec.data(),
                               wfcQuadPointData.data(),
                               gradWfcQuadPointData.data(),
@@ -427,6 +457,10 @@ namespace dftfe
                       }     // cells block loop
                   }
               } // spectrum split block
+
+          if (this_process == 0){
+            std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          }
         }
 #if defined(DFTFE_WITH_DEVICE)
     rhoHost.resize(rho.size());
@@ -440,6 +474,10 @@ namespace dftfe
       }
 
 #endif
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
 
     int size;
     MPI_Comm_size(interpoolcomm, &size);
@@ -461,6 +499,11 @@ namespace dftfe
                         MPI_SUM,
                         interpoolcomm);
       }
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
+
     MPI_Comm_size(interBandGroupComm, &size);
     if (size > 1)
       {
@@ -480,6 +523,10 @@ namespace dftfe
                         MPI_SUM,
                         interBandGroupComm);
       }
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
 
     if (dftParams.spinPolarized == 1)
       {
@@ -527,8 +574,17 @@ namespace dftfe
     if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       dftfe::utils::deviceSynchronize();
 #endif
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
+
     MPI_Barrier(mpiCommParent);
     computeRho_time = MPI_Wtime() - computeRho_time;
+
+    if (this_process == 0){
+      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    }
 
     if (this_process == 0 && dftParams.verbosity >= 2)
       if (memorySpace == dftfe::utils::MemorySpace::HOST)
@@ -542,14 +598,11 @@ namespace dftfe
   void
   computeRhoGradRhoFromInterpolatedValues(
     std::shared_ptr<
-      dftfe::basis::
-        FEBasisOperations<NumberType, double, dftfe::utils::MemorySpace::HOST>>
-      &basisOperationsPtr,
-    std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
       &                                         BLASWrapperPtr,
     const std::pair<unsigned int, unsigned int> cellRange,
     const std::pair<unsigned int, unsigned int> vecRange,
+    const unsigned int                          nQuadsPerCell,
     double *                                    partialOccupVec,
     NumberType *                                wfcQuadPointData,
     NumberType *                                gradWfcQuadPointData,
@@ -561,8 +614,6 @@ namespace dftfe
   {
     const unsigned int cellsBlockSize   = cellRange.second - cellRange.first;
     const unsigned int vectorsBlockSize = vecRange.second - vecRange.first;
-    const unsigned int nQuadsPerCell    = basisOperationsPtr->nQuadsPerCell();
-    const unsigned int nCells           = basisOperationsPtr->nCells();
     for (unsigned int iCell = cellRange.first; iCell < cellRange.second;
          ++iCell)
       for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
