@@ -218,6 +218,11 @@ namespace dftfe
       d_dftParamsPtr->reproducible_output ?
         30.0 :
         (std::max(d_dftParamsPtr->pspCutoffImageCharges, d_pspCutOffTrunc));
+
+    d_smearedChargeMoments.resize(13, 0.0);
+    std::fill(d_smearedChargeMoments.begin(),
+              d_smearedChargeMoments.end(),
+              0.0);
   }
 
   template <unsigned int              FEOrder,
@@ -1414,77 +1419,6 @@ namespace dftfe
       dftUtils::printCurrentMemoryUsage(intrapoolcomm, "KSDFT problem initialization completed");
   }
 
-
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
-  void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::initHubbardOperator()
-  {
-    if (d_excManagerPtr->getExcSSDFunctionalObj()->getExcFamilyType() ==
-        ExcFamilyType::DFTPlusU)
-      {
-        double init_hubbOp;
-        MPI_Barrier(d_mpiCommParent);
-        init_hubbOp = MPI_Wtime();
-
-        std::shared_ptr<ExcDFTPlusU<dataTypes::number, memorySpace>>
-          excHubbPtr = std::dynamic_pointer_cast<
-            ExcDFTPlusU<dataTypes::number, memorySpace>>(
-            d_excManagerPtr->getSSDSharedObj());
-
-        excHubbPtr->initialiseHubbardClass(
-          d_mpiCommParent,
-          mpi_communicator,
-          interpoolcomm,
-          interBandGroupComm,
-          getBasisOperationsMemSpace(),
-          getBasisOperationsHost(),
-          getBLASWrapperMemSpace(),
-          getBLASWrapperHost(),
-          d_densityDofHandlerIndex,
-          d_nlpspQuadratureId,
-          d_sparsityPatternQuadratureId,
-          d_numEigenValues, // The total number of waveFunctions that are passed
-                            // to the operator
-          d_dftParamsPtr->spinPolarized == 1 ? 2 : 1,
-          *d_dftParamsPtr,
-          d_dftfeScratchFolderName,
-          false, // singlePrecNonLocalOperator
-          true,  // updateNonlocalSparsity
-          atomLocations,
-          atomLocationsFractional,
-          d_imageIds,
-          d_imagePositions,
-          d_kPointCoordinates,
-          d_kPointWeights,
-          d_domainBoundingVectors);
-
-        d_hubbardClassPtr = excHubbPtr->getHubbardClass();
-
-        d_useHubbard = true;
-
-        AssertThrow(d_nOMPThreads == 1,
-                    dealii::ExcMessage(
-                      "open mp is not compatible with hubbard "));
-
-        AssertThrow(d_dftParamsPtr->mixingMethod != "LOW_RANK_DIELECM_PRECOND",
-                    dealii::ExcMessage(
-                      "LRDM preconditioner is not compatible with hubbard "));
-
-        AssertThrow(d_dftParamsPtr->useSinglePrecCheby == false,
-                    dealii::ExcMessage(
-                      "single prec in cheby is not compatible with hubbard "));
-
-        init_hubbOp = MPI_Wtime() - init_hubbOp;
-
-        if (d_dftParamsPtr->verbosity >= 2)
-          pcout << "Time taken for hubbard class initialization: "
-                << init_hubbOp << std::endl;
-      }
-  }
-
-
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
@@ -2652,6 +2586,23 @@ namespace dftfe
               d_dftParamsPtr->adaptAndersonMixingParameter);
           }
       }
+
+    if (d_dftParamsPtr->confiningPotential)
+      {
+        d_basisOperationsPtrHost->reinit(0, 0, d_densityQuadratureId);
+        d_expConfiningPot.init(d_basisOperationsPtrHost,
+                               *d_dftParamsPtr,
+                               atomLocations);
+      }
+
+    {
+      int size, this_process;
+      MPI_Comm_size(d_mpiCommParent, &size);
+      MPI_Comm_rank(d_mpiCommParent, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+    
     //
     // Begin SCF iteration
     //
@@ -3082,6 +3033,14 @@ namespace dftfe
                 true);
           }
 
+        {
+          int size, this_process;
+          MPI_Comm_size(d_mpiCommParent, &size);
+          MPI_Comm_rank(d_mpiCommParent, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
+
         computing_timer.enter_subsection("phiTot solve");
 
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
@@ -3103,6 +3062,14 @@ namespace dftfe
                            d_dftParamsPtr->verbosity);
           }
 
+        {
+          int size, this_process;
+          MPI_Comm_size(d_mpiCommParent, &size);
+          MPI_Comm_rank(d_mpiCommParent, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
+
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
           dummy;
         interpolateElectroNodalDataToQuadratureDataGeneral(
@@ -3112,6 +3079,19 @@ namespace dftfe
           d_phiTotRhoIn,
           d_phiInQuadValues,
           dummy);
+
+        {
+          int size, this_process;
+          MPI_Comm_size(d_mpiCommParent, &size);
+          MPI_Comm_rank(d_mpiCommParent, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
+
+        if (d_dftParamsPtr->confiningPotential)
+          {
+            d_expConfiningPot.addConfiningPotential(d_phiInQuadValues);
+          }
 
         //
         // impose integral phi equals 0
@@ -3125,6 +3105,14 @@ namespace dftfe
         "<<totalCharge(d_dofHandlerPRefined,d_phiTotRhoIn)<<std::endl;
         }
         */
+
+        {
+          int size, this_process;
+          MPI_Comm_size(d_mpiCommParent, &size);
+          MPI_Comm_rank(d_mpiCommParent, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
 
         computing_timer.leave_subsection("phiTot solve");
 
@@ -3532,6 +3520,14 @@ namespace dftfe
                   }
               }
 
+            {
+              int size, this_process;
+              MPI_Comm_size(d_mpiCommParent, &size);
+              MPI_Comm_rank(d_mpiCommParent, &this_process);
+              std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+              
+            }
+
 
             //
             // fermi energy
@@ -3576,6 +3572,14 @@ namespace dftfe
                        adaptiveChebysevFilterPassesTol);
                 while (maxRes > filterPassTol && count < d_dftParamsPtr->maxChebyPasses)
                   {
+                    {
+                      int size, this_process;
+                      MPI_Comm_size(d_mpiCommParent, &size);
+                      MPI_Comm_rank(d_mpiCommParent, &this_process);
+                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                      
+                    }
+                    
                     for (unsigned int kPoint = 0;
                          kPoint < d_kPointWeights.size();
                          ++kPoint)
@@ -3596,6 +3600,14 @@ namespace dftfe
                             computing_timer.leave_subsection(
                               "Hamiltonian Matrix Computation");
                           }
+                        
+                        {
+                          int size, this_process;
+                          MPI_Comm_size(d_mpiCommParent, &size);
+                          MPI_Comm_rank(d_mpiCommParent, &this_process);
+                          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                          
+                        }
 
 
 #ifdef DFTFE_WITH_DEVICE
@@ -3636,12 +3648,29 @@ namespace dftfe
                             scfIter == 0);
                       }
 
+                    {
+                      int size, this_process;
+                      MPI_Comm_size(d_mpiCommParent, &size);
+                      MPI_Comm_rank(d_mpiCommParent, &this_process);
+                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                      
+                    }
+
                     //
                     if (d_dftParamsPtr->constraintMagnetization)
                       compute_fermienergy_constraintMagnetization(eigenValues);
                     else
                       compute_fermienergy(eigenValues, numElectrons);
                     //
+
+                    {
+                      int size, this_process;
+                      MPI_Comm_size(d_mpiCommParent, &size);
+                      MPI_Comm_rank(d_mpiCommParent, &this_process);
+                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                      
+                    }
+
                     maxRes = computeMaximumHighestOccupiedStateResidualNorm(
                       residualNormWaveFunctionsAllkPoints,
                       (scfIter < d_dftParamsPtr->spectrumSplitStartingScfIter ||
@@ -3649,6 +3678,15 @@ namespace dftfe
                         eigenValues :
                         eigenValuesRRSplit,
                       fermiEnergy);
+
+                    {
+                      int size, this_process;
+                      MPI_Comm_size(d_mpiCommParent, &size);
+                      MPI_Comm_rank(d_mpiCommParent, &this_process);
+                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                      
+                    }
+
                     if (d_dftParamsPtr->verbosity >= 2)
                       pcout
                         << "Maximum residual norm among all states with occupation number greater than 1e-3: "
@@ -3665,6 +3703,15 @@ namespace dftfe
                 pcout << "Fermi Energy computed: " << fermiEnergy << std::endl;
               }
           }
+
+        {
+          int size, this_process;
+          MPI_Comm_size(d_mpiCommParent, &size);
+          MPI_Comm_rank(d_mpiCommParent, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
+
         computing_timer.enter_subsection("compute rho");
         if (d_dftParamsPtr->useSymm)
           {
@@ -4518,7 +4565,8 @@ namespace dftfe
             unsigned int              FEOrderElectro,
             dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::outputWfc()
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::outputWfc(
+    const std::string outputFileName)
   {
     //
     // identify the index which is close to Fermi Energy
@@ -4654,7 +4702,7 @@ namespace dftfe
                                                interpoolcomm,
                                                interBandGroupComm,
                                                tempFolder,
-                                               "wfcOutput");
+                                               outputFileName);
     //"wfcOutput_"+std::to_string(k)+"_"+std::to_string(i));
   }
 
@@ -5178,6 +5226,37 @@ namespace dftfe
                                         dealii::update_JxW_values);
         const unsigned int  n_q_points = quadrature_formula.size();
 
+        const unsigned int totalLocallyOwnedCells =
+          d_basisOperationsPtrHost->nCells();
+
+        const unsigned int totalQuadPoints =
+          totalLocallyOwnedCells * n_q_points;
+
+        std::vector<unsigned int> numberOfPointsInEachProc;
+        numberOfPointsInEachProc.resize(n_mpi_processes);
+        std::fill(numberOfPointsInEachProc.begin(),
+                  numberOfPointsInEachProc.end(),
+                  0);
+
+        numberOfPointsInEachProc[this_mpi_process] = totalQuadPoints;
+
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                      &numberOfPointsInEachProc[0],
+                      n_mpi_processes,
+                      dataTypes::mpi_type_id(&numberOfPointsInEachProc[0]),
+                      MPI_SUM,
+                      mpi_communicator);
+
+        unsigned int quadIdStartIndex = 0;
+
+        for (unsigned int iProc = 0; iProc < this_mpi_process; iProc++)
+          {
+            quadIdStartIndex += numberOfPointsInEachProc[iProc];
+          }
+
+
+
         // loop over elements
         typename dealii::DoFHandler<3>::active_cell_iterator
           cell = dofHandler.begin_active(),
@@ -5204,6 +5283,8 @@ namespace dftfe
                       fe_values.quadrature_point(q_point);
                     const double jxw = fe_values.JxW(q_point);
 
+                    quadVals.push_back(quadIdStartIndex +
+                                       cellIndex * n_q_points + q_point);
                     quadVals.push_back(quadPoint[0]);
                     quadVals.push_back(quadPoint[1]);
                     quadVals.push_back(quadPoint[2]);
@@ -5473,6 +5554,16 @@ namespace dftfe
         }
   }
 
+
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  void
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::setNumElectrons(
+    unsigned int inputNumElectrons)
+  {
+    this->numElectrons = inputNumElectrons;
+  }
 
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
@@ -5797,6 +5888,14 @@ namespace dftfe
     return interBandGroupComm;
   }
 
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  const expConfiningPotential &
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getConfiningPotential() const
+  {
+    return d_expConfiningPot;
+  }
 
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,
@@ -5844,6 +5943,14 @@ namespace dftfe
     return d_useHubbard;
   }
 
+  template <unsigned int              FEOrder,
+            unsigned int              FEOrderElectro,
+            dftfe::utils::MemorySpace memorySpace>
+  const std::map<dealii::CellId, std::vector<double>> &
+  dftClass<FEOrder, FEOrderElectro, memorySpace>::getPseudoVLoc() const
+  {
+    return d_pseudoVLoc;
+  }
 
   template <unsigned int              FEOrder,
             unsigned int              FEOrderElectro,

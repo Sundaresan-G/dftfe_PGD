@@ -18,11 +18,9 @@
 
 #include <chebyshevOrthogonalizedSubspaceIterationSolverDevice.h>
 #include <dftUtils.h>
-#include <DeviceAPICalls.h>
-#include <DeviceDataTypeOverloads.h>
-#include <DeviceKernelLauncherConstants.h>
 #include <linearAlgebraOperations.h>
 #include <linearAlgebraOperationsDevice.h>
+#include <linearAlgebraOperationsDeviceKernels.h>
 #include <vectorUtilities.h>
 
 static const unsigned int order_lookup[][2] = {
@@ -48,48 +46,6 @@ namespace dftfe
 {
   namespace
   {
-    __global__ void
-    setZeroKernel(const unsigned int BVec,
-                  const unsigned int M,
-                  const unsigned int N,
-                  double *           yVec,
-                  const unsigned int startingXVecId)
-    {
-      const unsigned int globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
-      const unsigned int numGangsPerBVec = (BVec + blockDim.x - 1) / blockDim.x;
-      const unsigned int gangBlockId     = blockIdx.x / numGangsPerBVec;
-      const unsigned int localThreadId =
-        globalThreadId - gangBlockId * numGangsPerBVec * blockDim.x;
-
-      if (globalThreadId < M * numGangsPerBVec * blockDim.x &&
-          localThreadId < BVec)
-        {
-          *(yVec + gangBlockId * N + startingXVecId + localThreadId) = 0.0;
-        }
-    }
-
-
-    __global__ void
-    setZeroKernel(const unsigned int                 BVec,
-                  const unsigned int                 M,
-                  const unsigned int                 N,
-                  dftfe::utils::deviceDoubleComplex *yVec,
-                  const unsigned int                 startingXVecId)
-    {
-      const unsigned int globalThreadId = blockIdx.x * blockDim.x + threadIdx.x;
-      const unsigned int numGangsPerBVec = (BVec + blockDim.x - 1) / blockDim.x;
-      const unsigned int gangBlockId     = blockIdx.x / numGangsPerBVec;
-      const unsigned int localThreadId =
-        globalThreadId - gangBlockId * numGangsPerBVec * blockDim.x;
-
-      if (globalThreadId < M * numGangsPerBVec * blockDim.x &&
-          localThreadId < BVec)
-        {
-          *(yVec + gangBlockId * N + startingXVecId + localThreadId) =
-            dftfe::utils::makeComplex(0.0, 0.0);
-        }
-    }
-
     namespace internal
     {
       unsigned int
@@ -173,6 +129,14 @@ namespace dftfe
     const bool               isFirstScf)
   {
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -185,6 +149,14 @@ namespace dftfe
         dealii::TimerOutput::never :
         dealii::TimerOutput::every_call,
       dealii::TimerOutput::wall_times);
+
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
 
 
     //
@@ -212,6 +184,14 @@ namespace dftfe
     reShapedNumRows = (localVectorSize + numberBandGroups - 1)/numberBandGroups;
     reShapedNumCols = totalNumberWaveFunctions;
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     if (isFirstScf && isFirstFilteringCall && numberBandGroups > 1)
     {
       devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL, 1);
@@ -221,6 +201,14 @@ namespace dftfe
 
       // XHost.resize(reShapedNumRows * reShapedNumCols, 0);
       // HXHost.resize(reShapedNumRows * reShapedNumCols, 0);
+    }
+
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
     }
 
     distributedDeviceVec<dataTypes::number> *XBlock =
@@ -253,8 +241,24 @@ namespace dftfe
         &operatorMatrix.getScratchFEMultivectorSinglePrec(vectorsBlockSize, 3) :
         NULL;
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     operatorMatrix.reinitNumberWavefunctions(vectorsBlockSize);
     std::vector<double> eigenValuesBlock(vectorsBlockSize);
+
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
 
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
@@ -319,6 +323,14 @@ namespace dftfe
         d_upperBoundUnWantedSpectrum = bounds.second;
       }
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -330,6 +342,14 @@ namespace dftfe
         computingTimerStandard.enter_subsection(
           "Chebyshev filtering on Device");
       }
+
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
 
 
     unsigned int chebyshevOrder = d_dftParams.chebyshevOrder;
@@ -379,6 +399,14 @@ namespace dftfe
         fflush(stdout);
       }
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
 
 
     // two blocks of wavefunctions are filtered simultaneously when overlap
@@ -394,6 +422,14 @@ namespace dftfe
     for (unsigned int jvec = 0; jvec < totalNumberWaveFunctions;
          jvec += numSimultaneousBlocksCurrent * vectorsBlockSize)
       {
+
+        {
+          int size, this_process;
+          MPI_Comm_size(intrapoolcomm, &size);
+          MPI_Comm_rank(intrapoolcomm, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
         // Correct block dimensions if block "goes off edge of" the matrix
         const unsigned int BVec =
           vectorsBlockSize; // std::min(vectorsBlockSize,
@@ -663,6 +699,14 @@ namespace dftfe
           pcout << "ChebyShev Filtering Done: " << std::endl;
       }
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -756,6 +800,11 @@ namespace dftfe
       {
         if (d_dftParams.useSubspaceProjectedSHEPGPU)
           {
+
+            AssertThrow(numberBandGroups == 1,
+                    dealii::ExcMessage(
+                      "SUBSPACE PROJ SHEP GPU == true && NPBAND != 1 is not yet implemented."));
+
             linearAlgebraOperationsDevice::pseudoGramSchmidtOrthogonalization(
               elpaScala,
               eigenVectorsFlattenedDevice,
@@ -840,6 +889,14 @@ namespace dftfe
           "Total RR GEP step time");
       }
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -917,6 +974,14 @@ namespace dftfe
         1.0,
         operatorMatrix.getInverseSqrtMassVector().data(),
         eigenVectorsRotFracDensityFlattenedDevice);
+
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
 
     return d_upperBoundUnWantedSpectrum;
   }
@@ -1203,34 +1268,12 @@ namespace dftfe
                   {
                     // set to zero wavefunctions which wont go through chebyshev
                     // filtering inside a given band group
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-                    setZeroKernel<<<(numSimultaneousBlocksCurrent * BVec +
-                                     (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                                      dftfe::utils::DEVICE_BLOCK_SIZE *
-                                      localVectorSize,
-                                    dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+                    dftfe::linearAlgebraOperationsDevice::setZero(
                       numSimultaneousBlocksCurrent * BVec,
                       localVectorSize,
                       totalNumberWaveFunctions,
-                      dftfe::utils::makeDataTypeDeviceCompatible(
-                        eigenVectorsFlattenedDevice),
+                      eigenVectorsFlattenedDevice,
                       jvec);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-                    hipLaunchKernelGGL(
-                      setZeroKernel,
-                      (numSimultaneousBlocksCurrent * BVec +
-                       (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                        dftfe::utils::DEVICE_BLOCK_SIZE * localVectorSize,
-                      dftfe::utils::DEVICE_BLOCK_SIZE,
-                      0,
-                      0,
-                      numSimultaneousBlocksCurrent * BVec,
-                      localVectorSize,
-                      totalNumberWaveFunctions,
-                      dftfe::utils::makeDataTypeDeviceCompatible(
-                        eigenVectorsFlattenedDevice),
-                      jvec);
-#endif
                   }
 
               } // cheby block loop

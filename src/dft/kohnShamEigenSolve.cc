@@ -561,6 +561,14 @@ namespace dftfe
                                            kPointIndex +
                                          spinType]);
 
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     if (numberRayleighRitzAvoidancePasses > 0)
       {
         subspaceIterationSolverDevice.solveNoRR(
@@ -582,6 +590,15 @@ namespace dftfe
       }
     else
       {
+
+        {
+          int size, this_process;
+          MPI_Comm_size(intrapoolcomm, &size);
+          MPI_Comm_rank(intrapoolcomm, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
+
         d_upperBoundUnwantedSpectrumValues[(1 + d_dftParamsPtr->spinPolarized) *
                                              kPointIndex +
                                            spinType] =
@@ -611,6 +628,14 @@ namespace dftfe
             computeResidual,
             useMixedPrec,
             isFirstScf);
+
+        {
+          int size, this_process;
+          MPI_Comm_size(intrapoolcomm, &size);
+          MPI_Comm_rank(intrapoolcomm, &this_process);
+          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+          
+        }
 
 
 
@@ -650,7 +675,7 @@ namespace dftfe
           {
             for (unsigned int i = 0; i < d_numEigenValues; i++)
               {
-                if (d_dftParamsPtr->verbosity >= 5)
+                if (d_dftParamsPtr->verbosity >= 4)
                   pcout << "eigen value " << std::setw(3) << i << ": "
                         << eigenValuesTemp[i] << std::endl;
 
@@ -674,6 +699,14 @@ namespace dftfe
               eigenValuesTemp[0];
           }
       }
+
+    {
+      int size, this_process;
+      MPI_Comm_size(intrapoolcomm, &size);
+      MPI_Comm_rank(intrapoolcomm, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
   }
 #endif
 

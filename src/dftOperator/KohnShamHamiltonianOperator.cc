@@ -533,9 +533,8 @@ namespace dftfe
           }
       }
 
-    resetExtPotHamFlag();
-    setVEffExternalPotCorrToZero();
-    computeCellHamiltonianMatrixExtPotContribution();
+    if (!d_isExternalPotCorrHamiltonianComputed)
+      computeCellHamiltonianMatrixExtPotContribution();
 #if defined(DFTFE_WITH_DEVICE)
     d_VeffJxW.resize(d_VeffJxWHost.size());
     d_VeffJxW.copyFrom(d_VeffJxWHost);
@@ -666,6 +665,14 @@ namespace dftfe
       d_cellWaveFunctionMatrixDstSinglePrec.resize(
         d_nOMPThreads * d_cellsBlockSizeHX * nDofsPerCell * numWaveFunctions);
 
+    {
+      int size, this_process;
+      MPI_Comm_size(d_mpiCommParent, &size);
+      MPI_Comm_rank(d_mpiCommParent, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     if (d_useHubbard)
       {
         d_hubbardClassPtr->initialiseFlattenedDataStructure(numWaveFunctions);
@@ -673,12 +680,27 @@ namespace dftfe
         d_hubbardClassPtr->initialiseCellWaveFunctionPointers(numWaveFunctions);
       }
 
+    {
+      int size, this_process;
+      MPI_Comm_size(d_mpiCommParent, &size);
+      MPI_Comm_rank(d_mpiCommParent, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     if (d_dftParamsPtr->isPseudopotential)
       {
         if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
           {
             d_ONCVnonLocalOperator->initialiseFlattenedDataStructure(
               numWaveFunctions, d_ONCVNonLocalProjectorTimesVectorBlock);
+
+            {
+              int size, this_process;
+              MPI_Comm_size(d_mpiCommParent, &size);
+              MPI_Comm_rank(d_mpiCommParent, &this_process);
+              std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;              
+            }
             d_ONCVnonLocalOperator->initialiseCellWaveFunctionPointers(
               d_cellWaveFunctionMatrixSrc);
           }
@@ -688,6 +710,14 @@ namespace dftfe
               numWaveFunctions, d_ONCVNonLocalProjectorTimesVectorBlock);
           }
       }
+    {
+      int size, this_process;
+      MPI_Comm_size(d_mpiCommParent, &size);
+      MPI_Comm_rank(d_mpiCommParent, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     if (d_dftParamsPtr->isPseudopotential && d_dftParamsPtr->useSinglePrecCheby)
       {
         if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
@@ -705,11 +735,27 @@ namespace dftfe
             d_ONCVNonLocalProjectorTimesVectorBlockSinglePrec);
       }
 
+    {
+      int size, this_process;
+      MPI_Comm_size(d_mpiCommParent, &size);
+      MPI_Comm_rank(d_mpiCommParent, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
+
     d_basisOperationsPtr->reinit(numWaveFunctions,
                                  d_cellsBlockSizeHX,
                                  d_densityQuadratureID,
                                  false,
                                  false);
+
+    {
+      int size, this_process;
+      MPI_Comm_size(d_mpiCommParent, &size);
+      MPI_Comm_rank(d_mpiCommParent, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
 
     // TODO extend to MGGA if required
     if ((d_excManagerPtr->getExcSSDFunctionalObj()->getExcFamilyType() ==
@@ -722,6 +768,14 @@ namespace dftfe
         d_basisOperationsPtr->createMultiVector(numWaveFunctions,
                                                 d_dstNonLocalTemp);
       }
+
+    {
+      int size, this_process;
+      MPI_Comm_size(d_mpiCommParent, &size);
+      MPI_Comm_rank(d_mpiCommParent, &this_process);
+      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+      
+    }
 
 
     dftfe::utils::MemoryStorage<dftfe::global_size_type,

@@ -24,7 +24,9 @@
 #include <TypeConfig.h>
 #include <DeviceTypeConfig.h>
 #include <cmath>
-
+#if defined(DFTFE_WITH_DEVICE)
+#  include "Exceptions.h"
+#endif
 namespace dftfe
 {
   namespace linearAlgebra
@@ -512,6 +514,15 @@ namespace dftfe
         const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
 
+      template <typename ValueType1, typename ValueType2>
+      void
+      stridedCopyToBlock(
+        const dftfe::size_type         contiguousBlockSize,
+        const dftfe::size_type         numContiguousBlocks,
+        const dftfe::size_type         startingVecId,
+        const ValueType1 *             copyFromVec,
+        ValueType2 *                   copyToVecBlock,
+        const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
       template <typename ValueType1, typename ValueType2>
       void
@@ -656,6 +667,7 @@ namespace dftfe
     private:
     };
 #if defined(DFTFE_WITH_DEVICE)
+#  include "Exceptions.h"
     enum class tensorOpDataType
     {
       fp32,
@@ -1141,6 +1153,15 @@ namespace dftfe
         ValueType2 *                   copyToVecBlock,
         const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
+      template <typename ValueType1, typename ValueType2>
+      void
+      stridedCopyToBlock(
+        const dftfe::size_type         contiguousBlockSize,
+        const dftfe::size_type         numContiguousBlocks,
+        const dftfe::size_type         startingVecId,
+        const ValueType1 *             copyFromVec,
+        ValueType2 *                   copyToVecBlock,
+        const dftfe::global_size_type *copyFromVecStartingContiguousBlockIds);
 
 
       template <typename ValueType1, typename ValueType2>

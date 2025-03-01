@@ -20,64 +20,12 @@
 #include "linearAlgebraOperationsDevice.h"
 #include "linearAlgebraOperationsInternal.h"
 #include "constants.h"
-#include <DeviceAPICalls.h>
-#include <DeviceDataTypeOverloads.h>
-#include <DeviceKernelLauncherConstants.h>
-#include "deviceKernelsGeneric.h"
+#include "linearAlgebraOperationsDeviceKernels.h"
 
 namespace dftfe
 {
   namespace linearAlgebraOperationsDevice
   {
-    namespace
-    {
-      __global__ void
-      setZeroKernel(const unsigned int BVec,
-                    const unsigned int M,
-                    const unsigned int N,
-                    double *           yVec,
-                    const unsigned int startingXVecId)
-      {
-        const unsigned int globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const unsigned int numGangsPerBVec =
-          (BVec + blockDim.x - 1) / blockDim.x;
-        const unsigned int gangBlockId = blockIdx.x / numGangsPerBVec;
-        const unsigned int localThreadId =
-          globalThreadId - gangBlockId * numGangsPerBVec * blockDim.x;
-
-        if (globalThreadId < M * numGangsPerBVec * blockDim.x &&
-            localThreadId < BVec)
-          {
-            *(yVec + gangBlockId * N + startingXVecId + localThreadId) = 0.0;
-          }
-      }
-
-
-      __global__ void
-      setZeroKernel(const unsigned int                 BVec,
-                    const unsigned int                 M,
-                    const unsigned int                 N,
-                    dftfe::utils::deviceDoubleComplex *yVec,
-                    const unsigned int                 startingXVecId)
-      {
-        const unsigned int globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const unsigned int numGangsPerBVec =
-          (BVec + blockDim.x - 1) / blockDim.x;
-        const unsigned int gangBlockId = blockIdx.x / numGangsPerBVec;
-        const unsigned int localThreadId =
-          globalThreadId - gangBlockId * numGangsPerBVec * blockDim.x;
-
-        if (globalThreadId < M * numGangsPerBVec * blockDim.x &&
-            localThreadId < BVec)
-          {
-            *(yVec + gangBlockId * N + startingXVecId + localThreadId) =
-              dftfe::utils::makeComplex(0.0, 0.0);
-          }
-      }
-    } // namespace
-
     void
     rayleighRitz(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
@@ -821,6 +769,14 @@ namespace dftfe
       //     computing_timer.enter_subsection("Total RR GEP step time");
       //   }
 
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
       const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
         elpaScala.getProcessGridDftfeScalaWrapper();
@@ -832,12 +788,17 @@ namespace dftfe
       const unsigned int chebyBlockSize =
                 std::min((std::size_t)dftParams.chebyWfcBlockSize, N/numberBandGroups);
 
-      const bool   scaleFlag = false;
-      const double scalar    = 1.0;
-
       // HXDevice.setValue(0.0);
       // HXDevice set additional points value to 0
       dftfe::utils::deviceSetValue((HXDevice + (N/numberBandGroups) * M), 0.0, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
 
       // Compute HX and store it in HXDevice
       for (unsigned int k = 0; k < N/numberBandGroups; k += chebyBlockSize)
@@ -845,15 +806,6 @@ namespace dftfe
         BLASWrapperPtr->stridedCopyToBlockConstantStride(
             chebyBlockSize, N/numberBandGroups, M, k, X, Xb.begin());
 
-        // evaluate H times XBlock^{T} and store in HXBlock^{T}
-        // HXb.setValue(0);
-        // operatorMatrix.HX(Xb,
-        //                   projectorKetTimesVector,
-        //                   M,
-        //                   chebyBlockSize,
-        //                   scaleFlag,
-        //                   scalar,
-        //                   HXb);
         operatorMatrix.HX(Xb, 1.0, 0.0, 0.0, HXb);
 
         BLASWrapperPtr->stridedCopyFromBlockConstantStride(
@@ -863,6 +815,14 @@ namespace dftfe
                                             k,
                                             HXb.begin(),
                                             HXDevice);
+      }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
       }
 
       // Note the timings for alltoall
@@ -881,10 +841,26 @@ namespace dftfe
         dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
       // end time
       if (dftParams.deviceFineGrainedTimings){
         dftfe::utils::deviceSynchronize();
         computing_timer.leave_subsection("HX Alltoall, RR GEP step");
+      }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
       }
 
       // record time for convertLayout
@@ -895,13 +871,12 @@ namespace dftfe
         }
 
       // kernel function to convert XDevice to row major form and save it in HXDevice
-      dftfe::utils::deviceKernelsGeneric::
-        convertLayout(HXDevice, 
-                      XDevice, 
-                      N/numberBandGroups, //block size
-                      numberBandGroups, //initBlockRows
-                      ((M + numberBandGroups - 1)/numberBandGroups) //initBlockCols
-                      );
+      convertLayout(HXDevice, 
+                    XDevice, 
+                    N/numberBandGroups, //block size
+                    numberBandGroups, //initBlockRows
+                    ((M + numberBandGroups - 1)/numberBandGroups) //initBlockCols
+                    );
       // Now HXDevice contains HX in row major form as needed
 
       // end time
@@ -910,6 +885,14 @@ namespace dftfe
           dftfe::utils::deviceSynchronize();
           computing_timer.leave_subsection("HX Convert Layout, RR GEP step");
         }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }  
 
       // Copy HX to extraBufferDevice as the device buffer needs to be used again
       // dftfe::utils::deviceMemcpyD2D(
@@ -951,10 +934,26 @@ namespace dftfe
         dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
       // end time
       if (dftParams.deviceFineGrainedTimings){
         dftfe::utils::deviceSynchronize();
         computing_timer.leave_subsection("X Alltoall, RR GEP step");
+      }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
       }
 
       // record time for convertLayout
@@ -965,13 +964,12 @@ namespace dftfe
         }
 
       // kernel function to convert XDevice to row major form and save it in HXDevice using stream streamCompute
-      dftfe::utils::deviceKernelsGeneric::
-        convertLayout(XDevice, 
-                      HXDevice, 
-                      N/numberBandGroups, //block size
-                      numberBandGroups, //initBlockRows
-                      ((M + numberBandGroups - 1)/numberBandGroups) //initBlockCols
-                      );
+      convertLayout(XDevice, 
+                    HXDevice, 
+                    N/numberBandGroups, //block size
+                    numberBandGroups, //initBlockRows
+                    ((M + numberBandGroups - 1)/numberBandGroups) //initBlockCols
+                    );
       // Now HXDevice contains X in row major form as needed
 
       // end time
@@ -980,6 +978,14 @@ namespace dftfe
           dftfe::utils::deviceSynchronize();
           computing_timer.leave_subsection("X Convert Layout, RR GEP step");
         }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
 
 
       // Copy resultant HXDevice to XHost as the device buffer needs to be used again
@@ -1055,137 +1061,6 @@ namespace dftfe
           overlapMatPar,
           projHamPar,
           dftParams);
-        
-
-      if (dftParams.deviceFineGrainedTimings)
-        {
-          dftfe::utils::deviceSynchronize();
-          computing_timer.leave_subsection("SConj=X^{T}XConj and HConjProj= X^{T}*HConj*XConj, RR GEP step");
-        }
-
-      //
-      // SConj=LConj*L^{T}
-      //
-      if (dftParams.deviceFineGrainedTimings)
-        computing_timer.enter_subsection(
-          "Cholesky and triangular matrix invert, RR GEP step");
-
-
-      dftfe::LAPACKSupport::Property overlapMatPropertyPostCholesky;
-      if (dftParams.useELPA)
-        {
-          // For ELPA cholesky only the upper triangular part of the hermitian
-          // matrix is required
-          dftfe::ScaLAPACKMatrix<dataTypes::number> overlapMatParConjTrans(
-            N, processGrid, rowsBlockSize);
-
-          if (processGrid->is_process_active())
-            std::fill(&overlapMatParConjTrans.local_el(0, 0),
-                      &overlapMatParConjTrans.local_el(0, 0) +
-                        overlapMatParConjTrans.local_m() *
-                          overlapMatParConjTrans.local_n(),
-                      dataTypes::number(0.0));
-
-          overlapMatParConjTrans.copy_conjugate_transposed(overlapMatPar);
-
-          if (processGrid->is_process_active())
-            {
-              int error;
-
-              if (dftParams.useELPADeviceKernel)
-                {
-#ifdef DFTFE_WITH_DEVICE_NVIDIA
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "nvidia-gpu",
-                                   0,
-                                   &error);
-                  AssertThrow(error == ELPA_OK,
-                              dealii::ExcMessage("DFT-FE Error: ELPA Error."));
-#elif DFTFE_WITH_DEVICE_AMD
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "amd-gpu",
-                                   0,
-                                   &error);
-                  AssertThrow(error == ELPA_OK,
-                              dealii::ExcMessage("DFT-FE Error: ELPA Error."));
-#endif
-                }
-
-              elpa_cholesky(elpaScala.getElpaHandle(),
-                            &overlapMatParConjTrans.local_el(0, 0),
-                            &error);
-              AssertThrow(error == ELPA_OK,
-                          dealii::ExcMessage(
-                            "DFT-FE Error: elpa_cholesky error."));
-
-              if (dftParams.useELPADeviceKernel)
-                {
-#ifdef DFTFE_WITH_DEVICE_NVIDIA
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "nvidia-gpu",
-                                   1,
-                                   &error);
-                  AssertThrow(error == ELPA_OK,
-                              dealii::ExcMessage("DFT-FE Error: ELPA Error."));
-#elif DFTFE_WITH_DEVICE_AMD
-                  elpa_set_integer(elpaScala.getElpaHandle(),
-                                   "amd-gpu",
-                                   1,
-                                   &error);
-                  AssertThrow(error == ELPA_OK,
-                              dealii::ExcMessage("DFT-FE Error: ELPA Error."));
-#endif
-                }
-            }
-          overlapMatPar.copy_conjugate_transposed(overlapMatParConjTrans);
-          overlapMatPropertyPostCholesky =
-            dftfe::LAPACKSupport::Property::lower_triangular;
-        }
-      else
-        {
-          overlapMatPar.compute_cholesky_factorization();
-
-          overlapMatPropertyPostCholesky = overlapMatPar.get_property();
-        }
-
-      AssertThrow(
-        overlapMatPropertyPostCholesky ==
-          dftfe::LAPACKSupport::Property::lower_triangular,
-        dealii::ExcMessage(
-          "DFT-FE Error: overlap matrix property after cholesky factorization incorrect"));
-
-
-      // extract LConj
-      dftfe::ScaLAPACKMatrix<dataTypes::number> LMatPar(
-        N,
-        processGrid,
-        rowsBlockSize,
-        dftfe::LAPACKSupport::Property::lower_triangular);
-
-      if (processGrid->is_process_active())
-        for (unsigned int i = 0; i < LMatPar.local_n(); ++i)
-          {
-            const unsigned int glob_i = LMatPar.global_column(i);
-            for (unsigned int j = 0; j < LMatPar.local_m(); ++j)
-              {
-                const unsigned int glob_j = LMatPar.global_row(j);
-                if (glob_j < glob_i)
-                  LMatPar.local_el(j, i) = dataTypes::number(0);
-                else
-                  LMatPar.local_el(j, i) = overlapMatPar.local_el(j, i);
-              }
-          }
-
-      // compute LConj^{-1}
-      LMatPar.invert();
-
-      if (dftParams.deviceFineGrainedTimings)
-        computing_timer.leave_subsection(
-          "Cholesky and triangular matrix invert, RR GEP step");
-
-      if (dftParams.deviceFineGrainedTimings)
-        computing_timer.enter_subsection(
-          "Compute Lconj^{-1}*HConjProj*(Lconj^{-1})^C, RR GEP step");
 
       // Construct the full HConjProj matrix
       dftfe::ScaLAPACKMatrix<dataTypes::number> projHamParConjTrans(
@@ -1215,19 +1090,22 @@ namespace dftfe
                   projHamPar.local_el(j, i) *= dataTypes::number(0.5);
               }
           }
-
-      dftfe::ScaLAPACKMatrix<dataTypes::number> projHamParCopy(N,
-                                                               processGrid,
-                                                               rowsBlockSize);
-
-      // compute HSConjProj= Lconj^{-1}*HConjProj*(Lconj^{-1})^C  (C denotes
-      // conjugate transpose LAPACK notation)
-      LMatPar.mmult(projHamParCopy, projHamPar);
-      projHamParCopy.zmCmult(projHamPar, LMatPar);
+        
 
       if (dftParams.deviceFineGrainedTimings)
-        computing_timer.leave_subsection(
-          "Compute Lconj^{-1}*HConjProj*(Lconj^{-1})^C, RR GEP step");
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.leave_subsection("SConj=X^{T}XConj and HConjProj= X^{T}*HConj*XConj, RR GEP step");
+        }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
       //
       // compute standard eigendecomposition HSConjProj: {QConjPrime,D}
       // HSConjProj=QConjPrime*D*QConjPrime^{C} QConj={Lc^{-1}}^{C}*QConjPrime
@@ -1246,41 +1124,129 @@ namespace dftfe
                       &eigenVectors.local_el(0, 0) +
                         eigenVectors.local_m() * eigenVectors.local_n(),
                       dataTypes::number(0.0));
+          // For ELPA cholesky only the upper triangular part of the
+          // hermitian matrix is required
+          dftfe::ScaLAPACKMatrix<dataTypes::number> overlapMatParConjTrans(
+            N, processGrid, rowsBlockSize);
+
+          if (processGrid->is_process_active())
+            std::fill(&overlapMatParConjTrans.local_el(0, 0),
+                      &overlapMatParConjTrans.local_el(0, 0) +
+                        overlapMatParConjTrans.local_m() *
+                          overlapMatParConjTrans.local_n(),
+                      dataTypes::number(0.0));
+
+          overlapMatParConjTrans.copy_conjugate_transposed(overlapMatPar);
 
           if (processGrid->is_process_active())
             {
               int error;
-              elpa_eigenvectors(elpaScala.getElpaHandle(),
-                                &projHamPar.local_el(0, 0),
-                                &eigenValues[0],
-                                &eigenVectors.local_el(0, 0),
-                                &error);
+              elpa_generalized_eigenvectors(elpaScala.getElpaHandle(),
+                                            &projHamPar.local_el(0, 0),
+                                            &overlapMatParConjTrans.local_el(0,
+                                                                             0),
+                                            &eigenValues[0],
+                                            &eigenVectors.local_el(0, 0),
+                                            0,
+                                            &error);
               AssertThrow(error == ELPA_OK,
                           dealii::ExcMessage(
                             "DFT-FE Error: elpa_eigenvectors error."));
             }
 
 
-          MPI_Bcast(
-            &eigenValues[0], eigenValues.size(), MPI_DOUBLE, 0, intrapoolcomm);
-
-
-          eigenVectors.copy_to(projHamPar);
+          projHamPar.copy_conjugate_transposed(eigenVectors);
 
           if (dftParams.deviceFineGrainedTimings)
             computing_timer.leave_subsection("ELPA eigen decomp, RR GEP step");
         }
       else
         {
+          //
+          // SConj=LConj*L^{T}
+          //
+          if (dftParams.deviceFineGrainedTimings)
+            computing_timer.enter_subsection(
+              "Cholesky and triangular matrix invert, RR GEP step");
+
+
+          dftfe::LAPACKSupport::Property overlapMatPropertyPostCholesky;
+          overlapMatPar.compute_cholesky_factorization();
+
+          overlapMatPropertyPostCholesky = overlapMatPar.get_property();
+
+          AssertThrow(
+            overlapMatPropertyPostCholesky ==
+              dftfe::LAPACKSupport::Property::lower_triangular,
+            dealii::ExcMessage(
+              "DFT-FE Error: overlap matrix property after cholesky factorization incorrect"));
+
+
+          // extract LConj
+          dftfe::ScaLAPACKMatrix<dataTypes::number> LMatPar(
+            N,
+            processGrid,
+            rowsBlockSize,
+            dftfe::LAPACKSupport::Property::lower_triangular);
+
+          if (processGrid->is_process_active())
+            for (unsigned int i = 0; i < LMatPar.local_n(); ++i)
+              {
+                const unsigned int glob_i = LMatPar.global_column(i);
+                for (unsigned int j = 0; j < LMatPar.local_m(); ++j)
+                  {
+                    const unsigned int glob_j = LMatPar.global_row(j);
+                    if (glob_j < glob_i)
+                      LMatPar.local_el(j, i) = dataTypes::number(0);
+                    else
+                      LMatPar.local_el(j, i) = overlapMatPar.local_el(j, i);
+                  }
+              }
+
+          // compute LConj^{-1}
+          LMatPar.invert();
+
+          if (dftParams.deviceFineGrainedTimings)
+            computing_timer.leave_subsection(
+              "Cholesky and triangular matrix invert, RR GEP step");
+          if (dftParams.deviceFineGrainedTimings)
+            computing_timer.enter_subsection(
+              "Compute Lconj^{-1}*HConjProj*(Lconj^{-1})^C, RR GEP step");
+
+
+          dftfe::ScaLAPACKMatrix<dataTypes::number> projHamParCopy(
+            N, processGrid, rowsBlockSize);
+
+          // compute HSConjProj= Lconj^{-1}*HConjProj*(Lconj^{-1})^C  (C denotes
+          // conjugate transpose LAPACK notation)
+          LMatPar.mmult(projHamParCopy, projHamPar);
+          projHamParCopy.zmCmult(projHamPar, LMatPar);
+
+          if (dftParams.deviceFineGrainedTimings)
+            computing_timer.leave_subsection(
+              "Compute Lconj^{-1}*HConjProj*(Lconj^{-1})^C, RR GEP step");
+
           if (dftParams.deviceFineGrainedTimings)
             computing_timer.enter_subsection(
               "ScaLAPACK eigen decomp, RR GEP step");
           eigenValues = projHamPar.eigenpairs_hermitian_by_index_MRRR(
             std::make_pair(0, N - 1), true);
+          projHamParCopy.copy_conjugate_transposed(projHamPar);
+          projHamParCopy.mmult(projHamPar, LMatPar);
+
           if (dftParams.deviceFineGrainedTimings)
             computing_timer.leave_subsection(
               "ScaLAPACK eigen decomp, RR GEP step");
         }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
 
       // Printing Eigenvalues
       // if (dftParams.verbosity > 3)
@@ -1320,9 +1286,6 @@ namespace dftfe
               "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T} mixed prec, RR GEP step");
         }
 
-      projHamParCopy.copy_conjugate_transposed(projHamPar);
-      projHamParCopy.mmult(projHamPar, LMatPar);
-
       if (useMixedPrecOverall && dftParams.useMixedPrecSubspaceRotRR)
         subspaceRotationRRMixedPrecScalapack(XDevice,
                                             (M + numberBandGroups - 1)/numberBandGroups,
@@ -1359,6 +1322,14 @@ namespace dftfe
               "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T} mixed prec, RR GEP step");
         }
 
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
       // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
@@ -1375,13 +1346,12 @@ namespace dftfe
       // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
 
       // kernel function to convert XDevice to col major form and save it in HXDevice using stream streamCompute
-      dftfe::utils::deviceKernelsGeneric::
-        convertLayout(HXDevice, 
-                      XDevice, 
-                      N/numberBandGroups, //block size
-                      ((M + numberBandGroups - 1)/numberBandGroups), //initBlockRows
-                      numberBandGroups //initBlockCols
-                      );
+      convertLayout(HXDevice, 
+                    XDevice, 
+                    N/numberBandGroups, //block size
+                    ((M + numberBandGroups - 1)/numberBandGroups), //initBlockRows
+                    numberBandGroups //initBlockCols
+                    );
       // Now HXDevice contains X in column major form as needed
 
       // end time
@@ -1411,12 +1381,28 @@ namespace dftfe
         dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
       // endtime
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
           computing_timer.leave_subsection("X Alltoall after subspaceRot, RR GEP step");
         }
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
@@ -1428,6 +1414,14 @@ namespace dftfe
         X,
         XDevice,
         (M * (N/numberBandGroups)) * sizeof(dataTypes::number));
+
+      {
+        int size, this_process;
+        MPI_Comm_size(intrapoolcomm, &size);
+        MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
@@ -1761,30 +1755,7 @@ namespace dftfe
                 {
                   // set to zero wavefunctions which are not inside a given band
                   // paral group
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-                  setZeroKernel<<<(BVec +
-                                   (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                                    dftfe::utils::DEVICE_BLOCK_SIZE * M,
-                                  dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-                    BVec,
-                    M,
-                    N,
-                    dftfe::utils::makeDataTypeDeviceCompatible(X),
-                    jvec);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-                  hipLaunchKernelGGL(
-                    setZeroKernel,
-                    (BVec + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                      dftfe::utils::DEVICE_BLOCK_SIZE * M,
-                    dftfe::utils::DEVICE_BLOCK_SIZE,
-                    0,
-                    0,
-                    BVec,
-                    M,
-                    N,
-                    dftfe::utils::makeDataTypeDeviceCompatible(X),
-                    jvec);
-#endif
+                  setZero(BVec, M, N, X, jvec);
                 }
             }
 

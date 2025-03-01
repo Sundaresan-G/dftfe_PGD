@@ -230,8 +230,25 @@ namespace dftfe
       // fflush(stdout);
 
       // select ncclDouble or ncclFloat based on NumberType
+      {
+        int size = totalRanks, this_process = myRank;
+        // MPI_Comm_size(intrapoolcomm, &size);
+        // MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
+
       if (ncclCommInit && useDCCL)
         {
+
+          {
+            int size = totalRanks, this_process = myRank;
+            // MPI_Comm_size(intrapoolcomm, &size);
+            // MPI_Comm_rank(intrapoolcomm, &this_process);
+            std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+            
+          }
+
           ncclComm_t comm = *ncclCommPtr;
           if (dcclCommSelector != 0){
             comm = *ncclCommPvtPtr;            
@@ -263,6 +280,14 @@ namespace dftfe
               //   }
               // fflush(stdout);
 
+              {
+                int size = totalRanks, this_process = myRank;
+                // MPI_Comm_size(intrapoolcomm, &size);
+                // MPI_Comm_rank(intrapoolcomm, &this_process);
+                std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                
+              }
+
               sendTo += i;
               sendTo %= totalRanks;
               recvFrom += (totalRanks - i);
@@ -272,27 +297,30 @@ namespace dftfe
               recvOffset = (size_t)recvFrom * recvCount;
 
               // Printing line and file to show no error
-              // dftfe::utils::deviceSynchronize();
-              // MPI_Barrier(MPI_COMM_WORLD);
-              // fflush(stdout);
-              // ncclCommUserRank(*ncclCommPtr, &ncclRank);
-              // MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-              // std::cout << "ncclRank: " << ncclRank << " mpiRank: " << mpiRank 
-              //           << " sendOffset: " << sendOffset
-              //           << " recvOffset: " << recvOffset
-              //           << " sendCount: " << sendCount
-              //           << " recvCount: " << recvCount << std::endl;
-              // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
-              //   {
-              //     std::cout << "No error in file " << __FILE__ << " at line " << __LINE__
-              //           << std::endl;
-              //     // print parameter values
-                  // std::cout << "sendCount: " << sendCount << std::endl;
-                  // std::cout << "recvCount: " << recvCount << std::endl;
-                  // std::cout << "sendTo: " << sendTo << std::endl;
-                  // std::cout << "recvFrom: " << recvFrom << std::endl;
-              //   }
-              // fflush(stdout);
+              {
+                int ncclRank, mpiRank;
+                dftfe::utils::deviceSynchronize();
+                MPI_Barrier(MPI_COMM_WORLD);
+                fflush(stdout);
+                ncclCommUserRank(*ncclCommPtr, &ncclRank);
+                MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+                std::cout << "ncclRank: " << ncclRank << " mpiRank: " << mpiRank 
+                          << " sendOffset: " << sendOffset
+                          << " recvOffset: " << recvOffset
+                          << " sendCount: " << sendCount
+                          << " recvCount: " << recvCount << std::endl;
+                // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
+                //   {
+                //     std::cout << "No error in file " << __FILE__ << " at line " << __LINE__
+                //           << std::endl;
+                //     // print parameter values
+                //     std::cout << "sendCount: " << sendCount << std::endl;
+                //     std::cout << "recvCount: " << recvCount << std::endl;
+                //     std::cout << "sendTo: " << sendTo << std::endl;
+                //     std::cout << "recvFrom: " << recvFrom << std::endl;
+                //   }
+                fflush(stdout);
+              }
 
               // if (sendOffset + sendCount > totalNumRows * totalNumCols){
               //   sendCount = totalNumRows * totalNumCols - sendOffset;
@@ -316,6 +344,14 @@ namespace dftfe
                                     stream));
 
               NCCLCHECK(ncclGroupEnd());
+
+              {
+                int size = totalRanks, this_process = myRank;
+                // MPI_Comm_size(intrapoolcomm, &size);
+                // MPI_Comm_rank(intrapoolcomm, &this_process);
+                std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                
+              }
             }
           // NCCLCHECK(ncclGroupEnd());
         } else
@@ -364,6 +400,14 @@ namespace dftfe
             }
 #  endif
         }
+
+      {
+        int size = totalRanks, this_process = myRank;
+        // MPI_Comm_size(intrapoolcomm, &size);
+        // MPI_Comm_rank(intrapoolcomm, &this_process);
+        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+        
+      }
 
       return 0;
     }
