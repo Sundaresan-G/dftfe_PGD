@@ -40,8 +40,12 @@ namespace dftfe
     d_matrixFreeDataPRefined.initialize_dof_vector(
       d_phiExt, d_phiExtDofHandlerIndexElectro);
 
-    d_densityInNodalValues.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
-    d_densityOutNodalValues.resize(d_dftParamsPtr->spinPolarized == 1 ? 2 : 1);
+    d_densityInNodalValues.resize(
+      d_dftParamsPtr->noncolin ? 4 :
+                                 (d_dftParamsPtr->spinPolarized == 1 ? 2 : 1));
+    d_densityOutNodalValues.resize(
+      d_dftParamsPtr->noncolin ? 4 :
+                                 (d_dftParamsPtr->spinPolarized == 1 ? 2 : 1));
 
     d_matrixFreeDataPRefined.initialize_dof_vector(
       d_densityInNodalValues[0], d_densityDofHandlerIndexElectro);
@@ -96,7 +100,8 @@ namespace dftfe
     //
 
     AssertThrow(
-      (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
+      ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1) *
+          (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
           matrix_free_data.get_vector_partitioner()->locally_owned_size() <
         INT_MAX / d_numEigenValues,
       dealii::ExcMessage(
@@ -105,7 +110,8 @@ namespace dftfe
     d_eigenVectorsFlattenedHost.resize(
       (d_numEigenValues *
        matrix_free_data.get_vector_partitioner()->locally_owned_size()) *
-        (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size(),
+        (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
+        ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),
       dataTypes::number(0.0));
 
 
@@ -156,6 +162,8 @@ namespace dftfe
 
     if (d_dftParamsPtr->verbosity >= 2 && d_dftParamsPtr->spinPolarized == 1)
       totalMagnetization(d_densityInQuadValues[1]);
+    if (d_dftParamsPtr->verbosity >= 2 && d_dftParamsPtr->noncolin)
+      totalNonCollinearMagnetization(d_densityInQuadValues);
   }
 #include "dft.inst.cc"
 } // namespace dftfe

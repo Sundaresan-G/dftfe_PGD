@@ -94,6 +94,7 @@ namespace dftfe
     std::vector<double> d_densityValsTotalAllQuads;
     std::vector<double> d_densityValsSpinUpAllQuads;
     std::vector<double> d_densityValsSpinDownAllQuads;
+    std::vector<double> d_magAxisAllQuads;
     std::vector<double> d_gradDensityValsSpinUpAllQuads;
     std::vector<double> d_gradDensityValsSpinDownAllQuads;
     std::vector<double> d_quadPointsAll;

@@ -25,7 +25,8 @@ namespace dftfe
     hessianSpinUp,
     hessianSpinDown,
     laplacianSpinUp,
-    laplacianSpinDown
+    laplacianSpinDown,
+    magAxisValues
   };
 
   template <dftfe::utils::MemorySpace memorySpace>

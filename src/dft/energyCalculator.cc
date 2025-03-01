@@ -143,6 +143,107 @@ namespace dftfe
         }
       return result;
     }
+    template <typename T>
+    void
+    transformNonColinDensityToSpinPolarizedDensity(
+      const std::shared_ptr<
+        dftfe::basis::
+          FEBasisOperations<T, double, dftfe::utils::MemorySpace::HOST>>
+        &                basisOperationsPtr,
+      const unsigned int quadratureId,
+      bool               isGGA,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &nonColinDensityValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &nonColinGradDensityValues,
+      std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &spinPolarizedDensityValues,
+      std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &spinPolarizedGradDensityValues)
+    {
+      spinPolarizedDensityValues.resize(2);
+      spinPolarizedGradDensityValues.resize(isGGA ? 2 : 0);
+      spinPolarizedDensityValues[0] = nonColinDensityValues[0];
+      spinPolarizedDensityValues[1].resize(spinPolarizedDensityValues[0].size(),
+                                           0.0);
+      if (isGGA)
+        {
+          spinPolarizedGradDensityValues[0] = nonColinGradDensityValues[0];
+          spinPolarizedGradDensityValues[1].resize(
+            spinPolarizedGradDensityValues[0].size(), 0.0);
+        }
+      basisOperationsPtr->reinit(0, 0, quadratureId, false);
+      const unsigned int  nQuadsPerCell = basisOperationsPtr->nQuadsPerCell();
+      std::vector<double> cellMagAxisVals(isGGA ? nQuadsPerCell * 3 : 0, 0.0);
+      for (unsigned int iCell = 0; iCell < basisOperationsPtr->nCells();
+           ++iCell)
+        {
+          const double *cellRhoValues =
+            nonColinDensityValues[0].data() + iCell * nQuadsPerCell;
+          const double *cellMagZValues =
+            nonColinDensityValues[1].data() + iCell * nQuadsPerCell;
+          const double *cellMagYValues =
+            nonColinDensityValues[2].data() + iCell * nQuadsPerCell;
+          const double *cellMagXValues =
+            nonColinDensityValues[3].data() + iCell * nQuadsPerCell;
+          double *cellMagNormValues =
+            spinPolarizedDensityValues[1].data() + iCell * nQuadsPerCell;
+
+          for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+            cellMagNormValues[iQuad] =
+              std::sqrt(cellMagZValues[iQuad] * cellMagZValues[iQuad] +
+                        cellMagYValues[iQuad] * cellMagYValues[iQuad] +
+                        cellMagXValues[iQuad] * cellMagXValues[iQuad]);
+          if (isGGA)
+            {
+              const double *cellGradRhoValues =
+                nonColinGradDensityValues[0].data() + 3 * iCell * nQuadsPerCell;
+              const double *cellGradMagZValues =
+                nonColinGradDensityValues[1].data() + 3 * iCell * nQuadsPerCell;
+              const double *cellGradMagYValues =
+                nonColinGradDensityValues[2].data() + 3 * iCell * nQuadsPerCell;
+              const double *cellGradMagXValues =
+                nonColinGradDensityValues[3].data() + 3 * iCell * nQuadsPerCell;
+              double *cellGradMagNormValues =
+                spinPolarizedGradDensityValues[1].data() +
+                3 * iCell * nQuadsPerCell;
+              double *cellMagAxisValues = cellMagAxisVals.data();
+              for (unsigned int iQuad = 0; iQuad < nQuadsPerCell; ++iQuad)
+                {
+                  if (cellMagNormValues[iQuad] > 1e-12)
+                    {
+                      cellMagAxisValues[3 * iQuad + 0] =
+                        cellMagXValues[iQuad] / cellMagNormValues[iQuad];
+                      cellMagAxisValues[3 * iQuad + 1] =
+                        cellMagYValues[iQuad] / cellMagNormValues[iQuad];
+                      cellMagAxisValues[3 * iQuad + 2] =
+                        cellMagZValues[iQuad] / cellMagNormValues[iQuad];
+                    }
+                  else
+                    {
+                      cellMagAxisValues[3 * iQuad + 0] = 0.0;
+                      cellMagAxisValues[3 * iQuad + 1] = 0.0;
+                      cellMagAxisValues[3 * iQuad + 2] = 0.0;
+                    }
+                  for (unsigned int idim = 0; idim < 3; ++idim)
+                    {
+                      cellGradMagNormValues[iQuad * 3 + idim] =
+                        cellMagAxisValues[3 * iQuad + 2] *
+                          cellGradMagZValues[3 * iQuad + idim] +
+                        cellMagAxisValues[3 * iQuad + 1] *
+                          cellGradMagYValues[3 * iQuad + idim] +
+                        cellMagAxisValues[3 * iQuad + 0] *
+                          cellGradMagXValues[3 * iQuad + idim];
+                    }
+                }
+            }
+        }
+    }
+
     void
     printEnergy(const double                      bandEnergy,
                 const double                      totalkineticEnergy,
@@ -274,7 +375,8 @@ namespace dftfe
                     const dftParameters &                   dftParams)
     {
       double       bandEnergyLocal = 0.0;
-      unsigned int numEigenValues = eigenValues[0].size() / (1 + spinPolarized);
+      unsigned int numEigenValues =
+        eigenValues[0].size() / (spinPolarized == 1 ? 2 : 1);
       //
       for (unsigned int ipool = 0;
            ipool < dealii::Utilities::MPI::n_mpi_processes(interpoolcomm);
@@ -344,6 +446,21 @@ namespace dftfe
                                   << eigenValues[kPoint][i + numEigenValues]
                                   << "       " << partialOccupancy << "       "
                                   << partialOccupancy2 << std::endl;
+                        }
+                      if (spinPolarized == 2)
+                        {
+                          const double partialOccupancy =
+                            dftUtils::getPartialOccupancy(
+                              eigenValues[kPoint][i], fermiEnergy, C_kb, TVal);
+                          bandEnergyLocal += partialOccupancy *
+                                             kPointWeights[kPoint] *
+                                             eigenValues[kPoint][i];
+                          //
+
+                          if (verbosity > 1)
+                            scout << i << " : " << eigenValues[kPoint][i]
+                                  << "       " << partialOccupancy << std::endl;
+                          //
                         }
                     } // eigen state
                   //
@@ -620,7 +737,10 @@ namespace dftfe
                                       fermiEnergyUp,
                                       fermiEnergyDown,
                                       d_dftParams.TVal,
-                                      d_dftParams.spinPolarized,
+                                      (d_dftParams.noncolin ||
+                                       d_dftParams.hasSOC) ?
+                                        2 :
+                                        d_dftParams.spinPolarized,
                                       scout,
                                       interpoolcomm,
                                       lowerBoundKindex,
@@ -662,26 +782,37 @@ namespace dftfe
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       gradDensityOutQuadValuesSpinPolarized;
 
-    if (d_dftParams.spinPolarized == 0)
-      densityOutQuadValuesSpinPolarized.push_back(
-        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>(
-          densityOutValues[0].size(), 0.0));
-
     bool isIntegrationByPartsGradDensityDependenceVxc =
       (excManagerPtr->getExcSSDFunctionalObj()->getDensityBasedFamilyType() ==
        densityFamilyType::GGA);
-
-    if (isIntegrationByPartsGradDensityDependenceVxc)
+    if (d_dftParams.noncolin)
       {
-        gradDensityOutQuadValuesSpinPolarized = gradDensityOutValues;
-
-        if (d_dftParams.spinPolarized == 0)
-          gradDensityOutQuadValuesSpinPolarized.push_back(
-            dftfe::utils::MemoryStorage<double,
-                                        dftfe::utils::MemorySpace::HOST>(
-              gradDensityOutValues[0].size(), 0.0));
+        internalEnergy::transformNonColinDensityToSpinPolarizedDensity(
+          basisOperationsPtr,
+          densityQuadratureID,
+          isIntegrationByPartsGradDensityDependenceVxc,
+          densityOutValues,
+          gradDensityOutValues,
+          densityOutQuadValuesSpinPolarized,
+          gradDensityOutQuadValuesSpinPolarized);
       }
+    else if (d_dftParams.spinPolarized == 0)
+      {
+        densityOutQuadValuesSpinPolarized.push_back(
+          dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>(
+            densityOutValues[0].size(), 0.0));
 
+
+        if (isIntegrationByPartsGradDensityDependenceVxc)
+          {
+            gradDensityOutQuadValuesSpinPolarized = gradDensityOutValues;
+
+            gradDensityOutQuadValuesSpinPolarized.push_back(
+              dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::HOST>(
+                gradDensityOutValues[0].size(), 0.0));
+          }
+      }
     computeXCEnergyTermsSpinPolarized(basisOperationsPtr,
                                       densityQuadratureID,
                                       excManagerPtr,
@@ -872,8 +1003,26 @@ namespace dftfe
         gradDensityInQuadValuesSpinPolarized  = gradDensityInValues;
         gradDensityOutQuadValuesSpinPolarized = gradDensityOutValues;
       }
-
-    if (d_dftParams.spinPolarized == 0)
+    if (d_dftParams.noncolin)
+      {
+        internalEnergy::transformNonColinDensityToSpinPolarizedDensity(
+          basisOperationsPtr,
+          densityQuadratureID,
+          isIntegrationByPartsGradDensityDependenceVxc,
+          densityInValues,
+          gradDensityInValues,
+          densityInQuadValuesSpinPolarized,
+          gradDensityInQuadValuesSpinPolarized);
+        internalEnergy::transformNonColinDensityToSpinPolarizedDensity(
+          basisOperationsPtr,
+          densityQuadratureID,
+          isIntegrationByPartsGradDensityDependenceVxc,
+          densityOutValues,
+          gradDensityOutValues,
+          densityOutQuadValuesSpinPolarized,
+          gradDensityOutQuadValuesSpinPolarized);
+      }
+    else if (d_dftParams.spinPolarized == 0)
       {
         densityInQuadValuesSpinPolarized.push_back(
           dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>(

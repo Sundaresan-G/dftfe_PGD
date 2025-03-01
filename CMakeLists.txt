@@ -216,6 +216,7 @@ SET(DEVICE_SRC
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dft/solveVselfInBinsDeviceKernels.cc
+  ./src/dftOperator/KohnShamHamiltonianOperatorDeviceKernels.cc
   ./src/dft/kineticEnergyDensityCalculatorDeviceKernels.cc
   ./src/linAlg/linearAlgebraOperationsDeviceKernels.cc
   ./src/force/forceWfcContractionsDeviceKernels.cc
@@ -236,6 +237,7 @@ SET(DEVICE_SRC
   ./src/dft/densityCalculatorDeviceKernels.cc
   ./src/dft/densityFirstOrderResponseCalculatorDeviceKernels.cc
   ./src/dft/solveVselfInBinsDeviceKernels.cc
+  ./src/dftOperator/KohnShamHamiltonianOperatorDeviceKernels.cc
   ./src/dft/kineticEnergyDensityCalculatorDeviceKernels.cc
   ./src/linAlg/linearAlgebraOperationsDeviceKernels.cc
   ./src/force/forceWfcContractionsDeviceKernels.cc
