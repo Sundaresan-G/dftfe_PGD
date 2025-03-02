@@ -65,18 +65,6 @@ namespace dftfe
     if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       dftfe::utils::deviceSynchronize();
 #endif
-
-    {
-      int size;
-      MPI_Comm_size(mpiCommParent, &size);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
-
     MPI_Barrier(mpiCommParent);
     double             computeRho_time = MPI_Wtime();
     const unsigned int numKPoints      = kPointWeights.size();
@@ -92,10 +80,6 @@ namespace dftfe
     dftUtils::createBandParallelizationIndices(interBandGroupComm,
                                                totalNumWaveFunctions,
                                                bandGroupLowHighPlusOneIndices);
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
 
     const unsigned int BVec =
       std::min(dftParams.chebyWfcBlockSize, bandGroupLowHighPlusOneIndices[1]);
@@ -167,10 +151,6 @@ namespace dftfe
 
     dftfe::linearAlgebra::MultiVector<NumberType, memorySpace>
       *flattenedArrayBlock;
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
 
     for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
       for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
@@ -260,10 +240,6 @@ namespace dftfe
                       flattenedArrayBlock->data());
 #endif
 
-                  if (this_process == 0){
-                    std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                  }
-
 
                   basisOperationsPtr->reinit(currentBlockSize,
                                              cellsBlockSize,
@@ -273,10 +249,6 @@ namespace dftfe
 
                   flattenedArrayBlock->updateGhostValues();
                   basisOperationsPtr->distribute(*(flattenedArrayBlock));
-
-                  if (this_process == 0){
-                    std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                  }
 
                   for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
                     {
@@ -318,16 +290,8 @@ namespace dftfe
                             isEvaluateGradRho);
                         } // non-trivial cell block check
                     }     // cells block loop
-
-                  if (this_process == 0){
-                    std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                  }
                 }
             }
-
-          if (this_process == 0){
-            std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          }
 
           if (spectrumSplit)
             for (unsigned int jvec = 0; jvec < Nfr; jvec += BVec)
@@ -457,10 +421,6 @@ namespace dftfe
                       }     // cells block loop
                   }
               } // spectrum split block
-
-          if (this_process == 0){
-            std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          }
         }
 #if defined(DFTFE_WITH_DEVICE)
     rhoHost.resize(rho.size());
@@ -474,10 +434,6 @@ namespace dftfe
       }
 
 #endif
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
 
     int size;
     MPI_Comm_size(interpoolcomm, &size);
@@ -499,11 +455,6 @@ namespace dftfe
                         MPI_SUM,
                         interpoolcomm);
       }
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
-
     MPI_Comm_size(interBandGroupComm, &size);
     if (size > 1)
       {
@@ -523,10 +474,6 @@ namespace dftfe
                         MPI_SUM,
                         interBandGroupComm);
       }
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
 
     if (dftParams.spinPolarized == 1)
       {
@@ -574,17 +521,8 @@ namespace dftfe
     if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       dftfe::utils::deviceSynchronize();
 #endif
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
-
     MPI_Barrier(mpiCommParent);
     computeRho_time = MPI_Wtime() - computeRho_time;
-
-    if (this_process == 0){
-      std::cout << "Reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-    }
 
     if (this_process == 0 && dftParams.verbosity >= 2)
       if (memorySpace == dftfe::utils::MemorySpace::HOST)

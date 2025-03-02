@@ -610,6 +610,7 @@ namespace dftfe
     const bool         print,
     const bool         smearedNuclearCharges)
   {
+    // FIXME: change it to intrapoolcomm
     const dealii::ConditionalOStream scout(
       std::cout,
       (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0));

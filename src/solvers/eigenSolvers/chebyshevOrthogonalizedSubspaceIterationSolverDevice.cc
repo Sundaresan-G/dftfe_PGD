@@ -128,15 +128,7 @@ namespace dftfe
     const bool               useMixedPrecOverall,
     const bool               isFirstScf)
   {
-
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
+    
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -149,14 +141,6 @@ namespace dftfe
         dealii::TimerOutput::never :
         dealii::TimerOutput::every_call,
       dealii::TimerOutput::wall_times);
-
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
 
 
     //
@@ -184,13 +168,13 @@ namespace dftfe
     reShapedNumRows = (localVectorSize + numberBandGroups - 1)/numberBandGroups;
     reShapedNumCols = totalNumberWaveFunctions;
 
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
+    // {
+    //   int size, this_process;
+    //   MPI_Comm_size(intrapoolcomm, &size);
+    //   MPI_Comm_rank(intrapoolcomm, &this_process);
+    //   std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
       
-    }
+    // }
 
     if (isFirstScf && isFirstFilteringCall && numberBandGroups > 1)
     {
@@ -201,14 +185,6 @@ namespace dftfe
 
       // XHost.resize(reShapedNumRows * reShapedNumCols, 0);
       // HXHost.resize(reShapedNumRows * reShapedNumCols, 0);
-    }
-
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
     }
 
     distributedDeviceVec<dataTypes::number> *XBlock =
@@ -241,24 +217,8 @@ namespace dftfe
         &operatorMatrix.getScratchFEMultivectorSinglePrec(vectorsBlockSize, 3) :
         NULL;
 
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
     operatorMatrix.reinitNumberWavefunctions(vectorsBlockSize);
     std::vector<double> eigenValuesBlock(vectorsBlockSize);
-
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
 
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
@@ -323,14 +283,6 @@ namespace dftfe
         d_upperBoundUnWantedSpectrum = bounds.second;
       }
 
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -342,14 +294,6 @@ namespace dftfe
         computingTimerStandard.enter_subsection(
           "Chebyshev filtering on Device");
       }
-
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
 
 
     unsigned int chebyshevOrder = d_dftParams.chebyshevOrder;
@@ -399,14 +343,6 @@ namespace dftfe
         fflush(stdout);
       }
 
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
 
 
     // two blocks of wavefunctions are filtered simultaneously when overlap
@@ -422,14 +358,6 @@ namespace dftfe
     for (unsigned int jvec = 0; jvec < totalNumberWaveFunctions;
          jvec += numSimultaneousBlocksCurrent * vectorsBlockSize)
       {
-
-        {
-          int size, this_process;
-          MPI_Comm_size(intrapoolcomm, &size);
-          MPI_Comm_rank(intrapoolcomm, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          
-        }
         // Correct block dimensions if block "goes off edge of" the matrix
         const unsigned int BVec =
           vectorsBlockSize; // std::min(vectorsBlockSize,
@@ -699,14 +627,6 @@ namespace dftfe
           pcout << "ChebyShev Filtering Done: " << std::endl;
       }
 
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -889,14 +809,6 @@ namespace dftfe
           "Total RR GEP step time");
       }
 
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -974,14 +886,6 @@ namespace dftfe
         1.0,
         operatorMatrix.getInverseSqrtMassVector().data(),
         eigenVectorsRotFracDensityFlattenedDevice);
-
-    {
-      int size, this_process;
-      MPI_Comm_size(intrapoolcomm, &size);
-      MPI_Comm_rank(intrapoolcomm, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
 
     return d_upperBoundUnWantedSpectrum;
   }
