@@ -769,13 +769,7 @@ namespace dftfe
       //     computing_timer.enter_subsection("Total RR GEP step time");
       //   }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
@@ -792,13 +786,7 @@ namespace dftfe
       // HXDevice set additional points value to 0
       dftfe::utils::deviceSetValue((HXDevice + (N/numberBandGroups) * M), 0.0, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // Compute HX and store it in HXDevice
       for (unsigned int k = 0; k < N/numberBandGroups; k += chebyBlockSize)
@@ -817,13 +805,7 @@ namespace dftfe
                                             HXDevice);
       }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // Note the timings for alltoall
       if (dftParams.deviceFineGrainedTimings){
@@ -841,13 +823,7 @@ namespace dftfe
         dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // end time
       if (dftParams.deviceFineGrainedTimings){
@@ -855,13 +831,7 @@ namespace dftfe
         computing_timer.leave_subsection("HX Alltoall, RR GEP step");
       }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // record time for convertLayout
       if (dftParams.deviceFineGrainedTimings)
@@ -886,13 +856,7 @@ namespace dftfe
           computing_timer.leave_subsection("HX Convert Layout, RR GEP step");
         }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }  
+  
 
       // Copy HX to extraBufferDevice as the device buffer needs to be used again
       // dftfe::utils::deviceMemcpyD2D(
@@ -934,13 +898,7 @@ namespace dftfe
         dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // end time
       if (dftParams.deviceFineGrainedTimings){
@@ -948,13 +906,7 @@ namespace dftfe
         computing_timer.leave_subsection("X Alltoall, RR GEP step");
       }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // record time for convertLayout
       if (dftParams.deviceFineGrainedTimings)
@@ -979,13 +931,7 @@ namespace dftfe
           computing_timer.leave_subsection("X Convert Layout, RR GEP step");
         }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
 
       // Copy resultant HXDevice to XHost as the device buffer needs to be used again
@@ -1098,13 +1044,7 @@ namespace dftfe
           computing_timer.leave_subsection("SConj=X^{T}XConj and HConjProj= X^{T}*HConj*XConj, RR GEP step");
         }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       //
       // compute standard eigendecomposition HSConjProj: {QConjPrime,D}
@@ -1239,13 +1179,7 @@ namespace dftfe
               "ScaLAPACK eigen decomp, RR GEP step");
         }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
 
       // Printing Eigenvalues
@@ -1263,13 +1197,13 @@ namespace dftfe
       // linearAlgebraOperations::internal::broadcastAcrossInterCommScaLAPACKMat(
       //   processGrid, projHamPar, interBandGroupComm, 0);
 
-      /*
-         MPI_Bcast(&eigenValues[0],
-         eigenValues.size(),
-         MPI_DOUBLE,
-         0,
-         interBandGroupComm);
-       */
+      
+      MPI_Bcast(&eigenValues[0],
+      eigenValues.size(),
+      MPI_DOUBLE,
+      0,
+      intrapoolcomm);
+
       //
       // rotate the basis in the subspace
       // X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T}, stored in the column major
@@ -1322,13 +1256,7 @@ namespace dftfe
               "X^{T}={QConjPrime}^{C}*LConj^{-1}*X^{T} mixed prec, RR GEP step");
         }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
@@ -1381,13 +1309,7 @@ namespace dftfe
         dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
       );
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // endtime
       if (dftParams.deviceFineGrainedTimings)
@@ -1396,13 +1318,7 @@ namespace dftfe
           computing_timer.leave_subsection("X Alltoall after subspaceRot, RR GEP step");
         }
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
@@ -1415,13 +1331,7 @@ namespace dftfe
         XDevice,
         (M * (N/numberBandGroups)) * sizeof(dataTypes::number));
 
-      {
-        int size, this_process;
-        MPI_Comm_size(intrapoolcomm, &size);
-        MPI_Comm_rank(intrapoolcomm, &this_process);
-        std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-        
-      }
+
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);

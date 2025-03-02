@@ -79,6 +79,8 @@ namespace dftfe
         }
     }
 
+
+
     template <typename ValueType1, typename ValueType2>
     __global__ void
     interpolateNodalDataToQuadDeviceKernel(
@@ -285,6 +287,7 @@ namespace dftfe
 #endif
       }
 
+
       template void
       interpolateNodalDataToQuadDevice(
         const dftfe::size_type numDofsPerElem,
@@ -338,7 +341,6 @@ namespace dftfe
            double *               x,
            const double           beta,
            const dftfe::size_type size);
-
     } // namespace deviceKernelsGeneric
   }   // namespace utils
 } // namespace dftfe

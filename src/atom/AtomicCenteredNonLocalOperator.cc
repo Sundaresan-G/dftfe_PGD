@@ -1151,13 +1151,6 @@ namespace dftfe
     d_flattenedNonLocalCellDofIndexToProcessDofIndexMap.copyFrom(
       tempNonLocalCellDofVector);
 
-    {
-      int size, this_process;
-      MPI_Comm_size(d_mpi_communicator, &size);
-      MPI_Comm_rank(d_mpi_communicator, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;              
-    }
-
     if constexpr (dftfe::utils::MemorySpace::HOST == memorySpace)
       {
         d_numberWaveFunctions = waveFunctionBlockSize;
@@ -1187,37 +1180,15 @@ namespace dftfe
     else
       {
         d_numberWaveFunctions = waveFunctionBlockSize;
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpi_communicator, &size);
-          MPI_Comm_rank(d_mpi_communicator, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;              
-        }
-
         dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
           d_SphericalFunctionKetTimesVectorPar[0].get_partitioner(),
           waveFunctionBlockSize,
           sphericalFunctionKetTimesVectorParFlattened);
-        
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpi_communicator, &size);
-          MPI_Comm_rank(d_mpi_communicator, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;              
-        }
-        
         d_sphericalFnTimesVectorAllCellsDevice.clear();
         d_sphericalFnTimesVectorAllCellsDevice.resize(
           d_totalNonlocalElems * d_numberWaveFunctions *
             d_maxSingleAtomContribution,
           ValueType(0.0));
-
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpi_communicator, &size);
-          MPI_Comm_rank(d_mpi_communicator, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;              
-        }
         const std::vector<unsigned int> atomIdsInProcessor =
           d_atomCenteredSphericalFunctionContainer
             ->getAtomIdsInCurrentProcess();
@@ -1238,26 +1209,12 @@ namespace dftfe
             d_numberNodesPerElement,
           ValueType(0.0));
 
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpi_communicator, &size);
-          MPI_Comm_rank(d_mpi_communicator, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;              
-        }
-
         for (unsigned int i = 0; i < d_totalNonlocalElems; i++)
           {
             hostPointerCDaggeOutTemp[i] =
               d_sphericalFnTimesVectorAllCellsDevice.begin() +
               i * d_numberWaveFunctions * d_maxSingleAtomContribution;
           }
-
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpi_communicator, &size);
-          MPI_Comm_rank(d_mpi_communicator, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;              
-        }
 
         dftfe::utils::deviceMemcpyH2D(devicePointerCDaggerOutTemp,
                                       hostPointerCDaggeOutTemp,

@@ -36,14 +36,6 @@ namespace dftfe
       (d_excManagerPtr->getExcSSDFunctionalObj()->getDensityBasedFamilyType() ==
        densityFamilyType::GGA);
 
-    {
-      int size, this_process;
-      MPI_Comm_size(d_mpiCommParent, &size);
-      MPI_Comm_rank(d_mpiCommParent, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-
     if (d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER" ||
         d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA" ||
         d_dftParamsPtr->mixingMethod == "LOW_RANK_DIELECM_PRECOND")
@@ -86,9 +78,6 @@ namespace dftfe
       }
     else
       {
-
-        pcout << "Reached line " << __LINE__ << std::endl;
-
         d_basisOperationsPtrHost->reinit(0, 0, d_densityQuadratureId, false);
         const unsigned int nQuadsPerCell =
           d_basisOperationsPtrHost->nQuadsPerCell();
@@ -107,16 +96,6 @@ namespace dftfe
         for (unsigned int iComp = 0; iComp < d_gradDensityOutQuadValues.size();
              ++iComp)
           d_gradDensityOutQuadValues[iComp].resize(3 * nQuadsPerCell * nCells);
-
-          pcout << "Reached line " << __LINE__ << std::endl;
-
-          {
-            int size, this_process;
-            MPI_Comm_size(d_mpiCommParent, &size);
-            MPI_Comm_rank(d_mpiCommParent, &this_process);
-            std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-            
-          }
 
 
 #ifdef DFTFE_WITH_DEVICE
@@ -169,8 +148,6 @@ namespace dftfe
                               d_numEigenValues != d_numEigenValuesRR);
         // normalizeRhoOutQuadValues();
 
-        pcout << "Reached line " << __LINE__ << std::endl;
-
         if (d_dftParamsPtr->computeEnergyEverySCF || isGroundState)
           {
             computeRhoNodalFromPSI(isConsiderSpectrumSplitting);
@@ -187,8 +164,6 @@ namespace dftfe
           }
       }
 
-    pcout << "Reached line " << __LINE__ << std::endl;
-
     if (d_dftParamsPtr->computeEnergyEverySCF || isGroundState)
       {
         d_rhoOutNodalValuesDistributed = d_densityOutNodalValues[0];
@@ -203,8 +178,6 @@ namespace dftfe
           d_gradDensityTotalOutValuesLpspQuad,
           true);
       }
-
-    pcout << "Reached line " << __LINE__ << std::endl;
 
     if (isGroundState &&
         ((d_dftParamsPtr->reuseDensityGeoOpt == 2 &&
@@ -235,8 +208,6 @@ namespace dftfe
           rhoOutValuesCopy,
           d_rhoOutNodalValuesSplit);
       }
-
-    pcout << "Reached line " << __LINE__ << std::endl;
   }
 
 

@@ -2594,15 +2594,6 @@ namespace dftfe
                                *d_dftParamsPtr,
                                atomLocations);
       }
-
-    {
-      int size, this_process;
-      MPI_Comm_size(d_mpiCommParent, &size);
-      MPI_Comm_rank(d_mpiCommParent, &this_process);
-      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
-    }
-    
     //
     // Begin SCF iteration
     //
@@ -3031,14 +3022,6 @@ namespace dftfe
                 true,
                 false,
                 true);
-          }
-
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpiCommParent, &size);
-          MPI_Comm_rank(d_mpiCommParent, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          
         }
 
         computing_timer.enter_subsection("phiTot solve");
@@ -3060,14 +3043,6 @@ namespace dftfe
                            d_dftParamsPtr->absLinearSolverTolerance,
                            d_dftParamsPtr->maxLinearSolverIterations,
                            d_dftParamsPtr->verbosity);
-          }
-
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpiCommParent, &size);
-          MPI_Comm_rank(d_mpiCommParent, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          
         }
 
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
@@ -3079,14 +3054,6 @@ namespace dftfe
           d_phiTotRhoIn,
           d_phiInQuadValues,
           dummy);
-
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpiCommParent, &size);
-          MPI_Comm_rank(d_mpiCommParent, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          
-        }
 
         if (d_dftParamsPtr->confiningPotential)
           {
@@ -3105,14 +3072,6 @@ namespace dftfe
         "<<totalCharge(d_dofHandlerPRefined,d_phiTotRhoIn)<<std::endl;
         }
         */
-
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpiCommParent, &size);
-          MPI_Comm_rank(d_mpiCommParent, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          
-        }
 
         computing_timer.leave_subsection("phiTot solve");
 
@@ -3520,14 +3479,6 @@ namespace dftfe
                   }
               }
 
-            {
-              int size, this_process;
-              MPI_Comm_size(d_mpiCommParent, &size);
-              MPI_Comm_rank(d_mpiCommParent, &this_process);
-              std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-              
-            }
-
 
             //
             // fermi energy
@@ -3572,14 +3523,6 @@ namespace dftfe
                        adaptiveChebysevFilterPassesTol);
                 while (maxRes > filterPassTol && count < d_dftParamsPtr->maxChebyPasses)
                   {
-                    {
-                      int size, this_process;
-                      MPI_Comm_size(d_mpiCommParent, &size);
-                      MPI_Comm_rank(d_mpiCommParent, &this_process);
-                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                      
-                    }
-                    
                     for (unsigned int kPoint = 0;
                          kPoint < d_kPointWeights.size();
                          ++kPoint)
@@ -3599,14 +3542,6 @@ namespace dftfe
                               .computeCellHamiltonianMatrix();
                             computing_timer.leave_subsection(
                               "Hamiltonian Matrix Computation");
-                          }
-                        
-                        {
-                          int size, this_process;
-                          MPI_Comm_size(d_mpiCommParent, &size);
-                          MPI_Comm_rank(d_mpiCommParent, &this_process);
-                          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                          
                         }
 
 
@@ -3648,29 +3583,12 @@ namespace dftfe
                             scfIter == 0);
                       }
 
-                    {
-                      int size, this_process;
-                      MPI_Comm_size(d_mpiCommParent, &size);
-                      MPI_Comm_rank(d_mpiCommParent, &this_process);
-                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                      
-                    }
-
                     //
                     if (d_dftParamsPtr->constraintMagnetization)
                       compute_fermienergy_constraintMagnetization(eigenValues);
                     else
                       compute_fermienergy(eigenValues, numElectrons);
                     //
-
-                    {
-                      int size, this_process;
-                      MPI_Comm_size(d_mpiCommParent, &size);
-                      MPI_Comm_rank(d_mpiCommParent, &this_process);
-                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                      
-                    }
-
                     maxRes = computeMaximumHighestOccupiedStateResidualNorm(
                       residualNormWaveFunctionsAllkPoints,
                       (scfIter < d_dftParamsPtr->spectrumSplitStartingScfIter ||
@@ -3678,15 +3596,6 @@ namespace dftfe
                         eigenValues :
                         eigenValuesRRSplit,
                       fermiEnergy);
-
-                    {
-                      int size, this_process;
-                      MPI_Comm_size(d_mpiCommParent, &size);
-                      MPI_Comm_rank(d_mpiCommParent, &this_process);
-                      std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-                      
-                    }
-
                     if (d_dftParamsPtr->verbosity >= 2)
                       pcout
                         << "Maximum residual norm among all states with occupation number greater than 1e-3: "
@@ -3703,15 +3612,6 @@ namespace dftfe
                 pcout << "Fermi Energy computed: " << fermiEnergy << std::endl;
               }
           }
-
-        {
-          int size, this_process;
-          MPI_Comm_size(d_mpiCommParent, &size);
-          MPI_Comm_rank(d_mpiCommParent, &this_process);
-          std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-          
-        }
-
         computing_timer.enter_subsection("compute rho");
         if (d_dftParamsPtr->useSymm)
           {
