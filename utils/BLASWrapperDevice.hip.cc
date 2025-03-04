@@ -269,19 +269,19 @@ namespace dftfe
       dftfe::utils::deviceBlasOperation_t transa, transb;
       if (transA == 'N')
         transa = dftfe::utils::DEVICEBLAS_OP_N;
-      else if (transA == 'T')
+      else if (transA == 'T' || transA == 'C')
         transa = dftfe::utils::DEVICEBLAS_OP_T;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemm ");
         }
       if (transB == 'N')
         transb = dftfe::utils::DEVICEBLAS_OP_N;
-      else if (transB == 'T')
+      else if (transB == 'T' || transB == 'C')
         transb = dftfe::utils::DEVICEBLAS_OP_T;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemm ");
         }
 
       dftfe::utils::deviceBlasStatus_t status = hipblasSgemm(d_deviceBlasHandle,
@@ -326,7 +326,7 @@ namespace dftfe
         transa = dftfe::utils::DEVICEBLAS_OP_C;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemm ");
         }
       if (transB == 'N')
         transb = dftfe::utils::DEVICEBLAS_OP_N;
@@ -336,7 +336,7 @@ namespace dftfe
         transb = dftfe::utils::DEVICEBLAS_OP_C;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transB in gemm ");
         }
 
       dftfe::utils::deviceBlasStatus_t status =
@@ -376,21 +376,21 @@ namespace dftfe
       dftfe::utils::deviceBlasOperation_t transa, transb;
       if (transA == 'N')
         transa = dftfe::utils::DEVICEBLAS_OP_N;
-      else if (transA == 'T')
+      else if (transA == 'T' || transA == 'C')
         transa = dftfe::utils::DEVICEBLAS_OP_T;
 
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemm ");
         }
       if (transB == 'N')
         transb = dftfe::utils::DEVICEBLAS_OP_N;
-      else if (transB == 'T')
+      else if (transB == 'T' || transB == 'C')
         transb = dftfe::utils::DEVICEBLAS_OP_T;
 
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transB in gemm ");
         }
       dftfe::utils::deviceBlasStatus_t status = hipblasDgemm(d_deviceBlasHandle,
                                                              transa,
@@ -434,7 +434,7 @@ namespace dftfe
         transa = dftfe::utils::DEVICEBLAS_OP_C;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemm ");
         }
       if (transB == 'N')
         transb = dftfe::utils::DEVICEBLAS_OP_N;
@@ -444,7 +444,7 @@ namespace dftfe
         transb = dftfe::utils::DEVICEBLAS_OP_C;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transB in gemm ");
         }
 
 
@@ -483,11 +483,11 @@ namespace dftfe
       dftfe::utils::deviceBlasOperation_t transa;
       if (transA == 'N')
         transa = dftfe::utils::DEVICEBLAS_OP_N;
-      else if (transA == 'T')
+      else if (transA == 'T' || transA == 'C')
         transa = dftfe::utils::DEVICEBLAS_OP_T;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemm ");
         }
       dftfe::utils::deviceBlasStatus_t status = hipblasDgemv(d_deviceBlasHandle,
                                                              transa,
@@ -522,11 +522,11 @@ namespace dftfe
       dftfe::utils::deviceBlasOperation_t transa, transb;
       if (transA == 'N')
         transa = dftfe::utils::DEVICEBLAS_OP_N;
-      else if (transA == 'T')
+      else if (transA == 'T' || transA == 'C')
         transa = dftfe::utils::DEVICEBLAS_OP_T;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemm ");
         }
 
       dftfe::utils::deviceBlasStatus_t status = hipblasSgemv(d_deviceBlasHandle,
@@ -567,7 +567,7 @@ namespace dftfe
         transa = dftfe::utils::DEVICEBLAS_OP_C;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemv ");
         }
 
       dftfe::utils::deviceBlasStatus_t status =
@@ -609,7 +609,7 @@ namespace dftfe
         transa = dftfe::utils::DEVICEBLAS_OP_C;
       else
         {
-          // Assert Statement
+          throw std::invalid_argument("Incorrect transA in gemv ");
         }
 
       dftfe::utils::deviceBlasStatus_t status =
