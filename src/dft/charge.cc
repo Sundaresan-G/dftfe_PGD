@@ -312,6 +312,9 @@ namespace dftfe
           << dealii::Utilities::MPI::sum(xsum, mpi_communicator) << " "
           << dealii::Utilities::MPI::sum(ysum, mpi_communicator) << " "
           << dealii::Utilities::MPI::sum(zsum, mpi_communicator) << std::endl;
+    pcout << "Absolute magentization : "
+          << dealii::Utilities::MPI::sum(normValue, mpi_communicator)
+          << std::endl;
   }
 
   //

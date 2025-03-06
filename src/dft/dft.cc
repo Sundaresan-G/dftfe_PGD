@@ -3524,14 +3524,13 @@ namespace dftfe
                 // do more passes of chebysev filter till the check passes.
                 // This improves the scf convergence performance.
 
-                double filterPassTol =
+                const double filterPassTol =
                   (scfIter == 0 && isRestartGroundStateCalcFromChk) ?
                     1.0e-8 :
                     ((scfIter == 0 &&
                       adaptiveChebysevFilterPassesTol > firstScfChebyTol) ?
                        firstScfChebyTol :
                        adaptiveChebysevFilterPassesTol);
-                filterPassTol = std::min(filterPassTol,norm*5e-3);
                 while (maxRes > filterPassTol && count < 100)
                   {
                     for (unsigned int kPoint = 0;
