@@ -614,10 +614,11 @@ namespace dftfe
         // int this_process;
         // MPI_Comm_rank(d_mpiCommParent, &this_process);
 
-
-
+        const unsigned int numWfnSpinors =
+          flattenedArrayBlock.numVectors() / numPsi;
         if (memorySpace == dftfe::utils::MemorySpace::HOST)
-          for (unsigned int iNode = 0; iNode < basisOperationsPtr->nOwnedDofs();
+          for (unsigned int iNode = 0;
+               iNode < basisOperationsPtr->nOwnedDofs() * numWfnSpinors;
                ++iNode)
             std::memcpy(flattenedArrayBlock.data() + iNode * numPsi,
                         X + iNode * N + startingVecId,
@@ -627,7 +628,7 @@ namespace dftfe
           BLASWrapperPtr->stridedCopyToBlockConstantStride(
             numPsi,
             N,
-            basisOperationsPtr->nOwnedDofs(),
+            basisOperationsPtr->nOwnedDofs() * numWfnSpinors,
             startingVecId,
             X,
             flattenedArrayBlock.data());
@@ -647,7 +648,7 @@ namespace dftfe
                                       densityQuadratureId,
                                       BLASWrapperPtr,
                                       flattenedArrayBlock,
-                                      numPsi,
+                                      numPsi * numWfnSpinors,
                                       numCells,
                                       numQuads,
                                       eigenValues,
@@ -685,7 +686,8 @@ namespace dftfe
             oncvClassPtr->getNonLocalOperator()->applyVCconjtransOnX(
               flattenedArrayBlock,
               kPointIndex,
-              CouplingStructure::diagonal,
+              oncvClassPtr->hasSOC() ? CouplingStructure::blockDiagonal :
+                                       CouplingStructure::diagonal,
               oncvClassPtr->getCouplingMatrix(),
               projectorKetTimesVector);
           }
@@ -721,7 +723,7 @@ namespace dftfe
                                               nlpspQuadratureId,
                                               BLASWrapperPtr,
                                               flattenedArrayBlock,
-                                              numPsi,
+                                              numPsi * numWfnSpinors,
                                               numCells,
                                               cellsBlockSize,
                                               psiQuadsNLP,
@@ -743,7 +745,7 @@ namespace dftfe
                   projecterKetTimesFlattenedVectorLocalIds,
                   numCells,
                   numQuadsNLP,
-                  numPsi,
+                  numPsi * numWfnSpinors,
                   totalNonTrivialPseudoWfcs,
                   innerBlockSizeEnlp,
                   nlpContractionContribution,
@@ -849,6 +851,10 @@ namespace dftfe
       const unsigned int blockSize =
         std::min(dftParams.chebyWfcBlockSize,
                  bandGroupLowHighPlusOneIndices[1]);
+      const unsigned int numWfnSpinors =
+        (dftParams.noncolin || dftParams.hasSOC) ? 2 : 1;
+      const unsigned int numSpinComponents =
+        (dftParams.spinPolarized == 1) ? 2 : 1;
 
       // int this_process;
       // MPI_Comm_rank(mpiCommParent, &this_process);
@@ -878,33 +884,40 @@ namespace dftfe
 
       // device_time = MPI_Wtime();
 
-      dftfe::utils::MemoryStorage<double, memorySpace> eigenValues(blockSize,
-                                                                   0.0);
+      dftfe::utils::MemoryStorage<double, memorySpace> eigenValues(
+        blockSize * numWfnSpinors, 0.0);
       dftfe::utils::MemoryStorage<double, memorySpace> partialOccupancies(
-        blockSize, 0.0);
+        blockSize * numWfnSpinors, 0.0);
       dftfe::utils::MemoryStorage<double, memorySpace>
         elocWfcEshelbyTensorQuadValues(numCells * numQuads * 9, 0.0);
 
-      dftfe::utils::MemoryStorage<double, memorySpace> onesVec(blockSize, 1.0);
+      dftfe::utils::MemoryStorage<double, memorySpace> onesVec(blockSize *
+                                                                 numWfnSpinors,
+                                                               1.0);
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace> onesVecNLP(
-        blockSize, dataTypes::number(1.0));
+        blockSize * numWfnSpinors, dataTypes::number(1.0));
 
       const unsigned int cellsBlockSize = std::min((unsigned int)10, numCells);
 
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace> psiQuadsFlat(
-        cellsBlockSize * numQuads * blockSize, dataTypes::number(0.0));
+        cellsBlockSize * numQuads * blockSize * numWfnSpinors,
+        dataTypes::number(0.0));
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
-                                                                  gradPsiQuadsFlat(cellsBlockSize * numQuads * blockSize * 3,
+                                                                  gradPsiQuadsFlat(cellsBlockSize * numQuads * blockSize * numWfnSpinors *
+                           3,
                          dataTypes::number(0.0));
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace> psiQuadsNLP(
-        numCells * numQuadsNLP * blockSize, dataTypes::number(0.0));
+        numCells * numQuadsNLP * blockSize * numWfnSpinors,
+        dataTypes::number(0.0));
 
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
-        gradPsiQuadsNLPFlat(numCells * numQuadsNLP * 3 * blockSize,
+        gradPsiQuadsNLPFlat(numCells * numQuadsNLP * 3 * blockSize *
+                              numWfnSpinors,
                             dataTypes::number(0.0));
 
       dftfe::utils::MemoryStorage<double, memorySpace>
-        eshelbyTensorContributions(cellsBlockSize * numQuads * blockSize * 9,
+        eshelbyTensorContributions(cellsBlockSize * numQuads * blockSize *
+                                     numWfnSpinors * 9,
                                    0.0);
 
       const unsigned int totalNonTrivialPseudoWfcs =
@@ -916,7 +929,7 @@ namespace dftfe
         std::min((unsigned int)10, totalNonTrivialPseudoWfcs);
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
         nlpContractionContribution(innerBlockSizeEnlp * numQuadsNLP * 3 *
-                                     blockSize,
+                                     blockSize * numWfnSpinors,
                                    dataTypes::number(0.0));
       dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
         projectorKetTimesPsiTimesVTimesPartOccContractionPsiQuadsFlattenedBlock;
@@ -1091,12 +1104,13 @@ namespace dftfe
               const unsigned int currentBlockSize =
                 std::min(blockSize, N - ivec);
 
-              flattenedArrayBlockPtr =
-                &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
+              flattenedArrayBlockPtr = &(basisOperationsPtr->getMultiVector(
+                currentBlockSize * numWfnSpinors, 0));
 
               if (isPsp)
                 oncvClassPtr->getNonLocalOperator()
-                  ->initialiseFlattenedDataStructure(currentBlockSize,
+                  ->initialiseFlattenedDataStructure(currentBlockSize *
+                                                       numWfnSpinors,
                                                      projectorKetTimesVector);
 
               if (useHubbard)
@@ -1110,33 +1124,41 @@ namespace dftfe
                   (ivec + currentBlockSize) >
                     bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
                 {
-                  std::vector<double> blockedEigenValues(currentBlockSize, 0.0);
+                  std::vector<double> blockedEigenValues(currentBlockSize *
+                                                           numWfnSpinors,
+                                                         0.0);
                   std::vector<double> blockedPartialOccupancies(
-                    currentBlockSize, 0.0);
+                    currentBlockSize * numWfnSpinors, 0.0);
                   for (unsigned int iWave = 0; iWave < currentBlockSize;
                        ++iWave)
                     {
-                      blockedEigenValues[iWave] =
-                        eigenValuesH[kPoint][spinIndex * N + ivec + iWave];
-                      blockedPartialOccupancies[iWave] =
-                        partialOccupanciesH[kPoint]
-                                           [spinIndex * N + ivec + iWave];
+                      for (unsigned int iSpinor = 0; iSpinor < numWfnSpinors;
+                           ++iSpinor)
+                        blockedEigenValues[iSpinor * currentBlockSize + iWave] =
+                          eigenValuesH[kPoint][spinIndex * N + ivec + iWave];
+                      for (unsigned int iSpinor = 0; iSpinor < numWfnSpinors;
+                           ++iSpinor)
+                        blockedPartialOccupancies[iSpinor * currentBlockSize +
+                                                  iWave] =
+                          partialOccupanciesH[kPoint]
+                                             [spinIndex * N + ivec + iWave];
                     }
 
 
                   dftfe::utils::MemoryTransfer<
                     memorySpace,
-                    dftfe::utils::MemorySpace::HOST>::
-                    copy(currentBlockSize,
-                         eigenValues.data(),
-                         &blockedEigenValues[0]);
+                    dftfe::utils::MemorySpace::HOST>::copy(blockedEigenValues
+                                                             .size(),
+                                                           eigenValues.data(),
+                                                           blockedEigenValues
+                                                             .data());
 
                   dftfe::utils::MemoryTransfer<
                     memorySpace,
                     dftfe::utils::MemorySpace::HOST>::
-                    copy(currentBlockSize,
+                    copy(blockedPartialOccupancies.size(),
                          partialOccupancies.data(),
-                         &blockedPartialOccupancies[0]);
+                         blockedPartialOccupancies.data());
 
                   /*
                   dftfe::utils::deviceMemcpyH2D(eigenValuesD.data(),
@@ -1164,8 +1186,8 @@ namespace dftfe
                     *flattenedArrayBlockPtr,
                     projectorKetTimesVector,
                     projectorKetTimesVectorHubbard,
-                    X +
-                      ((1 + spinPolarizedFlag) * kPoint + spinIndex) * MLoc * N,
+                    X + (numSpinComponents * kPoint + spinIndex) * MLoc *
+                          numWfnSpinors * N,
                     eigenValues,
                     partialOccupancies,
                     kcoordx,

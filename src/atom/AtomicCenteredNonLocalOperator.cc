@@ -2020,6 +2020,16 @@ namespace dftfe
                       &zero,
                       &d_sphericalFnTimesWavefunMatrix[atomId][0],
                       d_numberWaveFunctions / 2);
+                    if (!flagCopyResultsToMatrix)
+                      {
+                        d_BLASWrapperPtr->xcopy(
+                          d_numberWaveFunctions * numberSphericalFunctions,
+                          &d_sphericalFnTimesWavefunMatrix[atomId][0],
+                          1,
+                          sphericalFunctionKetTimesVectorParFlattened.begin() +
+                            localId * d_numberWaveFunctions,
+                          1);
+                      }
                     alpha +=
                       numberSphericalFunctions * numberSphericalFunctions * 4;
                   }
@@ -2158,6 +2168,10 @@ namespace dftfe
                       d_sphericalFnTimesVectorAllCellsDevice.begin(),
                       d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice
                         .begin());
+                else
+                  copyPaddedMemoryStorageVectorToDistributeVectorDevice(
+                    d_couplingMatrixTimesVectorDevice,
+                    sphericalFunctionKetTimesVectorParFlattened);
               }
             else if (couplingtype == CouplingStructure::dense)
               {
