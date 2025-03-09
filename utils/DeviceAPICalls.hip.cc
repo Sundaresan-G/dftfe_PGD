@@ -111,50 +111,53 @@ namespace dftfe
 
     template <typename ValueType>
     void
-    deviceSetValue(ValueType *devPtr, ValueType value, std::size_t size)
+    deviceSetValue(ValueType *devPtr, ValueType value, std::size_t size, deviceStream_t stream)
     {
       hipLaunchKernelGGL(setValueKernel,
                          size / dftfe::utils::DEVICE_BLOCK_SIZE + 1,
                          dftfe::utils::DEVICE_BLOCK_SIZE,
                          0,
-                         0,
+                         stream,
                          makeDataTypeDeviceCompatible(devPtr),
                          makeDataTypeDeviceCompatible(value),
                          size);
     }
 
     template void
-    deviceSetValue(bool *devPtr, bool value, std::size_t size);
+    deviceSetValue(bool *devPtr, bool value, std::size_t size, deviceStream_t stream);
 
     template void
-    deviceSetValue(int *devPtr, int value, std::size_t size);
+    deviceSetValue(int *devPtr, int value, std::size_t size, deviceStream_t stream);
 
     template void
-    deviceSetValue(long int *devPtr, long int value, std::size_t size);
+    deviceSetValue(long int *devPtr, long int value, std::size_t size, deviceStream_t stream);
 
     template void
-    deviceSetValue(size_type *devPtr, size_type value, std::size_t size);
+    deviceSetValue(size_type *devPtr, size_type value, std::size_t size, deviceStream_t stream);
 
     template void
     deviceSetValue(global_size_type *devPtr,
                    global_size_type  value,
-                   std::size_t       size);
+                   std::size_t       size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(double *devPtr, double value, std::size_t size);
+    deviceSetValue(double *devPtr, double value, std::size_t size, deviceStream_t stream);
 
     template void
-    deviceSetValue(float *devPtr, float value, std::size_t size);
+    deviceSetValue(float *devPtr, float value, std::size_t size, deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<float> *devPtr,
                    std::complex<float>  value,
-                   std::size_t          size);
+                   std::size_t          size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<double> *devPtr,
                    std::complex<double>  value,
-                   std::size_t           size);
+                   std::size_t           size,
+                   deviceStream_t stream);
 
     deviceError_t
     deviceFree(void *devPtr)
