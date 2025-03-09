@@ -44,6 +44,8 @@ main
 #build files
 /*build/
 /*build*/
+/*run*/
+Instructions/
 
 #Tex files
 *.aux
