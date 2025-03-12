@@ -900,6 +900,19 @@ namespace dftfe
       const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
       dealii::AffineConstraints<double> &      constraintMatrix);
 
+    /**
+     *@brief Sets Nonhomegeneous dirichlet boundary conditions for total potential constraints on
+     * right most non-periodic boundary (boundary id==0).
+     *
+     * @param[in] dofHandler
+     * @param[out] constraintMatrix dealii::AffineConstraints<double> object
+     *with homogeneous Dirichlet boundary condition entries added
+     */
+    void
+    applyNeumanAndHomogeneousDirichletBC(
+      const dealii::DoFHandler<3> &            _dofHandler,
+      const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
+      dealii::AffineConstraints<double> &      constraintMatrix);
 
     /**
      *@brief interpolate rho nodal data to quadrature data using FEEvaluation
