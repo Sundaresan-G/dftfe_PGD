@@ -165,6 +165,8 @@ namespace dftfe
     bool         smearedNuclearCharges;
     bool         floatingNuclearCharges;
     bool         multipoleBoundaryConditions;
+    bool         applyHomogeneousNeumannDirichletBC;
+    bool         applyOnlyNeumannBC;
     bool         nonLinearCoreCorrection;
     unsigned int maxLineSearchIterCGPRP;
     std::string  atomicMassesFile;

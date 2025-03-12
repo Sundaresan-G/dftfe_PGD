@@ -3028,9 +3028,10 @@ namespace dftfe
                   densityInQuadValuesCopy,
                   d_BLASWrapperPtr,
                   true,
-                  d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                    d_dftParamsPtr->periodicZ &&
-                    !d_dftParamsPtr->pinnedNodeForPBC,
+                  (d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                   d_dftParamsPtr->periodicZ &&
+                   !d_dftParamsPtr->pinnedNodeForPBC) ||
+                    (d_dftParamsPtr->applyOnlyNeumannBC),
                   d_dftParamsPtr->smearedNuclearCharges,
                   true,
                   false,
@@ -3077,9 +3078,10 @@ namespace dftfe
                 d_smearedChargeQuadratureIdElectro,
                 densityInQuadValuesCopy,
                 true,
-                d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                  d_dftParamsPtr->periodicZ &&
-                  !d_dftParamsPtr->pinnedNodeForPBC,
+                (d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                 d_dftParamsPtr->periodicZ &&
+                 !d_dftParamsPtr->pinnedNodeForPBC) ||
+                  (d_dftParamsPtr->applyOnlyNeumannBC),
                 d_dftParamsPtr->smearedNuclearCharges,
                 true,
                 false,
@@ -3531,7 +3533,7 @@ namespace dftfe
                       adaptiveChebysevFilterPassesTol > firstScfChebyTol) ?
                        firstScfChebyTol :
                        adaptiveChebysevFilterPassesTol);
-                filterPassTol = std::min(filterPassTol,norm*5e-3);
+                filterPassTol = std::min(filterPassTol, norm * 5e-3);
                 while (maxRes > filterPassTol && count < 100)
                   {
                     for (unsigned int kPoint = 0;

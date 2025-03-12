@@ -250,9 +250,25 @@ namespace dftfe
       locatePeriodicPinnedNodes(d_dofHandlerPRefined,
                                 d_constraintsPRefined,
                                 d_constraintsForTotalPotentialElectro);
-    applyHomogeneousDirichletBC(d_dofHandlerPRefined,
-                                d_constraintsPRefinedOnlyHanging,
-                                d_constraintsForTotalPotentialElectro);
+
+    if (d_dftParamsPtr->applyHomogeneousNeumannDirichletBC)
+      {
+        applyNeumanAndHomogeneousDirichletBC(
+          d_dofHandlerPRefined,
+          d_constraintsPRefinedOnlyHanging,
+          d_constraintsForTotalPotentialElectro);
+      }
+    else if (d_dftParamsPtr->applyOnlyNeumannBC)
+      {
+        // do Nothing
+      }
+    else
+      {
+        applyHomogeneousDirichletBC(d_dofHandlerPRefined,
+                                    d_constraintsPRefinedOnlyHanging,
+                                    d_constraintsForTotalPotentialElectro);
+      }
+
     d_constraintsForTotalPotentialElectro.close();
     d_constraintsForTotalPotentialElectro.merge(
       d_constraintsPRefined,
