@@ -18,6 +18,8 @@
 //
 
 #include <KohnShamHamiltonianOperator.h>
+#include <KohnShamHamiltonianOperatorDeviceKernels.h>
+
 #include <ExcDFTPlusU.h>
 #ifdef _OPENMP
 #  include <omp.h>
@@ -30,6 +32,70 @@
 
 namespace dftfe
 {
+  namespace internal
+  {
+    template <>
+    void
+    computeCellHamiltonianMatrixNonCollinearFromBlocks(
+      const std::pair<unsigned int, unsigned int> cellRange,
+      const unsigned int                          nDofsPerCell,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &tempHamMatrixRealBlock,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &tempHamMatrixImagBlock,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &tempHamMatrixBZBlockNonCollin,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &tempHamMatrixBYBlockNonCollin,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &tempHamMatrixBXBlockNonCollin,
+      dftfe::utils::MemoryStorage<std::complex<double>,
+                                  dftfe::utils::MemorySpace::HOST>
+        &cellHamiltonianMatrix)
+    {
+      for (unsigned int iCell = cellRange.first; iCell < cellRange.second;
+           ++iCell)
+        for (unsigned int iDoF = 0; iDoF < nDofsPerCell; ++iDoF)
+          for (unsigned int jDoF = 0; jDoF < nDofsPerCell; ++jDoF)
+            {
+              const double H_realIJ =
+                tempHamMatrixRealBlock[jDoF + nDofsPerCell * iDoF +
+                                       (iCell - cellRange.first) *
+                                         nDofsPerCell * nDofsPerCell];
+              const double H_imagIJ =
+                tempHamMatrixImagBlock[jDoF + nDofsPerCell * iDoF +
+                                       (iCell - cellRange.first) *
+                                         nDofsPerCell * nDofsPerCell];
+              const double H_bzIJ =
+                tempHamMatrixBZBlockNonCollin[jDoF + nDofsPerCell * iDoF +
+                                              (iCell - cellRange.first) *
+                                                nDofsPerCell * nDofsPerCell];
+              const double H_byIJ =
+                tempHamMatrixBYBlockNonCollin[jDoF + nDofsPerCell * iDoF +
+                                              (iCell - cellRange.first) *
+                                                nDofsPerCell * nDofsPerCell];
+              const double H_bxIJ =
+                tempHamMatrixBXBlockNonCollin[jDoF + nDofsPerCell * iDoF +
+                                              (iCell - cellRange.first) *
+                                                nDofsPerCell * nDofsPerCell];
+              cellHamiltonianMatrix[iCell * nDofsPerCell * nDofsPerCell * 4 +
+                                    2 * nDofsPerCell * (2 * iDoF + 1) +
+                                    2 * jDoF + 1] =
+                std::complex<double>(H_realIJ - H_bzIJ, H_imagIJ);
+              cellHamiltonianMatrix[iCell * nDofsPerCell * nDofsPerCell * 4 +
+                                    2 * nDofsPerCell * (2 * iDoF) + 2 * jDoF] =
+                std::complex<double>(H_realIJ + H_bzIJ, H_imagIJ);
+              cellHamiltonianMatrix[iCell * nDofsPerCell * nDofsPerCell * 4 +
+                                    2 * nDofsPerCell * (2 * iDoF + 1) +
+                                    2 * jDoF] =
+                std::complex<double>(H_bxIJ, H_byIJ);
+              cellHamiltonianMatrix[iCell * nDofsPerCell * nDofsPerCell * 4 +
+                                    2 * nDofsPerCell * (2 * iDoF) + 2 * jDoF +
+                                    1] = std::complex<double>(H_bxIJ, -H_byIJ);
+            }
+    }
+  }; // namespace internal
+
   //
   // constructor
   //
@@ -37,6 +103,9 @@ namespace dftfe
   KohnShamHamiltonianOperator<memorySpace>::KohnShamHamiltonianOperator(
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
       BLASWrapperPtr,
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+      BLASWrapperPtrHost,
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
       basisOperationsPtr,
@@ -58,6 +127,7 @@ namespace dftfe
     , d_spinIndex(0)
     , d_HamiltonianIndex(0)
     , d_BLASWrapperPtr(BLASWrapperPtr)
+    , d_BLASWrapperPtrHost(BLASWrapperPtrHost)
     , d_basisOperationsPtr(basisOperationsPtr)
     , d_basisOperationsPtrHost(basisOperationsPtrHost)
     , d_oncvClassPtr(oncvClassPtr)
@@ -171,24 +241,38 @@ namespace dftfe
     const unsigned int nDofsPerCell = d_basisOperationsPtr->nDofsPerCell();
     tempHamMatrixRealBlock.resize(nDofsPerCell * nDofsPerCell *
                                   d_cellsBlockSizeHamiltonianConstruction);
-    if (std::is_same<dataTypes::number, std::complex<double>>::value)
+    if (d_dftParamsPtr->noncolin)
+      {
+        tempHamMatrixBXBlockNonCollin.resize(
+          nDofsPerCell * nDofsPerCell *
+          d_cellsBlockSizeHamiltonianConstruction);
+        tempHamMatrixBYBlockNonCollin.resize(
+          nDofsPerCell * nDofsPerCell *
+          d_cellsBlockSizeHamiltonianConstruction);
+        tempHamMatrixBZBlockNonCollin.resize(
+          nDofsPerCell * nDofsPerCell *
+          d_cellsBlockSizeHamiltonianConstruction);
+      }
+    if constexpr (std::is_same<dataTypes::number, std::complex<double>>::value)
       tempHamMatrixImagBlock.resize(nDofsPerCell * nDofsPerCell *
                                     d_cellsBlockSizeHamiltonianConstruction);
     for (unsigned int iHamiltonian = 0;
          iHamiltonian < d_cellHamiltonianMatrix.size();
          ++iHamiltonian)
-      d_cellHamiltonianMatrix[iHamiltonian].resize(nDofsPerCell * nDofsPerCell *
-                                                   nCells);
+      d_cellHamiltonianMatrix[iHamiltonian].resize(
+        nDofsPerCell * nDofsPerCell * nCells *
+        (d_dftParamsPtr->noncolin ? 4 : 1));
     for (unsigned int iHamiltonian = 0;
          iHamiltonian < d_cellHamiltonianMatrixSinglePrec.size();
          ++iHamiltonian)
       d_cellHamiltonianMatrixSinglePrec[iHamiltonian].resize(
-        nDofsPerCell * nDofsPerCell * nCells);
+        nDofsPerCell * nDofsPerCell * nCells *
+        (d_dftParamsPtr->noncolin ? 4 : 1));
 
     d_basisOperationsPtrHost->reinit(0, 0, d_densityQuadratureID, false);
     const unsigned int numberQuadraturePoints =
       d_basisOperationsPtrHost->nQuadsPerCell();
-    if (std::is_same<dataTypes::number, std::complex<double>>::value)
+    if constexpr (std::is_same<dataTypes::number, std::complex<double>>::value)
       for (unsigned int kPointIndex = 0; kPointIndex < d_kPointWeights.size();
            ++kPointIndex)
         {
@@ -301,23 +385,86 @@ namespace dftfe
     d_basisOperationsPtrHost->reinit(0, 0, d_densityQuadratureID);
     const unsigned int totalLocallyOwnedCells =
       d_basisOperationsPtrHost->nCells();
-    const unsigned int numberQuadraturePointsPerCell =
+    const unsigned int numberQuadraturePoints =
       d_basisOperationsPtrHost->nQuadsPerCell();
 #if defined(DFTFE_WITH_DEVICE)
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       d_VeffJxWHost;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_BeffxJxWHost;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_BeffyJxWHost;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_BeffzJxWHost;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       d_invJacderExcWithSigmaTimesGradRhoJxWHost;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxWHost;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxWHost;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxWHost;
 #else
     auto &d_VeffJxWHost = d_VeffJxW;
+    auto &d_BeffxJxWHost = d_BeffxJxW;
+    auto &d_BeffyJxWHost = d_BeffyJxW;
+    auto &d_BeffzJxWHost = d_BeffzJxW;
     auto &d_invJacderExcWithSigmaTimesGradRhoJxWHost =
       d_invJacderExcWithSigmaTimesGradRhoJxW;
+    auto &d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxWHost =
+      d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxW;
+    auto &d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxWHost =
+      d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxW;
+    auto &d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxWHost =
+      d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxW;
 #endif
-    d_VeffJxWHost.resize(totalLocallyOwnedCells * numberQuadraturePointsPerCell,
-                         0.0);
+    d_VeffJxWHost.resize(totalLocallyOwnedCells * numberQuadraturePoints, 0.0);
+    d_BeffxJxWHost.resize(d_dftParamsPtr->noncolin ?
+                            totalLocallyOwnedCells * numberQuadraturePoints :
+                            0,
+                          0.0);
+    d_BeffyJxWHost.resize(d_dftParamsPtr->noncolin ?
+                            totalLocallyOwnedCells * numberQuadraturePoints :
+                            0,
+                          0.0);
+    d_BeffzJxWHost.resize(d_dftParamsPtr->noncolin ?
+                            totalLocallyOwnedCells * numberQuadraturePoints :
+                            0,
+                          0.0);
+    std::vector<double> d_VeffGGA(
+      isGGA ? totalLocallyOwnedCells * numberQuadraturePoints : 0, 0.0);
+    std::vector<double> d_BeffxGGA(isGGA && d_dftParamsPtr->noncolin ?
+                                     totalLocallyOwnedCells *
+                                       numberQuadraturePoints :
+                                     0,
+                                   0.0);
+    std::vector<double> d_BeffyGGA(isGGA && d_dftParamsPtr->noncolin ?
+                                     totalLocallyOwnedCells *
+                                       numberQuadraturePoints :
+                                     0,
+                                   0.0);
+    std::vector<double> d_BeffzGGA(isGGA && d_dftParamsPtr->noncolin ?
+                                     totalLocallyOwnedCells *
+                                       numberQuadraturePoints :
+                                     0,
+                                   0.0);
     d_invJacderExcWithSigmaTimesGradRhoJxWHost.clear();
     d_invJacderExcWithSigmaTimesGradRhoJxWHost.resize(
-      isGGA ? totalLocallyOwnedCells * numberQuadraturePointsPerCell * 3 : 0,
+      isGGA ? totalLocallyOwnedCells * numberQuadraturePoints * 3 : 0, 0.0);
+    d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxWHost.resize(
+      d_dftParamsPtr->noncolin && isGGA ?
+        totalLocallyOwnedCells * numberQuadraturePoints * 3 :
+        0,
+      0.0);
+    d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxWHost.resize(
+      d_dftParamsPtr->noncolin && isGGA ?
+        totalLocallyOwnedCells * numberQuadraturePoints * 3 :
+        0,
+      0.0);
+    d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxWHost.resize(
+      d_dftParamsPtr->noncolin && isGGA ?
+        totalLocallyOwnedCells * numberQuadraturePoints * 3 :
+        0,
       0.0);
 
 
@@ -350,17 +497,16 @@ namespace dftfe
 
     for (unsigned int iCell = 0; iCell < totalLocallyOwnedCells; ++iCell)
       {
-        std::vector<double> quadPointsInCell(numberQuadraturePointsPerCell * 3);
-        std::vector<double> quadWeightsInCell(numberQuadraturePointsPerCell);
-        for (unsigned int iQuad = 0; iQuad < numberQuadraturePointsPerCell;
-             ++iQuad)
+        std::vector<double> quadPointsInCell(numberQuadraturePoints * 3);
+        std::vector<double> quadWeightsInCell(numberQuadraturePoints);
+        for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints; ++iQuad)
           {
             for (unsigned int idim = 0; idim < 3; ++idim)
               quadPointsInCell[3 * iQuad + idim] =
-                quadPointsAll[iCell * numberQuadraturePointsPerCell * 3 +
-                              3 * iQuad + idim];
-            quadWeightsInCell[iQuad] = std::real(
-              quadWeightsAll[iCell * numberQuadraturePointsPerCell + iQuad]);
+                quadPointsAll[iCell * numberQuadraturePoints * 3 + 3 * iQuad +
+                              idim];
+            quadWeightsInCell[iQuad] =
+              std::real(quadWeightsAll[iCell * numberQuadraturePoints + iQuad]);
           }
 
         d_excManagerPtr->getExcSSDFunctionalObj()->computeRhoTauDependentXCData(
@@ -385,14 +531,22 @@ namespace dftfe
           densityData[DensityDescriptorDataAttributes::valuesSpinUp];
         std::vector<double> &densitySpinDown =
           densityData[DensityDescriptorDataAttributes::valuesSpinDown];
+        if (isGGA)
+          {
+            densityData[DensityDescriptorDataAttributes::gradValuesSpinUp];
+            densityData[DensityDescriptorDataAttributes::gradValuesSpinDown];
+          }
+        if (d_dftParamsPtr->noncolin)
+          densityData[DensityDescriptorDataAttributes::magAxisValues];
+        if (isGGA || d_dftParamsPtr->noncolin)
+          auxDensityXCRepresentation->applyLocalOperations(quadPointsInCell,
+                                                           densityData);
         std::vector<double> &gradDensitySpinUp =
           densityData[DensityDescriptorDataAttributes::gradValuesSpinUp];
         std::vector<double> &gradDensitySpinDown =
           densityData[DensityDescriptorDataAttributes::gradValuesSpinDown];
-
-        if (isGGA)
-          auxDensityXCRepresentation->applyLocalOperations(quadPointsInCell,
-                                                           densityData);
+        std::vector<double> &magAxis =
+          densityData[DensityDescriptorDataAttributes::magAxisValues];
 
         const std::vector<double> &gradDensityXCSpinIndex =
           spinIndex == 0 ? gradDensitySpinUp : gradDensitySpinDown;
@@ -401,90 +555,355 @@ namespace dftfe
 
 
         const double *tempPhi =
-          phiValues.data() + iCell * numberQuadraturePointsPerCell;
+          phiValues.data() + iCell * numberQuadraturePoints;
 
         auto cellJxWPtr = d_basisOperationsPtrHost->JxWBasisData().data() +
-                          iCell * numberQuadraturePointsPerCell;
-        for (unsigned int iQuad = 0; iQuad < numberQuadraturePointsPerCell;
-             ++iQuad)
-          {
-            d_VeffJxWHost[iCell * numberQuadraturePointsPerCell + iQuad] =
-              (tempPhi[iQuad] + pdexDensitySpinIndex[iQuad] +
-               pdecDensitySpinIndex[iQuad]) *
-              cellJxWPtr[iQuad];
-          }
+                          iCell * numberQuadraturePoints;
+        if (!d_dftParamsPtr->noncolin)
+          for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints; ++iQuad)
+            {
+              d_VeffJxWHost[iCell * numberQuadraturePoints + iQuad] =
+                (tempPhi[iQuad] + pdexDensitySpinIndex[iQuad] +
+                 pdecDensitySpinIndex[iQuad]) *
+                cellJxWPtr[iQuad];
+            }
+        else
+          for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints; ++iQuad)
+            {
+              d_VeffJxWHost[iCell * numberQuadraturePoints + iQuad] =
+                (tempPhi[iQuad] +
+                 0.5 *
+                   (pdexDensitySpinUp[iQuad] + pdecDensitySpinUp[iQuad] +
+                    pdexDensitySpinDown[iQuad] + pdecDensitySpinDown[iQuad])) *
+                cellJxWPtr[iQuad];
+              const double temp =
+                0.5 *
+                (pdexDensitySpinUp[iQuad] - pdexDensitySpinDown[iQuad] +
+                 pdecDensitySpinUp[iQuad] - pdecDensitySpinDown[iQuad]) *
+                cellJxWPtr[iQuad];
+              d_BeffxJxWHost[iCell * numberQuadraturePoints + iQuad] =
+                temp * magAxis[3 * iQuad + 0];
+              d_BeffyJxWHost[iCell * numberQuadraturePoints + iQuad] =
+                temp * magAxis[3 * iQuad + 1];
+              d_BeffzJxWHost[iCell * numberQuadraturePoints + iQuad] =
+                temp * magAxis[3 * iQuad + 2];
+            }
+
 
         if (isGGA)
           {
-            if (d_basisOperationsPtrHost->cellsTypeFlag() != 2)
+            if (!d_dftParamsPtr->noncolin)
               {
-                for (unsigned int iQuad = 0;
-                     iQuad < numberQuadraturePointsPerCell;
-                     ++iQuad)
+                if (d_basisOperationsPtrHost->cellsTypeFlag() != 2)
                   {
-                    const double *inverseJacobiansQuadPtr =
-                      d_basisOperationsPtrHost->inverseJacobiansBasisData()
-                        .data() +
-                      (d_basisOperationsPtrHost->cellsTypeFlag() == 0 ?
-                         iCell * numberQuadraturePointsPerCell * 9 + iQuad * 9 :
-                         iCell * 9);
-                    const double *gradDensityQuadPtr =
-                      gradDensityXCSpinIndex.data() + iQuad * 3;
-                    const double *gradDensityOtherQuadPtr =
-                      gradDensityXCOtherSpinIndex.data() + iQuad * 3;
-                    const double term = (pdexSigma[iQuad * 3 + 2 * spinIndex] +
-                                         pdecSigma[iQuad * 3 + 2 * spinIndex]) *
-                                        cellJxWPtr[iQuad];
-                    const double termoff =
-                      (pdexSigma[iQuad * 3 + 1] + pdecSigma[iQuad * 3 + 1]) *
-                      cellJxWPtr[iQuad];
-                    for (unsigned jDim = 0; jDim < 3; ++jDim)
-                      for (unsigned iDim = 0; iDim < 3; ++iDim)
-                        d_invJacderExcWithSigmaTimesGradRhoJxWHost
-                          [iCell * numberQuadraturePointsPerCell * 3 +
-                           iQuad * 3 + iDim] +=
-                          inverseJacobiansQuadPtr[3 * jDim + iDim] *
-                          (2.0 * gradDensityQuadPtr[jDim] * term +
-                           gradDensityOtherQuadPtr[jDim] * termoff);
+                    for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints;
+                         ++iQuad)
+                      {
+                        const double *inverseJacobiansQuadPtr =
+                          d_basisOperationsPtrHost->inverseJacobiansBasisData()
+                            .data() +
+                          (d_basisOperationsPtrHost->cellsTypeFlag() == 0 ?
+                             iCell * numberQuadraturePoints * 9 + iQuad * 9 :
+                             iCell * 9);
+                        const double *gradDensityQuadPtr =
+                          gradDensityXCSpinIndex.data() + iQuad * 3;
+                        const double *gradDensityOtherQuadPtr =
+                          gradDensityXCOtherSpinIndex.data() + iQuad * 3;
+                        const double term =
+                          (pdexSigma[iQuad * 3 + 2 * spinIndex] +
+                           pdecSigma[iQuad * 3 + 2 * spinIndex]) *
+                          cellJxWPtr[iQuad];
+                        const double termoff = (pdexSigma[iQuad * 3 + 1] +
+                                                pdecSigma[iQuad * 3 + 1]) *
+                                               cellJxWPtr[iQuad];
+                        for (unsigned jDim = 0; jDim < 3; ++jDim)
+                          for (unsigned iDim = 0; iDim < 3; ++iDim)
+                            d_invJacderExcWithSigmaTimesGradRhoJxWHost
+                              [iCell * numberQuadraturePoints * 3 + iQuad * 3 +
+                               iDim] +=
+                              inverseJacobiansQuadPtr[3 * jDim + iDim] *
+                              (2.0 * gradDensityQuadPtr[jDim] * term +
+                               gradDensityOtherQuadPtr[jDim] * termoff);
+                      }
+                  }
+                else if (d_basisOperationsPtrHost->cellsTypeFlag() == 2)
+                  {
+                    for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints;
+                         ++iQuad)
+                      {
+                        const double *inverseJacobiansQuadPtr =
+                          d_basisOperationsPtrHost->inverseJacobiansBasisData()
+                            .data() +
+                          iCell * 3;
+                        const double *gradDensityQuadPtr =
+                          gradDensityXCSpinIndex.data() + iQuad * 3;
+                        const double *gradDensityOtherQuadPtr =
+                          gradDensityXCOtherSpinIndex.data() + iQuad * 3;
+                        const double term =
+                          (pdexSigma[iQuad * 3 + 2 * spinIndex] +
+                           pdecSigma[iQuad * 3 + 2 * spinIndex]) *
+                          cellJxWPtr[iQuad];
+                        const double termoff = (pdexSigma[iQuad * 3 + 1] +
+                                                pdecSigma[iQuad * 3 + 1]) *
+                                               cellJxWPtr[iQuad];
+                        for (unsigned iDim = 0; iDim < 3; ++iDim)
+                          d_invJacderExcWithSigmaTimesGradRhoJxWHost
+                            [iCell * numberQuadraturePoints * 3 + iQuad * 3 +
+                             iDim] = inverseJacobiansQuadPtr[iDim] *
+                                     (2.0 * gradDensityQuadPtr[iDim] * term +
+                                      gradDensityOtherQuadPtr[iDim] * termoff);
+                      }
                   }
               }
-            else if (d_basisOperationsPtrHost->cellsTypeFlag() == 2)
+            else
               {
-                for (unsigned int iQuad = 0;
-                     iQuad < numberQuadraturePointsPerCell;
-                     ++iQuad)
+                if (d_basisOperationsPtrHost->cellsTypeFlag() != 2)
                   {
-                    const double *inverseJacobiansQuadPtr =
-                      d_basisOperationsPtrHost->inverseJacobiansBasisData()
-                        .data() +
-                      iCell * 3;
-                    const double *gradDensityQuadPtr =
-                      gradDensityXCSpinIndex.data() + iQuad * 3;
-                    const double *gradDensityOtherQuadPtr =
-                      gradDensityXCOtherSpinIndex.data() + iQuad * 3;
-                    const double term = (pdexSigma[iQuad * 3 + 2 * spinIndex] +
-                                         pdecSigma[iQuad * 3 + 2 * spinIndex]) *
-                                        cellJxWPtr[iQuad];
-                    const double termoff =
-                      (pdexSigma[iQuad * 3 + 1] + pdecSigma[iQuad * 3 + 1]) *
-                      cellJxWPtr[iQuad];
-                    for (unsigned iDim = 0; iDim < 3; ++iDim)
-                      d_invJacderExcWithSigmaTimesGradRhoJxWHost
-                        [iCell * numberQuadraturePointsPerCell * 3 + iQuad * 3 +
-                         iDim] = inverseJacobiansQuadPtr[iDim] *
-                                 (2.0 * gradDensityQuadPtr[iDim] * term +
-                                  gradDensityOtherQuadPtr[iDim] * termoff);
+                    for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints;
+                         ++iQuad)
+                      {
+                        const double *inverseJacobiansQuadPtr =
+                          d_basisOperationsPtrHost->inverseJacobiansBasisData()
+                            .data() +
+                          (d_basisOperationsPtrHost->cellsTypeFlag() == 0 ?
+                             iCell * numberQuadraturePoints * 9 + iQuad * 9 :
+                             iCell * 9);
+                        const double *gradDensitySpin0QuadPtr =
+                          gradDensitySpinUp.data() + 3 * iQuad;
+                        const double *gradDensitySpin1QuadPtr =
+                          gradDensitySpinDown.data() + 3 * iQuad;
+                        const double termSpin0 =
+                          (pdexSigma[3 * iQuad] + pdecSigma[3 * iQuad]) *
+                          cellJxWPtr[iQuad];
+                        const double termSpin1 = (pdexSigma[3 * iQuad + 2] +
+                                                  pdecSigma[3 * iQuad + 2]) *
+                                                 cellJxWPtr[iQuad];
+                        const double termSpinCross =
+                          (pdexSigma[3 * iQuad + 1] +
+                           pdecSigma[3 * iQuad + 1]) *
+                          cellJxWPtr[iQuad];
+                        for (unsigned jDim = 0; jDim < 3; ++jDim)
+                          for (unsigned iDim = 0; iDim < 3; ++iDim)
+                            d_invJacderExcWithSigmaTimesGradRhoJxWHost
+                              [iCell * numberQuadraturePoints * 3 + iQuad * 3 +
+                               iDim] +=
+                              inverseJacobiansQuadPtr[3 * jDim + iDim] *
+                              (gradDensitySpin0QuadPtr[jDim] * termSpin0 +
+                               gradDensitySpin1QuadPtr[jDim] * termSpin1 +
+                               0.5 *
+                                 (gradDensitySpin0QuadPtr[jDim] +
+                                  gradDensitySpin1QuadPtr[jDim]) *
+                                 termSpinCross);
+                        for (unsigned jDim = 0; jDim < 3; ++jDim)
+                          {
+                            const double term =
+                              (gradDensitySpin0QuadPtr[jDim] * termSpin0 -
+                               gradDensitySpin1QuadPtr[jDim] * termSpin1 +
+                               0.5 *
+                                 (gradDensitySpin1QuadPtr[jDim] -
+                                  gradDensitySpin0QuadPtr[jDim]) *
+                                 termSpinCross);
+                            for (unsigned iDim = 0; iDim < 3; ++iDim)
+                              {
+                                const double termJac =
+                                  inverseJacobiansQuadPtr[3 * jDim + iDim] *
+                                  term;
+                                d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxWHost
+                                  [iCell * numberQuadraturePoints * 3 +
+                                   iQuad * 3 + iDim] +=
+                                  termJac * magAxis[3 * iQuad + 0];
+                                d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxWHost
+                                  [iCell * numberQuadraturePoints * 3 +
+                                   iQuad * 3 + iDim] +=
+                                  termJac * magAxis[3 * iQuad + 1];
+                                d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxWHost
+                                  [iCell * numberQuadraturePoints * 3 +
+                                   iQuad * 3 + iDim] +=
+                                  termJac * magAxis[3 * iQuad + 2];
+                              }
+                          }
+                      }
+                  }
+                else if (d_basisOperationsPtrHost->cellsTypeFlag() == 2)
+                  {
+                    for (unsigned int iQuad = 0; iQuad < numberQuadraturePoints;
+                         ++iQuad)
+                      {
+                        const double *inverseJacobiansQuadPtr =
+                          d_basisOperationsPtrHost->inverseJacobiansBasisData()
+                            .data() +
+                          iCell * 3;
+                        const double *gradDensitySpin0QuadPtr =
+                          gradDensitySpinUp.data() + 3 * iQuad;
+                        const double *gradDensitySpin1QuadPtr =
+                          gradDensitySpinDown.data() + 3 * iQuad;
+                        const double termSpin0 =
+                          (pdexSigma[3 * iQuad] + pdecSigma[3 * iQuad]) *
+                          cellJxWPtr[iQuad];
+                        const double termSpin1 = (pdexSigma[3 * iQuad + 2] +
+                                                  pdecSigma[3 * iQuad + 2]) *
+                                                 cellJxWPtr[iQuad];
+                        const double termSpinCross =
+                          (pdexSigma[3 * iQuad + 1] +
+                           pdecSigma[3 * iQuad + 1]) *
+                          cellJxWPtr[iQuad];
+                        for (unsigned jDim = 0; jDim < 3; ++jDim)
+                          {
+                            const double termMinus =
+                              (gradDensitySpin0QuadPtr[jDim] * termSpin0 -
+                               gradDensitySpin1QuadPtr[jDim] * termSpin1 +
+                               0.5 *
+                                 (gradDensitySpin1QuadPtr[jDim] -
+                                  gradDensitySpin0QuadPtr[jDim]) *
+                                 termSpinCross);
+                            const double termPlus =
+                              (gradDensitySpin0QuadPtr[jDim] * termSpin0 +
+                               gradDensitySpin1QuadPtr[jDim] * termSpin1 +
+                               0.5 *
+                                 (gradDensitySpin1QuadPtr[jDim] +
+                                  gradDensitySpin0QuadPtr[jDim]) *
+                                 termSpinCross);
+                            const double termMinusJac =
+                              inverseJacobiansQuadPtr[jDim] * termMinus;
+                            const double termPlusJac =
+                              inverseJacobiansQuadPtr[jDim] * termPlus;
+                            d_invJacderExcWithSigmaTimesGradRhoJxWHost
+                              [iCell * numberQuadraturePoints * 3 + iQuad * 3 +
+                               jDim] = termPlusJac;
+                            d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxWHost
+                              [iCell * numberQuadraturePoints * 3 + iQuad * 3 +
+                               jDim] = termMinusJac * magAxis[3 * iQuad + 0];
+                            d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxWHost
+                              [iCell * numberQuadraturePoints * 3 + iQuad * 3 +
+                               jDim] = termMinusJac * magAxis[3 * iQuad + 1];
+                            d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxWHost
+                              [iCell * numberQuadraturePoints * 3 + iQuad * 3 +
+                               jDim] = termMinusJac * magAxis[3 * iQuad + 2];
+                          }
+                      }
                   }
               }
           } // GGA
       }     // cell loop
 #if defined(DFTFE_WITH_DEVICE)
-    d_VeffJxW.resize(d_VeffJxWHost.size());
-    d_VeffJxW.copyFrom(d_VeffJxWHost);
-    d_invJacderExcWithSigmaTimesGradRhoJxW.resize(
-      d_invJacderExcWithSigmaTimesGradRhoJxWHost.size());
-    d_invJacderExcWithSigmaTimesGradRhoJxW.copyFrom(
-      d_invJacderExcWithSigmaTimesGradRhoJxWHost);
+    if (!d_dftParamsPtr->noncolin)
+      {
+        d_VeffJxW.resize(d_VeffJxWHost.size());
+        d_VeffJxW.copyFrom(d_VeffJxWHost);
+        d_invJacderExcWithSigmaTimesGradRhoJxW.resize(
+          d_invJacderExcWithSigmaTimesGradRhoJxWHost.size());
+        d_invJacderExcWithSigmaTimesGradRhoJxW.copyFrom(
+          d_invJacderExcWithSigmaTimesGradRhoJxWHost);
+      }
+    else
+      {
+        if (isGGA)
+          {
+            const double scalarCoeffOne  = 1.0;
+            const double scalarCoeffZero = 0.0;
+            d_BLASWrapperPtrHost->xgemm(
+              'T',
+              'N',
+              numberQuadraturePoints,
+              totalLocallyOwnedCells,
+              3 * numberQuadraturePoints,
+              &scalarCoeffOne,
+              d_basisOperationsPtrHost
+                ->collocationShapeFunctionGradientBasisData()
+                .data(),
+              3 * numberQuadraturePoints,
+              d_invJacderExcWithSigmaTimesGradRhoJxWHost.data(),
+              3 * numberQuadraturePoints,
+              &scalarCoeffOne,
+              d_VeffJxWHost.data(),
+              numberQuadraturePoints);
+            d_BLASWrapperPtrHost->xgemm(
+              'T',
+              'N',
+              numberQuadraturePoints,
+              totalLocallyOwnedCells,
+              3 * numberQuadraturePoints,
+              &scalarCoeffOne,
+              d_basisOperationsPtrHost
+                ->collocationShapeFunctionGradientBasisData()
+                .data(),
+              3 * numberQuadraturePoints,
+              d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxWHost.data(),
+              3 * numberQuadraturePoints,
+              &scalarCoeffZero,
+              d_BeffxGGA.data(),
+              numberQuadraturePoints);
+            d_BLASWrapperPtrHost->xgemm(
+              'T',
+              'N',
+              numberQuadraturePoints,
+              totalLocallyOwnedCells,
+              3 * numberQuadraturePoints,
+              &scalarCoeffOne,
+              d_basisOperationsPtrHost
+                ->collocationShapeFunctionGradientBasisData()
+                .data(),
+              3 * numberQuadraturePoints,
+              d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxWHost.data(),
+              3 * numberQuadraturePoints,
+              &scalarCoeffZero,
+              d_BeffyGGA.data(),
+              numberQuadraturePoints);
+            d_BLASWrapperPtrHost->xgemm(
+              'T',
+              'N',
+              numberQuadraturePoints,
+              totalLocallyOwnedCells,
+              3 * numberQuadraturePoints,
+              &scalarCoeffOne,
+              d_basisOperationsPtrHost
+                ->collocationShapeFunctionGradientBasisData()
+                .data(),
+              3 * numberQuadraturePoints,
+              d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxWHost.data(),
+              3 * numberQuadraturePoints,
+              &scalarCoeffZero,
+              d_BeffzGGA.data(),
+              numberQuadraturePoints);
+
+            const auto quadPointsAll = d_basisOperationsPtrHost->quadPoints();
+            std::vector<double> quadPoints(totalLocallyOwnedCells *
+                                           numberQuadraturePoints * 3);
+            for (unsigned int iQuad = 0;
+                 iQuad < 3 * totalLocallyOwnedCells * numberQuadraturePoints;
+                 ++iQuad)
+              quadPoints[iQuad] = quadPointsAll[iQuad];
+
+            std::unordered_map<DensityDescriptorDataAttributes,
+                               std::vector<double>>
+                                 densityData;
+            std::vector<double> &magAxis =
+              densityData[DensityDescriptorDataAttributes::magAxisValues];
+            auxDensityXCRepresentation->applyLocalOperations(quadPoints,
+                                                             densityData);
+
+            for (unsigned int iQuad = 0;
+                 iQuad < totalLocallyOwnedCells * numberQuadraturePoints;
+                 ++iQuad)
+              {
+                const double temp = magAxis[3 * iQuad + 0] * d_BeffxGGA[iQuad] +
+                                    magAxis[3 * iQuad + 1] * d_BeffyGGA[iQuad] +
+                                    magAxis[3 * iQuad + 2] * d_BeffzGGA[iQuad];
+                d_BeffxJxWHost[iQuad] += temp * magAxis[3 * iQuad + 0];
+                d_BeffyJxWHost[iQuad] += temp * magAxis[3 * iQuad + 1];
+                d_BeffzJxWHost[iQuad] += temp * magAxis[3 * iQuad + 2];
+              }
+          }
+        d_VeffJxW.resize(d_VeffJxWHost.size());
+        d_VeffJxW.copyFrom(d_VeffJxWHost);
+        d_BeffxJxW.resize(d_BeffxJxWHost.size());
+        d_BeffxJxW.copyFrom(d_BeffxJxWHost);
+        d_BeffyJxW.resize(d_BeffyJxWHost.size());
+        d_BeffyJxW.copyFrom(d_BeffyJxWHost);
+        d_BeffzJxW.resize(d_BeffzJxWHost.size());
+        d_BeffzJxW.copyFrom(d_BeffzJxWHost);
+      }
+    dftfe::utils::deviceSynchronize();
 #endif
   }
 
@@ -783,7 +1202,10 @@ namespace dftfe
     const unsigned int numVectors,
     const unsigned int index)
   {
-    return d_basisOperationsPtr->getMultiVector(numVectors, index);
+    return d_basisOperationsPtr->getMultiVector(
+      numVectors *
+        ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),
+      index);
   }
 
   template <dftfe::utils::MemorySpace memorySpace>
@@ -792,7 +1214,10 @@ namespace dftfe
     const unsigned int numVectors,
     const unsigned int index)
   {
-    return d_basisOperationsPtr->getMultiVectorSinglePrec(numVectors, index);
+    return d_basisOperationsPtr->getMultiVectorSinglePrec(
+      numVectors *
+        ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),
+      index);
   }
 
   template <dftfe::utils::MemorySpace memorySpace>
@@ -863,14 +1288,30 @@ namespace dftfe
         d_basisOperationsPtr->computeWeightedCellMassMatrix(
           cellRange, d_VeffJxW, tempHamMatrixRealBlock);
 
-        bool isGradDensityDataDependent =
-          (d_excManagerPtr->getExcSSDFunctionalObj()
-             ->getDensityBasedFamilyType() == densityFamilyType::GGA);
-        if (isGradDensityDataDependent)
-          d_basisOperationsPtr->computeWeightedCellNjGradNiPlusNiGradNjMatrix(
-            cellRange,
-            d_invJacderExcWithSigmaTimesGradRhoJxW,
-            tempHamMatrixRealBlock);
+        if (d_dftParamsPtr->noncolin)
+          {
+            tempHamMatrixBZBlockNonCollin.setValue(0.0);
+            tempHamMatrixBYBlockNonCollin.setValue(0.0);
+            tempHamMatrixBXBlockNonCollin.setValue(0.0);
+            d_basisOperationsPtr->computeWeightedCellMassMatrix(
+              cellRange, d_BeffzJxW, tempHamMatrixBZBlockNonCollin);
+            d_basisOperationsPtr->computeWeightedCellMassMatrix(
+              cellRange, d_BeffyJxW, tempHamMatrixBYBlockNonCollin);
+            d_basisOperationsPtr->computeWeightedCellMassMatrix(
+              cellRange, d_BeffxJxW, tempHamMatrixBXBlockNonCollin);
+          }
+        else
+          {
+            bool isGradDensityDataDependent =
+              (d_excManagerPtr->getExcSSDFunctionalObj()
+                 ->getDensityBasedFamilyType() == densityFamilyType::GGA);
+            if (isGradDensityDataDependent)
+              d_basisOperationsPtr
+                ->computeWeightedCellNjGradNiPlusNiGradNjMatrix(
+                  cellRange,
+                  d_invJacderExcWithSigmaTimesGradRhoJxW,
+                  tempHamMatrixRealBlock);
+          }
         if (!onlyHPrimePartForFirstOrderDensityMatResponse)
           d_BLASWrapperPtr->xaxpy(
             nDofsPerCell * nDofsPerCell * (cellRange.second - cellRange.first),
@@ -907,13 +1348,26 @@ namespace dftfe
                   d_invJacKPointTimesJxW[d_kPointIndex],
                   tempHamMatrixImagBlock);
               }
-            d_BLASWrapperPtr->copyRealArrsToComplexArr(
-              nDofsPerCell * nDofsPerCell *
-                (cellRange.second - cellRange.first),
-              tempHamMatrixRealBlock.data(),
-              tempHamMatrixImagBlock.data(),
-              d_cellHamiltonianMatrix[d_HamiltonianIndex].data() +
-                cellRange.first * nDofsPerCell * nDofsPerCell);
+            if (!d_dftParamsPtr->noncolin)
+              d_BLASWrapperPtr->copyRealArrsToComplexArr(
+                nDofsPerCell * nDofsPerCell *
+                  (cellRange.second - cellRange.first),
+                tempHamMatrixRealBlock.data(),
+                tempHamMatrixImagBlock.data(),
+                d_cellHamiltonianMatrix[d_HamiltonianIndex].data() +
+                  cellRange.first * nDofsPerCell * nDofsPerCell);
+            else
+              {
+                internal::computeCellHamiltonianMatrixNonCollinearFromBlocks(
+                  cellRange,
+                  nDofsPerCell,
+                  tempHamMatrixRealBlock,
+                  tempHamMatrixImagBlock,
+                  tempHamMatrixBZBlockNonCollin,
+                  tempHamMatrixBYBlockNonCollin,
+                  tempHamMatrixBXBlockNonCollin,
+                  d_cellHamiltonianMatrix[d_HamiltonianIndex]);
+              }
           }
         else
           {
@@ -957,12 +1411,13 @@ namespace dftfe
   {
     const unsigned int numCells       = d_basisOperationsPtr->nCells();
     const unsigned int numDoFsPerCell = d_basisOperationsPtr->nDofsPerCell();
-    const unsigned int numberWavefunctions = src.numVectors();
-    if (d_numVectorsInternal != numberWavefunctions)
-      reinitNumberWavefunctions(numberWavefunctions);
+    const unsigned int spinorFactor   = d_dftParamsPtr->noncolin ? 2 : 1;
+    const unsigned int numberWavefunctions = src.numVectors() / spinorFactor;
+    if (d_numVectorsInternal != numberWavefunctions * spinorFactor)
+      reinitNumberWavefunctions(numberWavefunctions * spinorFactor);
 
-    if (d_basisOperationsPtr->d_nVectors != numberWavefunctions)
-      d_basisOperationsPtr->reinit(numberWavefunctions,
+    if (d_basisOperationsPtr->d_nVectors != numberWavefunctions * spinorFactor)
+      d_basisOperationsPtr->reinit(numberWavefunctions * spinorFactor,
                                    d_cellsBlockSizeHX,
                                    d_densityQuadratureID,
                                    false,
@@ -979,9 +1434,7 @@ namespace dftfe
     if constexpr (memorySpace == dftfe::utils::MemorySpace::HOST)
       {
         if (d_dftParamsPtr->isPseudopotential)
-          {
-            d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
-          }
+          d_ONCVnonLocalOperator->initialiseOperatorActionOnX(d_kPointIndex);
 
         d_excManagerPtr->getExcSSDFunctionalObj()
           ->reinitKPointDependentVariables(d_kPointIndex);
@@ -997,22 +1450,22 @@ namespace dftfe
         std::pair<unsigned int, unsigned int> cellRange(
           iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
         d_BLASWrapperPtr->stridedCopyToBlock(
-          numberWavefunctions,
+          numberWavefunctions * spinorFactor,
           numDoFsPerCell * (cellRange.second - cellRange.first),
           src.data(),
           d_cellWaveFunctionMatrixSrc.data() +
-            cellRange.first * numDoFsPerCell * numberWavefunctions,
+            cellRange.first * numDoFsPerCell * numberWavefunctions *
+              spinorFactor,
           d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
               .data() +
             cellRange.first * numDoFsPerCell);
 #pragma omp critical(hx_Cconj)
         if (hasNonlocalComponents)
-          {
-            d_ONCVnonLocalOperator->applyCconjtransOnX(
-              d_cellWaveFunctionMatrixSrc.data() +
-                cellRange.first * numDoFsPerCell * numberWavefunctions,
-              cellRange);
-          }
+          d_ONCVnonLocalOperator->applyCconjtransOnX(
+            d_cellWaveFunctionMatrixSrc.data() +
+              cellRange.first * numDoFsPerCell * numberWavefunctions *
+                spinorFactor,
+            cellRange);
       }
     if (d_dftParamsPtr->isPseudopotential &&
         !onlyHPrimePartForFirstOrderDensityMatResponse)
@@ -1021,7 +1474,8 @@ namespace dftfe
         d_ONCVnonLocalOperator->applyAllReduceOnCconjtransX(
           d_ONCVNonLocalProjectorTimesVectorBlock);
         d_ONCVnonLocalOperator->applyVOnCconjtransX(
-          CouplingStructure::diagonal,
+          d_dftParamsPtr->hasSOC ? CouplingStructure::blockDiagonal :
+                                   CouplingStructure::diagonal,
           d_oncvClassPtr->getCouplingMatrix(),
           d_ONCVNonLocalProjectorTimesVectorBlock,
           true);
@@ -1036,40 +1490,40 @@ namespace dftfe
           'N',
           'N',
           numberWavefunctions,
-          numDoFsPerCell,
-          numDoFsPerCell,
+          numDoFsPerCell * spinorFactor,
+          numDoFsPerCell * spinorFactor,
           &scalarCoeffAlpha,
           d_cellWaveFunctionMatrixSrc.data() +
-            cellRange.first * numDoFsPerCell * numberWavefunctions,
+            cellRange.first * numDoFsPerCell * numberWavefunctions *
+              spinorFactor,
           numberWavefunctions,
-          numDoFsPerCell * numberWavefunctions,
+          numDoFsPerCell * spinorFactor * numberWavefunctions,
           d_cellHamiltonianMatrix[d_HamiltonianIndex].data() +
-            cellRange.first * numDoFsPerCell * numDoFsPerCell,
-          numDoFsPerCell,
-          numDoFsPerCell * numDoFsPerCell,
+            cellRange.first * numDoFsPerCell * numDoFsPerCell * spinorFactor *
+              spinorFactor,
+          numDoFsPerCell * spinorFactor,
+          numDoFsPerCell * spinorFactor * numDoFsPerCell * spinorFactor,
           &scalarCoeffBeta,
           d_cellWaveFunctionMatrixDst.data() +
             omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-              numberWavefunctions,
+              spinorFactor * numberWavefunctions,
           numberWavefunctions,
-          numDoFsPerCell * numberWavefunctions,
+          numDoFsPerCell * spinorFactor * numberWavefunctions,
           cellRange.second - cellRange.first);
         if (hasNonlocalComponents)
-          {
-            d_ONCVnonLocalOperator->applyCOnVCconjtransX(
-              d_cellWaveFunctionMatrixDst.data() +
-                omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-                  numberWavefunctions,
-              cellRange);
-          }
+          d_ONCVnonLocalOperator->applyCOnVCconjtransX(
+            d_cellWaveFunctionMatrixDst.data() +
+              omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
+                spinorFactor * numberWavefunctions,
+            cellRange);
 #pragma omp critical(hx_assembly)
         d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
-          numberWavefunctions,
+          numberWavefunctions * spinorFactor,
           numDoFsPerCell * (cellRange.second - cellRange.first),
           scalarHX,
           d_cellWaveFunctionMatrixDst.data() +
             omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-              numberWavefunctions,
+              spinorFactor * numberWavefunctions,
           dst.data(),
           d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
               .data() +
@@ -1487,12 +1941,13 @@ namespace dftfe
   {
     const unsigned int numCells       = d_basisOperationsPtr->nCells();
     const unsigned int numDoFsPerCell = d_basisOperationsPtr->nDofsPerCell();
-    const unsigned int numberWavefunctions = src.numVectors();
-    if (d_numVectorsInternal != numberWavefunctions)
-      reinitNumberWavefunctions(numberWavefunctions);
+    const unsigned int spinorFactor   = d_dftParamsPtr->noncolin ? 2 : 1;
+    const unsigned int numberWavefunctions = src.numVectors() / spinorFactor;
+    if (d_numVectorsInternal != numberWavefunctions * spinorFactor)
+      reinitNumberWavefunctions(numberWavefunctions * spinorFactor);
 
-    if (d_basisOperationsPtr->d_nVectors != numberWavefunctions)
-      d_basisOperationsPtr->reinit(numberWavefunctions,
+    if (d_basisOperationsPtr->d_nVectors != numberWavefunctions * spinorFactor)
+      d_basisOperationsPtr->reinit(numberWavefunctions * spinorFactor,
                                    d_cellsBlockSizeHX,
                                    d_densityQuadratureID,
                                    false,
@@ -1526,14 +1981,15 @@ namespace dftfe
             std::pair<unsigned int, unsigned int> cellRange(
               iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
             d_BLASWrapperPtr->stridedBlockScaleCopy(
-              numberWavefunctions,
+              numberWavefunctions * spinorFactor,
               numDoFsPerCell * (cellRange.second - cellRange.first),
               1.0,
               d_basisOperationsPtr->cellInverseMassVectorBasisData().data() +
                 cellRange.first * numDoFsPerCell,
               src.data(),
               d_cellWaveFunctionMatrixSrc.data() +
-                cellRange.first * numDoFsPerCell * numberWavefunctions,
+                cellRange.first * numDoFsPerCell * numberWavefunctions *
+                  spinorFactor,
               d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
                   .data() +
                 cellRange.first * numDoFsPerCell);
@@ -1541,7 +1997,8 @@ namespace dftfe
             if (hasNonlocalComponents)
               d_ONCVnonLocalOperator->applyCconjtransOnX(
                 d_cellWaveFunctionMatrixSrc.data() +
-                  cellRange.first * numDoFsPerCell * numberWavefunctions,
+                  cellRange.first * numDoFsPerCell * numberWavefunctions *
+                    spinorFactor,
                 cellRange);
           }
       }
@@ -1575,7 +2032,8 @@ namespace dftfe
           {
             d_ONCVNonLocalProjectorTimesVectorBlock.updateGhostValuesEnd();
             d_ONCVnonLocalOperator->applyVOnCconjtransX(
-              CouplingStructure::diagonal,
+              d_dftParamsPtr->hasSOC ? CouplingStructure::blockDiagonal :
+                                       CouplingStructure::diagonal,
               d_oncvClassPtr->getCouplingMatrix(),
               d_ONCVNonLocalProjectorTimesVectorBlock,
               true);
@@ -1594,38 +2052,40 @@ namespace dftfe
               'N',
               'N',
               numberWavefunctions,
-              numDoFsPerCell,
-              numDoFsPerCell,
+              numDoFsPerCell * spinorFactor,
+              numDoFsPerCell * spinorFactor,
               &scalarCoeffAlpha,
               d_cellWaveFunctionMatrixSrc.data() +
-                cellRange.first * numDoFsPerCell * numberWavefunctions,
+                cellRange.first * numDoFsPerCell * spinorFactor *
+                  numberWavefunctions,
               numberWavefunctions,
-              numDoFsPerCell * numberWavefunctions,
+              numDoFsPerCell * spinorFactor * numberWavefunctions,
               d_cellHamiltonianMatrix[d_HamiltonianIndex].data() +
-                cellRange.first * numDoFsPerCell * numDoFsPerCell,
-              numDoFsPerCell,
-              numDoFsPerCell * numDoFsPerCell,
+                cellRange.first * numDoFsPerCell * spinorFactor *
+                  numDoFsPerCell * spinorFactor,
+              numDoFsPerCell * spinorFactor,
+              numDoFsPerCell * spinorFactor * numDoFsPerCell * spinorFactor,
               &scalarCoeffBeta,
               d_cellWaveFunctionMatrixDst.data() +
                 omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-                  numberWavefunctions,
+                  spinorFactor * numberWavefunctions,
               numberWavefunctions,
-              numDoFsPerCell * numberWavefunctions,
+              numDoFsPerCell * spinorFactor * numberWavefunctions,
               cellRange.second - cellRange.first);
             if (hasNonlocalComponents)
               d_ONCVnonLocalOperator->applyCOnVCconjtransX(
                 d_cellWaveFunctionMatrixDst.data() +
                   omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-                    numberWavefunctions,
+                    spinorFactor * numberWavefunctions,
                 cellRange);
 #pragma omp critical(hxc_assembly)
             d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
-              numberWavefunctions,
+              numberWavefunctions * spinorFactor,
               numDoFsPerCell * (cellRange.second - cellRange.first),
               scalarHX,
               d_cellWaveFunctionMatrixDst.data() +
                 omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-                  numberWavefunctions,
+                  spinorFactor * numberWavefunctions,
               dst.data(),
               d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
                   .data() +
@@ -1695,7 +2155,8 @@ namespace dftfe
   {
     const unsigned int numCells       = d_basisOperationsPtr->nCells();
     const unsigned int numDoFsPerCell = d_basisOperationsPtr->nDofsPerCell();
-    const unsigned int numberWavefunctions = src.numVectors();
+    const unsigned int spinorFactor   = d_dftParamsPtr->noncolin ? 2 : 1;
+    const unsigned int numberWavefunctions = src.numVectors() / spinorFactor;
 #if defined(DFTFE_WITH_DEVICE)
     if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       {
@@ -1704,11 +2165,11 @@ namespace dftfe
             dftfe::linearAlgebra::tensorOpDataType::tf32);
       }
 #endif
-    if (d_numVectorsInternal != numberWavefunctions)
-      reinitNumberWavefunctions(numberWavefunctions);
+    if (d_numVectorsInternal != numberWavefunctions * spinorFactor)
+      reinitNumberWavefunctions(numberWavefunctions * spinorFactor);
 
-    if (d_basisOperationsPtr->d_nVectors != numberWavefunctions)
-      d_basisOperationsPtr->reinit(numberWavefunctions,
+    if (d_basisOperationsPtr->d_nVectors != numberWavefunctions * spinorFactor)
+      d_basisOperationsPtr->reinit(numberWavefunctions * spinorFactor,
                                    d_cellsBlockSizeHX,
                                    d_densityQuadratureID,
                                    false,
@@ -1737,14 +2198,15 @@ namespace dftfe
             std::pair<unsigned int, unsigned int> cellRange(
               iCell, std::min(iCell + d_cellsBlockSizeHX, numCells));
             d_BLASWrapperPtr->stridedBlockScaleCopy(
-              numberWavefunctions,
+              numberWavefunctions * spinorFactor,
               numDoFsPerCell * (cellRange.second - cellRange.first),
               1.0,
               d_basisOperationsPtr->cellInverseMassVectorBasisData().data() +
                 cellRange.first * numDoFsPerCell,
               src.data(),
               d_cellWaveFunctionMatrixSrcSinglePrec.data() +
-                cellRange.first * numDoFsPerCell * numberWavefunctions,
+                cellRange.first * numDoFsPerCell * numberWavefunctions *
+                  spinorFactor,
               d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
                   .data() +
                 cellRange.first * numDoFsPerCell);
@@ -1752,7 +2214,8 @@ namespace dftfe
             if (hasNonlocalComponents)
               d_ONCVnonLocalOperatorSinglePrec->applyCconjtransOnX(
                 d_cellWaveFunctionMatrixSrcSinglePrec.data() +
-                  cellRange.first * numDoFsPerCell * numberWavefunctions,
+                  cellRange.first * numDoFsPerCell * numberWavefunctions *
+                    spinorFactor,
                 cellRange);
           }
       }
@@ -1788,7 +2251,8 @@ namespace dftfe
             d_ONCVNonLocalProjectorTimesVectorBlockSinglePrec
               .updateGhostValuesEnd();
             d_ONCVnonLocalOperatorSinglePrec->applyVOnCconjtransX(
-              CouplingStructure::diagonal,
+              d_dftParamsPtr->hasSOC ? CouplingStructure::blockDiagonal :
+                                       CouplingStructure::diagonal,
               d_oncvClassPtr->getCouplingMatrixSinglePrec(),
               d_ONCVNonLocalProjectorTimesVectorBlockSinglePrec,
               true);
@@ -1807,38 +2271,40 @@ namespace dftfe
               'N',
               'N',
               numberWavefunctions,
-              numDoFsPerCell,
-              numDoFsPerCell,
+              numDoFsPerCell * spinorFactor,
+              numDoFsPerCell * spinorFactor,
               &scalarCoeffAlpha,
               d_cellWaveFunctionMatrixSrcSinglePrec.data() +
-                cellRange.first * numDoFsPerCell * numberWavefunctions,
+                cellRange.first * numDoFsPerCell * spinorFactor *
+                  numberWavefunctions,
               numberWavefunctions,
-              numDoFsPerCell * numberWavefunctions,
+              numDoFsPerCell * spinorFactor * numberWavefunctions,
               d_cellHamiltonianMatrixSinglePrec[d_HamiltonianIndex].data() +
-                cellRange.first * numDoFsPerCell * numDoFsPerCell,
-              numDoFsPerCell,
-              numDoFsPerCell * numDoFsPerCell,
+                cellRange.first * numDoFsPerCell * spinorFactor *
+                  numDoFsPerCell * spinorFactor,
+              numDoFsPerCell * spinorFactor,
+              numDoFsPerCell * spinorFactor * numDoFsPerCell * spinorFactor,
               &scalarCoeffBeta,
               d_cellWaveFunctionMatrixDstSinglePrec.data() +
                 omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-                  numberWavefunctions,
+                  spinorFactor * numberWavefunctions,
               numberWavefunctions,
-              numDoFsPerCell * numberWavefunctions,
+              numDoFsPerCell * spinorFactor * numberWavefunctions,
               cellRange.second - cellRange.first);
             if (hasNonlocalComponents)
               d_ONCVnonLocalOperatorSinglePrec->applyCOnVCconjtransX(
                 d_cellWaveFunctionMatrixDstSinglePrec.data() +
                   omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-                    numberWavefunctions,
+                    spinorFactor * numberWavefunctions,
                 cellRange);
 #pragma omp critical(hxc_assembly)
             d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
-              numberWavefunctions,
+              numberWavefunctions * spinorFactor,
               numDoFsPerCell * (cellRange.second - cellRange.first),
               scalarHX,
               d_cellWaveFunctionMatrixDstSinglePrec.data() +
                 omp_get_thread_num() * d_cellsBlockSizeHX * numDoFsPerCell *
-                  numberWavefunctions,
+                  spinorFactor * numberWavefunctions,
               dst.data(),
               d_basisOperationsPtr->d_flattenedCellDofIndexToProcessDofIndexMap
                   .data() +

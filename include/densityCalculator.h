@@ -62,6 +62,7 @@ namespace dftfe
     const std::pair<unsigned int, unsigned int> cellRange,
     const std::pair<unsigned int, unsigned int> vecRange,
     const unsigned int                          nQuadsPerCell,
+    const unsigned int                          nCells,
     double *                                    partialOccupVec,
     NumberType *                                wfcQuadPointData,
     NumberType *                                gradWfcQuadPointData,
@@ -69,7 +70,9 @@ namespace dftfe
     double *                                    gradRhoCellsWfcContributions,
     double *                                    rho,
     double *                                    gradRho,
-    const bool                                  isEvaluateGradRho);
+    const bool                                  isEvaluateGradRho,
+    const bool                                  isNonCollin,
+    const bool                                  hasSOC);
 
 } // namespace dftfe
 #endif

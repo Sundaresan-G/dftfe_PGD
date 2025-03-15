@@ -71,24 +71,57 @@ namespace dftfe
                             d_densityOutQuadValues[0],
                             rhoNodalField);
 
-    distributedCPUVec<double> magNodalField;
+    distributedCPUVec<double> magNodalFieldz, magNodalFieldy, magNodalFieldx;
     if (d_dftParamsPtr->spinPolarized == 1)
       {
-        magNodalField.reinit(rhoNodalField);
-        magNodalField = 0;
+        magNodalFieldz.reinit(rhoNodalField);
+        magNodalFieldz = 0;
         l2ProjectionQuadToNodal(d_basisOperationsPtrElectroHost,
                                 d_constraintsRhoNodal,
                                 d_densityDofHandlerIndexElectro,
                                 d_densityQuadratureIdElectro,
                                 d_densityOutQuadValues[1],
-                                magNodalField);
+                                magNodalFieldz);
+      }
+    else if (d_dftParamsPtr->noncolin)
+      {
+        magNodalFieldz.reinit(rhoNodalField);
+        magNodalFieldz = 0;
+        l2ProjectionQuadToNodal(d_basisOperationsPtrElectroHost,
+                                d_constraintsRhoNodal,
+                                d_densityDofHandlerIndexElectro,
+                                d_densityQuadratureIdElectro,
+                                d_densityOutQuadValues[1],
+                                magNodalFieldz);
+        magNodalFieldy.reinit(rhoNodalField);
+        magNodalFieldy = 0;
+        l2ProjectionQuadToNodal(d_basisOperationsPtrElectroHost,
+                                d_constraintsRhoNodal,
+                                d_densityDofHandlerIndexElectro,
+                                d_densityQuadratureIdElectro,
+                                d_densityOutQuadValues[2],
+                                magNodalFieldy);
+        magNodalFieldx.reinit(rhoNodalField);
+        magNodalFieldx = 0;
+        l2ProjectionQuadToNodal(d_basisOperationsPtrElectroHost,
+                                d_constraintsRhoNodal,
+                                d_densityDofHandlerIndexElectro,
+                                d_densityQuadratureIdElectro,
+                                d_densityOutQuadValues[3],
+                                magNodalFieldx);
       }
 
     solutionVectors.push_back(&rhoNodalField);
 
     if (d_dftParamsPtr->spinPolarized == 1)
       {
-        solutionVectors.push_back(&magNodalField);
+        solutionVectors.push_back(&magNodalFieldz);
+      }
+    else if (d_dftParamsPtr->noncolin)
+      {
+        solutionVectors.push_back(&magNodalFieldz);
+        solutionVectors.push_back(&magNodalFieldy);
+        solutionVectors.push_back(&magNodalFieldx);
       }
 
     pcout << "Checkpointing tria info and rho data in progress..." << std::endl;
@@ -121,7 +154,13 @@ namespace dftfe
     if (d_dftParamsPtr->spinPolarized == 1 &&
         !d_dftParamsPtr->restartSpinFromNoSpin)
       {
-        solutionVectors.push_back(&d_magInNodalValuesRead);
+        solutionVectors.push_back(&d_magZInNodalValuesRead);
+      }
+    else if (d_dftParamsPtr->noncolin)
+      {
+        solutionVectors.push_back(&d_magZInNodalValuesRead);
+        solutionVectors.push_back(&d_magYInNodalValuesRead);
+        solutionVectors.push_back(&d_magXInNodalValuesRead);
       }
 
     d_mesh.loadTriangulationsSolutionVectors(
@@ -135,15 +174,15 @@ namespace dftfe
     if (d_dftParamsPtr->spinPolarized == 1 &&
         d_dftParamsPtr->restartSpinFromNoSpin)
       {
-        d_magInNodalValuesRead.reinit(d_rhoInNodalValuesRead);
+        d_magZInNodalValuesRead.reinit(d_rhoInNodalValuesRead);
 
-        d_magInNodalValuesRead = 0;
+        d_magZInNodalValuesRead = 0;
 
         for (unsigned int i = 0;
              i < d_rhoInNodalValuesRead.locally_owned_size();
              i++)
           {
-            d_magInNodalValuesRead.local_element(i) =
+            d_magZInNodalValuesRead.local_element(i) =
               (d_dftParamsPtr->tot_magnetization) *
               d_rhoInNodalValuesRead.local_element(i);
           }
