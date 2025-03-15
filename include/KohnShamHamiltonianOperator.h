@@ -39,6 +39,9 @@ namespace dftfe
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
         BLASWrapperPtr,
       std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+        BLASWrapperPtrHost,
+      std::shared_ptr<
         dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
         basisOperationsPtr,
       std::shared_ptr<
@@ -338,6 +341,9 @@ namespace dftfe
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
       d_BLASWrapperPtr;
     std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+      d_BLASWrapperPtrHost;
+    std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number, double, memorySpace>>
       d_basisOperationsPtr;
     std::shared_ptr<
@@ -379,11 +385,15 @@ namespace dftfe
       d_tempBlockVectorOverlapInvXSinglePrec;
 
 
-    dftfe::utils::MemoryStorage<double, memorySpace> d_VeffJxW;
+    dftfe::utils::MemoryStorage<double, memorySpace> d_VeffJxW, d_BeffxJxW,
+      d_BeffyJxW, d_BeffzJxW;
     dftfe::utils::MemoryStorage<double, memorySpace> d_VeffExtPotJxW;
 
     dftfe::utils::MemoryStorage<double, memorySpace>
-      d_invJacderExcWithSigmaTimesGradRhoJxW;
+      d_invJacderExcWithSigmaTimesGradRhoJxW,
+      d_invJacderExcWithSigmaTimesMagXTimesGradRhoJxW,
+      d_invJacderExcWithSigmaTimesMagYTimesGradRhoJxW,
+      d_invJacderExcWithSigmaTimesMagZTimesGradRhoJxW;
     std::vector<dftfe::utils::MemoryStorage<double, memorySpace>>
       d_invJacKPointTimesJxW;
     // Constraints scaled with inverse sqrt diagonal Mass Matrix
@@ -398,6 +408,13 @@ namespace dftfe
 
     dftfe::utils::MemoryStorage<double, memorySpace> tempHamMatrixRealBlock;
     dftfe::utils::MemoryStorage<double, memorySpace> tempHamMatrixImagBlock;
+
+    dftfe::utils::MemoryStorage<double, memorySpace>
+      tempHamMatrixBXBlockNonCollin;
+    dftfe::utils::MemoryStorage<double, memorySpace>
+      tempHamMatrixBYBlockNonCollin;
+    dftfe::utils::MemoryStorage<double, memorySpace>
+      tempHamMatrixBZBlockNonCollin;
 
     const unsigned int         d_densityQuadratureID;
     const unsigned int         d_lpspQuadratureID;

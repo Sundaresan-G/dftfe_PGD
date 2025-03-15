@@ -50,7 +50,8 @@ namespace dftfe
     std::string auxBasisTypeXC;
     std::string auxBasisDataXC;
 
-    double radiusAtomBall, mixingParameter, spinMixingEnhancementFactor;
+    double radiusAtomBall, mixingParameter, inverseKerkerMixingParameter,
+      spinMixingEnhancementFactor;
     bool   adaptAndersonMixingParameter;
     double absLinearSolverTolerance, selfConsistentSolverTolerance, TVal,
       selfConsistentSolverEnergyTolerance, tot_magnetization,
@@ -178,6 +179,9 @@ namespace dftfe
     bool         memOptMode;
     bool         approxOverlapMatrix;
     bool         useReformulatedChFSI;
+    bool         noncolin;
+    bool         hasSOC;
+
 
     unsigned int dc_dispersioncorrectiontype;
     unsigned int dc_d3dampingtype;

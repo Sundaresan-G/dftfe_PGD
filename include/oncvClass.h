@@ -215,6 +215,9 @@ namespace dftfe
       memorySpace>>
     getNonLocalOperatorSinglePrec();
 
+    const bool
+    hasSOC() const;
+
   private:
     /**
      * @brief Converts the periodic image data structure to relevant form for the container class
@@ -329,8 +332,11 @@ namespace dftfe
       d_atomicValenceDensityVector;
     std::vector<std::map<unsigned int,
                          std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
-         d_atomicCoreDensityVector;
+      d_atomicCoreDensityVector;
+    std::map<unsigned int, std::map<unsigned int, std::array<double, 4>>>
+         d_atomicProjectorFnsljmValues;
     bool d_reproducible_output;
+    bool d_hasSOC;
     /// FIXME: eventually it should be a map of atomic number to struct-
     /// {valence number, mesh input etc}
     std::map<unsigned int, unsigned int> d_atomTypeAtributes;

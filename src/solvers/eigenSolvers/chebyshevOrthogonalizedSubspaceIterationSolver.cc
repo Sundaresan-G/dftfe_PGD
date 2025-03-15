@@ -524,38 +524,34 @@ namespace dftfe
       {
         computing_timer.enter_subsection("Rayleigh-Ritz GEP");
 
-        {
-          linearAlgebraOperations::rayleighRitzGEP(operatorMatrix,
-                                                   BLASWrapperPtr,
-                                                   elpaScala,
-                                                   eigenVectorsFlattened,
-                                                   totalNumberWaveFunctions,
-                                                   localVectorSize,
-                                                   d_mpiCommParent,
-                                                   interBandGroupComm,
-                                                   mpiCommDomain,
-                                                   eigenValues,
-                                                   useMixedPrec,
-                                                   d_dftParams);
-        }
+        linearAlgebraOperations::rayleighRitzGEP(operatorMatrix,
+                                                 BLASWrapperPtr,
+                                                 elpaScala,
+                                                 eigenVectorsFlattened,
+                                                 totalNumberWaveFunctions,
+                                                 localVectorSize,
+                                                 d_mpiCommParent,
+                                                 interBandGroupComm,
+                                                 mpiCommDomain,
+                                                 eigenValues,
+                                                 useMixedPrec,
+                                                 d_dftParams);
         computing_timer.leave_subsection("Rayleigh-Ritz GEP");
 
         computing_timer.enter_subsection("eigen vectors residuals opt");
 
-        {
-          linearAlgebraOperations::computeEigenResidualNorm(
-            operatorMatrix,
-            BLASWrapperPtr,
-            eigenVectorsFlattened,
-            eigenValues,
-            totalNumberWaveFunctions,
-            localVectorSize,
-            d_mpiCommParent,
-            mpiCommDomain,
-            interBandGroupComm,
-            residualNorms,
-            d_dftParams);
-        }
+        linearAlgebraOperations::computeEigenResidualNorm(
+          operatorMatrix,
+          BLASWrapperPtr,
+          eigenVectorsFlattened,
+          eigenValues,
+          totalNumberWaveFunctions,
+          localVectorSize,
+          d_mpiCommParent,
+          mpiCommDomain,
+          interBandGroupComm,
+          residualNorms,
+          d_dftParams);
         computing_timer.leave_subsection("eigen vectors residuals opt");
       }
     else if (d_dftParams.orthogType.compare("GS") == 0)
@@ -585,21 +581,18 @@ namespace dftfe
           pcout << "Orthogonalization Done: " << std::endl;
 
         computing_timer.enter_subsection("Rayleigh-Ritz proj Opt");
-        {
-          linearAlgebraOperations::rayleighRitz(operatorMatrix,
-                                                BLASWrapperPtr,
-                                                elpaScala,
-                                                eigenVectorsFlattened,
-                                                totalNumberWaveFunctions,
-                                                localVectorSize,
-                                                d_mpiCommParent,
-                                                interBandGroupComm,
-                                                mpiCommDomain,
-                                                eigenValues,
-                                                d_dftParams,
-                                                false);
-        }
-
+        linearAlgebraOperations::rayleighRitz(operatorMatrix,
+                                              BLASWrapperPtr,
+                                              elpaScala,
+                                              eigenVectorsFlattened,
+                                              totalNumberWaveFunctions,
+                                              localVectorSize,
+                                              d_mpiCommParent,
+                                              interBandGroupComm,
+                                              mpiCommDomain,
+                                              eigenValues,
+                                              d_dftParams,
+                                              false);
 
         computing_timer.leave_subsection("Rayleigh-Ritz proj Opt");
 
