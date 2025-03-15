@@ -838,11 +838,13 @@ namespace dftfe
       // dftfe::utils::deviceStreamCreate(&streamHX);
       // dftfe::utils::deviceStreamCreate(&streamMX);
 
+      dftfe::dataTypes::number zero{0.0};
+
       // HXDevice.setValue(0.0);
       // HXDevice set additional points value to 0
-      dftfe::utils::deviceSetValue((HXDevice + (N/numberBandGroups) * M), 0.0, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
+      dftfe::utils::deviceSetValue((HXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
 
-      dftfe::utils::deviceSetValue((MXDevice + (N/numberBandGroups) * M), 0.0, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
+      dftfe::utils::deviceSetValue((MXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
 
       // The BLASWrapperPtr uses default stream and hence shall sync the above streams
 
@@ -983,7 +985,7 @@ namespace dftfe
 
       // FIXME: May not be needed at all
       // XDevice set additional points value to 0
-      dftfe::utils::deviceSetValue((XDevice + (N/numberBandGroups) * M), 0.0, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
+      dftfe::utils::deviceSetValue((XDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
 
       // XHost.setValue(0.0);
       // dftfe::utils::deviceMemcpyH2D(
