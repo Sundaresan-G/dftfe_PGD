@@ -603,6 +603,30 @@ namespace dftfe
       const dftfe::global_size_type         initBlockCols,
       const dftfe::utils::deviceStream_t   streamId);
     template void
+    convertLayout(
+      float *                   copyTo,
+      const float *             copyFromVec,
+      const dftfe::global_size_type         blockSize,
+      const dftfe::global_size_type         initBlockRows,
+      const dftfe::global_size_type         initBlockCols,
+      const dftfe::utils::deviceStream_t   streamId);
+    template void
+    convertLayout(
+      std::complex<double> *                   copyTo,
+      const std::complex<double> *             copyFromVec,
+      const dftfe::global_size_type         blockSize,
+      const dftfe::global_size_type         initBlockRows,
+      const dftfe::global_size_type         initBlockCols,
+      const dftfe::utils::deviceStream_t   streamId);
+    template void
+    convertLayout(
+      std::complex<float> *                   copyTo,
+      const std::complex<float> *             copyFromVec,
+      const dftfe::global_size_type         blockSize,
+      const dftfe::global_size_type         initBlockRows,
+      const dftfe::global_size_type         initBlockCols,
+      const dftfe::utils::deviceStream_t   streamId);
+    template void
     addSubspaceRotatedBlockToX(const unsigned int            BDof,
                                const unsigned int            BVec,
                                const float *                 rotatedXBlockSP,
