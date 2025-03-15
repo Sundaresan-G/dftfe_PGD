@@ -183,8 +183,8 @@ namespace dftfe
 
       // use D2D copy for the first one
       dftfe::utils::deviceMemcpyAsyncD2D(
-        recv + recvOffset,
-        send + sendOffset,
+        makeDataTypeDeviceCompatible(recv + recvOffset),
+        makeDataTypeDeviceCompatible(send + sendOffset),
         sendCount * sizeof(NumberType),
         stream);
 
@@ -241,6 +241,9 @@ namespace dftfe
       if (ncclCommInit && useDCCL)
         {
 
+          sendCount = sendCount * sizeof(NumberType);
+          recvCount = recvCount * sizeof(NumberType);
+
           // {
           //   int size = totalRanks, this_process = myRank;
           //   // MPI_Comm_size(intrapoolcomm, &size);
@@ -253,10 +256,6 @@ namespace dftfe
           if (dcclCommSelector != 0){
             comm = *ncclCommPvtPtr;            
           }
-
-          ncclDataType_t ncclType = ncclDouble;
-          if (std::is_same<NumberType, float>::value)
-            ncclType = ncclFloat;
           
           // NCCLCHECK(ncclGroupStart());
           for (unsigned int i = 1; i < totalRanks; i++)
@@ -330,15 +329,15 @@ namespace dftfe
 
               NCCLCHECK(ncclGroupStart());
               
-                NCCLCHECK(ncclSend((const void *)(send + sendOffset),
+                NCCLCHECK(ncclSend(static_cast<const void *>(send) + sendOffset,
                                   sendCount,
-                                  ncclType,
+                                  ncclChar,
                                   sendTo,
                                   comm,
                                   stream));
-                NCCLCHECK(ncclRecv((void *)(recv + recvOffset),
+                NCCLCHECK(ncclRecv(static_cast<void *>(recv) + recvOffset,
                                     recvCount,
-                                    ncclType,
+                                    ncclChar,
                                     recvFrom,
                                     comm,
                                     stream));
@@ -412,10 +411,14 @@ namespace dftfe
       return 0;
     }
 
-  // initialize alltoall templates
-  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, size_t sendCount, double * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+    // initialize alltoall templates
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, size_t sendCount, double * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
 
-  template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, size_t sendCount, float * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, size_t sendCount, float * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<double> * send, size_t sendCount, std::complex<double> * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<float> * send, size_t sendCount, std::complex<float> * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
 
 
     int
