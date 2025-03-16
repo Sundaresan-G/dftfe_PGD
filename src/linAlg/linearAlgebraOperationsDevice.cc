@@ -1423,18 +1423,9 @@ namespace dftfe
                                   *(rotationMatBlockHostSP.begin() + i * BVec +
                                     j) = rotationMatPar.local_el(localRowId,
                                                                  it->second);
-                                }
-                            }
-
-                          if (i >= jvec && i < (jvec + BVec))
-                            {
-                              std::unordered_map<unsigned int,
-                                                 unsigned int>::iterator it =
-                                globalToLocalColumnIdMap.find(i);
-                              if (it != globalToLocalColumnIdMap.end())
-                                {
-                                  *(rotationMatBlockHostSP.begin() + i * BVec +
-                                    i - jvec) = dataTypes::numberFP32(0);
+                                  if (i == j + jvec)
+                                    *(rotationMatBlockHostSP.begin() +
+                                      i * BVec + j) = dataTypes::numberFP32(0);
                                 }
                             }
                         }
@@ -1458,19 +1449,9 @@ namespace dftfe
                                   *(rotationMatBlockHostSP.begin() + i * BVec +
                                     j) = rotationMatPar.local_el(it->second,
                                                                  localColumnId);
-                                }
-                            }
-
-                          if (i >= jvec && i < (jvec + BVec))
-                            {
-                              std::unordered_map<unsigned int,
-                                                 unsigned int>::iterator it =
-                                globalToLocalRowIdMap.find(i);
-                              if (globalToLocalRowIdMap.find(i) !=
-                                  globalToLocalRowIdMap.end())
-                                {
-                                  *(rotationMatBlockHostSP.begin() + i * BVec +
-                                    i - jvec) = dataTypes::numberFP32(0);
+                                  if (i == j + jvec)
+                                    *(rotationMatBlockHostSP.begin() +
+                                      i * BVec + j) = dataTypes::numberFP32(0);
                                 }
                             }
                         }
