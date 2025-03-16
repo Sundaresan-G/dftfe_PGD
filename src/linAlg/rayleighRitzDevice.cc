@@ -840,13 +840,88 @@ namespace dftfe
 
       dftfe::dataTypes::number zero{0.0};
 
+      // Create separate streams for data transfer of X AlltoAll and computation of HX, MX
+      static dftfe::utils::deviceStream_t streamCompute = 0, streamDataMove = 0;
+
+      if (streamCompute == 0 && streamDataMove == 0){
+        dftfe::utils::deviceStreamCreate(&streamCompute);
+        dftfe::utils::deviceStreamCreate(&streamDataMove);
+      }
+
+      // FIXME: May not be needed at all
+      // XDevice set additional points value to 0
+      dftfe::utils::deviceSetValue((XDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M, streamDataMove);
+
+      // XHost.setValue(0.0);
+      // dftfe::utils::deviceMemcpyH2D(
+      //   XDevice,
+      //   XHost.begin(),
+      //   XHost.size() * sizeof(dataTypes::number));
+
+      // Copy X to XDevice
+      dftfe::utils::deviceMemcpyAsyncD2D(
+        XDevice,
+        X,
+        ((N/numberBandGroups) * M) * sizeof(dataTypes::number),
+        streamDataMove);
+
+      // Note the timings for alltoall
+      if (dftParams.deviceFineGrainedTimings){
+        dftfe::utils::deviceSynchronize();
+        computing_timer.enter_subsection("X Alltoall, RR GEP step");
+      }
+
+      // for (int i=0; i < 3; i++)
+      devicecclMpiInterBand.deviceDirectAllToAllWrapper(
+        XDevice,
+        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        extraBufferDevice,
+        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        streamDataMove,
+        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
+      );
+
+
+
+      // end time
+      if (dftParams.deviceFineGrainedTimings){
+        dftfe::utils::deviceSynchronize();
+        computing_timer.leave_subsection("X Alltoall, RR GEP step");
+      }
+
+
+
+      // record time for convertLayout
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.enter_subsection("X Convert Layout, RR GEP step");
+        }
+
+      // kernel function to convert XDevice to row major form and save it in extraBufferDevice using stream streamCompute
+      convertLayout(XDevice, 
+                    extraBufferDevice, 
+                    N/numberBandGroups, //block size
+                    numberBandGroups, //initBlockRows
+                    ((M + numberBandGroups - 1)/numberBandGroups), //initBlockCols
+                    streamDataMove
+                    );
+      // Now extraBufferDevice contains X in row major form as needed
+
+      // end time
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.leave_subsection("X Convert Layout, RR GEP step");
+        }
+
       // HXDevice.setValue(0.0);
       // HXDevice set additional points value to 0
-      dftfe::utils::deviceSetValue((HXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
+      dftfe::utils::deviceSetValue((HXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M, streamCompute);
 
-      dftfe::utils::deviceSetValue((MXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
+      dftfe::utils::deviceSetValue((MXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M, streamCompute);
 
-      // The BLASWrapperPtr uses default stream and hence shall sync the above streams
+      BLASWrapperPtr->setStream(streamCompute);
 
       // Compute HX and MX and store it in HXDevice and MXDevice
       for (unsigned int k = 0; k < N/numberBandGroups; k += chebyBlockSize)
@@ -876,7 +951,9 @@ namespace dftfe
         
       }
 
+      BLASWrapperPtr->setStream(0);
 
+      // Stream synchronize is not needed since the default stream is used here after
 
       // Note the timings for alltoall
       if (dftParams.deviceFineGrainedTimings){
@@ -981,71 +1058,6 @@ namespace dftfe
         {
           dftfe::utils::deviceSynchronize();
           computing_timer.leave_subsection("MX Convert Layout, RR GEP step");
-        }
-
-      // FIXME: May not be needed at all
-      // XDevice set additional points value to 0
-      dftfe::utils::deviceSetValue((XDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M);
-
-      // XHost.setValue(0.0);
-      // dftfe::utils::deviceMemcpyH2D(
-      //   XDevice,
-      //   XHost.begin(),
-      //   XHost.size() * sizeof(dataTypes::number));
-
-      // Copy X to XDevice
-      dftfe::utils::deviceMemcpyD2D(
-        XDevice,
-        X,
-        ((N/numberBandGroups) * M) * sizeof(dataTypes::number));
-
-      // Note the timings for alltoall
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.enter_subsection("X Alltoall, RR GEP step");
-      }
-
-      // for (int i=0; i < 3; i++)
-      devicecclMpiInterBand.deviceDirectAllToAllWrapper(
-        XDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
-        extraBufferDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
-        0, //default stream
-        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
-      );
-
-
-
-      // end time
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.leave_subsection("X Alltoall, RR GEP step");
-      }
-
-
-
-      // record time for convertLayout
-      if (dftParams.deviceFineGrainedTimings)
-        {
-          dftfe::utils::deviceSynchronize();
-          computing_timer.enter_subsection("X Convert Layout, RR GEP step");
-        }
-
-      // kernel function to convert XDevice to row major form and save it in extraBufferDevice using stream streamCompute
-      convertLayout(XDevice, 
-                    extraBufferDevice, 
-                    N/numberBandGroups, //block size
-                    numberBandGroups, //initBlockRows
-                    ((M + numberBandGroups - 1)/numberBandGroups) //initBlockCols
-                    );
-      // Now extraBufferDevice contains X in row major form as needed
-
-      // end time
-      if (dftParams.deviceFineGrainedTimings)
-        {
-          dftfe::utils::deviceSynchronize();
-          computing_timer.leave_subsection("X Convert Layout, RR GEP step");
         }
 
 
