@@ -17,6 +17,7 @@
 // @author Phani Motamarri, Shiva Rudraraju, Sambit Das
 //
 #include "applyHomogeneousDirichletBC.cc"
+#include "applyNeumanAndHomogeneousDirichletBC.cc"
 #include "locatenodes.cc"
 #include <dft.h>
 #include <dftUtils.h>

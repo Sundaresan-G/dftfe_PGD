@@ -3078,9 +3078,10 @@ namespace dftfe
                   densityInQuadValuesCopy,
                   d_BLASWrapperPtr,
                   true,
-                  d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                    d_dftParamsPtr->periodicZ &&
-                    !d_dftParamsPtr->pinnedNodeForPBC,
+                  (d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                   d_dftParamsPtr->periodicZ &&
+                   !d_dftParamsPtr->pinnedNodeForPBC) ||
+                    (d_dftParamsPtr->applyOnlyNeumannBC),
                   d_dftParamsPtr->smearedNuclearCharges,
                   true,
                   false,
@@ -3127,9 +3128,10 @@ namespace dftfe
                 d_smearedChargeQuadratureIdElectro,
                 densityInQuadValuesCopy,
                 true,
-                d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
-                  d_dftParamsPtr->periodicZ &&
-                  !d_dftParamsPtr->pinnedNodeForPBC,
+                (d_dftParamsPtr->periodicX && d_dftParamsPtr->periodicY &&
+                 d_dftParamsPtr->periodicZ &&
+                 !d_dftParamsPtr->pinnedNodeForPBC) ||
+                  (d_dftParamsPtr->applyOnlyNeumannBC),
                 d_dftParamsPtr->smearedNuclearCharges,
                 true,
                 false,
@@ -3574,7 +3576,7 @@ namespace dftfe
                 // do more passes of chebysev filter till the check passes.
                 // This improves the scf convergence performance.
 
-                double filterPassTol =
+                const double filterPassTol =
                   (scfIter == 0 && isRestartGroundStateCalcFromChk) ?
                     1.0e-8 :
                     ((scfIter == 0 &&

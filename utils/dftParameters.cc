@@ -435,6 +435,20 @@ namespace dftfe
           "[Standard] Flag to set point wise multipole boundary conditions (upto quadrupole term) for non-periodic systems.");
 
         prm.declare_entry(
+          "HOMOGENEOUS NEUMAN DIRICHLET BOUNDARY CONDITIONS",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Flag to set for semi periodic caclulations along Z, with homogeneous Neuman and Dirichlet boundary conditions.");
+
+
+        prm.declare_entry(
+          "ONLY NEUMAN BOUNDARY CONDITIONS",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Standard] Flag to set for semi periodic caclulations along Z, with only Neuman boundary conditions");
+
+
+        prm.declare_entry(
           "CONSTRAINTS PARALLEL CHECK",
           "false",
           dealii::Patterns::Bool(),
@@ -1440,6 +1454,8 @@ namespace dftfe
     smearedNuclearCharges                          = false;
     floatingNuclearCharges                         = false;
     multipoleBoundaryConditions                    = false;
+    applyHomogeneousNeumannDirichletBC             = false;
+    applyOnlyNeumannBC                             = false;
     nonLinearCoreCorrection                        = false;
     maxLineSearchIterCGPRP                         = 5;
     atomicMassesFile                               = "";
@@ -1640,6 +1656,11 @@ namespace dftfe
       floatingNuclearCharges = prm.get_bool("FLOATING NUCLEAR CHARGES");
       multipoleBoundaryConditions =
         prm.get_bool("MULTIPOLE BOUNDARY CONDITIONS");
+      applyHomogeneousNeumannDirichletBC =
+        prm.get_bool("HOMOGENEOUS NEUMAN DIRICHLET BOUNDARY CONDITIONS") &&
+        !periodicZ;
+      applyOnlyNeumannBC =
+        prm.get_bool("ONLY NEUMAN BOUNDARY CONDITIONS") && !periodicZ;
     }
     prm.leave_subsection();
 
