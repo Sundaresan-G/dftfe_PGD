@@ -549,10 +549,14 @@ namespace dftfe
 
                   } // image atom loop
                 const unsigned int startIndex1 =
-                  d_nonTrivialSphericalFnsCellStartIndex[elementIndex]; //extract the location of first projector in the elementIndex 
+                  d_nonTrivialSphericalFnsCellStartIndex
+                    [elementIndex]; // extract the location of first projector
+                                    // in the elementIndex
                 const unsigned int startIndex2 =
                   globalAtomIdToNonTrivialSphericalFnsCellStartIndex
-                    [ChargeId][elementIndex]; //extract the location of the ChargeId's first projector in the cell
+                    [ChargeId]
+                    [elementIndex]; // extract the location of the ChargeId's
+                                    // first projector in the cell
                 if (d_computeSphericalFnTimesX)
                   {
                     for (int kPoint = 0; kPoint < maxkPoints; ++kPoint)
@@ -2020,6 +2024,16 @@ namespace dftfe
                       &zero,
                       &d_sphericalFnTimesWavefunMatrix[atomId][0],
                       d_numberWaveFunctions / 2);
+                    if (!flagCopyResultsToMatrix)
+                      {
+                        d_BLASWrapperPtr->xcopy(
+                          d_numberWaveFunctions * numberSphericalFunctions,
+                          &d_sphericalFnTimesWavefunMatrix[atomId][0],
+                          1,
+                          sphericalFunctionKetTimesVectorParFlattened.begin() +
+                            localId * d_numberWaveFunctions,
+                          1);
+                      }
                     alpha +=
                       numberSphericalFunctions * numberSphericalFunctions * 4;
                   }
@@ -2158,6 +2172,10 @@ namespace dftfe
                       d_sphericalFnTimesVectorAllCellsDevice.begin(),
                       d_indexMapFromPaddedNonLocalVecToParallelNonLocalVecDevice
                         .begin());
+                else
+                  copyPaddedMemoryStorageVectorToDistributeVectorDevice(
+                    d_couplingMatrixTimesVectorDevice,
+                    sphericalFunctionKetTimesVectorParFlattened);
               }
             else if (couplingtype == CouplingStructure::dense)
               {
