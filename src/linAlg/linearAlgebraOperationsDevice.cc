@@ -1413,13 +1413,23 @@ namespace dftfe
                 }
               else
                 {
+                  MPI_Allreduce(MPI_IN_PLACE,
+                                rotationMatBlockHostSP.begin(),
+                                BVec * D,
+                                dataTypes::mpi_type_id(
+                                  rotationMatBlockHostSP.begin()),
+                                MPI_SUM,
+                                mpiCommDomain);
+			
                   dftfe::utils::deviceMemcpyH2D(
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       rotationMatBlockSP.begin()),
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       rotationMatBlockHostSP.begin()),
                     BVec * D * sizeof(dataTypes::numberFP32));
-                  MPI_Allreduce(MPI_IN_PLACE,
+                  
+		  
+		  MPI_Allreduce(MPI_IN_PLACE,
                                 rotationMatBlockHostDP.begin(),
                                 BVec * BVec,
                                 dataTypes::mpi_type_id(
