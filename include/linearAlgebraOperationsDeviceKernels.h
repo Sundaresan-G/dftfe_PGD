@@ -20,6 +20,19 @@ namespace dftfe
 
     template <typename ValueType1, typename ValueType2>
     void
+    addSubspaceRotatedBlockToXBlockDiagonal(const dftfe::uInt             BDof,
+                               const dftfe::uInt             BVec,
+                               const ValueType1             *rotatedXBlockSP,
+                               const ValueType2             *rotatedXBlockDP,
+			       ValueType2                   *X,
+                               const dftfe::uInt             startingDofId,
+                               const dftfe::uInt             startingVecId,
+                               const dftfe::uInt             N,
+                               dftfe::utils::deviceStream_t &streamCompute);
+
+
+    template <typename ValueType1, typename ValueType2>
+    void
     copyFromOverlapMatBlockToDPSPBlocks(
       const dftfe::uInt             B,
       const dftfe::uInt             D,
