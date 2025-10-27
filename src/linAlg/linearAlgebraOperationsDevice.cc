@@ -1172,6 +1172,423 @@ namespace dftfe
     void
     subspaceRotationRRMixedPrecScalapack(
       dataTypes::number *X,
+      const unsigned int M,
+      const unsigned int N,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+        &                                              BLASWrapperPtr,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      const MPI_Comm &                                 mpiCommDomain,
+      utils::DeviceCCLWrapper &                        devicecclMpiCommDomain,
+      const MPI_Comm &                                 interBandGroupComm,
+      const dftfe::ScaLAPACKMatrix<dataTypes::number> &rotationMatPar,
+      const dftParameters &                            dftParams,
+      const bool                                       rotationMatTranspose)
+    {
+      const unsigned int maxNumLocalDofs =
+        dealii::Utilities::MPI::max(M, mpiCommDomain);
+
+      std::unordered_map<unsigned int, unsigned int> globalToLocalColumnIdMap;
+      std::unordered_map<unsigned int, unsigned int> globalToLocalRowIdMap;
+      linearAlgebraOperations::internal::createGlobalToLocalIdMapsScaLAPACKMat(
+        processGrid,
+        rotationMatPar,
+        globalToLocalRowIdMap,
+        globalToLocalColumnIdMap);
+
+      const unsigned int MPadded = std::ceil(M * 1.0 / 8.0) * 8.0 + 0.5;
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        XSP;
+
+
+      dftfe::utils::MemoryStorage<typename dftfe::dataTypes::halfPrecType<dataTypes::numberFP32>::type,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        XFP16High, XFP16Low;
+
+      XSP.resize(MPadded * N, dataTypes::numberFP32(0));
+      BLASWrapperPtr->copyValueType1ArrToValueType2Arr(N * M, X, XSP.begin());
+
+
+      // band group parallelization data structures
+      const unsigned int numberBandGroups =
+        dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+      const unsigned int bandGroupTaskId =
+        dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
+      std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+      dftUtils::createBandParallelizationIndices(
+        interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
+
+      const unsigned int vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
+      const unsigned int dofsBlockSize =
+        std::min(maxNumLocalDofs, dftParams.subspaceRotDofsBlockSize);
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::HOST_PINNED>
+        rotationMatBlockHostSP(vectorsBlockSize * N);
+
+      std::memset(rotationMatBlockHostSP.begin(),
+                  0,
+                  vectorsBlockSize * N * sizeof(dataTypes::numberFP32));
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::HOST_PINNED>
+        rotationMatBlockHostDP(vectorsBlockSize * vectorsBlockSize);
+
+      std::memset(rotationMatBlockHostDP.begin(),
+                  0,
+                  vectorsBlockSize * vectorsBlockSize * sizeof(dataTypes::number));
+      
+      dftfe::utils::deviceStream_t streamCompute, streamDeviceCCL;
+      dftfe::utils::deviceStreamCreate(&streamCompute);
+      dftfe::utils::deviceStreamCreate(&streamDeviceCCL);
+
+      // attach deviceblas handle to compute stream
+      BLASWrapperPtr->setStream(streamCompute);
+
+      // create array of compute and device direct commun events on Devices
+      // for all the blocks. These are required for synchronization
+      const unsigned int          numberBlocks = (N / vectorsBlockSize);
+      dftfe::utils::deviceEvent_t computeEvents[numberBlocks];
+      dftfe::utils::deviceEvent_t communEvents[numberBlocks];
+      for (int i = 0; i < numberBlocks; ++i)
+        {
+          dftfe::utils::deviceEventCreate(&computeEvents[i]);
+          dftfe::utils::deviceEventCreate(&communEvents[i]);
+        }
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        rotationMatBlockDP(vectorsBlockSize *vectorsBlockSize, dataTypes::number(0));
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        rotationMatBlockDPTemp(vectorsBlockSize * vectorsBlockSize, dataTypes::number(0));
+
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        rotationMatBlockSP(vectorsBlockSize * N, dataTypes::numberFP32(0));
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        rotationMatBlockSPTemp(vectorsBlockSize * N, dataTypes::numberFP32(0));
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        rotatedVectorsMatBlockDP(vectorsBlockSize * dofsBlockSize,
+                                 dataTypes::number(0));
+      
+      
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        rotatedVectorsMatBlockSP(vectorsBlockSize * dofsBlockSize,
+                                 dataTypes::numberFP32(0));
+
+      dftfe::utils::MemoryStorage<typename dftfe::dataTypes::halfPrecType<dataTypes::numberFP32>::type,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        rotationMatBlockFP16High, rotationMatBlockFP16Low;
+
+
+      dftfe::utils::MemoryStorage<typename dftfe::dataTypes::halfPrecType<dataTypes::numberFP32>::type,
+                                  dftfe::utils::MemorySpace::HOST>
+        rotationMatBlockFP16SendRecvBuffer;
+
+      const dataTypes::number scalarCoeffAlphaDP =
+        dataTypes::number(1.0);
+      const dataTypes::number scalarCoeffBetaDP = dataTypes::number(0);
+
+      const dataTypes::numberFP32 scalarCoeffAlphaSP =
+        dataTypes::numberFP32(1.0);
+      const dataTypes::numberFP32 scalarCoeffBetaSP = dataTypes::numberFP32(0);
+      const dataTypes::numberFP32 scalarCoeffBetaSP_2 = dataTypes::numberFP32(1.0);
+
+
+      dftfe::utils::MemoryStorage<dataTypes::numberValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempReal;
+      dftfe::utils::MemoryStorage<dataTypes::numberValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempImag;
+      if (std::is_same<dataTypes::number, std::complex<double>>::value)
+        {
+          tempReal.resize(vectorsBlockSize * vectorsBlockSize, 0);
+          tempImag.resize(vectorsBlockSize * vectorsBlockSize, 0);
+        }
+
+
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32ValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempRealFP32;
+      dftfe::utils::MemoryStorage<dataTypes::numberFP32ValueType,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        tempImagFP32;
+      if (std::is_same<dataTypes::number, std::complex<double>>::value)
+        {
+          tempRealFP32.resize(vectorsBlockSize * N, 0);
+          tempImagFP32.resize(vectorsBlockSize * N, 0);
+        }
+
+      unsigned int blockCount = 0;
+      for (unsigned int jvec = 0; jvec < N; jvec += vectorsBlockSize)
+        {
+          // Correct block dimensions if block "goes off edge of" the matrix
+          const unsigned int BVec = std::min(vectorsBlockSize, N - jvec);
+
+          const unsigned int D = N;
+
+          if ((jvec + BVec) <=
+                bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&
+              (jvec + BVec) >
+                bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
+            {
+              std::memset(rotationMatBlockHostSP.begin(),
+                          0,
+                          BVec * N * sizeof(dataTypes::numberFP32));
+
+              std::memset(rotationMatBlockHostDP.begin(),
+                          0,
+                          BVec * BVec * sizeof(dataTypes::number));
+
+
+              // Extract QBVec from parallel ScaLAPACK matrix Q
+              if (rotationMatTranspose)
+                {
+                  if (processGrid->is_process_active())
+                    for (unsigned int i = 0; i < D; ++i)
+                      if (globalToLocalRowIdMap.find(i) !=
+                          globalToLocalRowIdMap.end())
+                        {
+                          const unsigned int localRowId =
+                            globalToLocalRowIdMap[i];
+                          for (unsigned int j = 0; j < BVec; ++j)
+                            {
+                              std::unordered_map<unsigned int,
+                                                 unsigned int>::iterator it =
+                                globalToLocalColumnIdMap.find(j + jvec);
+                              if (it != globalToLocalColumnIdMap.end())
+                                {
+                                  *(rotationMatBlockHostSP.begin() + i * BVec +
+                                    j) = rotationMatPar.local_el(localRowId,
+                                                                 it->second);
+				 if (i >= jvec and i <(jvec+BVec))
+				  {
+                                    *(rotationMatBlockHostSP.begin() +
+                                      i * BVec + j) = dataTypes::numberFP32(0);                                   *(rotationMatBlockHostDP.begin() +
+                                      (i-jvec) * BVec + j) = rotationMatPar.local_el(localRowId,
+                                                                 it->second);
+
+				  }
+                                }
+                            }
+                        }
+                }
+              else
+                {
+                  if (processGrid->is_process_active())
+                    for (unsigned int i = 0; i < D; ++i)
+                      if (globalToLocalColumnIdMap.find(i) !=
+                          globalToLocalColumnIdMap.end())
+                        {
+                          const unsigned int localColumnId =
+                            globalToLocalColumnIdMap[i];
+                          for (unsigned int j = 0; j < BVec; ++j)
+                            {
+                              std::unordered_map<unsigned int,
+                                                 unsigned int>::iterator it =
+                                globalToLocalRowIdMap.find(j + jvec);
+                              if (it != globalToLocalRowIdMap.end())
+                                {
+                                  *(rotationMatBlockHostSP.begin() + i * BVec +
+                                    j) = rotationMatPar.local_el(it->second,
+                                                                 localColumnId);
+                                 if (i >= jvec and i <(jvec+BVec))
+                                  {
+                                    *(rotationMatBlockHostSP.begin() +
+                                      i * BVec + j) = dataTypes::numberFP32(0);                                   *(rotationMatBlockHostDP.begin() +
+                                      (i-jvec) * BVec + j) = rotationMatPar.local_el(it->second,
+                                                                 localColumnId);
+
+                                  }
+
+                                }
+                            }
+                        }
+                }
+
+
+              if (dftParams.useDeviceDirectAllReduce)
+                {
+                  dftfe::utils::deviceMemcpyAsyncH2D(
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockSPTemp.begin()),
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockHostSP.begin()),
+                    BVec * D * sizeof(dataTypes::numberFP32),
+                    streamDeviceCCL);
+
+                  if (std::is_same<dataTypes::number,
+                                   std::complex<double>>::value)
+                    devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                      rotationMatBlockSPTemp.begin(),
+                      rotationMatBlockSPTemp.begin(),
+                      BVec * D,
+                      tempRealFP32.begin(),
+                      tempImagFP32.begin(),
+                      streamDeviceCCL);
+                  else
+                    devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                      rotationMatBlockSPTemp.begin(),
+                      rotationMatBlockSPTemp.begin(),
+                      BVec * D,
+                      streamDeviceCCL);
+
+                  dftfe::utils::deviceMemcpyAsyncH2D(
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockDPTemp.begin()),
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockHostDP.begin()),
+                    BVec * BVec * sizeof(dataTypes::number),
+                    streamDeviceCCL);
+
+                  if (std::is_same<dataTypes::number,
+                                   std::complex<double>>::value)
+                    devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                      rotationMatBlockDPTemp.begin(),
+                      rotationMatBlockDPTemp.begin(),
+                      BVec * BVec,
+                      tempReal.begin(),
+                      tempImag.begin(),
+                      streamDeviceCCL);
+                  else
+                    devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
+                      rotationMatBlockDPTemp.begin(),
+                      rotationMatBlockDPTemp.begin(),
+                      BVec * BVec,
+                      streamDeviceCCL);
+
+                }
+              else
+                {
+                  dftfe::utils::deviceMemcpyH2D(
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockSP.begin()),
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockHostSP.begin()),
+                    BVec * D * sizeof(dataTypes::numberFP32));
+                  MPI_Allreduce(MPI_IN_PLACE,
+                                rotationMatBlockHostDP.begin(),
+                                BVec * BVec,
+                                dataTypes::mpi_type_id(
+                                  rotationMatBlockHostDP.begin()),
+                                MPI_SUM,
+                                mpiCommDomain);
+
+                  dftfe::utils::deviceMemcpyH2D(
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockDP.begin()),
+                    dftfe::utils::makeDataTypeDeviceCompatible(
+                      rotationMatBlockHostDP.begin()),
+                    BVec * BVec * sizeof(dataTypes::number));
+                }
+
+              if (dftParams.useDeviceDirectAllReduce)
+                {
+                  // check for completion of compute of previous block in
+                  // compute stream before proceeding to rewriting
+                  // rotationMatBlock in communication stream
+                  dftfe::utils::deviceEventRecord(computeEvents[blockCount],
+                                                  streamCompute);
+                  dftfe::utils::deviceStreamWaitEvent(streamDeviceCCL,
+                                                      computeEvents[blockCount],
+                                                      0);
+
+                  // synchronize host to communication stream before doing swap
+                  // this automatically also makes sure the compute stream has
+                  // the correct rotationMatBlock for dgemm
+                  dftfe::utils::deviceEventRecord(communEvents[blockCount],
+                                                  streamDeviceCCL);
+                  if (dftfe::utils::deviceEventSynchronize(
+                        communEvents[blockCount]) ==
+                      dftfe::utils::deviceSuccess)
+		  {
+                    rotationMatBlockSP.swap(rotationMatBlockSPTemp);
+                    rotationMatBlockDP.swap(rotationMatBlockDPTemp);	    
+		  }
+                }
+
+              for (unsigned int idof = 0; idof < maxNumLocalDofs;
+                   idof += dofsBlockSize)
+                {
+                  // Correct block dimensions if block "goes off edge of" the
+                  // matrix
+                  unsigned int BDof = 0;
+                  if (M >= idof)
+                    BDof = std::min(dofsBlockSize, M - idof);
+
+                  if (BDof != 0)
+                    {
+                      BLASWrapperPtr->xgemm('N',
+                                            'N',
+                                            BVec,
+                                            BDof,
+                                            BVec,
+                                            &scalarCoeffAlphaDP,
+                                            rotationMatBlockDP.begin(),
+                                            BVec,
+                                            X + idof *N+jvec,
+                                            N,
+                                            &scalarCoeffBetaDP,
+                                            rotatedVectorsMatBlockDP.begin(),
+                                            BVec);
+			    
+                      BLASWrapperPtr->xgemm('N',
+                                            'N',
+                                            BVec,
+                                            BDof,
+                                            D,
+                                            &scalarCoeffAlphaSP,
+                                            rotationMatBlockSP.begin(),
+                                            BVec,
+                                            XSP.begin() + idof * N,
+                                            N,
+                                            &scalarCoeffBetaSP,
+                                            rotatedVectorsMatBlockSP.begin(),
+                                            BVec);
+                      
+		      addSubspaceRotatedBlockToX(
+                        BDof,
+                        BVec,
+                        rotatedVectorsMatBlockSP.begin(),
+                        rotatedVectorsMatBlockDP.begin(),	
+                        X,
+                        idof,
+                        jvec,
+                        N,
+                        streamCompute);
+
+
+                    }
+                } // block loop over dofs
+            }     // band parallelization
+          blockCount++;
+        } // block loop over vectors
+
+
+      // return deviceblas handle to default stream
+      BLASWrapperPtr->setStream(NULL);
+
+      for (int i = 0; i < numberBlocks; ++i)
+        {
+          dftfe::utils::deviceEventDestroy(computeEvents[i]);
+          dftfe::utils::deviceEventDestroy(communEvents[i]);
+        }
+
+      dftfe::utils::deviceStreamDestroy(streamCompute);
+      dftfe::utils::deviceStreamDestroy(streamDeviceCCL);
+    }
+
+/*
+    void
+    subspaceRotationRRMixedPrecScalapack(
+      dataTypes::number *X,
       const dftfe::uInt  M,
       const dftfe::uInt  N,
       std::shared_ptr<
@@ -1497,7 +1914,7 @@ namespace dftfe
       dftfe::utils::deviceStreamDestroy(streamCompute);
       dftfe::utils::deviceStreamDestroy(streamDeviceCCL);
     }
-
+*/
     void
     fillParallelOverlapMatScalapack(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
