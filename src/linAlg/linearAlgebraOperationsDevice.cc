@@ -1217,6 +1217,10 @@ namespace dftfe
         interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
 
       const dftfe::uInt vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
+      const dftfe::uInt extBlockSize = 0.5*vectorsBlockSize;
+     
+      const dftfe::uInt vectorsWithExtBlockSize = vectorsBlockSize+2*extBlockSize;
+
       const dftfe::uInt dofsBlockSize =
         std::min(maxNumLocalDofs, dftParams.subspaceRotDofsBlockSize);
 
@@ -1230,11 +1234,11 @@ namespace dftfe
 
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::HOST_PINNED>
-        rotationMatBlockHostDP(vectorsBlockSize * vectorsBlockSize);
+        rotationMatBlockHostDP(vectorsBlockSize * vectorsWithExtBlockSize);
 
       std::memset(rotationMatBlockHostDP.begin(),
                   0,
-                  vectorsBlockSize * vectorsBlockSize * sizeof(dataTypes::number));
+                  vectorsBlockSize * vectorsWithExtBlockSize * sizeof(dataTypes::number));
       
       dftfe::utils::deviceStream_t streamCompute, streamDeviceCCL;
       dftfe::utils::deviceStreamCreate(streamCompute);
@@ -1256,10 +1260,10 @@ namespace dftfe
 
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::DEVICE>
-        rotationMatBlockDP(vectorsBlockSize *vectorsBlockSize, dataTypes::number(0));
+        rotationMatBlockDP(vectorsBlockSize *vectorsWithExtBlockSize, dataTypes::number(0));
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::DEVICE>
-        rotationMatBlockDPTemp(vectorsBlockSize * vectorsBlockSize, dataTypes::number(0));
+        rotationMatBlockDPTemp(vectorsBlockSize * vectorsWithExtBlockSize, dataTypes::number(0));
 
 
       dftfe::utils::MemoryStorage<dataTypes::numberFP32,
@@ -1291,13 +1295,14 @@ namespace dftfe
       const dataTypes::numberFP32 scalarCoeffBetaSP = dataTypes::numberFP32(0);
       const dataTypes::numberFP32 scalarCoeffBetaSP_2 = dataTypes::numberFP32(1.0);
 
-
       dftfe::uInt blockCount = 0;
       for (dftfe::uInt jvec = 0; jvec < N; jvec += vectorsBlockSize)
         {
           // Correct block dimensions if block "goes off edge of" the matrix
           const dftfe::uInt BVec = std::min(vectorsBlockSize, N - jvec);
-
+          const dftfe::uInt extBVecUp= std::min(extBlockSize,jvec);
+          const dftfe::uInt extBVecDown = std::min(extBlockSize,N-BVec);
+          const dftfe::uInt BVecNet=BVec+extBVecUp+extBVecDown;
           const dftfe::uInt D = N;
 
           if ((jvec + BVec) <=
@@ -1311,7 +1316,7 @@ namespace dftfe
 
               std::memset(rotationMatBlockHostDP.begin(),
                           0,
-                          BVec * BVec * sizeof(dataTypes::number));
+                          BVec * BVecNet * sizeof(dataTypes::number));
 
 
               // Extract QBVec from parallel ScaLAPACK matrix Q
@@ -1334,11 +1339,11 @@ namespace dftfe
                                   *(rotationMatBlockHostSP.begin() + i * BVec +
                                     j) = rotationMatPar.local_el(localRowId,
                                                                  it->second);
-				 if (i >= jvec and i <(jvec+BVec))
+				 if (i >= (jvec-extBVecUp) and i <(jvec+BVec+extBVecDown))
 				  {
                                     *(rotationMatBlockHostSP.begin() +
                                       i * BVec + j) = dataTypes::numberFP32(0);                                   *(rotationMatBlockHostDP.begin() +
-                                      (i-jvec) * BVec + j) = rotationMatPar.local_el(localRowId,
+                                      (i-(jvec-extBVecUp)) * BVec + j) = rotationMatPar.local_el(localRowId,
                                                                  it->second);
 
 				  }
@@ -1365,11 +1370,11 @@ namespace dftfe
                                   *(rotationMatBlockHostSP.begin() + i * BVec +
                                     j) = rotationMatPar.local_el(it->second,
                                                                  localColumnId);
-                                 if (i >= jvec and i <(jvec+BVec))
+                                 if (i >= (jvec-extBVecUp) and i <(jvec+BVec+extBVecDown))
                                   {
                                     *(rotationMatBlockHostSP.begin() +
                                       i * BVec + j) = dataTypes::numberFP32(0);                                   *(rotationMatBlockHostDP.begin() +
-                                      (i-jvec) * BVec + j) = rotationMatPar.local_el(it->second,
+                                      (i-(jvec-extBVecUp)) * BVec + j) = rotationMatPar.local_el(it->second,
                                                                  localColumnId);
 
                                   }
@@ -1401,13 +1406,13 @@ namespace dftfe
                       rotationMatBlockDPTemp.begin()),
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       rotationMatBlockHostDP.begin()),
-                    BVec * BVec * sizeof(dataTypes::number),
+                    BVec * BVecNet * sizeof(dataTypes::number),
                     streamDeviceCCL);
 
                   devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
                       rotationMatBlockDPTemp.begin(),
                       rotationMatBlockDPTemp.begin(),
-                      BVec * BVec,
+                      BVec * BVecNet,
                       streamDeviceCCL);
 
                 }
@@ -1431,7 +1436,7 @@ namespace dftfe
 		  
 		  MPI_Allreduce(MPI_IN_PLACE,
                                 rotationMatBlockHostDP.begin(),
-                                BVec * BVec,
+                                BVec * BVecNet,
                                 dataTypes::mpi_type_id(
                                   rotationMatBlockHostDP.begin()),
                                 MPI_SUM,
@@ -1442,7 +1447,7 @@ namespace dftfe
                       rotationMatBlockDP.begin()),
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       rotationMatBlockHostDP.begin()),
-                    BVec * BVec * sizeof(dataTypes::number));
+                    BVec * BVecNet * sizeof(dataTypes::number));
                 }
 
               if (dftParams.useDeviceDirectAllReduce)
@@ -1485,11 +1490,11 @@ namespace dftfe
                                             'N',
                                             BVec,
                                             BDof,
-                                            BVec,
+                                            BVecNet,
                                             &scalarCoeffAlphaDP,
                                             rotationMatBlockDP.begin(),
                                             BVec,
-                                            X + idof *N+jvec,
+                                            X + idof *N+jvec-extBVecUp,
                                             N,
                                             &scalarCoeffBetaDP,
                                             rotatedVectorsMatBlockDP.begin(),
