@@ -1301,7 +1301,7 @@ namespace dftfe
           // Correct block dimensions if block "goes off edge of" the matrix
           const dftfe::uInt BVec = std::min(vectorsBlockSize, N - jvec);
           const dftfe::uInt extBVecUp= std::min(extBlockSize,jvec);
-          const dftfe::uInt extBVecDown = std::min(extBlockSize,N-BVec);
+          const dftfe::uInt extBVecDown = std::min(extBlockSize,N-(jvec+BVec));
           const dftfe::uInt BVecNet=BVec+extBVecUp+extBVecDown;
           const dftfe::uInt D = N;
 
