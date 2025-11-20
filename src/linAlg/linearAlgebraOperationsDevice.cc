@@ -1196,15 +1196,16 @@ namespace dftfe
         globalToLocalRowIdMap,
         globalToLocalColumnIdMap);
 
-      const dftfe::uInt MPadded = std::ceil(M * 1.0 / 8.0) * 8.0 + 0.5;
+      //const dftfe::uInt MPadded = std::ceil(M * 1.0 / 8.0) * 8.0 + 0.5;
       dftfe::utils::MemoryStorage<dataTypes::numberFP32,
                                   dftfe::utils::MemorySpace::DEVICE>
         XSP;
 
 
 
-      XSP.resize(MPadded * N, dataTypes::numberFP32(0));
+      XSP.resize(M * N, dataTypes::numberFP32(0));
       BLASWrapperPtr->copyValueType1ArrToValueType2Arr(N * M, X, XSP.begin());
+
 
 
       // band group parallelization data structures
@@ -1220,6 +1221,25 @@ namespace dftfe
       const dftfe::uInt extBlockSize = 0.5*vectorsBlockSize;
      
       const dftfe::uInt vectorsWithExtBlockSize = vectorsBlockSize+2*extBlockSize;
+
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        XDP;
+
+
+
+      XDP.resize(M * vectorsWithExtBlockSize, dataTypes::number(0));
+      
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        XDPNext;
+
+
+
+      XDPNext.resize(M * vectorsWithExtBlockSize, dataTypes::number(0));
+      
+      //BLASWrapperPtr->copyValueType1ArrToValueType2Arr(N * M, X, XDP.begin());
+
 
       const dftfe::uInt dofsBlockSize =
         std::min(maxNumLocalDofs, dftParams.subspaceRotDofsBlockSize);
@@ -1294,6 +1314,23 @@ namespace dftfe
         dataTypes::numberFP32(1.0);
       const dataTypes::numberFP32 scalarCoeffBetaSP = dataTypes::numberFP32(0);
       const dataTypes::numberFP32 scalarCoeffBetaSP_2 = dataTypes::numberFP32(1.0);
+
+      dftfe::uInt jvecNext=0;
+      dftfe::uInt BVecNext = std::min(vectorsBlockSize, N-jvecNext);
+      dftfe::uInt extBVecUpNext= std::min(vectorsBlockSize, jvecNext);
+      dftfe::uInt extBVecDownNext = std::min(extBlockSize,N-(jvecNext+BVecNext));
+      dftfe::uInt BVecNetNext=BVecNext+extBVecUpNext+extBVecDownNext;
+
+
+      copyToWfcsBlock(
+	BVecNetNext,
+	M,
+	X,
+	jvecNext-extBVecUpNext,
+	N,
+	XDPNext.begin(),
+	streamCompute);
+
 
       dftfe::uInt blockCount = 0;
       for (dftfe::uInt jvec = 0; jvec < N; jvec += vectorsBlockSize)
@@ -1475,6 +1512,27 @@ namespace dftfe
 		  }
                 }
 
+              XDPNext.swap(XDP);
+	      jvecNext=jvec+vectorsBlockSize;
+	      if (jvecNext<N)
+	      {
+		      BVecNext = std::min(vectorsBlockSize, N - jvecNext);
+		      extBVecUpNext= std::min(extBlockSize,jvecNext);
+		      extBVecDownNext = std::min(extBlockSize,N-(jvecNext+BVecNext));
+		      BVecNetNext=BVecNext+extBVecUpNext+extBVecDownNext;
+
+
+		      copyToWfcsBlock(
+			BVecNetNext,
+			M,
+			X,
+			jvecNext-extBVecUpNext,
+			N,
+			XDPNext.begin(),
+			streamCompute);
+	      }
+
+
               for (dftfe::uInt idof = 0; idof < maxNumLocalDofs;
                    idof += dofsBlockSize)
                 {
@@ -1494,12 +1552,12 @@ namespace dftfe
                                             &scalarCoeffAlphaDP,
                                             rotationMatBlockDP.begin(),
                                             BVec,
-                                            X + idof *N+jvec-extBVecUp,
-                                            N,
+                                            XDP.begin() + idof *BVecNet,
+                                            BVecNet,
                                             &scalarCoeffBetaDP,
                                             rotatedVectorsMatBlockDP.begin(),
                                             BVec);
-			    
+
                       BLASWrapperPtr->xgemm('N',
                                             'N',
                                             BVec,
