@@ -8,6 +8,29 @@ namespace dftfe
     namespace
     {
 
+      template <typename ValueType>	    
+      DFTFE_CREATE_KERNEL(
+        void,
+        copyToWfcsBlockKernel,
+        {
+          const dftfe::uInt numEntries = BVec * M;
+          for (dftfe::Int i = globalThreadId; i < numEntries;
+               i += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt idof = i / BVec;
+              const dftfe::uInt ivec  = i % BVec;
+
+              XBlock[idof * BVec + ivec]=X[N *idof + startingVecId + ivec]; 
+            }
+        },
+        const dftfe::uInt BVec,
+	const dftfe::uInt M,
+        const ValueType      *X,
+        const dftfe::uInt startingVecId,
+        const dftfe::uInt N,
+	ValueType           *XBlock);
+
+
       DFTFE_CREATE_KERNEL(
         void,
         addSubspaceRotatedBlockToXKernel,
@@ -392,6 +415,31 @@ namespace dftfe
 
     } // namespace
 
+    template <typename ValueType>
+    void
+    copyToWfcsBlock(const dftfe::uInt             BVec,
+                    const dftfe::uInt M,		    
+                               const ValueType             *X,
+                               const dftfe::uInt             startingVecId,
+                               const dftfe::uInt             N,
+			       ValueType             *XBlock,
+                               dftfe::utils::deviceStream_t &streamCompute)
+    {
+      DFTFE_LAUNCH_KERNEL(
+        copyToWfcsBlockKernel,
+        (BVec * M + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+          dftfe::utils::DEVICE_BLOCK_SIZE,
+        dftfe::utils::DEVICE_BLOCK_SIZE,
+        streamCompute,
+        BVec,
+	M,
+        dftfe::utils::makeDataTypeDeviceCompatible(X),
+        startingVecId,
+        N,
+	dftfe::utils::makeDataTypeDeviceCompatible(XBlock));
+    }
+
+
     template <typename ValueType1, typename ValueType2>
     void
     addSubspaceRotatedBlockToX(const dftfe::uInt             BDof,
@@ -679,6 +727,27 @@ namespace dftfe
             const dftfe::uInt     N,
             std::complex<double> *yVec,
             const dftfe::uInt     startingXVecId);
+
+    template
+    void
+    copyToWfcsBlock(const dftfe::uInt             BVec,
+                    const dftfe::uInt M,       
+                               const double             *X,
+                               const dftfe::uInt             startingVecId,
+                               const dftfe::uInt             N,
+                               double             *XBlock,
+                               dftfe::utils::deviceStream_t &streamCompute);
+
+    template 
+    void
+    copyToWfcsBlock(const dftfe::uInt             BVec,
+                    const dftfe::uInt M,
+                               const std::complex<double>              *X,
+                               const dftfe::uInt             startingVecId,
+                               const dftfe::uInt             N,
+                               std::complex<double>             *XBlock,
+                               dftfe::utils::deviceStream_t &streamCompute);
+    
 
   } // namespace linearAlgebraOperationsDevice
 } // namespace dftfe

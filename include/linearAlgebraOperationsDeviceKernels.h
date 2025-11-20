@@ -7,6 +7,16 @@ namespace dftfe
 {
   namespace linearAlgebraOperationsDevice
   {
+    template <typename ValueType>
+    void
+    copyToWfcsBlock(const dftfe::uInt             BVec,
+		    const dftfe::uInt             M,
+                               const ValueType                   *X,
+                               const dftfe::uInt             startingVecId,
+                               const dftfe::uInt             N,
+			       ValueType                   *XBlock,
+                               dftfe::utils::deviceStream_t &streamCompute);
+
     template <typename ValueType1, typename ValueType2>
     void
     addSubspaceRotatedBlockToX(const dftfe::uInt             BDof,
