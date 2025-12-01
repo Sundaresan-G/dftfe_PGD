@@ -2857,7 +2857,6 @@ namespace dftfe
 
       const dftfe::uInt vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
       const dftfe::uInt extBlockSize = 0.5*vectorsBlockSize;      
-      const dftfe::uInt vectorsWithExtBlockSize = vectorsBlockSize+extBlockSize;      
       const dftfe::uInt numberBlocks     = N / vectorsBlockSize;
 
       // create separate Device streams for Device->CPU copy and computation
@@ -4526,7 +4525,7 @@ namespace dftfe
 
 
       const dftfe::uInt vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
-      const dftfe::uInt extBlockSize = 0.5*vectorsBlockSize;
+      const dftfe::uInt extBlockSize = 0.0*vectorsBlockSize;
       const dftfe::uInt vectorsWithExtBlockSize = vectorsBlockSize+extBlockSize;
 
       const dftfe::uInt numberBlocks = N / vectorsBlockSize;
@@ -4741,7 +4740,7 @@ namespace dftfe
                       projHamBlockFP32.swap(projHamBlockFP32Next);
                     }
                 }
-              const dftfe::uInt DRem    = D - B;
+              const dftfe::uInt DRem    = D - BNet;
               const dftfe::uInt jvecNew = jvec + vectorsBlockSize;
               const dftfe::uInt DNew    = N - jvecNew;
               const dftfe::uInt BNew = std::min(vectorsBlockSize, N - jvecNew);
