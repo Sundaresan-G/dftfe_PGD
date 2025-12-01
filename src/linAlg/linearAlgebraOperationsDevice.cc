@@ -4525,8 +4525,7 @@ namespace dftfe
 
 
       const dftfe::uInt vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
-      const dftfe::uInt extBlockSize = 0.0*vectorsBlockSize;
-      const dftfe::uInt vectorsWithExtBlockSize = vectorsBlockSize+extBlockSize;
+      const dftfe::uInt extBlockSize = 0.5*vectorsBlockSize;
 
       const dftfe::uInt numberBlocks = N / vectorsBlockSize;
 
@@ -4779,7 +4778,7 @@ namespace dftfe
 
                   // evaluate X^{T} times HXBlockFullConj or XFP32^{T} times
                   // HXBlockFullFP32Conj
-                  const dftfe::uInt DRemNew = DNew - BNew;
+                  const dftfe::uInt DRemNew = DNew - BNetNew;
                   if (jvecNew + BNew > Noc)
                     {
                       BLASWrapperPtr->xgemm(
