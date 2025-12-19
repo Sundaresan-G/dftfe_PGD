@@ -1285,6 +1285,13 @@ namespace dftfe
   }
 
   template <dftfe::utils::MemorySpace memorySpace>
+  const dftfe::utils::MemoryStorage<double, memorySpace> &
+  KohnShamDFTBaseOperator<memorySpace>::getMassVector()
+  {
+    return d_basisOperationsPtr->massVectorBasisData();
+  }
+
+  template <dftfe::utils::MemorySpace memorySpace>
   dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &
   KohnShamDFTBaseOperator<memorySpace>::getScratchFEMultivector(
     const dftfe::uInt numVectors,

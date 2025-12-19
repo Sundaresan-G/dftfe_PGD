@@ -168,6 +168,9 @@ namespace dftfe
 
     virtual const dftfe::utils::MemoryStorage<double, memorySpace> &
     getSqrtMassVector() = 0;
+
+    virtual const dftfe::utils::MemoryStorage<double, memorySpace> &
+    getMassVector() = 0;    
   };
 } // namespace dftfe
 #endif
