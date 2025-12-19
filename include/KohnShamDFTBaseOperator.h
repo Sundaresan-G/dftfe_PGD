@@ -156,6 +156,9 @@ namespace dftfe
     const dftfe::utils::MemoryStorage<double, memorySpace> &
     getSqrtMassVector();
 
+    const dftfe::utils::MemoryStorage<double, memorySpace> &
+    getMassVector();
+
     void
     computeCellHamiltonianMatrix(
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);

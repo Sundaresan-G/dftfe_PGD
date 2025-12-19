@@ -2132,7 +2132,7 @@ namespace dftfe
     // 7) [COM] Perform blocking MPI_Allreduce on curent block and copy to
     // scalapack matrix
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    // Used in RR GEP
     void
     fillParallelOverlapMatScalapackAsyncComputeCommun(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
@@ -2214,6 +2214,8 @@ namespace dftfe
 
       const dataTypes::number scalarCoeffAlpha = dataTypes::number(1.0);
       const dataTypes::number scalarCoeffBeta  = dataTypes::number(0);
+      const dftfe::uInt chebyBlockSize =
+                    std::min(dftParams.chebyWfcBlockSize, N);
 
       dftfe::uInt blockCount = 0;
       for (dftfe::uInt ivec = 0; ivec < N; ivec += vectorsBlockSize)
@@ -2229,31 +2231,36 @@ namespace dftfe
               // Compute local XTrunc^{T}*XcBlock.
               if (ivec == bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
                 {
-                  const dftfe::uInt chebyBlockSize =
-                    std::min(dftParams.chebyWfcBlockSize, N);
+                  if (dftParams.approxOverlapMatrix)
+                          copyScaleToWfcsBlock(B,
+                                 M,
+                                 X,
+                                 operatorMatrix.getMassVector().data(),
+                                 ivec,
+                                 N,
+                                 OXBlockFull.begin(),
+                                 streamCompute);
+                  else
+                          for (dftfe::uInt k = ivec; k < ivec + B; k += chebyBlockSize)
+                            {
+                              BLASWrapperPtr->stridedCopyToBlockConstantStride(
+                                chebyBlockSize, N, M, k, X, XBlock.begin());
 
-                  for (dftfe::uInt k = ivec; k < ivec + B; k += chebyBlockSize)
-                    {
-                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
-                        chebyBlockSize, N, M, k, X, XBlock.begin());
-
-                      // evaluate XBlock^{T} times H^{T} and store in HXBlock
-                      operatorMatrix.overlapMatrixTimesX(
-                        XBlock,
-                        1.0,
-                        0.0,
-                        0.0,
-                        OXBlock,
-                        dftParams.approxOverlapMatrix);
-
-                      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                        B,
-                        chebyBlockSize,
-                        M,
-                        k - ivec,
-                        OXBlock.begin(),
-                        OXBlockFull.begin());
-                    }
+                              operatorMatrix.overlapMatrixTimesX(
+                                XBlock,
+                                1.0,
+                                0.0,
+                                0.0,
+                                OXBlock,
+                                dftParams.approxOverlapMatrix);
+                              BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+                                B,
+                                chebyBlockSize,
+                                M,
+                                k - ivec,
+                                OXBlock.begin(),
+                                OXBlockFull.begin());
+                            }
 
                   BLASWrapperPtr->xgemm(
                     'N',
@@ -2923,6 +2930,9 @@ namespace dftfe
       const dataTypes::numberFP32 scalarCoeffAlphaSP =
         dataTypes::numberFP32(1.0);
       const dataTypes::numberFP32 scalarCoeffBetaSP = dataTypes::numberFP32(0);
+      dftfe::utils::MemoryStorage<dataTypes::number,
+                                  dftfe::utils::MemorySpace::DEVICE>
+        XBlockFull(vectorsBlockSize * M, dataTypes::number(0.0));
 
       dftfe::utils::MemoryStorage<dataTypes::number,
                                   dftfe::utils::MemorySpace::DEVICE>
@@ -2949,26 +2959,38 @@ namespace dftfe
               // Compute local XTrunc^{T}*XcBlock
               if (ivec == bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
                 {
-                  for (dftfe::uInt k = ivec; k < ivec + B; k += chebyBlockSize)
-                    {
-                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
-                        chebyBlockSize, N, M, k, X, XBlock.begin());
+                  if (dftParams.approxOverlapMatrix)
+			  copyScaleToWfcsBlock(B,
+				 M,
+				 X,
+				 operatorMatrix.getMassVector().data(),
+				 ivec,
+				 N,
+				 OXBlockFull.begin(),
+				 streamCompute);
+		  else
+			  for (dftfe::uInt k = ivec; k < ivec + B; k += chebyBlockSize)
+			    {
+			      BLASWrapperPtr->stridedCopyToBlockConstantStride(
+				chebyBlockSize, N, M, k, X, XBlock.begin());
 
-                      operatorMatrix.overlapMatrixTimesX(
-                        XBlock,
-                        1.0,
-                        0.0,
-                        0.0,
-                        OXBlock,
-                        dftParams.approxOverlapMatrix);
-                      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                        B,
-                        chebyBlockSize,
-                        M,
-                        k - ivec,
-                        OXBlock.begin(),
-                        OXBlockFull.begin());
-                    }
+			      operatorMatrix.overlapMatrixTimesX(
+				XBlock,
+				1.0,
+				0.0,
+				0.0,
+				OXBlock,
+				dftParams.approxOverlapMatrix);
+			      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+				B,
+				chebyBlockSize,
+				M,
+				k - ivec,
+				OXBlock.begin(),
+				OXBlockFull.begin());
+			    }
+
+
                   if (ivec + B > Noc)
                     {
                       BLASWrapperPtr->xgemm(
