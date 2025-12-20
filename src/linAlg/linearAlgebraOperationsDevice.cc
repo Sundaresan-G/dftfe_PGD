@@ -2309,29 +2309,40 @@ namespace dftfe
                   const dftfe::uInt chebyBlockSize =
                     std::min(dftParams.chebyWfcBlockSize, N);
 
-                  for (dftfe::uInt k = ivecNew; k < ivecNew + BNew;
-                       k += chebyBlockSize)
-                    {
-                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
-                        chebyBlockSize, N, M, k, X, XBlock.begin());
 
-                      // evaluate XBlock^{T} times H^{T} and store in HXBlock
-                      operatorMatrix.overlapMatrixTimesX(
-                        XBlock,
-                        1.0,
-                        0.0,
-                        0.0,
-                        OXBlock,
-                        dftParams.approxOverlapMatrix);
+                  if (dftParams.approxOverlapMatrix)
+                          copyScaleToWfcsBlock(BNew,
+                                 M,
+                                 X,
+                                 operatorMatrix.getMassVector().data(),
+                                 ivecNew,
+                                 N,
+                                 OXBlockFull.begin(),
+                                 streamCompute);
+                  else
+			  for (dftfe::uInt k = ivecNew; k < ivecNew + BNew;
+			       k += chebyBlockSize)
+			    {
+			      BLASWrapperPtr->stridedCopyToBlockConstantStride(
+				chebyBlockSize, N, M, k, X, XBlock.begin());
 
-                      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                        B,
-                        chebyBlockSize,
-                        M,
-                        k - ivecNew,
-                        OXBlock.begin(),
-                        OXBlockFull.begin());
-                    }
+			      // evaluate XBlock^{T} times H^{T} and store in HXBlock
+			      operatorMatrix.overlapMatrixTimesX(
+				XBlock,
+				1.0,
+				0.0,
+				0.0,
+				OXBlock,
+				dftParams.approxOverlapMatrix);
+
+			      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+				BNew,
+				chebyBlockSize,
+				M,
+				k - ivecNew,
+				OXBlock.begin(),
+				OXBlockFull.begin());
+			    }
 
                   // evaluate X^{T} times XBlock
                   BLASWrapperPtr->xgemm(
@@ -3096,27 +3107,37 @@ namespace dftfe
               if (ivecNew <
                   bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1])
                 {
-                  for (dftfe::uInt k = ivecNew; k < ivecNew + BNew;
-                       k += chebyBlockSize)
-                    {
-                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
-                        chebyBlockSize, N, M, k, X, XBlock.begin());
+                  if (dftParams.approxOverlapMatrix)
+                          copyScaleToWfcsBlock(BNew,
+                                 M,
+                                 X,
+                                 operatorMatrix.getMassVector().data(),
+                                 ivecNew,
+                                 N,
+                                 OXBlockFull.begin(),
+                                 streamCompute);
+                  else
+			  for (dftfe::uInt k = ivecNew; k < ivecNew + BNew;
+			       k += chebyBlockSize)
+			    {
+			      BLASWrapperPtr->stridedCopyToBlockConstantStride(
+				chebyBlockSize, N, M, k, X, XBlock.begin());
 
-                      operatorMatrix.overlapMatrixTimesX(
-                        XBlock,
-                        1.0,
-                        0.0,
-                        0.0,
-                        OXBlock,
-                        dftParams.approxOverlapMatrix);
-                      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                        BNew,
-                        chebyBlockSize,
-                        M,
-                        k - ivecNew,
-                        OXBlock.begin(),
-                        OXBlockFull.begin());
-                    }
+			      operatorMatrix.overlapMatrixTimesX(
+				XBlock,
+				1.0,
+				0.0,
+				0.0,
+				OXBlock,
+				dftParams.approxOverlapMatrix);
+			      BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+				BNew,
+				chebyBlockSize,
+				M,
+				k - ivecNew,
+				OXBlock.begin(),
+				OXBlockFull.begin());
+			    }
 
                   // evaluate X^{T} times XBlock
                   if (ivecNew + BNew > Noc)
