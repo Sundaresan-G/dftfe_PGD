@@ -438,6 +438,27 @@ namespace dftfe
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
+    XtHXMixedPrec(
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      const dataTypes::number                             *X,
+      distributedDeviceVec<dataTypes::number>             &XBlock,
+      distributedDeviceVec<dataTypes::number>             &HXBlock,
+      const dftfe::uInt                                    M,
+      const dftfe::uInt                                    N,
+      const dftfe::uInt                                    Noc,
+      std::shared_ptr<
+        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+                                                      &BLASWrapperPtr,
+      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+      dftfe::ScaLAPACKMatrix<dataTypes::number>       &projHamPar,
+      utils::DeviceCCLWrapper                         &devicecclMpiCommDomain,
+      const MPI_Comm                                  &mpiCommDomain,
+      const MPI_Comm                                  &interBandGroupComm,
+      const dftParameters                             &dftParams,
+      const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
+
+
+    void
     XtHXOverlapComputeCommun(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       const dataTypes::number                             *X,

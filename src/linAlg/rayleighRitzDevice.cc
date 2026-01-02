@@ -496,21 +496,40 @@ namespace dftfe
               interBandGroupComm,
               dftParams);
           else
-            XtHXMixedPrecOverlapComputeCommun(
-              operatorMatrix,
-              X,
-              Xb,
-              HXb,
-              M,
-              N,
-              dftParams.numCoreWfcForMixedPrecRR,
-              BLASWrapperPtr,
-              processGrid,
-              projHamPar,
-              devicecclMpiCommDomain,
-              mpiCommDomain,
-              interBandGroupComm,
-              dftParams);
+          {
+            if (dftParams.overlapComputeCommunOrthoRR)
+                XtHXMixedPrecOverlapComputeCommun(
+                  operatorMatrix,
+                  X,
+                  Xb,
+                  HXb,
+                  M,
+                  N,
+                  dftParams.numCoreWfcForMixedPrecRR,
+                  BLASWrapperPtr,
+                  processGrid,
+                  projHamPar,
+                  devicecclMpiCommDomain,
+                  mpiCommDomain,
+                  interBandGroupComm,
+                  dftParams);
+            else
+                XtHXMixedPrec(
+                  operatorMatrix,
+                  X,
+                  Xb,
+                  HXb,
+                  M,
+                  N,
+                  dftParams.numCoreWfcForMixedPrecRR,
+                  BLASWrapperPtr,
+                  processGrid,
+                  projHamPar,
+                  devicecclMpiCommDomain,
+                  mpiCommDomain,
+                  interBandGroupComm,
+                  dftParams);              
+          }
         }
       else
         {
