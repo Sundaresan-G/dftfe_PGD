@@ -2695,13 +2695,13 @@ namespace dftfe
                   D * B * sizeof(dataTypes::number));
               else
                 {
-                  dftfe::utils::deviceMemcpyAsyncD2H(
+                  dftfe::utils::deviceMemcpyD2H(
                     overlapMatrixBlockHostDP.begin(),
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       overlapMatrixBlockDP.begin()),
                     B * B * sizeof(dataTypes::number));
                   if (DRem != 0)
-                    dftfe::utils::deviceMemcpyAsyncD2H(
+                    dftfe::utils::deviceMemcpyD2H(
                       overlapMatrixBlockHostSP.begin(),
                       dftfe::utils::makeDataTypeDeviceCompatible(
                         overlapMatrixBlockSP.begin()),
