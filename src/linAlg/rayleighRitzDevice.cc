@@ -771,7 +771,8 @@ namespace dftfe
                                              interBandGroupComm,
                                              projHamPar,
                                              dftParams,
-                                             false);
+                                             false,
+                                             dftParams.overlapComputeCommunOrthoRR);
       else
         subspaceRotationScalapack(X,
                                   M,
@@ -783,7 +784,9 @@ namespace dftfe
                                   interBandGroupComm,
                                   projHamPar,
                                   dftParams,
-                                  false);
+                                  false,
+                                  false,
+                                  dftParams.overlapComputeCommunOrthoRR);
 
       if (dftParams.deviceFineGrainedTimings)
         {
