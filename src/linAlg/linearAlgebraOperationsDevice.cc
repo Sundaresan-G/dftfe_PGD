@@ -457,7 +457,8 @@ namespace dftfe
       const dftfe::ScaLAPACKMatrix<dataTypes::number> &rotationMatPar,
       const dftParameters                             &dftParams,
       const bool                                       rotationMatTranspose,
-      const bool                                       isRotationMatLowerTria)
+      const bool                                       isRotationMatLowerTria,
+      const bool overlapComputeCommun)
     {
       const dftfe::uInt maxNumLocalDofs =
         dealii::Utilities::MPI::max(M, mpiCommDomain);
@@ -789,6 +790,8 @@ namespace dftfe
                                             rotatedVectorsMatBlock.begin() +
                                               jvec,
                                             N);
+                      if (!overlapComputeCommun)
+                        dftfe::utils::deviceStreamSynchronize(streamCompute);
                     }
                 } // band parallelization
               blockCount++;
@@ -1183,7 +1186,8 @@ namespace dftfe
       const MPI_Comm &                                 interBandGroupComm,
       const dftfe::ScaLAPACKMatrix<dataTypes::number> &rotationMatPar,
       const dftParameters &                            dftParams,
-      const bool                                       rotationMatTranspose)
+      const bool                                       rotationMatTranspose,
+      const bool overlapComputeCommun)
     {
       const dftfe::uInt maxNumLocalDofs =
         dealii::Utilities::MPI::max(M, mpiCommDomain);
@@ -1583,6 +1587,9 @@ namespace dftfe
                         jvec,
                         N,
                         streamCompute);
+
+                      if (!overlapComputeCommun)
+                        dftfe::utils::deviceStreamSynchronize(streamCompute);
                     }
                 } // block loop over dofs
             }     // band parallelization
