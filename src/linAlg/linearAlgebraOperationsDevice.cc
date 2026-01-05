@@ -2511,6 +2511,7 @@ namespace dftfe
         interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
 
       const dftfe::uInt vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
+      const dftfe::uInt extBlockSize = 0.5*vectorsBlockSize;
 
 
       dftfe::utils::MemoryStorage<dataTypes::numberFP32,
@@ -2563,6 +2564,8 @@ namespace dftfe
           // Correct block dimensions if block "goes off edge of" the matrix
           const dftfe::uInt B = std::min(vectorsBlockSize, N - ivec);
 
+          const dftfe::uInt extBDown = std::min(extBlockSize,N-(ivec+B));
+          const dftfe::uInt BNet=B+extBDown;
 
           const dftfe::uInt D = N - ivec;
 
@@ -2594,7 +2597,7 @@ namespace dftfe
                     OXBlock.begin(),
                     OXBlockFull.begin());
                 }
-              const dftfe::uInt DRem = D - B;
+              const dftfe::uInt DRem = D - BNet;
               if (ivec + B > Noc)
                 {
                   BLASWrapperPtr->xgemm(
@@ -2623,7 +2626,7 @@ namespace dftfe
                                  std::complex<double>>::value ?
                       'C' :
                       'T',
-                    B,
+                    BNet,
                     B,
                     M,
                     &scalarCoeffAlpha,
@@ -2633,7 +2636,7 @@ namespace dftfe
                     B,
                     &scalarCoeffBeta,
                     overlapMatrixBlockDP.begin(),
-                    B);
+                    BNet);
 
 
 
@@ -2657,7 +2660,7 @@ namespace dftfe
                         B,
                         M,
                         &scalarCoeffAlphaSP,
-                        XSP.begin() + ivec + B,
+                        XSP.begin() + ivec + BNet,
                         N,
                         OXBlockFullFP32.data(),
                         B,
@@ -2684,7 +2687,7 @@ namespace dftfe
                           devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
                             overlapMatrixBlockDP.begin(),
                             overlapMatrixBlockDP.begin(),
-                            B * B,
+                            BNet * B,
                             streamDeviceCCL);
                         }
                       if (DRem != 0)
@@ -2695,7 +2698,7 @@ namespace dftfe
                               overlapMatrixBlockSP.begin(),
                               overlapMatrixBlockDP.begin(),
                               overlapMatrixBlockSP.begin(),
-                              B * B,
+                              BNet * B,
                               DRem * B,
                               streamDeviceCCL);
                         }
@@ -2714,7 +2717,7 @@ namespace dftfe
                     overlapMatrixBlockHostDP.begin(),
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       overlapMatrixBlockDP.begin()),
-                    B * B * sizeof(dataTypes::number));
+                    BNet * B * sizeof(dataTypes::number));
                   if (DRem != 0)
                     dftfe::utils::deviceMemcpyD2H(
                       overlapMatrixBlockHostSP.begin(),
@@ -2764,7 +2767,7 @@ namespace dftfe
                     {
                       MPI_Allreduce(MPI_IN_PLACE,
                                     overlapMatrixBlockHostDP.begin(),
-                                    B * B,
+                                    BNet * B,
                                     dataTypes::mpi_type_id(
                                       overlapMatrixBlockHostDP.begin()),
                                     MPI_SUM,
@@ -2788,7 +2791,7 @@ namespace dftfe
                         {
                           const dftfe::uInt localColumnId =
                             globalToLocalColumnIdMap[j + ivec];
-                          for (dftfe::uInt i = j + ivec; i < ivec + B; ++i)
+                          for (dftfe::uInt i = j + ivec; i < ivec + BNet; ++i)
                             {
                               std::unordered_map<dftfe::uInt,
                                                  dftfe::uInt>::iterator it =
@@ -2796,9 +2799,9 @@ namespace dftfe
                               if (it != globalToLocalRowIdMap.end())
                                 overlapMatPar.local_el(it->second,
                                                        localColumnId) =
-                                  overlapMatrixBlockHostDP[j * B + i - ivec];
+                                  overlapMatrixBlockHostDP[j * BNet + i - ivec];
                             }
-                          for (dftfe::uInt i = ivec + B; i < N; ++i)
+                          for (dftfe::uInt i = ivec + BNet; i < N; ++i)
                             {
                               std::unordered_map<dftfe::uInt,
                                                  dftfe::uInt>::iterator it =
@@ -2807,7 +2810,7 @@ namespace dftfe
                                 overlapMatPar.local_el(it->second,
                                                        localColumnId) =
                                   overlapMatrixBlockHostSP[j * DRem + i - ivec -
-                                                           B];
+                                                           BNet];
                             }
                         }
                 }
@@ -2859,6 +2862,7 @@ namespace dftfe
         interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
 
       const dftfe::uInt vectorsBlockSize = std::min(dftParams.wfcBlockSize, N);
+      const dftfe::uInt extBlockSize = 0.5*vectorsBlockSize;
 
 
       dftfe::utils::MemoryStorage<dataTypes::numberFP32,
@@ -2913,6 +2917,8 @@ namespace dftfe
 
 
           const dftfe::uInt D = N - ivec;
+          const dftfe::uInt extBDown = std::min(extBlockSize,N-(ivec+B));
+          const dftfe::uInt BNet=B+extBDown; 
 
           if ((ivec + B) <=
                 bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&
@@ -2952,7 +2958,7 @@ namespace dftfe
                             OXBlockFull.begin());
                         }
 
-              const dftfe::uInt DRem = D - B;
+              const dftfe::uInt DRem = D - BNet;
               if (ivec + B > Noc)
                 {
                   BLASWrapperPtr->xgemm(
@@ -2981,7 +2987,7 @@ namespace dftfe
                                  std::complex<double>>::value ?
                       'C' :
                       'T',
-                    B,
+                    BNet,
                     B,
                     M,
                     &scalarCoeffAlpha,
@@ -2991,7 +2997,7 @@ namespace dftfe
                     B,
                     &scalarCoeffBeta,
                     overlapMatrixBlockDP.begin(),
-                    B);
+                    BNet);
 
 
 
@@ -3015,7 +3021,7 @@ namespace dftfe
                         B,
                         M,
                         &scalarCoeffAlphaSP,
-                        XSP.begin() + ivec + B,
+                        XSP.begin() + ivec + BNet,
                         N,
                         OXBlockFullFP32.data(),
                         B,
@@ -3042,7 +3048,7 @@ namespace dftfe
                           devicecclMpiCommDomain.deviceDirectAllReduceWrapper(
                             overlapMatrixBlockDP.begin(),
                             overlapMatrixBlockDP.begin(),
-                            B * B,
+                            BNet * B,
                             streamDeviceCCL);
                         }
                       if (DRem != 0)
@@ -3053,7 +3059,7 @@ namespace dftfe
                               overlapMatrixBlockSP.begin(),
                               overlapMatrixBlockDP.begin(),
                               overlapMatrixBlockSP.begin(),
-                              B * B,
+                              BNet * B,
                               DRem * B,
                               streamDeviceCCL);
                         }
@@ -3072,7 +3078,7 @@ namespace dftfe
                     overlapMatrixBlockHostDP.begin(),
                     dftfe::utils::makeDataTypeDeviceCompatible(
                       overlapMatrixBlockDP.begin()),
-                    B * B * sizeof(dataTypes::number));
+                    BNet * B * sizeof(dataTypes::number));
                   if (DRem != 0)
                     dftfe::utils::deviceMemcpyD2H(
                       overlapMatrixBlockHostSP.begin(),
@@ -3122,7 +3128,7 @@ namespace dftfe
                     {
                       MPI_Allreduce(MPI_IN_PLACE,
                                     overlapMatrixBlockHostDP.begin(),
-                                    B * B,
+                                    BNet * B,
                                     dataTypes::mpi_type_id(
                                       overlapMatrixBlockHostDP.begin()),
                                     MPI_SUM,
@@ -3146,7 +3152,7 @@ namespace dftfe
                         {
                           const dftfe::uInt localColumnId =
                             globalToLocalColumnIdMap[j + ivec];
-                          for (dftfe::uInt i = j + ivec; i < ivec + B; ++i)
+                          for (dftfe::uInt i = j + ivec; i < ivec + BNet; ++i)
                             {
                               std::unordered_map<dftfe::uInt,
                                                  dftfe::uInt>::iterator it =
@@ -3154,9 +3160,9 @@ namespace dftfe
                               if (it != globalToLocalRowIdMap.end())
                                 overlapMatPar.local_el(it->second,
                                                        localColumnId) =
-                                  overlapMatrixBlockHostDP[j * B + i - ivec];
+                                  overlapMatrixBlockHostDP[j * BNet + i - ivec];
                             }
-                          for (dftfe::uInt i = ivec + B; i < N; ++i)
+                          for (dftfe::uInt i = ivec + BNet; i < N; ++i)
                             {
                               std::unordered_map<dftfe::uInt,
                                                  dftfe::uInt>::iterator it =
@@ -3165,7 +3171,7 @@ namespace dftfe
                                 overlapMatPar.local_el(it->second,
                                                        localColumnId) =
                                   overlapMatrixBlockHostSP[j * DRem + i - ivec -
-                                                           B];
+                                                           BNet];
                             }
                         }
                 }
