@@ -1834,7 +1834,7 @@ namespace dftfe
         communPrecCheby    = prm.get("COMMUN PREC CHEBY");
         useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
         tensorOpType       = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
-	adaptiveUsageBelowFP32Prec      = prm.get("ADAPTIVE USAGE BELOW FP32 PREC")
+	adaptiveUsageBelowFP32Prec      = prm.get_bool("ADAPTIVE USAGE BELOW FP32 PREC");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
         overlapComputeCommunOrthoRR =
