@@ -1742,11 +1742,12 @@ namespace dftfe
             ->initialiseFlattenedDataStructure(
               numWaveFunctions,
               d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec);
-
+/*
         if (d_dftParamsPtr->communPrecCheby == "BF16")
           d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
             .setCommunicationPrecision(
               dftfe::utils::mpi::communicationPrecision::half);
+*/
       }
 
     d_basisOperationsPtr->reinit(numWaveFunctions,
@@ -2075,6 +2076,7 @@ namespace dftfe
     const dftfe::uInt numberWavefunctions = src.numVectors() / spinorFactor;
     if (d_numVectorsInternal != numberWavefunctions * spinorFactor)
       reinitNumberWavefunctions(numberWavefunctions * spinorFactor);
+/*
 #if defined(DFTFE_WITH_DEVICE)
     if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       {
@@ -2086,6 +2088,7 @@ namespace dftfe
             dftfe::linearAlgebra::tensorOpDataType::bf16);
       }
 #endif
+*/
     if (d_basisOperationsPtr->d_nVectors != numberWavefunctions * spinorFactor)
       d_basisOperationsPtr->reinit(numberWavefunctions * spinorFactor,
                                    d_cellsBlockSizeHX,
@@ -2266,11 +2269,13 @@ namespace dftfe
     inverseSqrtMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);
     dst.accumulateAddLocallyOwned();
     dst.zeroOutGhosts();
+/*
 #if defined(DFTFE_WITH_DEVICE)
     if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       d_BLASWrapperPtr->setTensorOpDataType(
         dftfe::linearAlgebra::tensorOpDataType::fp32);
 #endif
+*/
   }
   template <dftfe::utils::MemorySpace memorySpace>
   void
@@ -2675,6 +2680,24 @@ namespace dftfe
     dst.accumulateAddLocallyOwned();
     dst.zeroOutGhosts();
   }
+
+  template <dftfe::utils::MemorySpace memorySpace>
+  void                      
+  KohnShamDFTBaseOperator<memorySpace>::setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(const std::string precision)
+  {
+     if (d_dftParamsPtr->isPseudopotential && d_dftParamsPtr->useSinglePrecCheby)	
+     {
+	 if (precision == "BF16")
+          d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
+            .setCommunicationPrecision(
+              dftfe::utils::mpi::communicationPrecision::half);	
+         else if (precision == "STANDARD")	 
+          d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
+            .setCommunicationPrecision(
+              dftfe::utils::mpi::communicationPrecision::standard);
+     }	 
+  }  
+
 
   template class KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)

@@ -781,11 +781,13 @@ namespace dftfe
         dst.accumulateAddLocallyOwned();
         dst.zeroOutGhosts();
       }
+/*
 #if defined(DFTFE_WITH_DEVICE)
     if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       d_BLASWrapperPtr->setTensorOpDataType(
         dftfe::linearAlgebra::tensorOpDataType::fp32);
 #endif
+*/
   }
 
   template class KohnShamDFTStandardEigenOperator<

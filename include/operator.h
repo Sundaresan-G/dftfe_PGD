@@ -180,7 +180,11 @@ namespace dftfe
     getSqrtMassVector() = 0;
 
     virtual const dftfe::utils::MemoryStorage<double, memorySpace> &
-    getMassVector() = 0;    
+    getMassVector() = 0;   
+
+    virtual void
+    setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(const std::string precision) = 0;
+
   };
 } // namespace dftfe
 #endif
