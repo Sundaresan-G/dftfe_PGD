@@ -540,6 +540,7 @@ namespace dftfe
     const dftfe::uInt numDoFsPerCell = d_basisOperationsPtr->nDofsPerCell();
     const dftfe::uInt spinorFactor   = d_dftParamsPtr->noncolin ? 2 : 1;
     const dftfe::uInt numberWavefunctions = src.numVectors() / spinorFactor;
+/*
 #if defined(DFTFE_WITH_DEVICE)
     if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
       {
@@ -551,6 +552,7 @@ namespace dftfe
             dftfe::linearAlgebra::tensorOpDataType::bf16);
       }
 #endif
+*/
     if (d_numVectorsInternal != numberWavefunctions * spinorFactor)
       reinitNumberWavefunctions(numberWavefunctions * spinorFactor);
 
