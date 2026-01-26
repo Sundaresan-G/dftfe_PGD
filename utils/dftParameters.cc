@@ -1437,7 +1437,7 @@ namespace dftfe
     deviceFineGrainedTimings                       = false;
     allowFullCPUMemSubspaceRot                     = true;
     communPrecCheby                                = "STANDARD";
-    adaptiveUsageBelowFP32Prec                     = "true";
+    adaptiveUsageBelowFP32Prec                     = true;
     overlapComputeCommunCheby                      = false;
     overlapComputeCommunOrthoRR                    = false;
     autoDeviceBlockSizes                           = true;
