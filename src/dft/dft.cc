@@ -2618,8 +2618,13 @@ namespace dftfe
                                atomLocations);
       }
 
-    const bool BF16ChebyCommunMode=d_dftParamsPtr->communPrecCheby=="BF16"?true:false;
-    const bool TF32Mode=d_dftParamsPtr->tensorOpType == "TF32"?true:false;
+    const bool BF16ChebyCommunMode=(d_dftParamsPtr->communPrecCheby=="BF16")?true:false;
+    const bool TF32Mode=(d_dftParamsPtr->tensorOpType == "TF32")?true:false;
+    if (TF32Mode)
+         d_BLASWrapperPtr->setTensorOpDataType(
+            dftfe::linearAlgebra::tensorOpDataType::tf32);
+	    
+    
     //
     // Begin SCF iteration
     //
