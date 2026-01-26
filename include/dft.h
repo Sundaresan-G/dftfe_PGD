@@ -1128,6 +1128,24 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &magQuadValues);
 
+    void
+    totalNonCollinearMagnetization(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &densityQuadValues);
+
+    void
+    localCollinearMagnetizationDensity(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &densityQuadValues);
+
+    void
+    localNonCollinearMagnetizationDensity(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &densityQuadValues);
+
     /**
      *@brief normalize the input electron density
      */
@@ -1550,7 +1568,8 @@ namespace dftfe
     const dftfe::uInt this_mpi_process;
     dealii::IndexSet  locally_owned_dofs, locally_owned_dofsEigen;
     dealii::IndexSet  locally_relevant_dofs, locally_relevant_dofsEigen,
-      d_locallyRelevantDofsPRefined, d_locallyRelevantDofsRhoNodal;
+      d_locallyRelevantDofsPRefined, d_locallyRelevantDofsRhoNodal,
+      d_locallyOwnedDofsPRefined, d_locallyOwnedDofsRhoNodal;
     std::vector<dealii::types::global_dof_index> local_dof_indicesReal,
       local_dof_indicesImag;
     std::vector<dealii::types::global_dof_index> localProc_dof_indicesReal,
@@ -1710,7 +1729,8 @@ namespace dftfe
       d_rhoOutNodalValuesDistributed;
 
 
-    distributedCPUVec<double> d_magInNodalValuesRead;
+    distributedCPUVec<double> d_magZInNodalValuesRead, d_magYInNodalValuesRead,
+      d_magXInNodalValuesRead;
 
 
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
