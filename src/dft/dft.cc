@@ -2617,6 +2617,9 @@ namespace dftfe
                                *d_dftParamsPtr,
                                atomLocations);
       }
+
+    const bool BF16ChebyCommunMode=d_dftParamsPtr->communPrecCheby=="BF16"?true:false;
+    const bool TF32Mode=d_dftParamsPtr->tensorOpType == "TF32"?true:false;
     //
     // Begin SCF iteration
     //
@@ -3340,6 +3343,28 @@ namespace dftfe
         // adaptiveChebysevFilterPassesTol (a heuristic value)
         // do more passes of chebysev filter till the check passes.
         // This improves the scf convergence performance.
+
+	if (d_dftParamsPtr->adaptiveUsageBelowFP32Prec)
+	{
+		if (BF16ChebyCommunMode)
+		{
+			if (norm>0.1) 
+			   d_dftParamsPtr->communPrecCheby="STANDARD";
+			else
+			   d_dftParamsPtr->communPrecCheby="BF16"; 
+		}
+
+		if (TF32Mode)
+		{
+			if (norm>0.1)
+			   d_BLASWrapperPtr->setTensorOpDataType(
+            dftfe::linearAlgebra::tensorOpDataType::fp32);
+			else
+			   d_BLASWrapperPtr->setTensorOpDataType(
+            dftfe::linearAlgebra::tensorOpDataType::tf32); 
+		}
+	}
+	
 
         const double filterPassTol =
           (scfIter == 0 && isRestartGroundStateCalcFromChk) ?
