@@ -663,7 +663,10 @@ namespace dftfe
 
     // if (d_dftParams.measureOnlyChebyTime)
     //  exit(0);
-
+    const bool TF32Mode=(d_dftParams.tensorOpType == "TF32")?true:false;
+                if (TF32Mode)
+                           BLASWrapperPtr->setTensorOpDataType(
+            dftfe::linearAlgebra::tensorOpDataType::fp32);
 
 
     if (d_dftParams.orthogType.compare("GS") == 0)
@@ -768,6 +771,9 @@ namespace dftfe
       }
 
 
+                if (TF32Mode)
+                           BLASWrapperPtr->setTensorOpDataType(
+            dftfe::linearAlgebra::tensorOpDataType::tf32);
 
     return d_upperBoundUnWantedSpectrum;
   }

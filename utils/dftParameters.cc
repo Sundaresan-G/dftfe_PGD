@@ -1142,7 +1142,7 @@ namespace dftfe
 
           prm.declare_entry(
             "ADAPTIVE USAGE BELOW FP32 PREC",
-            "true",
+            "false",
             dealii::Patterns::Bool(),
             "[Advanced] If below FP32 precision is enabled in the paramters either in compute or communication, only actualy use them when the SCF error in L2 norm of the electron density difference below 0.1. This provides robust convergence of the SCF and the linear eignsolve in each SCF step.");
 
@@ -1437,7 +1437,7 @@ namespace dftfe
     deviceFineGrainedTimings                       = false;
     allowFullCPUMemSubspaceRot                     = true;
     communPrecCheby                                = "STANDARD";
-    adaptiveUsageBelowFP32Prec                     = true;
+    adaptiveUsageBelowFP32Prec                     = false;
     overlapComputeCommunCheby                      = false;
     overlapComputeCommunOrthoRR                    = false;
     autoDeviceBlockSizes                           = true;
