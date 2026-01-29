@@ -3349,7 +3349,7 @@ namespace dftfe
         // do more passes of chebysev filter till the check passes.
         // This improves the scf convergence performance.
 
-	if (d_dftParamsPtr->adaptiveUsageBelowFP32Prec)
+	if (d_dftParamsPtr->adaptiveUsageBF16Commun)
 	{
 		if (BF16ChebyCommunMode)
 		{
@@ -3357,16 +3357,6 @@ namespace dftfe
 			   d_dftParamsPtr->communPrecCheby="STANDARD";
 			else
 			   d_dftParamsPtr->communPrecCheby="BF16"; 
-		}
-
-		if (TF32Mode)
-		{
-			if (norm>0.1)
-			   d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::fp32);
-			else
-			   d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::tf32); 
 		}
 	}
 	
