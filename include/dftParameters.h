@@ -150,7 +150,7 @@ namespace dftfe
     bool        deviceFineGrainedTimings;
     bool        allowFullCPUMemSubspaceRot;
     std::string communPrecCheby;
-    bool        adaptiveUsageBelowFP32Prec;
+    bool        adaptiveUsageBF16Commun;
     bool        useSinglePrecCheby;
     bool        overlapComputeCommunCheby;
     bool        overlapComputeCommunOrthoRR;

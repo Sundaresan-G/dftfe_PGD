@@ -1141,10 +1141,10 @@ namespace dftfe
             "[Advanced] Tensor operation datatype for the modified single precision algorithm for Chebyshev filtering, this only used on Nvidia GPUs with compute capability greater than 80. Default setting is FP32.");
 
           prm.declare_entry(
-            "ADAPTIVE USAGE BELOW FP32 PREC",
+            "ADAPTIVE USAGE BF16 COMMUN",
             "false",
             dealii::Patterns::Bool(),
-            "[Advanced] If below FP32 precision is enabled in the paramters either in compute or communication, only actualy use them when the SCF error in L2 norm of the electron density difference below 0.1. This provides robust convergence of the SCF and the linear eignsolve in each SCF step.");
+            "[Advanced] Use BF16 communication only when the SCF error in L2 norm of the electron density difference below 0.1. This provides robust convergence of the SCF and the linear eignsolve in each SCF step.");
 
 
           prm.declare_entry(
@@ -1437,7 +1437,7 @@ namespace dftfe
     deviceFineGrainedTimings                       = false;
     allowFullCPUMemSubspaceRot                     = true;
     communPrecCheby                                = "STANDARD";
-    adaptiveUsageBelowFP32Prec                     = false;
+    adaptiveUsageBF16Commun                     = false;
     overlapComputeCommunCheby                      = false;
     overlapComputeCommunOrthoRR                    = false;
     autoDeviceBlockSizes                           = true;
@@ -1834,7 +1834,7 @@ namespace dftfe
         communPrecCheby    = prm.get("COMMUN PREC CHEBY");
         useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
         tensorOpType       = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
-	adaptiveUsageBelowFP32Prec      = prm.get_bool("ADAPTIVE USAGE BELOW FP32 PREC");
+        adaptiveUsageBF16Commun      = prm.get_bool("ADAPTIVE USAGE BF16 COMMUN");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
         overlapComputeCommunOrthoRR =
