@@ -159,13 +159,6 @@ namespace dftfe
     const dftfe::utils::MemoryStorage<double, memorySpace> &
     getSqrtMassVector();
 
-    const dftfe::utils::MemoryStorage<double, memorySpace> &
-    getMassVector();
-
-    void
-    setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(
-      const std::string precision);
-
     void
     computeCellHamiltonianMatrix(
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
