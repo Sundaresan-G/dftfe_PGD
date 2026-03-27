@@ -496,8 +496,8 @@ namespace dftfe
               interBandGroupComm,
               dftParams);
           else
-          {
-            if (dftParams.overlapComputeCommunOrthoRR)
+            {
+              if (dftParams.overlapComputeCommunOrthoRR)
                 XtHXMixedPrecOverlapComputeCommun(
                   operatorMatrix,
                   X,
@@ -513,23 +513,22 @@ namespace dftfe
                   mpiCommDomain,
                   interBandGroupComm,
                   dftParams);
-            else
-                XtHXMixedPrec(
-                  operatorMatrix,
-                  X,
-                  Xb,
-                  HXb,
-                  M,
-                  N,
-                  dftParams.numCoreWfcForMixedPrecRR,
-                  BLASWrapperPtr,
-                  processGrid,
-                  projHamPar,
-                  devicecclMpiCommDomain,
-                  mpiCommDomain,
-                  interBandGroupComm,
-                  dftParams);              
-          }
+              else
+                XtHXMixedPrec(operatorMatrix,
+                              X,
+                              Xb,
+                              HXb,
+                              M,
+                              N,
+                              dftParams.numCoreWfcForMixedPrecRR,
+                              BLASWrapperPtr,
+                              processGrid,
+                              projHamPar,
+                              devicecclMpiCommDomain,
+                              mpiCommDomain,
+                              interBandGroupComm,
+                              dftParams);
+            }
         }
       else
         {
@@ -761,18 +760,19 @@ namespace dftfe
         }
 
       if (useMixedPrecOverall && dftParams.useMixedPrecSubspaceRotRR)
-        subspaceRotationRRMixedPrecScalapack(X,
-                                             M,
-                                             N,
-                                             BLASWrapperPtr,
-                                             processGrid,
-                                             mpiCommDomain,
-                                             devicecclMpiCommDomain,
-                                             interBandGroupComm,
-                                             projHamPar,
-                                             dftParams,
-                                             false,
-                                             dftParams.overlapComputeCommunOrthoRR);
+        subspaceRotationRRMixedPrecScalapack(
+          X,
+          M,
+          N,
+          BLASWrapperPtr,
+          processGrid,
+          mpiCommDomain,
+          devicecclMpiCommDomain,
+          interBandGroupComm,
+          projHamPar,
+          dftParams,
+          false,
+          dftParams.overlapComputeCommunOrthoRR);
       else
         subspaceRotationScalapack(X,
                                   M,

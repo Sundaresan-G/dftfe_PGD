@@ -2620,15 +2620,16 @@ namespace dftfe
                                atomLocations);
       }
 
-    const bool BF16ChebyCommunMode=(d_dftParamsPtr->communPrecCheby=="BF16")?true:false;
+    const bool BF16ChebyCommunMode =
+      (d_dftParamsPtr->communPrecCheby == "BF16") ? true : false;
     if (d_dftParamsPtr->tensorOpType == "TF32")
-         d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::tf32);
+      d_BLASWrapperPtr->setTensorOpDataType(
+        dftfe::linearAlgebra::tensorOpDataType::tf32);
     else if (d_dftParamsPtr->tensorOpType == "BF16")
-         d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::bf16);
-	    
-    
+      d_BLASWrapperPtr->setTensorOpDataType(
+        dftfe::linearAlgebra::tensorOpDataType::bf16);
+
+
     //
     // Begin SCF iteration
     //
@@ -3355,17 +3356,17 @@ namespace dftfe
         // do more passes of chebysev filter till the check passes.
         // This improves the scf convergence performance.
 
-	if (d_dftParamsPtr->adaptiveUsageBF16Commun)
-	{
-		if (BF16ChebyCommunMode)
-		{
-			if (norm>0.1) 
-			   d_dftParamsPtr->communPrecCheby="STANDARD";
-			else
-			   d_dftParamsPtr->communPrecCheby="BF16"; 
-		}
-	}
-	
+        if (d_dftParamsPtr->adaptiveUsageBF16Commun)
+          {
+            if (BF16ChebyCommunMode)
+              {
+                if (norm > 0.1)
+                  d_dftParamsPtr->communPrecCheby = "STANDARD";
+                else
+                  d_dftParamsPtr->communPrecCheby = "BF16";
+              }
+          }
+
 
         const double filterPassTol =
           (scfIter == 0 && isRestartGroundStateCalcFromChk) ?
