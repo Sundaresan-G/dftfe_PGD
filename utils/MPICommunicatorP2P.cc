@@ -18,13 +18,13 @@
 /*
  * @author Sambit Das.
  */
-
 #include <MPICommunicatorP2P.h>
 #include <MPICommunicatorP2PKernels.h>
 #include <MPITags.h>
 #include <Exceptions.h>
 #include <DeviceAPICalls.h>
 #include <deviceDirectCCLWrapper.h>
+
 namespace dftfe
 {
   namespace utils
@@ -49,7 +49,7 @@ namespace dftfe
 #if defined(DFTFE_WITH_DCCL_P2P) && \
   (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
         if (memorySpace == MemorySpace::DEVICE &&
-            dftfe::utils::DeviceCCLWrapper::ncclCommInit)
+            dftfe::utils::DeviceCCLWrapper::dcclCommInit)
           d_commProtocol = communicationProtocol::nccl;
 #endif
 
@@ -916,7 +916,7 @@ namespace dftfe
                 {
                   MemoryTransfer<memorySpace, MemorySpace::HOST_PINNED>
                     memoryTransfer;
-                  if (d_ghostDataCopyHostPinnedPtr->size() > 0)
+                  if (d_ghostDataCopySinglePrecHostPinnedPtr->size() > 0)
                     memoryTransfer.copy(
                       d_ghostDataCopySinglePrecHostPinnedPtr->size(),
                       d_ghostDataCopySinglePrec.data(),
@@ -953,7 +953,7 @@ namespace dftfe
                 {
                   MemoryTransfer<memorySpace, MemorySpace::HOST_PINNED>
                     memoryTransfer;
-                  if (d_ghostDataCopyHostPinnedPtr->size() > 0)
+                  if (d_ghostDataCopyHalfPrecHostPinnedPtr->size() > 0)
                     memoryTransfer.copy(
                       d_ghostDataCopyHalfPrecHostPinnedPtr->size(),
                       d_ghostDataCopyHalfPrec.data(),
@@ -1234,7 +1234,7 @@ namespace dftfe
                   {
                     MemoryTransfer<MemorySpace::HOST_PINNED, memorySpace>
                       memoryTransfer;
-                    if (d_ghostDataCopyHostPinnedPtr->size() > 0)
+                    if (d_ghostDataCopySinglePrecHostPinnedPtr->size() > 0)
                       memoryTransfer.copy(
                         d_ghostDataCopySinglePrecHostPinnedPtr->size(),
                         d_ghostDataCopySinglePrecHostPinnedPtr->begin(),
@@ -1424,7 +1424,7 @@ namespace dftfe
                   {
                     MemoryTransfer<MemorySpace::HOST_PINNED, memorySpace>
                       memoryTransfer;
-                    if (d_ghostDataCopyHostPinnedPtr->size() > 0)
+                    if (d_ghostDataCopyHalfPrecHostPinnedPtr->size() > 0)
                       memoryTransfer.copy(
                         d_ghostDataCopyHalfPrecHostPinnedPtr->size(),
                         d_ghostDataCopyHalfPrecHostPinnedPtr->begin(),
@@ -1944,7 +1944,7 @@ namespace dftfe
                   {
                     MemoryTransfer<MemorySpace::HOST_PINNED, memorySpace>
                       memoryTransfer;
-                    if (d_ghostDataCopyHostPinnedPtr->size() > 0)
+                    if (d_ghostDataCopySinglePrecHostPinnedPtr->size() > 0)
                       memoryTransfer.copy(
                         d_ghostDataCopySinglePrecHostPinnedPtr->size(),
                         d_ghostDataCopySinglePrecHostPinnedPtr->begin(),
