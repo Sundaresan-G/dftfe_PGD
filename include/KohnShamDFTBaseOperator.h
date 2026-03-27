@@ -163,7 +163,8 @@ namespace dftfe
     getMassVector();
 
     void
-    setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(const std::string precision);
+    setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(
+      const std::string precision);
 
     void
     computeCellHamiltonianMatrix(

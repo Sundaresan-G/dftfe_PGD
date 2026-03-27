@@ -280,7 +280,7 @@ namespace dftfe
       const dftParameters                             &dftParams,
       const bool rotationMatTranspose   = false,
       const bool isRotationMatLowerTria = false,
-      const bool overlapComputeCommun=true);
+      const bool overlapComputeCommun   = true);
 
 
 
@@ -316,7 +316,7 @@ namespace dftfe
       const dftfe::ScaLAPACKMatrix<dataTypes::number> &rotationMatPar,
       const dftParameters                             &dftParams,
       const bool rotationMatTranspose = false,
-      const bool overlapComputeCommun=true);
+      const bool overlapComputeCommun = true);
 
 
     void

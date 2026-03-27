@@ -1133,8 +1133,8 @@ namespace dftfe
             "false",
             dealii::Patterns::Bool(),
             "[Advanced] Use a modified single precision algorithm for Chebyshev filtering. This cannot be used in conjunction with spectrum splitting. Default setting is false.");
-          
-	  prm.declare_entry(
+
+          prm.declare_entry(
             "TENSOR OP TYPE SINGLE PREC CHEBY",
             "FP32",
             dealii::Patterns::Selection("FP32|TF32|BF16"),
@@ -1437,7 +1437,7 @@ namespace dftfe
     deviceFineGrainedTimings                       = false;
     allowFullCPUMemSubspaceRot                     = true;
     communPrecCheby                                = "STANDARD";
-    adaptiveUsageBF16Commun                     = false;
+    adaptiveUsageBF16Commun                        = false;
     overlapComputeCommunCheby                      = false;
     overlapComputeCommunOrthoRR                    = false;
     autoDeviceBlockSizes                           = true;
@@ -1831,10 +1831,10 @@ namespace dftfe
         useMixedPrecSubspaceRotRR = prm.get_bool("USE MIXED PREC RR_SR");
         useMixedPrecCommunOnlyXtHXXtOX =
           prm.get_bool("USE MIXED PREC COMMUN ONLY XTOX XTHX");
-        communPrecCheby    = prm.get("COMMUN PREC CHEBY");
-        useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
-        tensorOpType       = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
-        adaptiveUsageBF16Commun      = prm.get_bool("ADAPTIVE USAGE BF16 COMMUN");
+        communPrecCheby         = prm.get("COMMUN PREC CHEBY");
+        useSinglePrecCheby      = prm.get_bool("USE SINGLE PREC CHEBY");
+        tensorOpType            = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
+        adaptiveUsageBF16Commun = prm.get_bool("ADAPTIVE USAGE BF16 COMMUN");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
         overlapComputeCommunOrthoRR =

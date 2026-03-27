@@ -197,7 +197,8 @@ namespace dftfe
     using KohnShamDFTBaseOperator<memorySpace>::getInverseSqrtMassVector;
     using KohnShamDFTBaseOperator<memorySpace>::getSqrtMassVector;
     using KohnShamDFTBaseOperator<memorySpace>::getMassVector;
-    using KohnShamDFTBaseOperator<memorySpace>::setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision;
+    using KohnShamDFTBaseOperator<memorySpace>::
+      setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision;
 
   protected:
     using KohnShamDFTBaseOperator<

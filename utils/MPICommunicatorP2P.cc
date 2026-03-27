@@ -46,7 +46,8 @@ namespace dftfe
         if (memorySpace == MemorySpace::DEVICE)
           d_commProtocol = communicationProtocol::mpiDevice;
 #endif
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+#if defined(DFTFE_WITH_DCCL_P2P) && \
+  (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
         if (memorySpace == MemorySpace::DEVICE &&
             dftfe::utils::DeviceCCLWrapper::ncclCommInit)
           d_commProtocol = communicationProtocol::nccl;
@@ -390,7 +391,8 @@ namespace dftfe
                     sendArrayStartPtr = d_sendRecvBufferHostPinnedPtr->begin();
                   }
               }
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
             if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
@@ -574,8 +576,9 @@ namespace dftfe
                       d_sendRecvBufferSinglePrecHostPinnedPtr->begin();
                   }
               }
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
-	    if constexpr (memorySpace == MemorySpace::DEVICE)
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+            if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
                   NCCLCHECK(ncclGroupStart());
@@ -763,8 +766,9 @@ namespace dftfe
                   }
               }
 
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))            
-	    if constexpr (memorySpace == MemorySpace::DEVICE)
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+            if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
                   NCCLCHECK(ncclGroupStart());
@@ -866,8 +870,9 @@ namespace dftfe
         MemoryStorage<ValueType, memorySpace> &dataArray)
       {
         // wait for all send and recv requests to be completed
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))        
-	if constexpr (memorySpace == MemorySpace::DEVICE)
+#if defined(DFTFE_WITH_DCCL_P2P) && \
+  (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+        if constexpr (memorySpace == MemorySpace::DEVICE)
           if (d_commProtocol == communicationProtocol::nccl)
             dftfe::utils::deviceStreamSynchronize(
               dftfe::utils::DeviceCCLWrapper::d_deviceCommStream);
@@ -1057,8 +1062,9 @@ namespace dftfe
 
                   sendArrayStartPtr = d_ghostDataCopyHostPinnedPtr->begin();
                 }
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))            
-	    if constexpr (memorySpace == MemorySpace::DEVICE)
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+            if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
                   NCCLCHECK(ncclGroupStart());
@@ -1238,8 +1244,9 @@ namespace dftfe
                       d_ghostDataCopySinglePrecHostPinnedPtr->begin();
                   }
               }
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))            
-	    if constexpr (memorySpace == MemorySpace::DEVICE)
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+            if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
                   NCCLCHECK(ncclGroupStart());
@@ -1427,8 +1434,9 @@ namespace dftfe
                       d_ghostDataCopyHalfPrecHostPinnedPtr->begin();
                   }
               }
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))            
-	    if constexpr (memorySpace == MemorySpace::DEVICE)
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+            if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
                   NCCLCHECK(ncclGroupStart());
@@ -1533,8 +1541,9 @@ namespace dftfe
         MemoryStorage<ValueType, memorySpace> &dataArray)
       {
         // wait for all send and recv requests to be completed
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
-	if constexpr (memorySpace == MemorySpace::DEVICE)
+#if defined(DFTFE_WITH_DCCL_P2P) && \
+  (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+        if constexpr (memorySpace == MemorySpace::DEVICE)
           if (d_commProtocol == communicationProtocol::nccl)
             dftfe::utils::deviceStreamSynchronize(
               dftfe::utils::DeviceCCLWrapper::d_deviceCommStream);
@@ -1762,8 +1771,9 @@ namespace dftfe
 
                   sendArrayStartPtr = d_ghostDataCopyHostPinnedPtr->begin();
                 }
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))            
-	    if constexpr (memorySpace == MemorySpace::DEVICE)
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+            if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
                   NCCLCHECK(ncclGroupStart());
@@ -1944,8 +1954,9 @@ namespace dftfe
                       d_ghostDataCopySinglePrecHostPinnedPtr->begin();
                   }
               }
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))            
-	    if constexpr (memorySpace == MemorySpace::DEVICE)
+#  if defined(DFTFE_WITH_DCCL_P2P) && \
+    (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+            if constexpr (memorySpace == MemorySpace::DEVICE)
               if (d_commProtocol == communicationProtocol::nccl)
                 {
                   NCCLCHECK(ncclGroupStart());
@@ -2054,8 +2065,9 @@ namespace dftfe
           MemoryStorage<ValueType, memorySpace> &dataArray)
       {
         // wait for all send and recv requests to be completed
-#if defined(DFTFE_WITH_DCCL_P2P) && (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))        
-	if constexpr (memorySpace == MemorySpace::DEVICE)
+#if defined(DFTFE_WITH_DCCL_P2P) && \
+  (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
+        if constexpr (memorySpace == MemorySpace::DEVICE)
           if (d_commProtocol == communicationProtocol::nccl)
             dftfe::utils::deviceStreamSynchronize(
               dftfe::utils::DeviceCCLWrapper::d_deviceCommStream);

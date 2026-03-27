@@ -540,19 +540,19 @@ namespace dftfe
     const dftfe::uInt numDoFsPerCell = d_basisOperationsPtr->nDofsPerCell();
     const dftfe::uInt spinorFactor   = d_dftParamsPtr->noncolin ? 2 : 1;
     const dftfe::uInt numberWavefunctions = src.numVectors() / spinorFactor;
-/*
-#if defined(DFTFE_WITH_DEVICE)
-    if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-      {
-        if (d_dftParamsPtr->tensorOpType == "TF32")
-          d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::tf32);
-        if (d_dftParamsPtr->tensorOpType == "BF16")
-          d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::bf16);
-      }
-#endif
-*/
+    /*
+    #if defined(DFTFE_WITH_DEVICE)
+        if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
+          {
+            if (d_dftParamsPtr->tensorOpType == "TF32")
+              d_BLASWrapperPtr->setTensorOpDataType(
+                dftfe::linearAlgebra::tensorOpDataType::tf32);
+            if (d_dftParamsPtr->tensorOpType == "BF16")
+              d_BLASWrapperPtr->setTensorOpDataType(
+                dftfe::linearAlgebra::tensorOpDataType::bf16);
+          }
+    #endif
+    */
     if (d_numVectorsInternal != numberWavefunctions * spinorFactor)
       reinitNumberWavefunctions(numberWavefunctions * spinorFactor);
 
@@ -781,13 +781,13 @@ namespace dftfe
         dst.accumulateAddLocallyOwned();
         dst.zeroOutGhosts();
       }
-/*
-#if defined(DFTFE_WITH_DEVICE)
-    if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-      d_BLASWrapperPtr->setTensorOpDataType(
-        dftfe::linearAlgebra::tensorOpDataType::fp32);
-#endif
-*/
+    /*
+    #if defined(DFTFE_WITH_DEVICE)
+        if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
+          d_BLASWrapperPtr->setTensorOpDataType(
+            dftfe::linearAlgebra::tensorOpDataType::fp32);
+    #endif
+    */
   }
 
   template class KohnShamDFTStandardEigenOperator<

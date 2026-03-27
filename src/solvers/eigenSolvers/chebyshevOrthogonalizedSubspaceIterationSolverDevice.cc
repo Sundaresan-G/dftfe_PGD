@@ -418,7 +418,9 @@ namespace dftfe
                           .setCommunicationPrecision(
                             dftfe::utils::mpi::communicationPrecision::half);
 
-			operatorMatrix.setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(d_dftParams.communPrecCheby);
+                        operatorMatrix
+                          .setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(
+                            d_dftParams.communPrecCheby);
                       }
                     linearAlgebraOperationsDevice::
                       reformulatedChebyshevFilterOverlapComputeCommunication(
@@ -457,7 +459,9 @@ namespace dftfe
                           .setCommunicationPrecision(
                             dftfe::utils::mpi::communicationPrecision::
                               standard);
-                        operatorMatrix.setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision("STANDARD");	
+                        operatorMatrix
+                          .setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(
+                            "STANDARD");
                       }
                   }
                 else
@@ -475,7 +479,9 @@ namespace dftfe
                         (*HXBlockFP32)
                           .setCommunicationPrecision(
                             dftfe::utils::mpi::communicationPrecision::half);
-                        operatorMatrix.setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(d_dftParams.communPrecCheby);	
+                        operatorMatrix
+                          .setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(
+                            d_dftParams.communPrecCheby);
                       }
                     linearAlgebraOperations::reformulatedChebyshevFilter(
                       BLASWrapperPtr,
@@ -502,7 +508,9 @@ namespace dftfe
                           .setCommunicationPrecision(
                             dftfe::utils::mpi::communicationPrecision::
                               standard);
-                        operatorMatrix.setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision("STANDARD");	
+                        operatorMatrix
+                          .setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(
+                            "STANDARD");
                       }
                   }
               }
