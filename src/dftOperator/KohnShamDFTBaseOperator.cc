@@ -1742,12 +1742,10 @@ namespace dftfe
             ->initialiseFlattenedDataStructure(
               numWaveFunctions,
               d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec);
-        /*
-                if (d_dftParamsPtr->communPrecCheby == "BF16")
-                  d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
-                    .setCommunicationPrecision(
-                      dftfe::utils::mpi::communicationPrecision::half);
-        */
+        if (d_dftParamsPtr->communPrecCheby == "BF16")
+          d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
+            .setCommunicationPrecision(
+              dftfe::utils::mpi::communicationPrecision::half);
       }
 
     d_basisOperationsPtr->reinit(numWaveFunctions,
@@ -1823,13 +1821,6 @@ namespace dftfe
   KohnShamDFTBaseOperator<memorySpace>::getSqrtMassVector()
   {
     return d_basisOperationsPtr->sqrtMassVectorBasisData();
-  }
-
-  template <dftfe::utils::MemorySpace memorySpace>
-  const dftfe::utils::MemoryStorage<double, memorySpace> &
-  KohnShamDFTBaseOperator<memorySpace>::getMassVector()
-  {
-    return d_basisOperationsPtr->massVectorBasisData();
   }
 
   template <dftfe::utils::MemorySpace memorySpace>
@@ -2680,27 +2671,6 @@ namespace dftfe
     dst.accumulateAddLocallyOwned();
     dst.zeroOutGhosts();
   }
-
-  template <dftfe::utils::MemorySpace memorySpace>
-  void
-  KohnShamDFTBaseOperator<memorySpace>::
-    setPseudopotentialNonLocalProjectorTimesVectorCommunicationPrecision(
-      const std::string precision)
-  {
-    if (d_dftParamsPtr->isPseudopotential && d_dftParamsPtr->useSinglePrecCheby)
-      {
-        if (precision == "BF16")
-          d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
-            .setCommunicationPrecision(
-              dftfe::utils::mpi::communicationPrecision::half);
-        else if (precision == "STANDARD")
-          d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
-            .setCommunicationPrecision(
-              dftfe::utils::mpi::communicationPrecision::standard);
-      }
-  }
-
-
   template class KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::DEVICE>;
