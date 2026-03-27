@@ -2317,6 +2317,7 @@ namespace dftfe
                   const dftfe::uInt chebyBlockSize =
                     std::min(dftParams.chebyWfcBlockSize, N);
 
+
                   for (dftfe::uInt k = ivecNew; k < ivecNew + BNew;
                        k += chebyBlockSize)
                     {
