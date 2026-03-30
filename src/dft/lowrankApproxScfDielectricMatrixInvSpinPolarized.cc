@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2019-2020 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -18,6 +18,7 @@
 //
 #include <dft.h>
 #include <linearAlgebraOperations.h>
+#include <random>
 
 namespace dftfe
 {
@@ -34,17 +35,25 @@ namespace dftfe
     relativeErrorEstimateSpin(
       const std::deque<distributedCPUVec<double>> &fvcontainerSpin0,
       const std::deque<distributedCPUVec<double>> &fvcontainerSpin1,
-      const distributedCPUVec<double> &            residualVecSpin0,
-      const distributedCPUVec<double> &            residualVecSpin1,
-      const double                                 k0)
+      const distributedCPUVec<double>             &residualVecSpin0,
+      const distributedCPUVec<double>             &residualVecSpin1,
+      const double                                 k0,
+      const double tikhonovRegularizationConstant)
     {
-      const unsigned int rank = fvcontainerSpin0.size();
+      const dftfe::uInt rank = fvcontainerSpin0.size();
 
       std::vector<double> mMat(rank * rank, 0.0);
-      for (int j = 0; j < rank; j++)
-        for (int i = 0; i < rank; i++)
-          mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
-                               fvcontainerSpin1[i] * fvcontainerSpin1[j];
+      for (dftfe::Int j = 0; j < rank; j++)
+        for (dftfe::Int i = 0; i < rank; i++)
+          {
+            if (i == j)
+              mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
+                                   fvcontainerSpin1[i] * fvcontainerSpin1[j] +
+                                   tikhonovRegularizationConstant;
+            else
+              mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
+                                   fvcontainerSpin1[i] * fvcontainerSpin1[j];
+          }
 
       dftfe::linearAlgebraOperations::inverse(&mMat[0], rank);
 
@@ -55,7 +64,7 @@ namespace dftfe
       k0ResidualVecSpin1.reinit(residualVecSpin0);
       approximationErrorVecSpin0.reinit(residualVecSpin0);
       approximationErrorVecSpin1.reinit(residualVecSpin1);
-      for (unsigned int idof = 0; idof < residualVecSpin0.locally_owned_size();
+      for (dftfe::uInt idof = 0; idof < residualVecSpin0.locally_owned_size();
            idof++)
         {
           k0ResidualVecSpin0.local_element(idof) =
@@ -70,18 +79,18 @@ namespace dftfe
         }
 
       std::vector<double> innerProducts(rank, 0.0);
-      for (unsigned int i = 0; i < rank; i++)
+      for (dftfe::uInt i = 0; i < rank; i++)
         innerProducts[i] = fvcontainerSpin0[i] * k0ResidualVecSpin0 +
                            fvcontainerSpin1[i] * k0ResidualVecSpin1;
 
 
-      for (unsigned int i = 0; i < rank; i++)
+      for (dftfe::uInt i = 0; i < rank; i++)
         {
           double temp = 0.0;
-          for (unsigned int j = 0; j < rank; j++)
+          for (dftfe::uInt j = 0; j < rank; j++)
             temp += mMat[j * rank + i] * innerProducts[j];
 
-          for (unsigned int idof = 0;
+          for (dftfe::uInt idof = 0;
                idof < residualVecSpin0.locally_owned_size();
                idof++)
             {
@@ -108,30 +117,38 @@ namespace dftfe
       const std::deque<distributedCPUVec<double>> &fvcontainerSpin1,
       const std::deque<distributedCPUVec<double>> &vcontainerSpin0,
       const std::deque<distributedCPUVec<double>> &vcontainerSpin1,
-      const distributedCPUVec<double> &            xSpin0,
-      const distributedCPUVec<double> &            xSpin1,
+      const distributedCPUVec<double>             &xSpin0,
+      const distributedCPUVec<double>             &xSpin1,
       const double                                 k0,
-      distributedCPUVec<double> &                  ySpin0,
-      distributedCPUVec<double> &                  ySpin1)
+      distributedCPUVec<double>                   &ySpin0,
+      distributedCPUVec<double>                   &ySpin1,
+      const double tikhonovRegularizationConstant)
     {
-      const unsigned int rank = fvcontainerSpin0.size();
+      const dftfe::uInt rank = fvcontainerSpin0.size();
 
       std::vector<double> mMat(rank * rank, 0.0);
-      for (int j = 0; j < rank; j++)
-        for (int i = 0; i < rank; i++)
-          mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
-                               fvcontainerSpin1[i] * fvcontainerSpin1[j];
+      for (dftfe::Int j = 0; j < rank; j++)
+        for (dftfe::Int i = 0; i < rank; i++)
+          {
+            if (i == j)
+              mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
+                                   fvcontainerSpin1[i] * fvcontainerSpin1[j] +
+                                   tikhonovRegularizationConstant;
+            else
+              mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
+                                   fvcontainerSpin1[i] * fvcontainerSpin1[j];
+          }
 
       dftfe::linearAlgebraOperations::inverse(&mMat[0], rank);
 
-      for (unsigned int idof = 0; idof < xSpin0.locally_owned_size(); idof++)
+      for (dftfe::uInt idof = 0; idof < xSpin0.locally_owned_size(); idof++)
         {
           ySpin0.local_element(idof) = xSpin0.local_element(idof) * k0;
           ySpin1.local_element(idof) = xSpin1.local_element(idof) * k0;
         }
 
       std::vector<double> innerProducts(rank, 0.0);
-      for (unsigned int i = 0; i < rank; i++)
+      for (dftfe::uInt i = 0; i < rank; i++)
         {
           innerProducts[i] =
             fvcontainerSpin0[i] * ySpin0 + fvcontainerSpin1[i] * ySpin1;
@@ -140,14 +157,13 @@ namespace dftfe
       ySpin0 = 0;
       ySpin1 = 0;
 
-      for (unsigned int i = 0; i < rank; i++)
+      for (dftfe::uInt i = 0; i < rank; i++)
         {
           double temp = 0.0;
-          for (unsigned int j = 0; j < rank; j++)
+          for (dftfe::uInt j = 0; j < rank; j++)
             temp += mMat[j * rank + i] * innerProducts[j];
 
-          for (unsigned int idof = 0; idof < ySpin0.locally_owned_size();
-               idof++)
+          for (dftfe::uInt idof = 0; idof < ySpin0.locally_owned_size(); idof++)
             {
               ySpin0.local_element(idof) +=
                 vcontainerSpin0[i].local_element(idof) * temp;
@@ -163,29 +179,37 @@ namespace dftfe
       const std::deque<distributedCPUVec<double>> &fvcontainerSpin1,
       const std::deque<distributedCPUVec<double>> &vcontainerSpin0,
       const std::deque<distributedCPUVec<double>> &vcontainerSpin1,
-      const distributedCPUVec<double> &            xSpin0,
-      const distributedCPUVec<double> &            xSpin1,
-      distributedCPUVec<double> &                  ySpin0,
-      distributedCPUVec<double> &                  ySpin1)
+      const distributedCPUVec<double>             &xSpin0,
+      const distributedCPUVec<double>             &xSpin1,
+      distributedCPUVec<double>                   &ySpin0,
+      distributedCPUVec<double>                   &ySpin1,
+      const double tikhonovRegularizationConstant)
     {
-      const unsigned int rank = fvcontainerSpin0.size();
+      const dftfe::uInt rank = fvcontainerSpin0.size();
 
       std::vector<double> mMat(rank * rank, 0.0);
-      for (int j = 0; j < rank; j++)
-        for (int i = 0; i < rank; i++)
-          mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
-                               fvcontainerSpin1[i] * fvcontainerSpin1[j];
+      for (dftfe::Int j = 0; j < rank; j++)
+        for (dftfe::Int i = 0; i < rank; i++)
+          {
+            if (i == j)
+              mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
+                                   fvcontainerSpin1[i] * fvcontainerSpin1[j] +
+                                   tikhonovRegularizationConstant;
+            else
+              mMat[j * rank + i] = fvcontainerSpin0[i] * fvcontainerSpin0[j] +
+                                   fvcontainerSpin1[i] * fvcontainerSpin1[j];
+          }
 
       dftfe::linearAlgebraOperations::inverse(&mMat[0], rank);
 
-      for (unsigned int idof = 0; idof < xSpin0.locally_owned_size(); idof++)
+      for (dftfe::uInt idof = 0; idof < xSpin0.locally_owned_size(); idof++)
         {
           ySpin0.local_element(idof) = xSpin0.local_element(idof);
           ySpin1.local_element(idof) = xSpin1.local_element(idof);
         }
 
       std::vector<double> innerProducts(rank, 0.0);
-      for (unsigned int i = 0; i < rank; i++)
+      for (dftfe::uInt i = 0; i < rank; i++)
         {
           innerProducts[i] =
             fvcontainerSpin0[i] * ySpin0 + fvcontainerSpin1[i] * ySpin1;
@@ -194,14 +218,13 @@ namespace dftfe
       ySpin0 = 0;
       ySpin1 = 0;
 
-      for (unsigned int i = 0; i < rank; i++)
+      for (dftfe::uInt i = 0; i < rank; i++)
         {
           double temp = 0.0;
-          for (unsigned int j = 0; j < rank; j++)
+          for (dftfe::uInt j = 0; j < rank; j++)
             temp += mMat[j * rank + i] * innerProducts[j];
 
-          for (unsigned int idof = 0; idof < ySpin0.locally_owned_size();
-               idof++)
+          for (dftfe::uInt idof = 0; idof < ySpin0.locally_owned_size(); idof++)
             {
               ySpin0.local_element(idof) +=
                 vcontainerSpin0[i].local_element(idof) * temp;
@@ -218,23 +241,23 @@ namespace dftfe
       const std::deque<distributedCPUVec<double>> &fvSpin1container,
       const std::deque<distributedCPUVec<double>> &vSpin0container,
       const std::deque<distributedCPUVec<double>> &vSpin1container,
-      const distributedCPUVec<double> &            xSpin0,
-      const distributedCPUVec<double> &            xSpin1,
-      distributedCPUVec<double> &                  ySpin0,
-      distributedCPUVec<double> &                  ySpin1)
+      const distributedCPUVec<double>             &xSpin0,
+      const distributedCPUVec<double>             &xSpin1,
+      distributedCPUVec<double>                   &ySpin0,
+      distributedCPUVec<double>                   &ySpin1)
     {
-      const unsigned int rank = fvSpin0container.size();
+      const dftfe::uInt rank = fvSpin0container.size();
 
 
       std::vector<double> innerProducts(rank, 0.0);
-      for (unsigned int i = 0; i < rank; i++)
+      for (dftfe::uInt i = 0; i < rank; i++)
         innerProducts[i] =
           vSpin0container[i] * xSpin0 + vSpin1container[i] * xSpin1;
 
       ySpin0 = 0;
       ySpin1 = 0;
-      for (unsigned int i = 0; i < rank; i++)
-        for (unsigned int idof = 0; idof < ySpin0.locally_owned_size(); idof++)
+      for (dftfe::uInt i = 0; i < rank; i++)
+        for (dftfe::uInt idof = 0; idof < ySpin0.locally_owned_size(); idof++)
           {
             ySpin0.local_element(idof) +=
               fvSpin0container[i].local_element(idof) * innerProducts[i];
@@ -250,9 +273,9 @@ namespace dftfe
       const std::deque<distributedCPUVec<double>> &lowrankFvSpin1container,
       const std::deque<distributedCPUVec<double>> &lowrankVSpin0container,
       const std::deque<distributedCPUVec<double>> &lowrankVSpin1container,
-      const distributedCPUVec<double> &            xSpin0,
-      const distributedCPUVec<double> &            xSpin1,
-      const dealii::AffineConstraints<double> &    constraintsRhoNodal)
+      const distributedCPUVec<double>             &xSpin0,
+      const distributedCPUVec<double>             &xSpin1,
+      const dealii::AffineConstraints<double>     &constraintsRhoNodal)
     {
       const double tol = 1.0e-6;
 
@@ -271,18 +294,19 @@ namespace dftfe
 
       vVectorSpin0 = 0.0, fVectorSpin0 = 0.0;
       vVectorSpin1 = 0.0, fVectorSpin1 = 0.0;
-      // std::srand(this_mpi_process);
-      const unsigned int local_size = vVectorSpin0.locally_owned_size();
+      const dftfe::uInt local_size = vVectorSpin0.locally_owned_size();
 
-      // for (unsigned int i = 0; i < local_size; i++)
+      // for (dftfe::uInt i = 0; i < local_size; i++)
       //  vVector.local_element(i) = x.local_element(i);
+      unsigned int this_mpi_process =
+        dealii::Utilities::MPI::this_mpi_process(xSpin0.get_mpi_communicator());
+      std::mt19937 randomIntGenerator(this_mpi_process);
+      std::uniform_real_distribution<double> uni{0.0, 1.0};
 
-      for (unsigned int i = 0; i < local_size; i++)
+      for (dftfe::uInt i = 0; i < local_size; i++)
         {
-          vVectorSpin0.local_element(i) =
-            ((double)std::rand()) / ((double)RAND_MAX);
-          vVectorSpin1.local_element(i) =
-            ((double)std::rand()) / ((double)RAND_MAX);
+          vVectorSpin0.local_element(i) = uni(randomIntGenerator);
+          vVectorSpin1.local_element(i) = uni(randomIntGenerator);
         }
 
       constraintsRhoNodal.set_zero(vVectorSpin0);
@@ -295,7 +319,7 @@ namespace dftfe
         std::sqrt(vVectorSpin0 * vVectorSpin0 + vVectorSpin1 * vVectorSpin1);
       vVectorSpin1 /=
         std::sqrt(vVectorSpin0 * vVectorSpin0 + vVectorSpin1 * vVectorSpin1);
-      int iter = 0;
+      dftfe::Int iter = 0;
       while (diffLambdaAbs > tol)
         {
           fVectorSpin0 = 0;
@@ -336,9 +360,10 @@ namespace dftfe
       const std::deque<distributedCPUVec<double>> &lowrankFvSpin1container,
       const std::deque<distributedCPUVec<double>> &lowrankVSpin0container,
       const std::deque<distributedCPUVec<double>> &lowrankVSpin1container,
-      const distributedCPUVec<double> &            xSpin0,
-      const distributedCPUVec<double> &            xSpin1,
-      const dealii::AffineConstraints<double> &    constraintsRhoNodal)
+      const distributedCPUVec<double>             &xSpin0,
+      const distributedCPUVec<double>             &xSpin1,
+      const dealii::AffineConstraints<double>     &constraintsRhoNodal,
+      const double tikhonovRegularizationConstant)
     {
       const double tol = 1.0e-6;
 
@@ -357,18 +382,20 @@ namespace dftfe
 
       vVectorSpin0 = 0.0, fVectorSpin0 = 0.0;
       vVectorSpin1 = 0.0, fVectorSpin1 = 0.0;
-      // std::srand(this_mpi_process);
-      const unsigned int local_size = vVectorSpin0.locally_owned_size();
 
-      // for (unsigned int i = 0; i < local_size; i++)
+      const dftfe::uInt local_size = vVectorSpin0.locally_owned_size();
+
+      // for (dftfe::uInt i = 0; i < local_size; i++)
       //  vVector.local_element(i) = x.local_element(i);
 
-      for (unsigned int i = 0; i < local_size; i++)
+      unsigned int this_mpi_process =
+        dealii::Utilities::MPI::this_mpi_process(xSpin0.get_mpi_communicator());
+      std::mt19937 randomIntGenerator(this_mpi_process);
+      std::uniform_real_distribution<double> uni{0.0, 1.0};
+      for (dftfe::uInt i = 0; i < local_size; i++)
         {
-          vVectorSpin0.local_element(i) =
-            ((double)std::rand()) / ((double)RAND_MAX);
-          vVectorSpin1.local_element(i) =
-            ((double)std::rand()) / ((double)RAND_MAX);
+          vVectorSpin0.local_element(i) = uni(randomIntGenerator);
+          vVectorSpin1.local_element(i) = uni(randomIntGenerator);
         }
 
       constraintsRhoNodal.set_zero(vVectorSpin0);
@@ -381,7 +408,7 @@ namespace dftfe
         std::sqrt(vVectorSpin0 * vVectorSpin0 + vVectorSpin1 * vVectorSpin1);
       vVectorSpin1 /=
         std::sqrt(vVectorSpin0 * vVectorSpin0 + vVectorSpin1 * vVectorSpin1);
-      int iter = 0;
+      dftfe::Int iter = 0;
       while (diffLambdaAbs > tol)
         {
           fVectorSpin0 = 0;
@@ -393,7 +420,8 @@ namespace dftfe
                                  vVectorSpin0,
                                  vVectorSpin1,
                                  fVectorSpin0,
-                                 fVectorSpin1);
+                                 fVectorSpin1,
+                                 tikhonovRegularizationConstant);
           lambdaOld = lambdaNew;
           lambdaNew =
             (vVectorSpin0 * fVectorSpin0 + vVectorSpin1 * fVectorSpin1) /
@@ -419,12 +447,10 @@ namespace dftfe
   } // namespace internalLowrankJacInv
 
 
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::
-    lowrankApproxScfDielectricMatrixInvSpinPolarized(const unsigned int scfIter)
+  dftClass<memorySpace>::lowrankApproxScfDielectricMatrixInvSpinPolarized(
+    const dftfe::uInt scfIter)
   {
     int this_process;
     MPI_Comm_rank(d_mpiCommParent, &this_process);
@@ -502,10 +528,10 @@ namespace dftfe
     compvecSpin1             = 0;
     tempDensityPrimeTotalVec = 0;
 
-    double             charge;
-    const unsigned int local_size = residualRho.locally_owned_size();
+    double            charge;
+    const dftfe::uInt local_size = residualRho.locally_owned_size();
 
-    const unsigned int maxRankCurrentSCF = 20;
+    const dftfe::uInt maxRankCurrentSCF = 20;
 
 
     d_vSpin0containerVals.clear();
@@ -514,8 +540,8 @@ namespace dftfe
     d_fvSpin1containerVals.clear();
     d_rankCurrentLRD = 0;
 
-    unsigned int       rankAddedInThisScf = 0;
-    const unsigned int maxRankThisScf = (scfIter < 2) ? 5 : maxRankCurrentSCF;
+    dftfe::uInt       rankAddedInThisScf = 0;
+    const dftfe::uInt maxRankThisScf = (scfIter < 2) ? 5 : maxRankCurrentSCF;
     while ((rankAddedInThisScf < maxRankThisScf) ||
            ((normValue < d_dftParamsPtr->selfConsistentSolverTolerance) &&
             (d_dftParamsPtr->estimateJacCondNoFinalSCFIter)))
@@ -537,7 +563,7 @@ namespace dftfe
 
         compvecSpin0 = 0;
         compvecSpin1 = 0;
-        for (int jrank = 0; jrank < d_rankCurrentLRD; jrank++)
+        for (dftfe::Int jrank = 0; jrank < d_rankCurrentLRD; jrank++)
           {
             const double tTvj = d_vSpin0containerVals[d_rankCurrentLRD] *
                                   d_vSpin0containerVals[jrank] +
@@ -572,7 +598,7 @@ namespace dftfe
         d_fvSpin1containerVals.push_back(residualRhoSpin1);
         d_fvSpin1containerVals[d_rankCurrentLRD] = 0;
 
-        for (unsigned int idof = 0;
+        for (dftfe::uInt idof = 0;
              idof < tempDensityPrimeTotalVec.locally_owned_size();
              idof++)
           tempDensityPrimeTotalVec.local_element(idof) =
@@ -595,7 +621,7 @@ namespace dftfe
         // d_constraintsRhoNodal.set_zero(d_vSpin0containerVals[d_rankCurrentLRD]);
         // d_constraintsRhoNodal.set_zero(d_vSpin1containerVals[d_rankCurrentLRD]);
 
-        for (unsigned int idof = 0;
+        for (dftfe::uInt idof = 0;
              idof < tempDensityPrimeTotalVec.locally_owned_size();
              idof++)
           tempDensityPrimeTotalVec.local_element(idof) =
@@ -617,7 +643,7 @@ namespace dftfe
           d_fvSpin0containerVals[d_rankCurrentLRD],
           d_fvSpin1containerVals[d_rankCurrentLRD]);
 
-        for (unsigned int idof = 0;
+        for (dftfe::uInt idof = 0;
              idof < tempDensityPrimeTotalVec.locally_owned_size();
              idof++)
           tempDensityPrimeTotalVec.local_element(idof) =
@@ -637,7 +663,7 @@ namespace dftfe
         d_fvSpin1containerVals[d_rankCurrentLRD].add(-charge / d_domainVolume /
                                                      2.0);
 
-        for (unsigned int idof = 0;
+        for (dftfe::uInt idof = 0;
              idof < tempDensityPrimeTotalVec.locally_owned_size();
              idof++)
           tempDensityPrimeTotalVec.local_element(idof) =
@@ -676,7 +702,8 @@ namespace dftfe
                 d_fvSpin1containerVals,
                 residualRhoSpin0,
                 residualRhoSpin1,
-                k0);
+                k0,
+                d_tikhonovRegularizationConstantLRD);
 
             if (d_dftParamsPtr->verbosity >= 4)
               pcout << " Relative approx error:  " << relativeApproxError
@@ -713,15 +740,17 @@ namespace dftfe
       pcout << " Net accumulated kernel rank:  " << d_rankCurrentLRD
             << " Accumulated in this scf: " << rankAddedInThisScf << std::endl;
 
-    internalLowrankJacInv::lowrankKernelApplySpin(d_fvSpin0containerVals,
-                                                  d_fvSpin1containerVals,
-                                                  d_vSpin0containerVals,
-                                                  d_vSpin1containerVals,
-                                                  residualRhoSpin0,
-                                                  residualRhoSpin1,
-                                                  k0,
-                                                  kernelActionSpin0,
-                                                  kernelActionSpin1);
+    internalLowrankJacInv::lowrankKernelApplySpin(
+      d_fvSpin0containerVals,
+      d_fvSpin1containerVals,
+      d_vSpin0containerVals,
+      d_vSpin1containerVals,
+      residualRhoSpin0,
+      residualRhoSpin1,
+      k0,
+      kernelActionSpin0,
+      kernelActionSpin1,
+      d_tikhonovRegularizationConstantLRD);
 
     if (normValue < d_dftParamsPtr->selfConsistentSolverTolerance &&
         d_dftParamsPtr->estimateJacCondNoFinalSCFIter)
@@ -744,7 +773,8 @@ namespace dftfe
                     d_vSpin1containerVals,
                     residualRhoSpin0,
                     residualRhoSpin1,
-                    d_constraintsRhoNodal);
+                    d_constraintsRhoNodal,
+                    d_tikhonovRegularizationConstantLRD);
         pcout << " Maximum eigenvalue of low rank approx of Jacobian: "
               << maxAbsEigenValue << std::endl;
         pcout << " Minimum non-zero eigenvalue of low rank approx of Jacobian: "
@@ -783,12 +813,15 @@ namespace dftfe
       (d_excManagerPtr->getExcSSDFunctionalObj()->getDensityBasedFamilyType() ==
        densityFamilyType::GGA);
 
-    for (unsigned int iComp = 0; iComp < d_densityInNodalValues.size(); ++iComp)
-      interpolateDensityNodalDataToQuadratureDataGeneral(
-        d_basisOperationsPtrElectroHost,
+    const bool isTauMGGA =
+      (d_excManagerPtr->getExcSSDFunctionalObj()->getExcFamilyType() ==
+       ExcFamilyType::TauMGGA);
+
+    for (dftfe::uInt iComp = 0; iComp < d_densityInNodalValues.size(); ++iComp)
+      d_basisOperationsPtrElectroHost->interpolate(
+        d_densityInNodalValues[iComp],
         d_densityDofHandlerIndexElectro,
         d_densityQuadratureIdElectro,
-        d_densityInNodalValues[iComp],
         d_densityInQuadValues[iComp],
         d_gradDensityInQuadValues[iComp],
         d_gradDensityInQuadValues[iComp],

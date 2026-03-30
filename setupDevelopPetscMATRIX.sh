@@ -17,16 +17,16 @@ SRC=`dirname $0` # location of source directory
 # and optimization flag
 
 #Paths for required external libraries
-dealiiPetscRealDir="/storage/dftfeDependencies/dealii/installReal"
-dealiiPetscComplexDir="/storage/dftfeDependencies/dealii/installComplex"
-alglibDir="/storage/dftfeDependencies/alglib/install"
-libxcDir="/storage/dftfeDependencies/libxc/install"
-spglibDir="/storage/dftfeDependencies/spglib/install"
+dealiiPetscRealDir="/storage/dftfeDependenciesNoMKL/dealii/installReal"
+dealiiPetscComplexDir="/storage/dftfeDependenciesNoMKL/dealii/installComplex"
+alglibDir="/storage/dftfeDependenciesNoMKL/alglib/install"
+libxcDir="/storage/dftfeDependenciesNoMKL/libxc/install"
+spglibDir="/storage/dftfeDependenciesNoMKL/spglib/install"
 xmlIncludeDir="/usr/include/libxml2"
 xmlLibDir="/usr/lib/x86_64-linux-gnu"
-ELPA_PATH="/storage/dftfeDependencies/elpa/install"
-dftdpath="/storage/dftfeDependencies/dftd/install"
-numdiffdir="/storage/dftfeDependencies/numdiff/install"
+ELPA_PATH="/storage/dftfeDependenciesNoMKL/elpa/install"
+dftdpath="/storage/dftfeDependenciesNoMKL/dftd/install"
+numdiffdir="/storage/dftfeDependenciesNoMKL/numdiff/install"
 
 
 #Paths for optional external libraries
@@ -52,7 +52,7 @@ withCustomizedDealii=OFF
 
 #Compiler options and flags
 cxx_compiler=mpicxx  #sets DCMAKE_CXX_COMPILER
-cxx_flags="-std=c++17 -march=native -fopenmp -fPIC" #sets DCMAKE_CXX_FLAGS
+cxx_flags="-std=c++17 -g -march=native -fopenmp -fPIC" #sets DCMAKE_CXX_FLAGS
 cxx_flagsRelease="-O2" #sets DCMAKE_CXX_FLAGS_RELEASE
 device_flags="-arch=sm_70 -ccbin=mpicxx" # set DCMAKE_CXX_CUDA_FLAGS 
                            #(only applicable for withGPU=ON)
@@ -68,7 +68,7 @@ withHigherQuadPSP=OFF
 build_type=Release
 
 testing=ON
-minimal_compile=ON
+useInt64=$withGPU
 ###########################################################################
 #Usually, no changes are needed below this line
 #
@@ -93,8 +93,8 @@ function cmake_configure() {
     -DWITH_CUSTOMIZED_DEALII=$withCustomizedDealii\
     -DWITH_DCCL=$withDCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$DCCL_PATH;$dftdpath;$numdiffdir"\
     -DWITH_COMPLEX=$withComplex -DWITH_GPU=$withGPU -DGPU_LANG=$gpuLang -DGPU_VENDOR=$gpuVendor -DWITH_GPU_AWARE_MPI=$withGPUAwareMPI -DCMAKE_CUDA_FLAGS="$device_flags" -DCMAKE_CUDA_ARCHITECTURES="$device_architectures"\
-    -DWITH_TESTING=$testing -DMINIMAL_COMPILE=$minimal_compile\
-    -DHIGHERQUAD_PSP=$withHigherQuadPSP $1
+    -DWITH_TESTING=$testing \
+    -DHIGHERQUAD_PSP=$withHigherQuadPSP -DUSE_64BIT_INT=$useInt64  $1
   elif [ "$gpuLang" = "hip" ]; then
     cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_COMPILER=$cxx_compiler\
     -DCMAKE_CXX_FLAGS="$cxx_flags"\
@@ -107,8 +107,8 @@ function cmake_configure() {
     -DWITH_CUSTOMIZED_DEALII=$withCustomizedDealii\
     -DWITH_DCCL=$withDCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$DCCL_PATH;$dftdpath;$numdiffdir"\
     -DWITH_COMPLEX=$withComplex -DWITH_GPU=$withGPU -DGPU_LANG=$gpuLang -DGPU_VENDOR=$gpuVendor -DWITH_GPU_AWARE_MPI=$withGPUAwareMPI -DCMAKE_HIP_FLAGS="$device_flags" -DCMAKE_HIP_ARCHITECTURES="$device_architectures"\
-    -DWITH_TESTING=$testing -DMINIMAL_COMPILE=$minimal_compile\
-    -DHIGHERQUAD_PSP=$withHigherQuadPSP $1
+    -DWITH_TESTING=$testing \
+    -DHIGHERQUAD_PSP=$withHigherQuadPSP -DUSE_64BIT_INT=$useInt64  $1
   else
     cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_COMPILER=$cxx_compiler\
     -DCMAKE_CXX_FLAGS="$cxx_flags"\
@@ -121,8 +121,8 @@ function cmake_configure() {
     -DWITH_CUSTOMIZED_DEALII=$withCustomizedDealii\
     -DWITH_DCCL=$withDCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$DCCL_PATH;$dftdpath;$numdiffdir"\
     -DWITH_COMPLEX=$withComplex \
-    -DWITH_TESTING=$testing -DMINIMAL_COMPILE=$minimal_compile\
-    -DHIGHERQUAD_PSP=$withHigherQuadPSP $1    
+    -DWITH_TESTING=$testing \
+    -DHIGHERQUAD_PSP=$withHigherQuadPSP -DUSE_64BIT_INT=$useInt64  $1    
   fi
 }
 
@@ -138,6 +138,7 @@ fi
 
 cd $out
 
+
 withComplex=OFF
 dealiiDir=$dealiiPetscRealDir
 echo -e "${Blu}Building Real executable in $build_type mode...${RCol}"
@@ -151,5 +152,6 @@ echo -e "${Blu}Building Complex executable in $build_type mode...${RCol}"
 mkdir -p complex && cd complex
 cmake_configure "$SRC" && make -j8
 cd ..
+
 
 echo -e "${Blu}Build complete.${RCol}"

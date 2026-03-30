@@ -27,6 +27,7 @@
 #include "linearAlgebraOperationsInternal.h"
 #include "constants.h"
 #include <DeviceAPICalls.h>
+#include <random>
 
 namespace dftfe
 {
@@ -40,7 +41,7 @@ namespace dftfe
     chebyshevFilter(operatorDFTClass<memorySpace> &operatorMatrix,
                     dftfe::linearAlgebra::MultiVector<T, memorySpace> &X,
                     dftfe::linearAlgebra::MultiVector<T, memorySpace> &Y,
-                    const unsigned int                                 m,
+                    const dftfe::uInt                                  m,
                     const double                                       a,
                     const double                                       b,
                     const double                                       a0)
@@ -71,7 +72,7 @@ namespace dftfe
       //
       // polynomial loop
       //
-      for (unsigned int degree = 2; degree < m + 1; ++degree)
+      for (dftfe::uInt degree = 2; degree < m + 1; ++degree)
         {
           sigma2 = 1.0 / (gamma - sigma);
           alpha1 = 2.0 * sigma2 / e, alpha2 = -(sigma * sigma2);
@@ -104,26 +105,27 @@ namespace dftfe
     void
     reformulatedChebyshevFilter(
       const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-        &                                                 BLASWrapperPtr,
-      operatorDFTClass<memorySpace> &                     operatorMatrix,
+                                                         &BLASWrapperPtr,
+      operatorDFTClass<memorySpace>                      &operatorMatrix,
       dftfe::linearAlgebra::MultiVector<T1, memorySpace> &X,
       dftfe::linearAlgebra::MultiVector<T1, memorySpace> &Y,
       dftfe::linearAlgebra::MultiVector<T2, memorySpace> &Residual,
       dftfe::linearAlgebra::MultiVector<T2, memorySpace> &ResidualNew,
       std::vector<double>                                 eigenvalues,
-      const unsigned int                                  m,
+      const dftfe::uInt                                   m,
       const double                                        a,
       const double                                        b,
       const double                                        a0,
       const bool                                          approxOverlapMatrix)
     {
       double e, c, sigma, sigma1, sigma2, gamma;
-      e                               = (b - a) / 2.0;
-      c                               = (b + a) / 2.0;
-      sigma                           = e / (a0 - c);
-      sigma1                          = sigma;
-      gamma                           = 2.0 / sigma1;
-      const unsigned int spinorFactor = X.numVectors() / eigenvalues.size();
+      e                              = (b - a) / 2.0;
+      c                              = (b + a) / 2.0;
+      sigma                          = e / (a0 - c);
+      sigma1                         = sigma;
+      gamma                          = 2.0 / sigma1;
+      const dftfe::uInt spinorFactor = X.numVectors() / eigenvalues.size();
+
 
 
       dftfe::utils::MemoryStorage<double, memorySpace> eigenValuesFiltered,
@@ -166,7 +168,7 @@ namespace dftfe
       // //
       // // polynomial loop
       // //
-      for (unsigned int degree = 2; degree < m + 1; ++degree)
+      for (dftfe::uInt degree = 2; degree < m + 1; ++degree)
         {
           sigma2 = 1.0 / (gamma - sigma);
           alpha1 = 2.0 * sigma2 / e, alpha2 = -(sigma * sigma2);
@@ -225,20 +227,20 @@ namespace dftfe
     std::pair<double, double>
     generalisedLanczosLowerUpperBoundEigenSpectrum(
       const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-        &                                                BLASWrapperPtr,
-      operatorDFTClass<memorySpace> &                    operatorMatrix,
+                                                        &BLASWrapperPtr,
+      operatorDFTClass<memorySpace>                     &operatorMatrix,
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &X,
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &Y,
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &Z,
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &tempVec,
-      const dftParameters &                              dftParams)
+      const dftParameters                               &dftParams)
     {
-      const unsigned int this_mpi_process =
+      const dftfe::uInt this_mpi_process =
         dealii::Utilities::MPI::this_mpi_process(
           operatorMatrix.getMPICommunicatorDomain());
 
-      const unsigned int lanczosIterations =
-        dftParams.reproducible_output ? 60 : 50;
+      const dftfe::uInt lanczosIterations =
+        dftParams.reproducible_output ? 60 : 20;
       double beta, betaNeg;
       T      betaTemp;
 
@@ -251,19 +253,19 @@ namespace dftfe
       Y.setValue(T(0.0));
       Z.setValue(T(0.0));
       tempVec.setValue(T(0.0));
-      const unsigned int local_size = X.locallyOwnedSize() * X.numVectors();
+      const dftfe::uInt local_size = X.locallyOwnedSize() * X.numVectors();
 #if defined(DFTFE_WITH_DEVICE)
       dftfe::utils::MemoryStorage<T, dftfe::utils::MemorySpace::HOST> XHost(
         local_size, T(0.0));
       T *XHostDataPtr = XHost.data();
 #else
-      T *                 XHostDataPtr = X.data();
+      T                  *XHostDataPtr = X.data();
 #endif
 
-
-      std::srand(this_mpi_process);
-      for (unsigned int i = 0; i < local_size; i++)
-        XHostDataPtr[i] = ((double)std::rand()) / ((double)RAND_MAX);
+      std::mt19937 randomIntGenerator(this_mpi_process);
+      std::uniform_real_distribution<double> uni{0.0, 1.0};
+      for (dftfe::uInt i = 0; i < local_size; i++)
+        XHostDataPtr[i] = uni(randomIntGenerator);
 
 #if defined(DFTFE_WITH_DEVICE)
       XHost.template copyTo<memorySpace>(X.data());
@@ -307,10 +309,10 @@ namespace dftfe
 
       std::vector<T> Tlanczos(lanczosIterations * lanczosIterations, 0.0);
 
-      Tlanczos[0]    = alpha;
-      unsigned index = 0;
+      Tlanczos[0]       = alpha;
+      dftfe::uInt index = 0;
       // filling only lower triangular part
-      for (unsigned int j = 1; j < lanczosIterations; j++)
+      for (dftfe::uInt j = 1; j < lanczosIterations; j++)
         {
           operatorMatrix.overlapMatrixTimesX(Y, 1.0, 0.0, 0.0, tempVec, true);
           BLASWrapperPtr->xdot(local_size,
@@ -468,7 +470,7 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::HOST> &,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::HOST> &,
-      const unsigned int,
+      const dftfe::uInt,
       const double,
       const double,
       const double);
@@ -478,7 +480,7 @@ namespace dftfe
     reformulatedChebyshevFilter(
       const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        &                                                BLASWrapperPtr,
+                                                        &BLASWrapperPtr,
       operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::HOST> &X,
@@ -489,9 +491,9 @@ namespace dftfe
         &Residual,
       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
                                         dftfe::utils::MemorySpace::HOST>
-        &                 ResidualNew,
+                         &ResidualNew,
       std::vector<double> eigenvalues,
-      const unsigned int  m,
+      const dftfe::uInt   m,
       const double        a,
       const double        b,
       const double        a0,
@@ -500,7 +502,7 @@ namespace dftfe
     reformulatedChebyshevFilter(
       const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-        &                                                BLASWrapperPtr,
+                                                        &BLASWrapperPtr,
       operatorDFTClass<dftfe::utils::MemorySpace::HOST> &operatorMatrix,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::HOST> &X,
@@ -511,9 +513,9 @@ namespace dftfe
         &Residual,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::HOST>
-        &                 ResidualNew,
+                         &ResidualNew,
       std::vector<double> eigenvalues,
-      const unsigned int  m,
+      const dftfe::uInt   m,
       const double        a,
       const double        b,
       const double        a0,
@@ -527,7 +529,7 @@ namespace dftfe
                                         dftfe::utils::MemorySpace::DEVICE> &,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::DEVICE> &,
-      const unsigned int,
+      const dftfe::uInt,
       const double,
       const double,
       const double);
@@ -537,7 +539,7 @@ namespace dftfe
     reformulatedChebyshevFilter(
       const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                                                  BLASWrapperPtr,
+                                                          &BLASWrapperPtr,
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::DEVICE> &X,
@@ -548,9 +550,9 @@ namespace dftfe
         &Residual,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &                 ResidualNew,
+                         &ResidualNew,
       std::vector<double> eigenvalues,
-      const unsigned int  m,
+      const dftfe::uInt   m,
       const double        a,
       const double        b,
       const double        a0,
@@ -560,7 +562,7 @@ namespace dftfe
     reformulatedChebyshevFilter(
       const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                                                  BLASWrapperPtr,
+                                                          &BLASWrapperPtr,
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       dftfe::linearAlgebra::MultiVector<dataTypes::number,
                                         dftfe::utils::MemorySpace::DEVICE> &X,
@@ -571,9 +573,9 @@ namespace dftfe
         &Residual,
       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
                                         dftfe::utils::MemorySpace::DEVICE>
-        &                 ResidualNew,
+                         &ResidualNew,
       std::vector<double> eigenvalues,
-      const unsigned int  m,
+      const dftfe::uInt   m,
       const double        a,
       const double        b,
       const double        a0,

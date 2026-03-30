@@ -28,51 +28,71 @@ namespace dftfe
   void
   computeRhoFromPSI(
     const dftfe::utils::MemoryStorage<NumberType, memorySpace> *X,
-    const unsigned int                      totalNumWaveFunctions,
-    const std::vector<std::vector<double>> &eigenValues,
-    const double                            fermiEnergy,
-    const double                            fermiEnergyUp,
-    const double                            fermiEnergyDown,
+    const dftfe::uInt                       totalNumWaveFunctions,
+    const std::vector<std::vector<double>> &partialOccupancies,
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<NumberType, double, memorySpace>>
       &basisOperationsPtr,
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-      &                        BLASWrapperPtr,
-    const unsigned int         matrixFreeDofhandlerIndex,
-    const unsigned int         quadratureIndex,
+                              &BLASWrapperPtr,
+    const dftfe::uInt          matrixFreeDofhandlerIndex,
+    const dftfe::uInt          quadratureIndex,
+    const std::vector<double> &kPointCoords,
     const std::vector<double> &kPointWeights,
     std::vector<
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &densityValues,
     std::vector<
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &                  gradDensityValues,
+      &gradDensityValues,
+    std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+                        &tauValues,
     const bool           isEvaluateGradRho,
-    const MPI_Comm &     mpiCommParent,
-    const MPI_Comm &     interpoolcomm,
-    const MPI_Comm &     interBandGroupComm,
+    const bool           isEvaluateTau,
+    const MPI_Comm      &mpiCommParent,
+    const MPI_Comm      &interpoolcomm,
+    const MPI_Comm      &interBandGroupComm,
     const dftParameters &dftParams);
+
 
   template <typename NumberType>
   void
   computeRhoGradRhoFromInterpolatedValues(
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-      &                                         BLASWrapperPtr,
-    const std::pair<unsigned int, unsigned int> cellRange,
-    const std::pair<unsigned int, unsigned int> vecRange,
-    const unsigned int                          nQuadsPerCell,
-    const unsigned int                          nCells,
-    double *                                    partialOccupVec,
-    NumberType *                                wfcQuadPointData,
-    NumberType *                                gradWfcQuadPointData,
-    double *                                    rhoCellsWfcContributions,
-    double *                                    gradRhoCellsWfcContributions,
-    double *                                    rho,
-    double *                                    gradRho,
-    const bool                                  isEvaluateGradRho,
-    const bool                                  isNonCollin,
-    const bool                                  hasSOC);
+                                             &BLASWrapperPtr,
+    const std::pair<dftfe::uInt, dftfe::uInt> cellRange,
+    const std::pair<dftfe::uInt, dftfe::uInt> vecRange,
+    const dftfe::uInt                         nQuadsPerCell,
+    const dftfe::uInt                         nCells,
+    double                                   *partialOccupVec,
+    NumberType                               *wfcQuadPointData,
+    NumberType                               *gradWfcQuadPointData,
+    double                                   *rhoCellsWfcContributions,
+    double                                   *gradRhoCellsWfcContributions,
+    double                                   *rho,
+    double                                   *gradRho,
+    const bool                                isEvaluateGradRho,
+    const bool                                isNonCollin,
+    const bool                                hasSOC);
 
+  template <typename NumberType>
+  void
+  computeTauFromInterpolatedValues(
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+                                             &BLASWrapperPtr,
+    const std::pair<dftfe::uInt, dftfe::uInt> cellRange,
+    const std::pair<dftfe::uInt, dftfe::uInt> vecRange,
+    const dftfe::uInt                         nQuadsPerCell,
+    double                                   *partialOccupVec,
+    double                                   *kCoord,
+    NumberType                               *wfcQuadPointData,
+    NumberType                               *gradWfcQuadPointData,
+    double    *kineticEnergyDensityCellsWfcContributions,
+    double    *tau,
+    const bool isNonCollin,
+    const bool hasSOC);
 } // namespace dftfe
 #endif

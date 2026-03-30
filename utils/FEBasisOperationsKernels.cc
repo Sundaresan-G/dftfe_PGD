@@ -36,7 +36,7 @@ namespace dftfe
       interpolateKernel(nodalData,
                         quadratureValues,
                         quadratureGradients,
-                        std::pair<unsigned int, unsigned int>(0, d_nCells));
+                        std::pair<dftfe::uInt, dftfe::uInt>(0, d_nCells));
     }
 
     template <typename ValueTypeBasisCoeff,
@@ -49,13 +49,13 @@ namespace dftfe
         ValueTypeBasisCoeff *quadratureGradients,
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
           &nodalData,
-        dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
+        dftfe::utils::MemoryStorage<dftfe::uInt, memorySpace>
           &mapQuadIdToProcId) const
     {
-      for (unsigned int iCell = 0; iCell < d_nCells; iCell += d_cellsBlockSize)
+      for (dftfe::uInt iCell = 0; iCell < d_nCells; iCell += d_cellsBlockSize)
         {
-          unsigned int maxCellId = std::min(iCell + d_cellsBlockSize, d_nCells);
-          std::pair<unsigned int, unsigned int> cellRange =
+          dftfe::uInt maxCellId = std::min(iCell + d_cellsBlockSize, d_nCells);
+          std::pair<dftfe::uInt, dftfe::uInt> cellRange =
             std::make_pair(iCell, maxCellId);
           integrateWithBasisKernel(quadratureValues,
                                    quadratureGradients,
@@ -73,13 +73,13 @@ namespace dftfe
     FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
       extractToCellNodalData(
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
-          &                  nodalData,
+                            &nodalData,
         ValueTypeBasisCoeff *cellNodalDataPtr) const
     {
       extractToCellNodalDataKernel(
         nodalData,
         cellNodalDataPtr,
-        std::pair<unsigned int, unsigned int>(0, d_nCells));
+        std::pair<dftfe::uInt, dftfe::uInt>(0, d_nCells));
     }
 
     template <typename ValueTypeBasisCoeff,
@@ -95,7 +95,7 @@ namespace dftfe
       accumulateFromCellNodalDataKernel(
         cellNodalDataPtr,
         nodalData,
-        std::pair<unsigned int, unsigned int>(0, d_nCells));
+        std::pair<dftfe::uInt, dftfe::uInt>(0, d_nCells));
     }
     template <typename ValueTypeBasisCoeff,
               typename ValueTypeBasisData,
@@ -105,17 +105,17 @@ namespace dftfe
       interpolateKernel(
         const dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff,
                                                 memorySpace> &nodalValues,
-        ValueTypeBasisCoeff *                                 quadratureValues,
-        ValueTypeBasisCoeff *                       quadratureGradients,
-        const std::pair<unsigned int, unsigned int> cellRange) const
+        ValueTypeBasisCoeff                                  *quadratureValues,
+        ValueTypeBasisCoeff                      *quadratureGradients,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const
     {
-      for (unsigned int iCell = cellRange.first; iCell < cellRange.second;
+      for (dftfe::uInt iCell = cellRange.first; iCell < cellRange.second;
            iCell += d_cellsBlockSize)
         {
           extractToCellNodalDataKernel(
             nodalValues,
             tempCellNodalData.data(),
-            std::pair<unsigned int, unsigned int>(
+            std::pair<dftfe::uInt, dftfe::uInt>(
               iCell, std::min(d_nCells, iCell + d_cellsBlockSize)));
           interpolateKernel(
             tempCellNodalData.data(),
@@ -129,7 +129,7 @@ namespace dftfe
               (quadratureGradients + (iCell - cellRange.first) *
                                        d_nQuadsPerCell[d_quadratureIndex] * 3 *
                                        d_nVectors),
-            std::pair<unsigned int, unsigned int>(
+            std::pair<dftfe::uInt, dftfe::uInt>(
               iCell, std::min(d_nCells, iCell + d_cellsBlockSize)));
         }
     }
@@ -139,10 +139,10 @@ namespace dftfe
     void
     FEBasisOperations<ValueTypeBasisCoeff, ValueTypeBasisData, memorySpace>::
       interpolateKernel(
-        const ValueTypeBasisCoeff *                 cellNodalValues,
-        ValueTypeBasisCoeff *                       quadratureValues,
-        ValueTypeBasisCoeff *                       quadratureGradients,
-        const std::pair<unsigned int, unsigned int> cellRange) const
+        const ValueTypeBasisCoeff                *cellNodalValues,
+        ValueTypeBasisCoeff                      *quadratureValues,
+        ValueTypeBasisCoeff                      *quadratureGradients,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const
     {
       const ValueTypeBasisCoeff scalarCoeffAlpha = ValueTypeBasisCoeff(1.0),
                                 scalarCoeffBeta  = ValueTypeBasisCoeff(0.0);
@@ -250,6 +250,7 @@ namespace dftfe
                   reshapeFromNonAffineLayoutHost(
                     d_nVectors,
                     d_nQuadsPerCell[d_quadratureIndex],
+                    3,
                     (cellRange.second - cellRange.first),
                     tempQuadratureGradientsDataNonAffine.data(),
                     quadratureGradients);
@@ -258,6 +259,7 @@ namespace dftfe
                   reshapeFromNonAffineLayoutDevice(
                     d_nVectors,
                     d_nQuadsPerCell[d_quadratureIndex],
+                    3,
                     (cellRange.second - cellRange.first),
                     tempQuadratureGradientsDataNonAffine.data(),
                     quadratureGradients);
@@ -275,9 +277,9 @@ namespace dftfe
         const ValueTypeBasisCoeff *quadratureGradients,
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
           &nodalData,
-        dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
-          &                                         mapQuadIdToProcId,
-        const std::pair<unsigned int, unsigned int> cellRange) const
+        dftfe::utils::MemoryStorage<dftfe::uInt, memorySpace>
+                                                 &mapQuadIdToProcId,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const
     {
       const ValueTypeBasisCoeff scalarCoeffAlpha = ValueTypeBasisCoeff(1.0),
                                 scalarCoeffBeta  = ValueTypeBasisCoeff(0.0);
@@ -371,6 +373,7 @@ namespace dftfe
                   reshapeToNonAffineLayoutHost(
                     d_nVectors,
                     d_nQuadsPerCell[d_quadratureIndex],
+                    3,
                     (cellRange.second - cellRange.first),
                     quadratureGradients,
                     tempQuadratureGradientsDataNonAffine.data());
@@ -379,6 +382,7 @@ namespace dftfe
                   reshapeToNonAffineLayoutDevice(
                     d_nVectors,
                     d_nQuadsPerCell[d_quadratureIndex],
+                    3,
                     (cellRange.second - cellRange.first),
                     quadratureGradients,
                     tempQuadratureGradientsDataNonAffine.data());
@@ -436,8 +440,8 @@ namespace dftfe
       extractToCellNodalDataKernel(
         const dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff,
                                                 memorySpace> &nodalData,
-        ValueTypeBasisCoeff *                                 cellNodalDataPtr,
-        const std::pair<unsigned int, unsigned int>           cellRange) const
+        ValueTypeBasisCoeff                                  *cellNodalDataPtr,
+        const std::pair<dftfe::uInt, dftfe::uInt>             cellRange) const
     {
       d_BLASWrapperPtr->stridedCopyToBlock(
         d_nVectors,
@@ -456,8 +460,8 @@ namespace dftfe
       accumulateFromCellNodalDataKernel(
         const ValueTypeBasisCoeff *cellNodalDataPtr,
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
-          &                                         nodalData,
-        const std::pair<unsigned int, unsigned int> cellRange) const
+                                                 &nodalData,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const
     {
       d_BLASWrapperPtr->axpyStridedBlockAtomicAdd(
         d_nVectors,

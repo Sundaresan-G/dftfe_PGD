@@ -17,8 +17,8 @@ namespace dftfe
     /// quadpoints in Cartesian coordinates
     void
     evalBasisData(const std::vector<double> &quadpts,
-                  const AtomicBasis &        atomicBasis,
-                  const unsigned int         maxDerOrder);
+                  const AtomicBasis         &atomicBasis,
+                  const dftfe::uInt          maxDerOrder);
 
     const std::vector<double> &
     getBasisValues() const;

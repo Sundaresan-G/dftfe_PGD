@@ -30,7 +30,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   ExcDFTPlusU<ValueType, memorySpace>::ExcDFTPlusU(
     std::shared_ptr<ExcSSDFunctionalBaseClass<memorySpace>> excSSDObjPtr,
-    unsigned int                                            numSpins)
+    dftfe::uInt                                             numSpins)
     : ExcSSDFunctionalBaseClass<memorySpace>(*(excSSDObjPtr.get()))
   {
     this->d_ExcFamilyType = ExcFamilyType::DFTPlusU;
@@ -42,18 +42,23 @@ namespace dftfe
   {}
 
 
+
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   ExcDFTPlusU<ValueType, memorySpace>::computeRhoTauDependentXCData(
-    AuxDensityMatrix<memorySpace> &auxDensityMatrix,
-    const std::vector<double> &    quadPoints,
-    std::unordered_map<xcRemainderOutputDataAttributes, std::vector<double>>
+    AuxDensityMatrix<memorySpace>             &auxDensityMatrix,
+    const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+    std::unordered_map<
+      xcRemainderOutputDataAttributes,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &xDataOut,
-    std::unordered_map<xcRemainderOutputDataAttributes, std::vector<double>>
+    std::unordered_map<
+      xcRemainderOutputDataAttributes,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &cDataOut) const
   {
     d_excSSDObjPtr->computeRhoTauDependentXCData(auxDensityMatrix,
-                                                 quadPoints,
+                                                 quadIndexRange,
                                                  xDataOut,
                                                  cDataOut);
   }
@@ -74,11 +79,11 @@ namespace dftfe
   void
   ExcDFTPlusU<ValueType, memorySpace>::applyWaveFunctionDependentFuncDerWrtPsi(
     const dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-      &                                                                src,
+                                                                      &src,
     dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
-    const unsigned int inputVecSize,
-    const unsigned int kPointIndex,
-    const unsigned int spinIndex)
+    const dftfe::uInt inputVecSize,
+    const dftfe::uInt kPointIndex,
+    const dftfe::uInt spinIndex)
   {
     d_hubbardClassPtr->applyPotentialDueToHubbardCorrection(
       src, dst, inputVecSize, kPointIndex, spinIndex);
@@ -92,10 +97,10 @@ namespace dftfe
       memorySpace> &src,
     dftfe::linearAlgebra::MultiVector<
       typename dataTypes::singlePrecType<ValueType>::type,
-      memorySpace> &   dst,
-    const unsigned int inputVecSize,
-    const unsigned int kPointIndex,
-    const unsigned int spinIndex)
+      memorySpace>   &dst,
+    const dftfe::uInt inputVecSize,
+    const dftfe::uInt kPointIndex,
+    const dftfe::uInt spinIndex)
   {
     d_hubbardClassPtr->applyPotentialDueToHubbardCorrection(
       src, dst, inputVecSize, kPointIndex, spinIndex);
@@ -106,7 +111,7 @@ namespace dftfe
   void
   ExcDFTPlusU<ValueType, memorySpace>::updateWaveFunctionDependentFuncDerWrtPsi(
     const std::shared_ptr<AuxDensityMatrix<memorySpace>> &auxDensityMatrixPtr,
-    const std::vector<double> &                           kPointWeights)
+    const std::vector<double>                            &kPointWeights)
   {
     std::shared_ptr<AuxDensityMatrixFE<memorySpace>> auxDensityMatrixFEPtr =
       std::dynamic_pointer_cast<AuxDensityMatrixFE<memorySpace>>(
@@ -121,7 +126,7 @@ namespace dftfe
   void
   ExcDFTPlusU<ValueType, memorySpace>::computeWaveFunctionDependentExcEnergy(
     const std::shared_ptr<AuxDensityMatrix<memorySpace>> &auxDensityMatrix,
-    const std::vector<double> &                           kPointWeights)
+    const std::vector<double>                            &kPointWeights)
   {
     d_hubbardClassPtr->computeEnergyFromOccupationMatrix();
   }
@@ -160,21 +165,21 @@ namespace dftfe
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
                                             BLASWrapperHostPtr,
-    const unsigned int                      matrixFreeVectorComponent,
-    const unsigned int                      densityQuadratureId,
-    const unsigned int                      sparsityPatternQuadratureId,
-    const unsigned int                      numberWaveFunctions,
-    const unsigned int                      numSpins,
-    const dftParameters &                   dftParam,
-    const std::string &                     scratchFolderName,
+    const dftfe::uInt                       matrixFreeVectorComponent,
+    const dftfe::uInt                       densityQuadratureId,
+    const dftfe::uInt                       sparsityPatternQuadratureId,
+    const dftfe::uInt                       numberWaveFunctions,
+    const dftfe::uInt                       numSpins,
+    const dftParameters                    &dftParam,
+    const std::string                      &scratchFolderName,
     const bool                              singlePrecNonLocalOperator,
     const bool                              updateNonlocalSparsity,
     const std::vector<std::vector<double>> &atomLocations,
     const std::vector<std::vector<double>> &atomLocationsFrac,
-    const std::vector<int> &                imageIds,
+    const std::vector<dftfe::Int>          &imageIds,
     const std::vector<std::vector<double>> &imagePositions,
-    std::vector<double> &                   kPointCoordinates,
-    const std::vector<double> &             kPointWeights,
+    std::vector<double>                    &kPointCoordinates,
+    const std::vector<double>              &kPointWeights,
     const std::vector<std::vector<double>> &domainBoundaries)
   {
     d_hubbardClassPtr = std::make_shared<hubbard<ValueType, memorySpace>>(
@@ -215,7 +220,7 @@ namespace dftfe
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
   void
   ExcDFTPlusU<ValueType, memorySpace>::reinitKPointDependentVariables(
-    unsigned int kPointIndex)
+    dftfe::uInt kPointIndex)
   {
     d_hubbardClassPtr->initialiseOperatorActionOnX(kPointIndex);
   }

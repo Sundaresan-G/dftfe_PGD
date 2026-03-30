@@ -44,8 +44,8 @@ namespace dftfe
      * @param mpi_comm_domain domain mpi communicator
      * @param type enum specifying the choice of the dealii linear solver
      */
-    dealiiLinearSolver(const MPI_Comm & mpi_comm_parent,
-                       const MPI_Comm & mpi_comm_domain,
+    dealiiLinearSolver(const MPI_Comm  &mpi_comm_parent,
+                       const MPI_Comm  &mpi_comm_domain,
                        const solverType type);
 
     /**
@@ -62,8 +62,8 @@ namespace dftfe
     void
     solve(dealiiLinearSolverProblem &problem,
           const double               absTolerance,
-          const unsigned int         maxNumberIterations,
-          const int                  debugLevel     = 0,
+          const dftfe::uInt          maxNumberIterations,
+          const dftfe::Int           debugLevel     = 0,
           bool                       distributeFlag = true);
 
   private:
@@ -75,8 +75,8 @@ namespace dftfe
 
     const MPI_Comm             d_mpiCommParent;
     const MPI_Comm             mpi_communicator;
-    const unsigned int         n_mpi_processes;
-    const unsigned int         this_mpi_process;
+    const dftfe::uInt          n_mpi_processes;
+    const dftfe::uInt          this_mpi_process;
     dealii::ConditionalOStream pcout;
   };
 

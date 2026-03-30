@@ -22,6 +22,7 @@
 
 #include <string>
 #include <mpi.h>
+#include <TypeConfig.h>
 
 namespace dftfe
 {
@@ -34,13 +35,14 @@ namespace dftfe
   class dftParameters
   {
   public:
-    unsigned int finiteElementPolynomialOrder,
+    dftfe::uInt finiteElementPolynomialOrder,
+      finiteElementPolynomialOrderRhoNodal,
       finiteElementPolynomialOrderElectrostatics, n_refinement_steps,
       numberEigenValues, spinPolarized, nkx, nky, nkz, offsetFlagX, offsetFlagY,
       offsetFlagZ;
-    unsigned int chebyshevOrder, maxChebyPasses, numPass, numSCFIterations,
-      maxLinearSolverIterations, mixingHistory, npool,
-      numberWaveFunctionsForEstimate, numLevels,
+    dftfe::uInt densityQuadratureRule;
+    dftfe::uInt chebyshevOrder, maxChebyPasses, numPass, numSCFIterations,
+      maxLinearSolverIterations, mixingHistory, npool, numLevels,
       maxLinearSolverIterationsHelmholtz;
 
     bool        poissonGPU;
@@ -49,6 +51,7 @@ namespace dftfe
     std::string modelXCInputFile;
     std::string auxBasisTypeXC;
     std::string auxBasisDataXC;
+    bool        useLibXCForXCEvaluation;
 
     double radiusAtomBall, mixingParameter, inverseKerkerMixingParameter,
       spinMixingEnhancementFactor;
@@ -57,10 +60,13 @@ namespace dftfe
       selfConsistentSolverEnergyTolerance, tot_magnetization,
       absLinearSolverToleranceHelmholtz, smearTval, intervalSize;
 
+    bool useAtomicMagnetizationGuessConstraintMag;
+
     bool isPseudopotential, periodicX, periodicY, periodicZ, useSymm,
       timeReversal, pseudoTestsFlag, constraintMagnetization, writeDosFile,
-      writeLdosFile, writeBandsFile, writeLocalizationLengths, pinnedNodeForPBC,
-      writePdosFile;
+      writeLdosFile, writeLocalizationLengths, pinnedNodeForPBC, writePdosFile;
+
+    bool pureState;
 
     double netCharge;
 
@@ -91,20 +97,21 @@ namespace dftfe
       restaFermiWavevector;
     std::string optimizationMode, mixingMethod, ionOptSolver, cellOptSolver;
 
-    std::string  hubbardFileName;
-    bool         isIonForce, isCellStress, isBOMD;
-    bool         nonSelfConsistentForce, meshAdaption;
-    double       forceRelaxTol, stressRelaxTol, toleranceKinetic;
-    unsigned int cellConstraintType;
+    std::string hubbardFileName;
+    bool        isIonForce, isCellStress, isBOMD;
+    bool        nonSelfConsistentForce;
+    double      forceRelaxTol, stressRelaxTol;
+    dftfe::uInt cellConstraintType;
 
-    int         verbosity;
+    dftfe::Int  verbosity;
     std::string solverMode;
     bool        keepScratchFolder;
-    bool        saveRhoData;
-    bool        loadRhoData;
+    bool        saveQuadData;
+    bool        loadQuadData;
     bool        restartSpinFromNoSpin;
-
-    bool reproducible_output;
+    bool        restartNonCollinartFromCollinear;
+    double      magPhi, magTheta;
+    bool        reproducible_output;
 
     bool writeWfcSolutionFields;
     bool printKE;
@@ -113,101 +120,98 @@ namespace dftfe
 
     bool writeDensityQuadData;
 
-    std::string  startingWFCType;
-    bool         restrictToOnePass;
-    unsigned int numCoreWfcForMixedPrecRR;
-    unsigned int wfcBlockSize;
-    unsigned int chebyWfcBlockSize;
-    unsigned int subspaceRotDofsBlockSize;
-    unsigned int nbandGrps;
-    bool         computeEnergyEverySCF;
-    bool         useEnergyResidualTolerance;
-    unsigned int scalapackParalProcs;
-    unsigned int scalapackBlockSize;
-    unsigned int natoms;
-    unsigned int natomTypes;
-    bool         reuseWfcGeoOpt;
-    unsigned int reuseDensityGeoOpt;
-    double       mpiAllReduceMessageBlockSizeMB;
-    bool         useSubspaceProjectedSHEPGPU;
-    bool         useMixedPrecCGS_SR;
-    bool         useMixedPrecXtOX;
-    bool         useMixedPrecXtHX;
-    bool         useMixedPrecSubspaceRotRR;
-    bool         useMixedPrecCommunOnlyXtHXXtOX;
-    bool         useELPA;
-    bool         constraintsParallelCheck;
-    bool         createConstraintsFromSerialDofhandler;
-    bool         bandParalOpt;
-    bool         useDevice;
-    bool         deviceFineGrainedTimings;
-    bool         allowFullCPUMemSubspaceRot;
-    bool         useSinglePrecCommunCheby;
-    bool         useSinglePrecCheby;
-    bool         overlapComputeCommunCheby;
-    bool         overlapComputeCommunOrthoRR;
-    bool         autoDeviceBlockSizes;
-    bool         readWfcForPdosPspFile;
-    double       maxJacobianRatioFactorForMD;
-    double       chebyshevFilterPolyDegreeFirstScfScalingFactor;
-    int          extrapolateDensity;
-    double       timeStepBOMD;
-    unsigned int numberStepsBOMD;
-    unsigned int TotalImages;
-    double       gaussianConstantForce;
-    double       gaussianOrderForce;
-    double       gaussianOrderMoveMeshToAtoms;
-    bool         useFlatTopGenerator;
-    double       diracDeltaKernelScalingConstant;
-    double       xlbomdRestartChebyTol;
-    bool         useDensityMatrixPerturbationRankUpdates;
-    double       xlbomdKernelRankUpdateFDParameter;
-    bool         smearedNuclearCharges;
-    bool         floatingNuclearCharges;
-    bool         multipoleBoundaryConditions;
-    bool         applyHomogeneousNeumannDirichletBC;
-    bool         applyOnlyNeumannBC;
-    bool         nonLinearCoreCorrection;
-    unsigned int maxLineSearchIterCGPRP;
-    std::string  atomicMassesFile;
-    bool         useDeviceDirectAllReduce;
-    bool         useDCCL;
-    bool         useAlltoAllDCCL;
-    double       pspCutoffImageCharges;
-    bool         reuseLanczosUpperBoundFromFirstCall;
-    bool         allowMultipleFilteringPassesAfterFirstScf;
-    unsigned int highestStateOfInterestForChebFiltering;
-    bool         useELPADeviceKernel;
-    bool         memOptMode;
-    bool         approxOverlapMatrix;
-    bool         useReformulatedChFSI;
-    bool         noncolin;
-    bool         hasSOC;
+    std::string startingWFCType;
+    bool        restrictToOnePass;
+    dftfe::uInt numCoreWfcForMixedPrecRR;
+    dftfe::uInt wfcBlockSize;
+    dftfe::uInt chebyWfcBlockSize;
+    dftfe::uInt subspaceRotDofsBlockSize;
+    dftfe::uInt nbandGrps;
+    bool        computeEnergyEverySCF;
+    bool        useEnergyResidualTolerance;
+    dftfe::uInt scalapackParalProcs;
+    dftfe::uInt scalapackBlockSize;
+    dftfe::uInt natoms;
+    dftfe::uInt natomTypes;
+    bool        reuseWfcGeoOpt;
+    dftfe::uInt reuseDensityGeoOpt;
+    double      mpiAllReduceMessageBlockSizeMB;
+    bool        useSubspaceProjectedSHEPGPU;
+    bool        useMixedPrecCGS_SR;
+    bool        useMixedPrecXtOX;
+    bool        useMixedPrecXtHX;
+    bool        useMixedPrecSubspaceRotRR;
+    bool        useMixedPrecCommunOnlyXtHXXtOX;
+    bool        useELPA;
+    bool        constraintsParallelCheck;
+    bool        createConstraintsFromSerialDofhandler;
+    bool        bandParalOpt;
+    bool        useDevice;
+    bool        deviceFineGrainedTimings;
+    bool        allowFullCPUMemSubspaceRot;
+    std::string communPrecCheby;
+    bool        useSinglePrecCheby;
+    bool        overlapComputeCommunCheby;
+    bool        overlapComputeCommunOrthoRR;
+    bool        autoDeviceBlockSizes;
+    bool        readWfcForPdosPspFile;
+    double      maxJacobianRatioFactorForMD;
+    double      chebyshevFilterPolyDegreeFirstScfScalingFactor;
+    dftfe::Int  extrapolateDensity;
+    double      timeStepBOMD;
+    dftfe::uInt numberStepsBOMD;
+    dftfe::uInt TotalImages;
+    double      gaussianConstantForce;
+    double      gaussianOrderForce;
+    double      gaussianOrderMoveMeshToAtoms;
+    bool        useFlatTopGenerator;
+    double      diracDeltaKernelScalingConstant;
+    double      xlbomdRestartChebyTol;
+    bool        useDensityMatrixPerturbationRankUpdates;
+    double      xlbomdKernelRankUpdateFDParameter;
+    bool        smearedNuclearCharges;
+    bool        floatingNuclearCharges;
+    bool        multipoleBoundaryConditions;
+    bool        nonLinearCoreCorrection;
+    dftfe::uInt maxLineSearchIterCGPRP;
+    std::string atomicMassesFile;
+    bool        useDeviceDirectAllReduce;
+    bool        useDCCL;
+    bool        useAlltoAllDCCL;
+    double      pspCutoffImageCharges;
+    bool        reuseLanczosUpperBoundFromFirstCall;
+    bool        allowMultipleFilteringPassesAfterFirstScf;
+    dftfe::uInt highestStateOfInterestForChebFiltering;
+    bool        useELPADeviceKernel;
+    bool        memOptMode;
+    bool        approxOverlapMatrix;
+    bool        useReformulatedChFSI;
+    bool        noncolin;
+    bool        hasSOC;
+
+    dftfe::uInt dc_dispersioncorrectiontype;
+    dftfe::uInt dc_d3dampingtype;
+    bool        dc_d3ATM;
+    bool        dc_d4MBD;
+    std::string dc_dampingParameterFilename;
+    double      dc_d3cutoff2;
+    double      dc_d3cutoff3;
+    double      dc_d3cutoffCN;
 
 
-    unsigned int dc_dispersioncorrectiontype;
-    unsigned int dc_d3dampingtype;
-    bool         dc_d3ATM;
-    bool         dc_d4MBD;
-    std::string  dc_dampingParameterFilename;
-    double       dc_d3cutoff2;
-    double       dc_d3cutoff3;
-    double       dc_d3cutoffCN;
-
-
-    std::string  bfgsStepMethod;
-    bool         usePreconditioner;
-    unsigned int lbfgsNumPastSteps;
-    unsigned int maxOptIter;
-    unsigned int maxStaggeredCycles;
-    double       maxIonUpdateStep, maxCellUpdateStep;
+    std::string bfgsStepMethod;
+    bool        usePreconditioner;
+    dftfe::uInt lbfgsNumPastSteps;
+    dftfe::uInt maxOptIter;
+    dftfe::uInt maxStaggeredCycles;
+    double      maxIonUpdateStep, maxCellUpdateStep;
 
     // New Paramters for moleculardyynamics class
     double      startingTempBOMD;
     double      MaxWallTime;
     double      thermostatTimeConstantBOMD;
     std::string tempControllerTypeBOMD;
-    int         MDTrack;
+    dftfe::Int  MDTrack;
 
     bool writeStructreEnergyForcesFileForPostProcess;
 
@@ -225,11 +229,11 @@ namespace dftfe
      */
     void
     parse_parameters(const std::string &parameter_file,
-                     const MPI_Comm &   mpi_comm_parent,
+                     const MPI_Comm    &mpi_comm_parent,
                      const bool         printParams      = false,
                      const std::string  mode             = "GS",
                      const std::string  restartFilesPath = ".",
-                     const int          _verbosity       = 1,
+                     const dftfe::Int   _verbosity       = 1,
                      const bool         _useDevice       = false);
 
     /**

@@ -50,7 +50,8 @@ withHigherQuadPSP=OFF
 build_type=Release
 
 testing=ON
-minimal_compile=ON
+useInt64=$withGPU
+
 ###########################################################################
 #Usually, no changes are needed below this line
 #
@@ -73,8 +74,8 @@ function cmake_real() {
   -DMDI_PATH=$mdiPath \
 	-DWITH_NCCL=$withNCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$NCCL_PATH"\
 	-DWITH_COMPLEX=OFF -DWITH_GPU=$withGPU -DCMAKE_CUDA_FLAGS="$cuda_flags"\
-	-DWITH_TESTING=$testing -DMINIMAL_COMPILE=$minimal_compile \
-  -DHIGHERQUAD_PSP=$withHigherQuadPSP\
+	-DWITH_TESTING=$testing  \
+  -DHIGHERQUAD_PSP=$withHigherQuadPSP -DUSE_64BIT_INT=$useInt64 \
 	  $1
 }
 
@@ -89,8 +90,8 @@ function cmake_cplx() {
   -DMDI_PATH=$mdiPath\
   -DWITH_NCCL=$withNCCL -DCMAKE_PREFIX_PATH="$ELPA_PATH;$NCCL_PATH" \
 	-DWITH_COMPLEX=ON \
-	-DWITH_TESTING=$testing -DMINIMAL_COMPILE=$minimal_compile \
-  -DHIGHERQUAD_PSP=$withHigherQuadPSP\
+	-DWITH_TESTING=$testing  \
+  -DHIGHERQUAD_PSP=$withHigherQuadPSP -DUSE_64BIT_INT=$useInt64 \
 	  $1
 }
 

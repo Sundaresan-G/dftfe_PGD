@@ -17,18 +17,15 @@
 // @author Phani Motamarri, Shiva Rudraraju, Sambit Das
 //
 #include "applyHomogeneousDirichletBC.cc"
-#include "applyNeumanAndHomogeneousDirichletBC.cc"
 #include "locatenodes.cc"
 #include <dft.h>
 #include <dftUtils.h>
 
 namespace dftfe
 {
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::initBoundaryConditions(
+  dftClass<memorySpace>::initBoundaryConditions(
     const bool recomputeBasisData,
     const bool meshOnlyDeformed,
     const bool vselfPerturbationUpdateForStress)
@@ -51,11 +48,13 @@ namespace dftfe
               << std::endl;
         pcout
           << "FE interpolating polynomial order for Kohn-Sham eigenvalue problem: "
-          << FEOrder << "\n"
+          << d_dftParamsPtr->finiteElementPolynomialOrder << "\n"
           << "FE interpolating polynomial order for electrostatics solve: "
-          << FEOrderElectro << "\n"
+          << d_dftParamsPtr->finiteElementPolynomialOrderElectrostatics << "\n"
           << "FE interpolating polynomial order for nodal electron density computation: "
-          << C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>() << "\n"
+          << d_dftParamsPtr->finiteElementPolynomialOrderRhoNodal << "\n"
+          << "quadrature rule for electron density and kinetic energy density computation: "
+          << d_dftParamsPtr->densityQuadratureRule << "\n"
           << "number of elements: "
           << dofHandler.get_triangulation().n_global_active_cells() << "\n"
           << "number of degrees of freedom for the Kohn-Sham eigenvalue problem : "
@@ -145,14 +144,14 @@ namespace dftfe
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
                                         "Dofs distributed again");
     d_supportPoints.clear();
-    dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
-                                                 dofHandler,
-                                                 d_supportPoints);
+    d_supportPoints =
+      dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
+                                                   dofHandler);
 
     d_supportPointsEigen.clear();
-    dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
-                                                 dofHandlerEigen,
-                                                 d_supportPointsEigen);
+    d_supportPointsEigen =
+      dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
+                                                   dofHandlerEigen);
 
     MPI_Barrier(d_mpiCommParent);
     init_dofhandlerobjs = MPI_Wtime() - init_dofhandlerobjs;
@@ -217,17 +216,20 @@ namespace dftfe
     d_constraintsVector.push_back(&constraintsNoneEigen); // For Eigen;
 
     std::vector<dealii::Quadrature<1>> quadratureVector;
-    quadratureVector.push_back(dealii::QGauss<1>(
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()));
     quadratureVector.push_back(
-      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadNLPSP<FEOrder>()),
+      dealii::QGauss<1>(d_dftParamsPtr->densityQuadratureRule));
+    quadratureVector.push_back(
+      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadNLPSP(
+                             d_dftParamsPtr->finiteElementPolynomialOrder)),
                            C_numCopies1DQuadNLPSP()));
     quadratureVector.push_back(dealii::QGaussLobatto<1>(
-      C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>() + 1));
+      d_dftParamsPtr->finiteElementPolynomialOrderRhoNodal + 1));
     quadratureVector.push_back(
-      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
+      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP(
+                             d_dftParamsPtr->finiteElementPolynomialOrder)),
                            C_numCopies1DQuadLPSP()));
-    quadratureVector.push_back(dealii::QGauss<1>(C_num1DQuad<FEOrder>()));
+    quadratureVector.push_back(dealii::QGauss<1>(
+      C_num1DQuad(d_dftParamsPtr->finiteElementPolynomialOrder)));
     // SparsityPattern VEctor
     quadratureVector.push_back(dealii::QGauss<1>(8));
     d_densityQuadratureId         = 0;
@@ -236,30 +238,6 @@ namespace dftfe
     d_lpspQuadratureId            = 3;
     d_feOrderPlusOneQuadratureId  = 4;
     d_sparsityPatternQuadratureId = 5;
-
-    double init_force;
-    MPI_Barrier(d_mpiCommParent);
-    init_force = MPI_Wtime();
-    //
-    //
-    //
-    forcePtr->initMoved(dofHandlerVector, d_constraintsVector, false);
-    d_forceDofHandlerIndex = d_constraintsVector.size() - 1;
-    /*
-    forcePtr->initMoved(dofHandlerVector,
-        d_constraintsVector,
-        true);
-    */
-
-    if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
-                                        "Called force init moved");
-
-    MPI_Barrier(d_mpiCommParent);
-    init_force = MPI_Wtime() - init_force;
-    if (d_dftParamsPtr->verbosity >= 4)
-      pcout << "initBoundaryConditions: Time taken for force init moved: "
-            << init_force << std::endl;
 
 
     double init_mf;
@@ -295,7 +273,7 @@ namespace dftfe
                                           dftfe::basis::update_jxw;
             dftfe::basis::UpdateFlags updateFlagssparsityPattern =
               dftfe::basis::update_quadpoints;
-            std::vector<unsigned int> quadratureIndices{
+            std::vector<dftfe::uInt> quadratureIndices{
               d_densityQuadratureId,
               d_nlpspQuadratureId,
               d_gllQuadratureId,
@@ -328,14 +306,14 @@ namespace dftfe
       }
     if (!d_dftParamsPtr->useDevice && recomputeBasisData)
       {
-        std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+        std::vector<dftfe::uInt> bandGroupLowHighPlusOneIndices;
         dftUtils::createBandParallelizationIndices(
           interBandGroupComm, d_numEigenValues, bandGroupLowHighPlusOneIndices);
 
-        unsigned int BVec = std::min(d_dftParamsPtr->chebyWfcBlockSize,
-                                     bandGroupLowHighPlusOneIndices[1]);
+        dftfe::uInt BVec = std::min(d_dftParamsPtr->chebyWfcBlockSize,
+                                    bandGroupLowHighPlusOneIndices[1]);
 
-        const unsigned int numWfnComponents =
+        const dftfe::uInt numWfnComponents =
           (d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1;
         d_basisOperationsPtrHost->createScratchMultiVectors(numWfnComponents,
                                                             4);
@@ -354,8 +332,8 @@ namespace dftfe
             d_basisOperationsPtrHost->createScratchMultiVectorsSinglePrec(
               (d_numEigenValues % BVec) * numWfnComponents, 2);
 
-        unsigned int BVec2 = std::min(d_dftParamsPtr->wfcBlockSize,
-                                      bandGroupLowHighPlusOneIndices[1]);
+        dftfe::uInt BVec2 = std::min(d_dftParamsPtr->wfcBlockSize,
+                                     bandGroupLowHighPlusOneIndices[1]);
         if (BVec != BVec2)
           {
             d_basisOperationsPtrHost->createScratchMultiVectors(
@@ -374,9 +352,9 @@ namespace dftfe
           {
             d_basisOperationsPtrDevice->clear();
             d_basisOperationsPtrDevice->init(*d_basisOperationsPtrHost);
-            const unsigned int BVec =
+            const dftfe::uInt BVec =
               std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues);
-            const unsigned int numWfnComponents =
+            const dftfe::uInt numWfnComponents =
               (d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1;
 
             d_basisOperationsPtrDevice->createScratchMultiVectors(
@@ -388,8 +366,8 @@ namespace dftfe
                  !d_dftParamsPtr->useSinglePrecCheby) ?
                 8 :
                 4 :
-                (d_dftParamsPtr->useReformulatedChFSI &&
-                 !d_dftParamsPtr->useSinglePrecCheby) ?
+              (d_dftParamsPtr->useReformulatedChFSI &&
+               !d_dftParamsPtr->useSinglePrecCheby) ?
                 4 :
                 2);
             if (d_dftParamsPtr->useSinglePrecCheby)
@@ -421,7 +399,7 @@ namespace dftfe
             dftfe::basis::UpdateFlags updateFlagsValuesGradients =
               dftfe::basis::update_values | dftfe::basis::update_gradients;
 
-            std::vector<unsigned int> quadratureIndices{
+            std::vector<dftfe::uInt> quadratureIndices{
               d_nlpspQuadratureId,
               d_densityQuadratureId,
               d_feOrderPlusOneQuadratureId};
@@ -434,7 +412,8 @@ namespace dftfe
                                              d_densityDofHandlerIndex,
                                              quadratureIndices,
                                              updateFlags);
-            if (FEOrder == FEOrderElectro)
+            if (d_dftParamsPtr->finiteElementPolynomialOrder ==
+                d_dftParamsPtr->finiteElementPolynomialOrderElectrostatics)
               d_basisOperationsPtrDevice->computeCellStiffnessMatrix(
                 d_feOrderPlusOneQuadratureId, 50, true, false);
           }
@@ -442,9 +421,9 @@ namespace dftfe
     else if (d_dftParamsPtr->useDevice)
       {
         d_basisOperationsPtrDevice->clearScratchMultiVectors();
-        const unsigned int BVec =
+        const dftfe::uInt BVec =
           std::min(d_dftParamsPtr->chebyWfcBlockSize, d_numEigenValues);
-        const unsigned int numWfnComponents =
+        const dftfe::uInt numWfnComponents =
           (d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1;
 
         d_basisOperationsPtrDevice->createScratchMultiVectors(numWfnComponents,
@@ -456,8 +435,8 @@ namespace dftfe
              !d_dftParamsPtr->useSinglePrecCheby) ?
             8 :
             4 :
-            (d_dftParamsPtr->useReformulatedChFSI &&
-             !d_dftParamsPtr->useSinglePrecCheby) ?
+          (d_dftParamsPtr->useReformulatedChFSI &&
+           !d_dftParamsPtr->useSinglePrecCheby) ?
             4 :
             2);
         if (d_dftParamsPtr->useSinglePrecCheby)

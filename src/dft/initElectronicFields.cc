@@ -22,11 +22,9 @@
 namespace dftfe
 {
   // init
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::initElectronicFields()
+  dftClass<memorySpace>::initElectronicFields()
   {
     dealii::TimerOutput::Scope scope(computing_timer, "init electronic fields");
 
@@ -49,18 +47,24 @@ namespace dftfe
 
     d_matrixFreeDataPRefined.initialize_dof_vector(
       d_densityInNodalValues[0], d_densityDofHandlerIndexElectro);
-    for (unsigned int iComp = 1; iComp < d_densityInNodalValues.size(); ++iComp)
+    for (dftfe::uInt iComp = 1; iComp < d_densityInNodalValues.size(); ++iComp)
       d_densityInNodalValues[iComp].reinit(d_densityInNodalValues[0]);
-    for (unsigned int iComp = 0; iComp < d_densityOutNodalValues.size();
-         ++iComp)
+    for (dftfe::uInt iComp = 0; iComp < d_densityOutNodalValues.size(); ++iComp)
       d_densityOutNodalValues[iComp].reinit(d_densityInNodalValues[0]);
 
-    for (unsigned int iComp = 0; iComp < d_densityInNodalValues.size(); ++iComp)
+    for (dftfe::uInt iComp = 0; iComp < d_densityInNodalValues.size(); ++iComp)
       d_densityInNodalValues[iComp] = 0;
-    for (unsigned int iComp = 0; iComp < d_densityOutNodalValues.size();
-         ++iComp)
+    for (dftfe::uInt iComp = 0; iComp < d_densityOutNodalValues.size(); ++iComp)
       d_densityOutNodalValues[iComp] = 0;
-
+    if (d_dftParamsPtr->useSymm)
+      {
+        d_tauOutNodalValues.resize(
+          d_dftParamsPtr->noncolin ?
+            4 :
+            (d_dftParamsPtr->spinPolarized == 1 ? 2 : 1));
+        for (dftfe::uInt iComp = 0; iComp < d_tauOutNodalValues.size(); ++iComp)
+          d_tauOutNodalValues[iComp].reinit(d_densityInNodalValues[0]);
+      }
 
     if ((d_dftParamsPtr->reuseDensityGeoOpt == 2 &&
          d_dftParamsPtr->solverMode == "GEOOPT") ||
@@ -98,23 +102,39 @@ namespace dftfe
     //
     // initialize PSI and density
     //
-    const unsigned int numberBandGroups =
+    const dftfe::uInt numberBandGroups =
           dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
-    /*AssertThrow(
-      ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1) *
-          (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size() <
-        INT_MAX / d_numEigenValuesPerBandGroup,
-      dealii::ExcMessage(
-        "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));*/
-
-    d_eigenVectorsFlattenedHost.resize(
-      (d_numEigenValuesPerBandGroup *
-       matrix_free_data.get_vector_partitioner()->locally_owned_size()) *
-        (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
-        ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),
-      dataTypes::number(0.0));
+    if (d_dftParamsPtr->solverMode == "BANDS")
+      {
+        AssertThrow(
+          ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1) *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size() <
+            std::numeric_limits<dftfe::Int>::max() / (d_numEigenValues/numberBandGroups),
+          dealii::ExcMessage(
+            "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
+        d_eigenVectorsFlattenedHost.resize(
+          ((d_numEigenValues/numberBandGroups) *
+           matrix_free_data.get_vector_partitioner()->locally_owned_size()) *
+            ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),
+          dataTypes::number(0.0));
+      }
+    else
+      {
+        AssertThrow(
+          ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1) *
+              (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
+              matrix_free_data.get_vector_partitioner()->locally_owned_size() <
+            std::numeric_limits<dftfe::Int>::max() / (d_numEigenValues/numberBandGroups),
+          dealii::ExcMessage(
+            "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
+        d_eigenVectorsFlattenedHost.resize(
+          ((d_numEigenValues/numberBandGroups) *
+           matrix_free_data.get_vector_partitioner()->locally_owned_size()) *
+            (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
+            ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),
+          dataTypes::number(0.0));
+      }
 
 
     pcout << std::endl
@@ -131,19 +151,19 @@ namespace dftfe
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
                                         "Created flattened array eigenvectors");
 
-    // if(!(d_dftParamsPtr->chkType==2 && d_dftParamsPtr->restartFromChk))
-    //{
-    initRho();
-    // d_rhoOutNodalValues.reinit(d_rhoInNodalValues);
-    //}
+    if (d_dftParamsPtr->loadQuadData)
+      {
+        loadDensityFromQuadratureValues();
+        d_isRestartGroundStateCalcFromChk = true;
+      }
+    else
+      initRho();
+
 
     if (d_dftParamsPtr->verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm, "initRho called");
 
 #ifdef DFTFE_WITH_DEVICE
-
-    // const unsigned int numberBandGroups =
-    //       dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
     if (d_dftParamsPtr->useDevice)
       {
         d_eigenVectorsFlattenedDevice.resize(
@@ -156,12 +176,6 @@ namespace dftfe
 
 
         d_eigenVectorsFlattenedDevice.copyFrom(d_eigenVectorsFlattenedHost);
-
-        // d_eigenVectorsFlattenedDevice.copyFrom(
-        //   d_eigenVectorsFlattenedHost, 
-        //   d_eigenVectorsFlattenedHost.size()/numberBandGroups,
-        //   dealii::Utilities::MPI::this_mpi_process(interBandGroupComm) * d_eigenVectorsFlattenedHost.size()/numberBandGroups,
-        //   0);
       }
 #endif
 

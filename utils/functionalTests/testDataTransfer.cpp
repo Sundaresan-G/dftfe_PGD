@@ -27,7 +27,7 @@ namespace functionalTest
   namespace
   {
     double
-    value(double x, double y, double z, unsigned int index)
+    value(double x, double y, double z, dftfe::uInt index)
     {
       double val = 1;
       val        = x * x + y * y + z * z;
@@ -77,18 +77,16 @@ namespace functionalTest
     // Works with just two processors.
     // if you have more. you are screwed.
 
-    std::pair<dftfe::global_size_type, dftfe::global_size_type> localRange;
-    std::vector<dftfe::global_size_type>                        ghostRange;
+    std::pair<dftfe::uInt, dftfe::uInt> localRange;
+    std::vector<dftfe::uInt>            ghostRange;
 
     dftfe::utils::MemoryStorage<dftfe::dataTypes::number,
                                 dftfe::utils::MemorySpace::HOST>
       vecData;
 
-    dftfe::size_type thisRankId =
-      dealii::Utilities::MPI::this_mpi_process(mpiComm);
+    dftfe::uInt thisRankId = dealii::Utilities::MPI::this_mpi_process(mpiComm);
 
-    dftfe::size_type numMPIRank =
-      dealii::Utilities::MPI::n_mpi_processes(mpiComm);
+    dftfe::uInt numMPIRank = dealii::Utilities::MPI::n_mpi_processes(mpiComm);
 
     if (numMPIRank != 2)
       {
@@ -98,9 +96,7 @@ namespace functionalTest
 
     if (thisRankId == 0)
       {
-        localRange =
-          std::make_pair<dftfe::global_size_type, dftfe::global_size_type>(0,
-                                                                           10);
+        localRange = std::make_pair<dftfe::uInt, dftfe::uInt>(0, 10);
         ghostRange.resize(3, 0);
         ghostRange[0] = 11;
         ghostRange[1] = 14;
@@ -109,9 +105,7 @@ namespace functionalTest
 
     if (thisRankId == 1)
       {
-        localRange =
-          std::make_pair<dftfe::global_size_type, dftfe::global_size_type>(10,
-                                                                           17);
+        localRange = std::make_pair<dftfe::uInt, dftfe::uInt>(10, 17);
         ghostRange.resize(0, 0);
       }
 
@@ -134,7 +128,7 @@ namespace functionalTest
       {
         vecData.resize(7, 0.0);
 
-        for (dftfe::size_type iPoint = 0; iPoint < 7; iPoint++)
+        for (dftfe::uInt iPoint = 0; iPoint < 7; iPoint++)
           {
             vecData[iPoint] = 2.0;
           }
@@ -144,7 +138,7 @@ namespace functionalTest
       {
         vecData.resize(13, 0.0);
 
-        for (dftfe::size_type iPoint = 0; iPoint < 10; iPoint++)
+        for (dftfe::uInt iPoint = 0; iPoint < 10; iPoint++)
           {
             vecData[iPoint] = iPoint;
           }
@@ -161,7 +155,7 @@ namespace functionalTest
       {
         std::cout << " This rank = 0 \n";
         std::cout << " Vec data = ";
-        for (dftfe::size_type iPoint = 0; iPoint < 10; iPoint++)
+        for (dftfe::uInt iPoint = 0; iPoint < 10; iPoint++)
           std::cout << vecData[iPoint] << "  ";
         std::cout << "\n";
       }
@@ -173,7 +167,7 @@ namespace functionalTest
       {
         std::cout << " This rank = 1 \n";
         std::cout << " Vec data = ";
-        for (dftfe::size_type iPoint = 0; iPoint < 7; iPoint++)
+        for (dftfe::uInt iPoint = 0; iPoint < 7; iPoint++)
           std::cout << vecData[iPoint] << "  ";
         std::cout << "\n";
       }
@@ -191,7 +185,7 @@ namespace functionalTest
       {
         std::cout << " This rank = 0 \n";
         std::cout << " Vec data = ";
-        for (dftfe::size_type iPoint = 0; iPoint < 10; iPoint++)
+        for (dftfe::uInt iPoint = 0; iPoint < 10; iPoint++)
           std::cout << vecData[iPoint] << "  ";
         std::cout << "\n";
       }
@@ -203,7 +197,7 @@ namespace functionalTest
       {
         std::cout << " This rank = 1 \n";
         std::cout << " Vec data = ";
-        for (dftfe::size_type iPoint = 0; iPoint < 7; iPoint++)
+        for (dftfe::uInt iPoint = 0; iPoint < 7; iPoint++)
           std::cout << vecData[iPoint] << "  ";
         std::cout << "\n";
       }
@@ -216,16 +210,16 @@ namespace functionalTest
   testTransferFromParentToChildIncompatiblePartitioning(
     const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<
       dftfe::utils::MemorySpace::HOST>>     BLASWrapperPtr,
-    const MPI_Comm &                        mpi_comm_parent,
-    const MPI_Comm &                        mpi_comm_domain,
-    const MPI_Comm &                        interpoolcomm,
-    const MPI_Comm &                        interbandgroup_comm,
-    const unsigned int                      FEOrder,
-    const dftfe::dftParameters &            dftParams,
+    const MPI_Comm                         &mpi_comm_parent,
+    const MPI_Comm                         &mpi_comm_domain,
+    const MPI_Comm                         &interpoolcomm,
+    const MPI_Comm                         &interbandgroup_comm,
+    const dftfe::uInt                       FEOrder,
+    const dftfe::dftParameters             &dftParams,
     const std::vector<std::vector<double>> &atomLocations,
     const std::vector<std::vector<double>> &imageAtomLocations,
-    const std::vector<int> &                imageIds,
-    const std::vector<double> &             nearestAtomDistances,
+    const std::vector<dftfe::Int>          &imageIds,
+    const std::vector<double>              &nearestAtomDistances,
     const std::vector<std::vector<double>> &domainBoundingVectors,
     const bool                              generateSerialTria,
     const bool                              generateElectrostaticsTria)
@@ -309,35 +303,37 @@ namespace functionalTest
 
     dealii::AffineConstraints<double> constraintMatrix, constraintMatrixVxc;
 
-    dealii::IndexSet locallyRelevantDofs, locallyRelevantDofsVxc;
 
-    dealii::DoFTools::extract_locally_relevant_dofs(dofHandlerTria,
-                                                    locallyRelevantDofs);
+    dealii::IndexSet locallyRelevantDofs =
+      dealii::DoFTools::extract_locally_relevant_dofs(dofHandlerTria);
+    dealii::IndexSet locallyOwnedDofs = dofHandlerTria.locally_owned_dofs();
 
-    dealii::DoFTools::extract_locally_relevant_dofs(dofHandlerTriaVxc,
-                                                    locallyRelevantDofsVxc);
+    dealii::IndexSet locallyRelevantDofsVxc =
+      dealii::DoFTools::extract_locally_relevant_dofs(dofHandlerTriaVxc);
+    dealii::IndexSet locallyOwnedDofsVxc =
+      dofHandlerTriaVxc.locally_owned_dofs();
 
 
     constraintMatrix.clear();
-    constraintMatrix.reinit(locallyRelevantDofs);
+    constraintMatrix.reinit(locallyOwnedDofs, locallyRelevantDofs);
     dealii::DoFTools::make_hanging_node_constraints(dofHandlerTria,
                                                     constraintMatrix);
-    constraintMatrix.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      dofHandlerTria, constraintMatrix);
 
     constraintMatrixVxc.clear();
-    constraintMatrix.reinit(locallyRelevantDofsVxc);
+    constraintMatrix.reinit(locallyOwnedDofsVxc, locallyRelevantDofsVxc);
     dealii::DoFTools::make_hanging_node_constraints(dofHandlerTriaVxc,
                                                     constraintMatrixVxc);
-
-
-    constraintMatrixVxc.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      dofHandlerTriaVxc, constraintMatrixVxc);
 
     // create quadrature
 
     dealii::QGauss<3>             gaussQuadHigh(FEOrder + 3);
     dealii::QGauss<3>             gaussQuadLow(FEOrder + 1);
-    unsigned int                  numQuadPointsHigh = gaussQuadHigh.size();
-    unsigned int                  numQuadPointsLow  = gaussQuadLow.size();
+    dftfe::uInt                   numQuadPointsHigh = gaussQuadHigh.size();
+    dftfe::uInt                   numQuadPointsLow  = gaussQuadLow.size();
     dealii::MatrixFree<3, double> matrixFreeData, matrixFreeDataVxc;
 
 
@@ -353,7 +349,7 @@ namespace functionalTest
 
     dftfe::distributedCPUMultiVec<dftfe::dataTypes::number> parentVec, childVec;
 
-    unsigned int blockSize = 1;
+    dftfe::uInt blockSize = 1;
 
 
     dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
@@ -368,7 +364,7 @@ namespace functionalTest
                                 dftfe::utils::MemorySpace::HOST>
       quadValuesChildAnalytical, quadValuesChildComputed;
 
-    unsigned int totalLocallyOwnedCellsVxc =
+    dftfe::uInt totalLocallyOwnedCellsVxc =
       matrixFreeDataVxc.n_physical_cells();
     quadValuesChildAnalytical.resize(totalLocallyOwnedCellsVxc *
                                      numQuadPointsLow * blockSize);
@@ -377,9 +373,8 @@ namespace functionalTest
 
 
     std::map<dealii::types::global_dof_index, dealii::Point<3, double>>
-      dof_coord;
-    dealii::DoFTools::map_dofs_to_support_points<3, 3>(
-      dealii::MappingQ1<3, 3>(), dofHandlerTria, dof_coord);
+      dof_coord = dealii::DoFTools::map_dofs_to_support_points<3, 3>(
+        dealii::MappingQ1<3, 3>(), dofHandlerTria);
 
 
     dealii::types::global_dof_index numberDofsParent = dofHandlerTria.n_dofs();
@@ -387,16 +382,16 @@ namespace functionalTest
     std::shared_ptr<
       const dftfe::utils::mpi::MPIPatternP2P<dftfe::utils::MemorySpace::HOST>>
       parentMPIPattern = parentVec.getMPIPatternP2P();
-    const std::pair<dftfe::global_size_type, dftfe::global_size_type>
-      &locallyOwnedRangeParent = parentMPIPattern->getLocallyOwnedRange();
+    const std::pair<dftfe::uInt, dftfe::uInt> &locallyOwnedRangeParent =
+      parentMPIPattern->getLocallyOwnedRange();
 
     for (dealii::types::global_dof_index iNode = locallyOwnedRangeParent.first;
          iNode < locallyOwnedRangeParent.second;
          iNode++)
       {
-        for (unsigned int iBlock = 0; iBlock < blockSize; iBlock++)
+        for (dftfe::uInt iBlock = 0; iBlock < blockSize; iBlock++)
           {
-            unsigned int indexVec =
+            dftfe::uInt indexVec =
               (iNode - locallyOwnedRangeParent.first) * blockSize + iBlock;
             if ((!constraintMatrix.is_constrained(iNode)))
               *(parentVec.data() + indexVec) = value(dof_coord[iNode][0],
@@ -428,8 +423,7 @@ namespace functionalTest
     std::cout << std::flush;
     MPI_Barrier(mpi_comm_domain);
 
-    std::vector<dealii::types::global_dof_index>
-      fullFlattenedArrayCellLocalProcIndexIdMapParent;
+    std::vector<dftfe::uInt> fullFlattenedArrayCellLocalProcIndexIdMapParent;
     dftfe::vectorTools::computeCellLocalIndexSetMap(
       parentVec.getMPIPatternP2P(),
       matrixFreeData,
@@ -437,8 +431,8 @@ namespace functionalTest
       blockSize,
       fullFlattenedArrayCellLocalProcIndexIdMapParent);
 
-    dftfe::global_size_type numPointsChild = (dftfe::global_size_type)(
-      totalLocallyOwnedCellsVxc * numQuadPointsLow * blockSize);
+    dftfe::uInt numPointsChild =
+      (dftfe::uInt)(totalLocallyOwnedCellsVxc * numQuadPointsLow * blockSize);
 
     MPI_Allreduce(MPI_IN_PLACE,
                   &numPointsChild,
@@ -452,8 +446,7 @@ namespace functionalTest
 
 
     double startTimeMesh1ToMesh2 = MPI_Wtime();
-    dftfe::utils::MemoryStorage<dftfe::global_size_type,
-                                dftfe::utils::MemorySpace::HOST>
+    dftfe::utils::MemoryStorage<dftfe::uInt, dftfe::utils::MemorySpace::HOST>
       fullFlattenedArrayCellLocalProcIndexIdMapParentMemStorage;
     fullFlattenedArrayCellLocalProcIndexIdMapParentMemStorage.resize(
       fullFlattenedArrayCellLocalProcIndexIdMapParent.size());
@@ -492,17 +485,17 @@ namespace functionalTest
       cellChild = dofHandlerTriaVxc.begin_active(),
       endcChild = dofHandlerTriaVxc.end();
 
-    unsigned int iCellChildIndex = 0;
+    dftfe::uInt iCellChildIndex = 0;
     for (; cellChild != endcChild; cellChild++)
       {
         if (cellChild->is_locally_owned())
           {
             fe_valuesChild.reinit(cellChild);
-            for (unsigned int iQuad = 0; iQuad < numQuadPointsLow; iQuad++)
+            for (dftfe::uInt iQuad = 0; iQuad < numQuadPointsLow; iQuad++)
               {
                 dealii::Point<3, double> qPointVal =
                   fe_valuesChild.quadrature_point(iQuad);
-                for (unsigned int iBlock = 0; iBlock < blockSize; iBlock++)
+                for (dftfe::uInt iBlock = 0; iBlock < blockSize; iBlock++)
                   {
                     quadValuesChildAnalytical
                       [(iCellChildIndex * numQuadPointsLow + iQuad) *
@@ -516,7 +509,7 @@ namespace functionalTest
       }
 
     double l2Error = 0.0;
-    for (unsigned int iQuad = 0; iQuad < quadValuesChildAnalytical.size();
+    for (dftfe::uInt iQuad = 0; iQuad < quadValuesChildAnalytical.size();
          iQuad++)
       {
         dftfe::dataTypes::number diff =
@@ -557,7 +550,7 @@ namespace functionalTest
                                 dftfe::utils::MemorySpace::HOST>
       quadValuesParentAnalytical, quadValuesParentComputed;
 
-    unsigned int totalLocallyOwnedCellsParent =
+    dftfe::uInt totalLocallyOwnedCellsParent =
       matrixFreeData.n_physical_cells();
     quadValuesParentAnalytical.resize(totalLocallyOwnedCellsParent *
                                       numQuadPointsHigh * blockSize);
@@ -566,9 +559,8 @@ namespace functionalTest
 
 
     std::map<dealii::types::global_dof_index, dealii::Point<3, double>>
-      dof_coord_child;
-    dealii::DoFTools::map_dofs_to_support_points<3, 3>(
-      dealii::MappingQ1<3, 3>(), dofHandlerTriaVxc, dof_coord_child);
+      dof_coord_child = dealii::DoFTools::map_dofs_to_support_points<3, 3>(
+        dealii::MappingQ1<3, 3>(), dofHandlerTriaVxc);
 
 
     dealii::types::global_dof_index numberDofsChild =
@@ -577,16 +569,16 @@ namespace functionalTest
     std::shared_ptr<
       const dftfe::utils::mpi::MPIPatternP2P<dftfe::utils::MemorySpace::HOST>>
       childMPIPattern = childVec.getMPIPatternP2P();
-    const std::pair<dftfe::global_size_type, dftfe::global_size_type>
-      &locallyOwnedRangeChild = childMPIPattern->getLocallyOwnedRange();
+    const std::pair<dftfe::uInt, dftfe::uInt> &locallyOwnedRangeChild =
+      childMPIPattern->getLocallyOwnedRange();
 
     for (dealii::types::global_dof_index iNode = locallyOwnedRangeChild.first;
          iNode < locallyOwnedRangeChild.second;
          iNode++)
       {
-        for (unsigned int iBlock = 0; iBlock < blockSize; iBlock++)
+        for (dftfe::uInt iBlock = 0; iBlock < blockSize; iBlock++)
           {
-            unsigned int indexVec =
+            dftfe::uInt indexVec =
               (iNode - locallyOwnedRangeChild.first) * blockSize + iBlock;
             if ((!constraintMatrixVxc.is_constrained(iNode)))
               *(childVec.data() + indexVec) = value(dof_coord_child[iNode][0],
@@ -599,7 +591,7 @@ namespace functionalTest
     childVec.updateGhostValues();
     multiVectorConstraintsChild.distribute(childVec);
 
-    dftfe::global_size_type numPointsParent =
+    dftfe::uInt numPointsParent =
       totalLocallyOwnedCellsParent * numQuadPointsHigh * blockSize;
 
     MPI_Allreduce(MPI_IN_PLACE,
@@ -611,8 +603,7 @@ namespace functionalTest
     std::cout << std::flush;
     MPI_Barrier(mpi_comm_domain);
 
-    std::vector<dealii::types::global_dof_index>
-      fullFlattenedArrayCellLocalProcIndexIdMapChild;
+    std::vector<dftfe::uInt> fullFlattenedArrayCellLocalProcIndexIdMapChild;
     dftfe::vectorTools::computeCellLocalIndexSetMap(
       childVec.getMPIPatternP2P(),
       matrixFreeDataVxc,
@@ -620,8 +611,7 @@ namespace functionalTest
       blockSize,
       fullFlattenedArrayCellLocalProcIndexIdMapChild);
 
-    dftfe::utils::MemoryStorage<dftfe::global_size_type,
-                                dftfe::utils::MemorySpace::HOST>
+    dftfe::utils::MemoryStorage<dftfe::uInt, dftfe::utils::MemorySpace::HOST>
       fullFlattenedArrayCellLocalProcIndexIdMapChildMemStorage;
     fullFlattenedArrayCellLocalProcIndexIdMapChildMemStorage.resize(
       fullFlattenedArrayCellLocalProcIndexIdMapChild.size());
@@ -661,17 +651,17 @@ namespace functionalTest
       cellParent = dofHandlerTria.begin_active(),
       endcParent = dofHandlerTria.end();
 
-    unsigned int iCellParentIndex = 0;
+    dftfe::uInt iCellParentIndex = 0;
     for (; cellParent != endcParent; cellParent++)
       {
         if (cellParent->is_locally_owned())
           {
             fe_valuesParent.reinit(cellParent);
-            for (unsigned int iQuad = 0; iQuad < numQuadPointsHigh; iQuad++)
+            for (dftfe::uInt iQuad = 0; iQuad < numQuadPointsHigh; iQuad++)
               {
                 dealii::Point<3, double> qPointVal =
                   fe_valuesParent.quadrature_point(iQuad);
-                for (unsigned int iBlock = 0; iBlock < blockSize; iBlock++)
+                for (dftfe::uInt iBlock = 0; iBlock < blockSize; iBlock++)
                   {
                     quadValuesParentAnalytical
                       [(iCellParentIndex * numQuadPointsHigh + iQuad) *
@@ -685,7 +675,7 @@ namespace functionalTest
       }
 
     l2Error = 0.0;
-    for (unsigned int iQuad = 0; iQuad < quadValuesParentAnalytical.size();
+    for (dftfe::uInt iQuad = 0; iQuad < quadValuesParentAnalytical.size();
          iQuad++)
       {
         dftfe::dataTypes::number diff =

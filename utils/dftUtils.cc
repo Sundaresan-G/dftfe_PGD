@@ -35,10 +35,8 @@
 
 #include <fstream>
 #include <iostream>
-#include <unistd.h>
-#ifdef DFTFE_WITH_DEVICE
-  # include <DeviceAPICalls.h>
-#endif
+#include "sys/types.h"
+#include "sys/sysinfo.h"
 
 namespace dftfe
 {
@@ -101,7 +99,7 @@ namespace dftfe
     void
     cross_product(const std::vector<double> &a,
                   const std::vector<double> &b,
-                  std::vector<double> &      crossProductVector)
+                  std::vector<double>       &crossProductVector)
     {
       std::vector<double> crossProduct(a.size(), 0.0);
       crossProduct[0] = a[1] * b[2] - a[2] * b[1];
@@ -113,133 +111,88 @@ namespace dftfe
 
     void
     transformDomainBoundingVectors(
-      std::vector<std::vector<double>> &  domainBoundingVectors,
+      std::vector<std::vector<double>>   &domainBoundingVectors,
       const dealii::Tensor<2, 3, double> &deformationGradient)
     {
-      for (unsigned int idim = 0; idim < 3; ++idim)
+      for (dftfe::uInt idim = 0; idim < 3; ++idim)
         {
           dealii::Tensor<1, 3, double> domainVector;
-          for (unsigned int jdim = 0; jdim < 3; ++jdim)
+          for (dftfe::uInt jdim = 0; jdim < 3; ++jdim)
             {
               domainVector[jdim] = domainBoundingVectors[idim][jdim];
             }
 
           domainVector = deformationGradient * domainVector;
 
-          for (unsigned int jdim = 0; jdim < 3; ++jdim)
+          for (dftfe::uInt jdim = 0; jdim < 3; ++jdim)
             {
               domainBoundingVectors[idim][jdim] = domainVector[jdim];
             }
         }
     }
 
-    // Only for linux systems to get in kB
-    void process_mem_usage(double& vm_usage, double& resident_set)
-    {
-        vm_usage     = 0.0;
-        resident_set = 0.0;
-
-        // the two fields we want
-        unsigned long vsize;
-        long rss;
-        {
-            std::string ignore;
-            std::ifstream ifs("/proc/self/stat", std::ios_base::in);
-            ifs >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore
-                    >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore
-                    >> ignore >> ignore >> vsize >> rss;
-        }
-
-        long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
-        vm_usage = vsize / 1024.0;
-        resident_set = rss * page_size_kb;
-    }
-
     void
     printCurrentMemoryUsage(const MPI_Comm &mpiComm, const std::string message)
     {
-      double vm, rss;
-      process_mem_usage(vm, rss);
-      double       maxVm = dealii::Utilities::MPI::max(vm, mpiComm);
-      double       maxRss = dealii::Utilities::MPI::max(rss, mpiComm);
-      const unsigned int taskId =
+#ifdef USE_PETSC
+      PetscLogDouble bytes;
+      PetscMemoryGetCurrentUsage(&bytes);
+      const double      maxBytes = dealii::Utilities::MPI::max(bytes, mpiComm);
+      const dftfe::uInt taskId =
         dealii::Utilities::MPI::this_mpi_process(mpiComm);
-
-#ifdef DFTFE_WITH_DEVICE
-
-      std::size_t free, total;
-
-      dftfe::utils::deviceMemGetInfo(&free, &total);
-
-      double freeGB  = free / 1.0e+9;
-      double totalGB = total / 1.0e+9;
-
-      double usedGB = totalGB - freeGB;
-
-      // Find max
-      double maxUsedGB = dealii::Utilities::MPI::max(usedGB, mpiComm);
-
-      // find min
-      double minFreeGB = dealii::Utilities::MPI::min(freeGB, mpiComm);
-
-#endif
-      
-      // Convert to GB
-      maxVm = maxVm / 1.0e+6;
-      maxRss = maxRss / 1.0e+6;
-      fflush(stdout);
       if (taskId == 0)
         std::cout << std::endl
                   << message +
                        ", Current maximum memory usage across all processors: "
-                  << maxVm << " GB (virtual VM) and " << maxRss << " GB (resident RSS).\n"
-#ifdef DFTFE_WITH_DEVICE
-                  << "Current maximum GPU memory usage ( and minimum free space) across all processors: "
-                  << maxUsedGB << " GB (used) and " << minFreeGB << " GB (free).\n"
-#endif
-                  // << "Rank in MPI_COMM_WORLD: " 
-                  // << dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD)
-                  << std::endl
+                  << maxBytes / 1.0e+6 << " MB." << std::endl
                   << std::endl;
-      fflush(stdout);
       MPI_Barrier(mpiComm);
-      // #ifdef USE_PETSC
-      //       PetscLogDouble bytes;
-      //       PetscMemoryGetCurrentUsage(&bytes);
-      //       const double       maxBytes = dealii::Utilities::MPI::max(bytes, mpiComm);
-      //       const unsigned int taskId =
-      //         dealii::Utilities::MPI::this_mpi_process(mpiComm);
-      //       if (taskId == 0)
-      //         std::cout << std::endl
-      //                   << message +
-      //                        ", Current maximum memory usage across all processors: "
-      //                   << maxBytes / 1.0e+6 << " MB." << std::endl
-      //                   << std::endl;
-      //       MPI_Barrier(mpiComm);
-      // #endif
+#else
+      MPI_Barrier(mpiComm);
+      struct sysinfo memInfo;
+      sysinfo(&memInfo);
+      double totalVirtualMem = memInfo.totalram;
+      totalVirtualMem += memInfo.totalswap;
+      totalVirtualMem *= memInfo.mem_unit;
+      double virtualMemUsed = memInfo.totalram - memInfo.freeram;
+      virtualMemUsed += memInfo.totalswap - memInfo.freeswap;
+      virtualMemUsed *= memInfo.mem_unit;
+      const double maxBytes =
+        dealii::Utilities::MPI::max(virtualMemUsed, mpiComm);
+      const dftfe::uInt taskId =
+        dealii::Utilities::MPI::this_mpi_process(mpiComm);
+      if (taskId == 0)
+        std::cout << std::endl
+                  << message +
+                       ", Current maximum memory usage across all processors: "
+                  << maxBytes / 1024.0 / 1024.0 / 1024.0 << " GB out of "
+                  << totalVirtualMem / 1024.0 / 1024.0 / 1024.0 << std::endl
+                  << std::endl;
+      MPI_Barrier(mpiComm);
+#endif
     }
 
     void
     writeDataVTUParallelLowestPoolId(const dealii::DoFHandler<3> &dofHandler,
-                                     const dealii::DataOut<3> &   dataOut,
-                                     const MPI_Comm &             mpiCommParent,
-                                     const MPI_Comm &             domainComm,
-                                     const MPI_Comm &             kPointComm,
-                                     const MPI_Comm &             bandGroupComm,
-                                     const std::string &          folderName,
-                                     const std::string &          fileName)
+                                     const dealii::DataOut<3>    &dataOut,
+                                     const MPI_Comm              &mpiCommParent,
+                                     const MPI_Comm              &domainComm,
+                                     const MPI_Comm              &kPointComm,
+                                     const MPI_Comm              &bandGroupComm,
+                                     const std::string           &folderName,
+                                     const std::string           &fileName)
     {
-      const unsigned int poolId =
+      const dftfe::uInt poolId =
         dealii::Utilities::MPI::this_mpi_process(kPointComm);
-      const unsigned int bandGroupId =
+      const dftfe::uInt bandGroupId =
         dealii::Utilities::MPI::this_mpi_process(bandGroupComm);
-      const unsigned int minPoolId =
+      const dftfe::uInt minPoolId =
         dealii::Utilities::MPI::min(poolId, kPointComm);
-      const unsigned int minBandGroupId =
+      const dftfe::uInt minBandGroupId =
         dealii::Utilities::MPI::min(bandGroupId, bandGroupComm);
 
 
-      unsigned int n_mpi_processes;
+      dftfe::uInt n_mpi_processes;
       if (poolId == minPoolId && bandGroupId == minBandGroupId)
         {
           /*std::vector<dealii::types::subdomain_id>
@@ -251,7 +204,7 @@ namespace dftfe
             dataOut.add_data_vector(partitioning,"partitioning");
             dataOut.build_patches();*/
 
-          const unsigned int this_mpi_process =
+          const dftfe::uInt this_mpi_process =
             dealii::Utilities::MPI::this_mpi_process(domainComm);
           n_mpi_processes = dealii::Utilities::MPI::n_mpi_processes(domainComm);
           std::string outFileName =
@@ -265,7 +218,7 @@ namespace dftfe
       if (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
         {
           std::vector<std::string> filenames;
-          for (unsigned int i = 0; i < n_mpi_processes; ++i)
+          for (dftfe::uInt i = 0; i < n_mpi_processes; ++i)
             filenames.push_back(fileName + "_" +
                                 dealii::Utilities::to_string(i) + ".vtu");
           const std::string visit_master_filename =
@@ -287,20 +240,20 @@ namespace dftfe
 
     void
     createBandParallelizationIndices(
-      const MPI_Comm &           interBandGroupComm,
-      const unsigned int         numBands,
-      std::vector<unsigned int> &bandGroupLowHighPlusOneIndices)
+      const MPI_Comm           &interBandGroupComm,
+      const dftfe::uInt         numBands,
+      std::vector<dftfe::uInt> &bandGroupLowHighPlusOneIndices)
     {
       bandGroupLowHighPlusOneIndices.clear();
-      const unsigned int numberBandGroups =
+      const dftfe::uInt numberBandGroups =
         dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
-      const unsigned int wfcBlockSizeBandGroup = numBands / numberBandGroups;
+      const dftfe::uInt wfcBlockSizeBandGroup = numBands / numberBandGroups;
       AssertThrow(
         wfcBlockSizeBandGroup != 0,
         dealii::ExcMessage(
           "DFT-FE Error: NPBAND is more than either total number of bands or total number of top states in case of spectrum splitting."));
       bandGroupLowHighPlusOneIndices.resize(numberBandGroups * 2);
-      for (unsigned int i = 0; i < numberBandGroups; i++)
+      for (dftfe::uInt i = 0; i < numberBandGroups; i++)
         {
           bandGroupLowHighPlusOneIndices[2 * i] = i * wfcBlockSizeBandGroup;
           bandGroupLowHighPlusOneIndices[2 * i + 1] =
@@ -312,17 +265,17 @@ namespace dftfe
 
     void
     createKpointParallelizationIndices(
-      const MPI_Comm &  interKptPoolComm,
-      const int         numberIndices,
-      std::vector<int> &kptGroupLowHighPlusOneIndices)
+      const MPI_Comm          &interKptPoolComm,
+      const dftfe::Int         numberIndices,
+      std::vector<dftfe::Int> &kptGroupLowHighPlusOneIndices)
     {
       kptGroupLowHighPlusOneIndices.clear();
-      const int numberKptGroups =
+      const dftfe::Int numberKptGroups =
         dealii::Utilities::MPI::n_mpi_processes(interKptPoolComm);
-      const int indicesKptGroup = numberIndices / numberKptGroups + 1;
+      const dftfe::Int indicesKptGroup = numberIndices / numberKptGroups + 1;
       kptGroupLowHighPlusOneIndices.resize(numberKptGroups * 2);
-      int indicesRemaining = numberIndices;
-      for (int i = 0; i < numberKptGroups; i++)
+      dftfe::Int indicesRemaining = numberIndices;
+      for (dftfe::Int i = 0; i < numberKptGroups; i++)
         {
           if (indicesRemaining > 0)
             {
@@ -344,18 +297,18 @@ namespace dftfe
     }
 
 
-    Pool::Pool(const MPI_Comm &   mpi_communicator,
-               const unsigned int npool,
-               const int          verbosity)
+    Pool::Pool(const MPI_Comm   &mpi_communicator,
+               const dftfe::uInt npool,
+               const dftfe::Int  verbosity)
     {
-      const unsigned int n_mpi_processes =
+      const dftfe::uInt n_mpi_processes =
         dealii::Utilities::MPI::n_mpi_processes(mpi_communicator);
       AssertThrow(
         n_mpi_processes % npool == 0,
         dealii::ExcMessage(
           "DFT-FE Error: Total number of mpi processes must be a multiple of npool. Please check that total number of mpi processes is a multiple of NPKPT*NPBAND."));
-      const unsigned int poolSize = n_mpi_processes / npool;
-      const unsigned int taskId =
+      const dftfe::uInt poolSize = n_mpi_processes / npool;
+      const dftfe::uInt taskId =
         dealii::Utilities::MPI::this_mpi_process(mpi_communicator);
 
       // FIXME: any and all terminal output should be optional
@@ -366,20 +319,16 @@ namespace dftfe
         }
       MPI_Barrier(mpi_communicator);
 
-      const unsigned int color1 = taskId % poolSize;
+      const dftfe::uInt color1 = taskId % poolSize;
       MPI_Comm_split(mpi_communicator, color1, 0, &interpoolcomm);
       MPI_Barrier(mpi_communicator);
 
-      const unsigned int color2 = taskId / poolSize;
+      const dftfe::uInt color2 = taskId / poolSize;
       MPI_Comm_split(mpi_communicator, color2, 0, &intrapoolcomm);
-
-      char processor_name[MPI_MAX_PROCESSOR_NAME];
-      int  name_len = MPI_MAX_PROCESSOR_NAME;
-      MPI_Get_processor_name(processor_name, &name_len);
 
       // FIXME: output should be optional
       if (verbosity > 4)
-        for (unsigned int i = 0; i < n_mpi_processes; ++i)
+        for (dftfe::uInt i = 0; i < n_mpi_processes; ++i)
           {
             if (taskId == i)
               {              
@@ -388,14 +337,12 @@ namespace dftfe
                   << dealii::Utilities::MPI::this_mpi_process(interpoolcomm)
                   << " , intrapool id is "
                   << dealii::Utilities::MPI::this_mpi_process(intrapoolcomm)
-                  << " , and my host name is " << processor_name
                   << std::endl;
                 std::fflush(stdout);
               }
-            MPI_Barrier(mpi_communicator);
+            MPI_Barrier(intrapoolcomm);
           }
       
-      // MPI_Abort(mpi_communicator, 0);
     }
 
     MPI_Comm &

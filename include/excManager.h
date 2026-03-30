@@ -45,7 +45,9 @@ namespace dftfe
     void
     init(std::string XCType,
          bool        isSpinPolarized,
-         std::string modelXCInputFile);
+         std::string modelXCInputFile,
+         const bool  printXCInfo = true,
+         const bool  useLibXC    = true);
 
     ExcSSDFunctionalBaseClass<memorySpace> *
     getExcSSDFunctionalObj();

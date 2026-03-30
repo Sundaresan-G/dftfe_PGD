@@ -4,7 +4,6 @@ set SOLVER MODE = NSCF
 set RESTART FOLDER = ../../fccAl_03.release/mpirun=16/fccAl_03
 
 subsection Post-processing Options
- set WRITE BANDS = false
  set WRITE DENSITY OF STATES=true
 end
 
@@ -19,16 +18,22 @@ subsection Boundary conditions
   set CONSTRAINTS PARALLEL CHECK=true
 end
 
-
 subsection Brillouin zone k point sampling options
   set USE TIME REVERSAL SYMMETRY = false
-  set kPOINT RULE FILE = @SOURCE_DIR@/kPoint2x2x2File
+  subsection Monkhorst-Pack (MP) grid generation
+    set SAMPLING POINTS 1 = 2
+    set SAMPLING POINTS 2 = 2
+    set SAMPLING POINTS 3 = 2
+    set SAMPLING SHIFT 1  = 1
+    set SAMPLING SHIFT 2  = 1
+    set SAMPLING SHIFT 3  = 1
+  end
 end
 
 subsection SCF Checkpointing and Restart
- set LOAD RHO DATA     = true
+ set LOAD QUAD DATA     = true
  set RESTART SP FROM NO SP = false
- set SAVE RHO DATA     = false
+ set SAVE QUAD DATA     = false
 end
 
 subsection Parallelization

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2019-2020 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -26,10 +26,9 @@ namespace dftfe
   //
   // compute total charge using quad point values
   //
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
-  void dftClass<FEOrder, FEOrderElectro, memorySpace>::createpRefinedDofHandler(
+  template <dftfe::utils::MemorySpace memorySpace>
+  void
+  dftClass<memorySpace>::createpRefinedDofHandler(
     dealii::parallel::distributed::Triangulation<3> &triaObject)
   {
     //
@@ -38,50 +37,46 @@ namespace dftfe
 
     d_dofHandlerPRefined.reinit(triaObject);
     d_dofHandlerPRefined.distribute_dofs(
-      dealii::FE_Q<3>(dealii::QGaussLobatto<1>(FEOrderElectro + 1)));
+      dealii::FE_Q<3>(dealii::QGaussLobatto<1>(
+        d_dftParamsPtr->finiteElementPolynomialOrderElectrostatics + 1)));
 
     d_locallyRelevantDofsPRefined.clear();
-    dealii::DoFTools::extract_locally_relevant_dofs(
-      d_dofHandlerPRefined, d_locallyRelevantDofsPRefined);
+    d_locallyRelevantDofsPRefined =
+      dealii::DoFTools::extract_locally_relevant_dofs(d_dofHandlerPRefined);
+    d_locallyOwnedDofsPRefined.clear();
+    d_locallyOwnedDofsPRefined = d_dofHandlerPRefined.locally_owned_dofs();
 
     d_constraintsPRefinedOnlyHanging.clear();
-    d_constraintsPRefinedOnlyHanging.reinit(d_locallyRelevantDofsPRefined);
+    d_constraintsPRefinedOnlyHanging.reinit(d_locallyOwnedDofsPRefined,
+                                            d_locallyRelevantDofsPRefined);
     dealii::DoFTools::make_hanging_node_constraints(
       d_dofHandlerPRefined, d_constraintsPRefinedOnlyHanging);
-    d_constraintsPRefinedOnlyHanging.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsPRefinedOnlyHanging);
 
     d_constraintsPRefined.clear();
-    d_constraintsPRefined.reinit(d_locallyRelevantDofsPRefined);
+    d_constraintsPRefined.reinit(d_locallyOwnedDofsPRefined,
+                                 d_locallyRelevantDofsPRefined);
     dealii::DoFTools::make_hanging_node_constraints(d_dofHandlerPRefined,
                                                     d_constraintsPRefined);
-
-    std::vector<std::vector<double>> unitVectorsXYZ;
-    unitVectorsXYZ.resize(3);
-
-    for (unsigned int i = 0; i < 3; ++i)
-      {
-        unitVectorsXYZ[i].resize(3, 0.0);
-        unitVectorsXYZ[i][i] = 0.0;
-      }
 
     std::vector<dealii::Tensor<1, 3>> offsetVectors;
     // resize offset vectors
     offsetVectors.resize(3);
 
-    for (unsigned int i = 0; i < 3; ++i)
-      for (unsigned int j = 0; j < 3; ++j)
-        offsetVectors[i][j] =
-          unitVectorsXYZ[i][j] - d_domainBoundingVectors[i][j];
+    for (dftfe::uInt i = 0; i < 3; ++i)
+      for (dftfe::uInt j = 0; j < 3; ++j)
+        offsetVectors[i][j] = -d_domainBoundingVectors[i][j];
 
     std::vector<dealii::GridTools::PeriodicFacePair<
       typename dealii::DoFHandler<3>::cell_iterator>>
-                                      periodicity_vector2;
-    const std::array<unsigned int, 3> periodic = {d_dftParamsPtr->periodicX,
-                                                  d_dftParamsPtr->periodicY,
-                                                  d_dftParamsPtr->periodicZ};
+                                     periodicity_vector2;
+    const std::array<dftfe::uInt, 3> periodic = {d_dftParamsPtr->periodicX,
+                                                 d_dftParamsPtr->periodicY,
+                                                 d_dftParamsPtr->periodicZ};
 
-    std::vector<int> periodicDirectionVector;
-    for (unsigned int d = 0; d < 3; ++d)
+    std::vector<dftfe::Int> periodicDirectionVector;
+    for (dftfe::uInt d = 0; d < 3; ++d)
       {
         if (periodic[d] == 1)
           {
@@ -89,7 +84,7 @@ namespace dftfe
           }
       }
 
-    for (unsigned int i = 0;
+    for (dftfe::uInt i = 0;
          i < std::accumulate(periodic.begin(), periodic.end(), 0);
          ++i)
       dealii::GridTools::collect_periodic_faces(
@@ -103,7 +98,8 @@ namespace dftfe
     dealii::DoFTools::make_periodicity_constraints<3, 3>(periodicity_vector2,
                                                          d_constraintsPRefined);
 
-    d_constraintsPRefined.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsPRefined);
 
     //
     // initialize rho nodal dofHandler and constraint matrices
@@ -112,27 +108,33 @@ namespace dftfe
     d_dofHandlerRhoNodal.reinit(triaObject);
     d_dofHandlerRhoNodal.distribute_dofs(
       dealii::FE_Q<3>(dealii::QGaussLobatto<1>(
-        C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>() + 1)));
+        d_dftParamsPtr->finiteElementPolynomialOrderRhoNodal + 1)));
 
     d_locallyRelevantDofsRhoNodal.clear();
-    dealii::DoFTools::extract_locally_relevant_dofs(
-      d_dofHandlerRhoNodal, d_locallyRelevantDofsRhoNodal);
+    d_locallyRelevantDofsRhoNodal =
+      dealii::DoFTools::extract_locally_relevant_dofs(d_dofHandlerRhoNodal);
+
+    d_locallyOwnedDofsRhoNodal.clear();
+    d_locallyOwnedDofsRhoNodal = d_dofHandlerRhoNodal.locally_owned_dofs();
 
     d_constraintsRhoNodalOnlyHanging.clear();
-    d_constraintsRhoNodalOnlyHanging.reinit(d_locallyRelevantDofsRhoNodal);
+    d_constraintsRhoNodalOnlyHanging.reinit(d_locallyOwnedDofsRhoNodal,
+                                            d_locallyRelevantDofsRhoNodal);
     dealii::DoFTools::make_hanging_node_constraints(
       d_dofHandlerRhoNodal, d_constraintsRhoNodalOnlyHanging);
-    d_constraintsRhoNodalOnlyHanging.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerRhoNodal, d_constraintsRhoNodalOnlyHanging);
 
     d_constraintsRhoNodal.clear();
-    d_constraintsRhoNodal.reinit(d_locallyRelevantDofsRhoNodal);
+    d_constraintsRhoNodal.reinit(d_locallyOwnedDofsRhoNodal,
+                                 d_locallyRelevantDofsRhoNodal);
     dealii::DoFTools::make_hanging_node_constraints(d_dofHandlerRhoNodal,
                                                     d_constraintsRhoNodal);
 
     std::vector<dealii::GridTools::PeriodicFacePair<
       typename dealii::DoFHandler<3>::cell_iterator>>
       periodicity_vector_rhonodal;
-    for (unsigned int i = 0;
+    for (dftfe::uInt i = 0;
          i < std::accumulate(periodic.begin(), periodic.end(), 0);
          ++i)
       dealii::GridTools::collect_periodic_faces(
@@ -145,8 +147,8 @@ namespace dftfe
 
     dealii::DoFTools::make_periodicity_constraints<3, 3>(
       periodicity_vector_rhonodal, d_constraintsRhoNodal);
-
-    d_constraintsRhoNodal.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerRhoNodal, d_constraintsRhoNodal);
 
     if (d_dftParamsPtr->createConstraintsFromSerialDofhandler)
       {
@@ -179,11 +181,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::initpRefinedObjects(
+  dftClass<memorySpace>::initpRefinedObjects(
     const bool recomputeBasisData,
     const bool meshOnlyDeformed,
     const bool vselfPerturbationUpdateForStress)
@@ -191,9 +191,9 @@ namespace dftfe
     d_dofHandlerPRefined.distribute_dofs(d_dofHandlerPRefined.get_fe());
     d_dofHandlerRhoNodal.distribute_dofs(d_dofHandlerRhoNodal.get_fe());
     d_supportPointsPRefined.clear();
-    dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
-                                                 d_dofHandlerPRefined,
-                                                 d_supportPointsPRefined);
+    d_supportPointsPRefined =
+      dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
+                                                   d_dofHandlerPRefined);
 
     // matrix free data structure
     typename dealii::MatrixFree<3>::AdditionalData additional_data;
@@ -222,17 +222,20 @@ namespace dftfe
     // used for Helmholtz solve
     //
     d_constraintsForHelmholtzRhoNodal.clear();
-    d_constraintsForHelmholtzRhoNodal.reinit(d_locallyRelevantDofsRhoNodal);
+    d_constraintsForHelmholtzRhoNodal.reinit(d_locallyOwnedDofsRhoNodal,
+                                             d_locallyRelevantDofsRhoNodal);
 
     applyHomogeneousDirichletBC(d_dofHandlerRhoNodal,
                                 d_constraintsRhoNodalOnlyHanging,
                                 d_constraintsForHelmholtzRhoNodal);
-    d_constraintsForHelmholtzRhoNodal.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerRhoNodal, d_constraintsForHelmholtzRhoNodal);
     d_constraintsForHelmholtzRhoNodal.merge(
       d_constraintsRhoNodal,
       dealii::AffineConstraints<
         double>::MergeConflictBehavior::right_object_wins);
-    d_constraintsForHelmholtzRhoNodal.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerRhoNodal, d_constraintsForHelmholtzRhoNodal);
     d_constraintsVectorElectro.push_back(&d_constraintsForHelmholtzRhoNodal);
     d_helmholtzDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
 
@@ -244,37 +247,24 @@ namespace dftfe
     // with (rho+b) as the rhs
     //
     d_constraintsForTotalPotentialElectro.clear();
-    d_constraintsForTotalPotentialElectro.reinit(d_locallyRelevantDofsPRefined);
+    d_constraintsForTotalPotentialElectro.reinit(d_locallyOwnedDofsPRefined,
+                                                 d_locallyRelevantDofsPRefined);
 
     if (d_dftParamsPtr->pinnedNodeForPBC)
       locatePeriodicPinnedNodes(d_dofHandlerPRefined,
                                 d_constraintsPRefined,
                                 d_constraintsForTotalPotentialElectro);
-
-    if (d_dftParamsPtr->applyHomogeneousNeumannDirichletBC)
-      {
-        applyNeumanAndHomogeneousDirichletBC(
-          d_dofHandlerPRefined,
-          d_constraintsPRefinedOnlyHanging,
-          d_constraintsForTotalPotentialElectro);
-      }
-    else if (d_dftParamsPtr->applyOnlyNeumannBC)
-      {
-        // do Nothing
-      }
-    else
-      {
-        applyHomogeneousDirichletBC(d_dofHandlerPRefined,
-                                    d_constraintsPRefinedOnlyHanging,
-                                    d_constraintsForTotalPotentialElectro);
-      }
-
-    d_constraintsForTotalPotentialElectro.close();
+    applyHomogeneousDirichletBC(d_dofHandlerPRefined,
+                                d_constraintsPRefinedOnlyHanging,
+                                d_constraintsForTotalPotentialElectro);
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsForTotalPotentialElectro);
     d_constraintsForTotalPotentialElectro.merge(
       d_constraintsPRefined,
       dealii::AffineConstraints<
         double>::MergeConflictBehavior::right_object_wins);
-    d_constraintsForTotalPotentialElectro.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsForTotalPotentialElectro);
 
     d_constraintsVectorElectro.push_back(
       &d_constraintsForTotalPotentialElectro);
@@ -333,7 +323,8 @@ namespace dftfe
     d_phiExtDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
 
     d_constraintsForPhiPrimeElectro.clear();
-    d_constraintsForPhiPrimeElectro.reinit(d_locallyRelevantDofsPRefined);
+    d_constraintsForPhiPrimeElectro.reinit(d_locallyOwnedDofsPRefined,
+                                           d_locallyRelevantDofsPRefined);
     if (d_dftParamsPtr->pinnedNodeForPBC)
       locatePeriodicPinnedNodes(d_dofHandlerPRefined,
                                 d_constraintsPRefined,
@@ -341,12 +332,14 @@ namespace dftfe
     applyHomogeneousDirichletBC(d_dofHandlerPRefined,
                                 d_constraintsPRefinedOnlyHanging,
                                 d_constraintsForPhiPrimeElectro);
-    d_constraintsForPhiPrimeElectro.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsForPhiPrimeElectro);
     d_constraintsForPhiPrimeElectro.merge(
       d_constraintsPRefined,
       dealii::AffineConstraints<
         double>::MergeConflictBehavior::right_object_wins);
-    d_constraintsForPhiPrimeElectro.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsForPhiPrimeElectro);
     d_constraintsVectorElectro.push_back(&d_constraintsForPhiPrimeElectro);
     d_phiPrimeDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
 
@@ -377,19 +370,15 @@ namespace dftfe
     matrixFreeDofHandlerVectorInput.push_back(&d_dofHandlerRhoNodal);
     matrixFreeDofHandlerVectorInput.push_back(&d_dofHandlerRhoNodal);
 
-    for (unsigned int i = 3; i < d_constraintsVectorElectro.size(); ++i)
+    for (dftfe::uInt i = 3; i < d_constraintsVectorElectro.size(); ++i)
       matrixFreeDofHandlerVectorInput.push_back(&d_dofHandlerPRefined);
 
-    forcePtr->initMoved(matrixFreeDofHandlerVectorInput,
-                        d_constraintsVectorElectro,
-                        true);
-    d_forceDofHandlerIndexElectro = d_constraintsVectorElectro.size() - 1;
-
     std::vector<dealii::Quadrature<1>> quadratureVector;
-    quadratureVector.push_back(dealii::QGauss<1>(
-      C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()));
     quadratureVector.push_back(
-      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP<FEOrder>()),
+      dealii::QGauss<1>(d_dftParamsPtr->densityQuadratureRule));
+    quadratureVector.push_back(
+      dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadLPSP(
+                             d_dftParamsPtr->finiteElementPolynomialOrder)),
                            C_numCopies1DQuadLPSP()));
     if (d_dftParamsPtr->isCellStress)
       quadratureVector.push_back(dealii::QIterated<1>(
@@ -403,13 +392,17 @@ namespace dftfe
       quadratureVector.push_back(
         dealii::QIterated<1>(dealii::QGauss<1>(C_num1DQuadSmearedCharge()),
                              C_numCopies1DQuadSmearedCharge()));
-    quadratureVector.push_back(dealii::QGauss<1>(FEOrderElectro + 1));
+    quadratureVector.push_back(dealii::QGauss<1>(
+      C_num1DQuad(d_dftParamsPtr->finiteElementPolynomialOrderElectrostatics)));
+    quadratureVector.push_back(dealii::QGauss<1>(
+      C_num1DQuad(d_dftParamsPtr->finiteElementPolynomialOrderRhoNodal)));
 
 
     d_densityQuadratureIdElectro       = 0;
     d_lpspQuadratureIdElectro          = 1;
     d_smearedChargeQuadratureIdElectro = 2;
     d_phiTotAXQuadratureIdElectro      = 3;
+    d_kerkerAXQuadratureIdElectro      = 4;
 
     d_matrixFreeDataPRefined.reinit(dealii::MappingQ1<3, 3>(),
                                     matrixFreeDofHandlerVectorInput,
@@ -429,42 +422,46 @@ namespace dftfe
 
             dftfe::basis::UpdateFlags updateFlagsDensity =
               dftfe::basis::update_values | dftfe::basis::update_jxw;
+            if (d_dftParamsPtr->isCellStress)
+              updateFlagsDensity =
+                updateFlagsDensity | dftfe::basis::update_quadpoints;
 
             dftfe::basis::UpdateFlags updateFlagsLPSP =
               dftfe::basis::update_values | dftfe::basis::update_jxw |
               dftfe::basis::update_quadpoints;
 
+            dftfe::basis::UpdateFlags updateFlagsSmearedCharge =
+              dftfe::basis::update_quadpoints | dftfe::basis::update_values |
+              dftfe::basis::update_jxw;
+
             dftfe::basis::UpdateFlags updateFlagsphiTotAX =
-              d_dftParamsPtr->useDevice && FEOrder != FEOrderElectro ?
+              d_dftParamsPtr->useDevice &&
+                  d_dftParamsPtr->finiteElementPolynomialOrder !=
+                    d_dftParamsPtr->finiteElementPolynomialOrderElectrostatics ?
                 dftfe::basis::update_gradients :
                 dftfe::basis::update_default;
 
-            std::vector<unsigned int> quadratureIndices{
+            dftfe::basis::UpdateFlags updateFlagsKerkerAX =
+              dftfe::basis::update_default;
+
+            std::vector<dftfe::uInt> quadratureIndices{
               d_densityQuadratureIdElectro,
               d_lpspQuadratureIdElectro,
               d_smearedChargeQuadratureIdElectro,
-              d_phiTotAXQuadratureIdElectro};
+              d_phiTotAXQuadratureIdElectro,
+              d_kerkerAXQuadratureIdElectro};
             std::vector<dftfe::basis::UpdateFlags> updateFlags{
               updateFlagsDensity,
               updateFlagsLPSP,
-              dftfe::basis::update_quadpoints,
-              updateFlagsphiTotAX};
-            d_basisOperationsPtrElectroHost->init(d_matrixFreeDataPRefined,
-                                                  d_constraintsVectorElectro,
-                                                  d_baseDofHandlerIndexElectro,
-                                                  quadratureIndices,
-                                                  updateFlags);
-          }
-        else
-          {
-            d_basisOperationsPtrElectroHost->clear();
-            std::vector<unsigned int>              quadratureIndices;
-            std::vector<dftfe::basis::UpdateFlags> updateFlags;
-            d_basisOperationsPtrElectroHost->init(d_matrixFreeDataPRefined,
-                                                  d_constraintsVectorElectro,
-                                                  d_baseDofHandlerIndexElectro,
-                                                  quadratureIndices,
-                                                  updateFlags);
+              updateFlagsSmearedCharge,
+              updateFlagsphiTotAX,
+              updateFlagsKerkerAX};
+            d_basisOperationsPtrElectroHost->init(
+              d_matrixFreeDataPRefined,
+              d_constraintsVectorElectro,
+              d_phiTotDofHandlerIndexElectro,
+              quadratureIndices,
+              updateFlags);
           }
       }
     else
@@ -478,7 +475,8 @@ namespace dftfe
             d_basisOperationsPtrElectroDevice->clear();
             d_basisOperationsPtrElectroDevice->init(
               *d_basisOperationsPtrElectroHost);
-            if (FEOrder != FEOrderElectro)
+            if (d_dftParamsPtr->finiteElementPolynomialOrder !=
+                d_dftParamsPtr->finiteElementPolynomialOrderElectrostatics)
               d_basisOperationsPtrElectroDevice->computeCellStiffnessMatrix(
                 d_phiTotAXQuadratureIdElectro, 50, true, false);
           }
@@ -489,17 +487,18 @@ namespace dftfe
               dftfe::basis::update_inversejacobians | dftfe::basis::update_jxw |
               dftfe::basis::update_gradients;
 
-            std::vector<unsigned int> quadratureIndices{
+            std::vector<dftfe::uInt> quadratureIndices{
               d_phiTotAXQuadratureIdElectro};
             std::vector<dftfe::basis::UpdateFlags> updateFlags{
               updateFlagsGradientsAndInvJacobians};
             d_basisOperationsPtrElectroDevice->init(
               d_matrixFreeDataPRefined,
               d_constraintsVectorElectro,
-              d_baseDofHandlerIndexElectro,
+              d_phiTotDofHandlerIndexElectro,
               quadratureIndices,
               updateFlags);
-            if (FEOrder != FEOrderElectro)
+            if (d_dftParamsPtr->finiteElementPolynomialOrder !=
+                d_dftParamsPtr->finiteElementPolynomialOrderElectrostatics)
               d_basisOperationsPtrElectroDevice->computeCellStiffnessMatrix(
                 d_phiTotAXQuadratureIdElectro, 50, true, false);
           }
@@ -521,14 +520,13 @@ namespace dftfe
   }
 
 
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::updatePRefinedConstraints()
+  dftClass<memorySpace>::updatePRefinedConstraints()
   {
     d_constraintsForTotalPotentialElectro.clear();
-    d_constraintsForTotalPotentialElectro.reinit(d_locallyRelevantDofsPRefined);
+    d_constraintsForTotalPotentialElectro.reinit(d_locallyOwnedDofsPRefined,
+                                                 d_locallyRelevantDofsPRefined);
     if (d_dftParamsPtr->pinnedNodeForPBC)
       locatePeriodicPinnedNodes(d_dofHandlerPRefined,
                                 d_constraintsPRefined,
@@ -536,12 +534,14 @@ namespace dftfe
     applyMultipoleDirichletBC(d_dofHandlerPRefined,
                               d_constraintsPRefinedOnlyHanging,
                               d_constraintsForTotalPotentialElectro);
-    d_constraintsForTotalPotentialElectro.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsForTotalPotentialElectro);
     d_constraintsForTotalPotentialElectro.merge(
       d_constraintsPRefined,
       dealii::AffineConstraints<
         double>::MergeConflictBehavior::right_object_wins);
-    d_constraintsForTotalPotentialElectro.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerPRefined, d_constraintsForTotalPotentialElectro);
   }
 #include "dft.inst.cc"
 } // namespace dftfe

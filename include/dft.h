@@ -26,6 +26,7 @@
 #include <FEBasisOperations.h>
 #include <BLASWrapper.h>
 #include <AuxDensityMatrix.h>
+#include <configurationalForce.h>
 
 #include <complex>
 #include <deque>
@@ -37,8 +38,6 @@
 #ifdef DFTFE_WITH_DEVICE
 #  include <chebyshevOrthogonalizedSubspaceIterationSolverDevice.h>
 #  include "deviceKernelsGeneric.h"
-#  include <poissonSolverProblemDevice.h>
-#  include <kerkerSolverProblemDevice.h>
 #  include <linearSolverCGDevice.h>
 #  include <deviceDirectCCLWrapper.h>
 #endif
@@ -51,16 +50,14 @@
 #include <dftParameters.h>
 #include <eigenSolver.h>
 #include <interpolation.h>
-#include <kerkerSolverProblem.h>
-#include <KohnShamHamiltonianOperator.h>
+#include <KohnShamDFTBaseOperator.h>
+#include <KohnShamDFTStandardEigenOperator.h>
 #include <meshMovementAffineTransform.h>
 #include <meshMovementGaussian.h>
-#include <poissonSolverProblem.h>
 #include <triangulationManager.h>
 #include <vselfBinsManager.h>
 #include <excManager.h>
 #include <dftd.h>
-#include <force.h>
 #include "dftBase.h"
 #ifdef USE_PETSC
 #  include <petsc.h>
@@ -73,6 +70,9 @@
 #include <AuxDensityMatrix.h>
 #include "expConfiningPotential.h"
 #include <atomCenteredPostProcessing.h>
+#include <poissonSolverProblemWrapper.h>
+#include <kerkerSolverProblemWrapper.h>
+#include <groupSymmetry.h>
 
 namespace dftfe
 {
@@ -86,19 +86,13 @@ namespace dftfe
 
   struct orbital
   {
-    unsigned int                atomID;
-    unsigned int                waveID;
-    unsigned int                Z, n, l;
-    int                         m;
+    dftfe::uInt                 atomID;
+    dftfe::uInt                 waveID;
+    dftfe::uInt                 Z, n, l;
+    dftfe::Int                  m;
     alglib::spline1dinterpolant psi;
   };
 
-  /* code that must be skipped by Doxygen */
-  // forward declarations
-  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
-  class symmetryClass;
-  template <unsigned int T1, unsigned int T2, dftfe::utils::MemorySpace memory>
-  class forceClass;
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   /**
@@ -108,15 +102,9 @@ namespace dftfe
    *
    * @author Shiva Rudraraju, Phani Motamarri, Sambit Das
    */
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   class dftClass : public dftBase
   {
-    friend class forceClass<FEOrder, FEOrderElectro, memorySpace>;
-
-    friend class symmetryClass<FEOrder, FEOrderElectro, memorySpace>;
-
   public:
     /**
      * @brief dftClass constructor
@@ -132,13 +120,13 @@ namespace dftfe
      *  @param[in] dftParams  dftParameters object containg parameter values
      * parsed from an input parameter file in dftfeWrapper class
      */
-    dftClass(const MPI_Comm &   mpiCommParent,
-             const MPI_Comm &   mpi_comm_domain,
-             const MPI_Comm &   interpoolcomm,
-             const MPI_Comm &   interBandGroupComm,
-             const MPI_Comm &   intrapoolcomm,
+    dftClass(const MPI_Comm    &mpiCommParent,
+             const MPI_Comm    &mpi_comm_domain,
+             const MPI_Comm    &interpoolcomm,
+             const MPI_Comm    &interBandGroupComm,
+             const MPI_Comm    &intrapoolcomm,
              const std::string &scratchFolderName,
-             dftParameters &    dftParams);
+             dftParameters     &dftParams);
 
     /**
      * @brief dftClass destructor
@@ -195,6 +183,11 @@ namespace dftfe
     void
     solveNoSCF();
     /**
+     * @brief compute bands without solving the SCF iteration
+     */
+    void
+    solveBands();
+    /**
      * @brief Kohn-Sham ground-state solve using SCF iteration
      *
      * @return tuple of boolean flag on whether scf converged,
@@ -207,20 +200,17 @@ namespace dftfe
           const bool restartGroundStateCalcFromChk = false);
 
     void
-    computeStress();
-
-    void
     trivialSolveForStress();
 
 
     void
     computeOutputDensityDirectionalDerivative(
-      const distributedCPUVec<double> &v,
-      const distributedCPUVec<double> &vSpin0,
-      const distributedCPUVec<double> &vSpin1,
-      distributedCPUVec<double> &      fv,
-      distributedCPUVec<double> &      fvSpin0,
-      distributedCPUVec<double> &      fvSpin1);
+      distributedCPUVec<double> &v,
+      distributedCPUVec<double> &vSpin0,
+      distributedCPUVec<double> &vSpin1,
+      distributedCPUVec<double> &fv,
+      distributedCPUVec<double> &fvSpin0,
+      distributedCPUVec<double> &fvSpin1);
 
     /**
      * @brief Copies the residual residualValues=outValues-inValues
@@ -234,14 +224,14 @@ namespace dftfe
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &residualValues,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &        JxW,
+                &JxW,
       const bool computeNorm);
 
 
     double
     computeResidualNodalData(const distributedCPUVec<double> &outValues,
                              const distributedCPUVec<double> &inValues,
-                             distributedCPUVec<double> &      residualValues);
+                             distributedCPUVec<double>       &residualValues);
 
 
     /**
@@ -291,16 +281,14 @@ namespace dftfe
     /**
      * @brief Number of Kohn-Sham eigen values to be computed
      */
-    unsigned int d_numEigenValues;
-    unsigned int d_numEigenValuesPerBandGroup;
-
-    unsigned int d_highestStateForResidualComputation;
+    dftfe::uInt d_numEigenValues;
+    dftfe::uInt d_numEigenValuesPerBandGroup;
 
 
     /**
      * @brief Number of random wavefunctions
      */
-    unsigned int d_nonAtomicWaveFunctions;
+    dftfe::uInt d_nonAtomicWaveFunctions;
 
     void
     readkPointData();
@@ -417,7 +405,7 @@ namespace dftfe
     /**
      * @brief Gets the current image atom ids from dftClass
      */
-    const std::vector<int> &
+    const std::vector<dftfe::Int> &
     getImageAtomIDs() const;
 
     /**
@@ -448,7 +436,7 @@ namespace dftfe
     /**
      * @brief Gets the current atom types from dftClass
      */
-    const std::set<unsigned int> &
+    const std::set<dftfe::uInt> &
     getAtomTypes() const;
 
     /**
@@ -502,7 +490,7 @@ namespace dftfe
     getNumElectrons() const;
 
     void
-    setNumElectrons(unsigned int inputNumElectrons);
+    setNumElectrons(dftfe::uInt inputNumElectrons);
 
     elpaScalaManager *
     getElpaScalaManager() const;
@@ -525,13 +513,13 @@ namespace dftfe
      */
     void
     kohnShamEigenSpaceCompute(
-      const unsigned int s,
-      const unsigned int kPointIndex,
-      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
-        &                                             kohnShamDFTEigenOperator,
-      elpaScalaManager &                              elpaScala,
+      const dftfe::uInt s,
+      const dftfe::uInt kPointIndex,
+      KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::HOST>
+                                                     &kohnShamDFTEigenOperator,
+      elpaScalaManager                               &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
-      std::vector<double> &                           residualNormWaveFunctions,
+      std::vector<double>                            &residualNormWaveFunctions,
       const bool                                      computeResidual,
       const bool                                      useMixedPrec = false,
       const bool                                      isFirstScf   = false);
@@ -543,16 +531,16 @@ namespace dftfe
      */
     void
     kohnShamEigenSpaceCompute(
-      const unsigned int s,
-      const unsigned int kPointIndex,
-      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
-        &               kohnShamDFTEigenOperator,
+      const dftfe::uInt s,
+      const dftfe::uInt kPointIndex,
+      KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::DEVICE>
+                       &kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
-        &                  subspaceIterationSolverDevice,
+                          &subspaceIterationSolverDevice,
       std::vector<double> &residualNormWaveFunctions,
       const bool           computeResidual,
-      const unsigned int   numberRayleighRitzAvoidancePasses = 0,
+      const dftfe::uInt    numberRayleighRitzAvoidancePasses = 0,
       const bool           useMixedPrec                      = false,
       const bool           isFirstScf                        = false);
 #endif
@@ -566,6 +554,14 @@ namespace dftfe
       const double                            numElectronsInput);
 
     /**
+     *@brief find HOMO eigenvalue for pure state
+     */
+    void
+    compute_fermienergy_purestate(
+      const std::vector<std::vector<double>> &eigenValuesInput,
+      const double                            numElectronsInput);
+
+    /**
      *@brief Computes the kinetic energy
      */
     double
@@ -574,25 +570,25 @@ namespace dftfe
         &kineticEnergyDensityValues);
 
     /**
-     *@brief get the Ptr to the operator class ( Kohn Sham Operator)
+     *@brief get the Ptr to the operator class ( Kohn Sham Base Operator)
      */
-    KohnShamHamiltonianOperator<memorySpace> *
-    getOperatorClass();
+    KohnShamDFTBaseOperator<memorySpace> *
+    getKohnShamDFTBaseOperatorClass();
 
     /**
      *@brief get the index of the DoF Handler corresponding to
      *
      */
-    unsigned int
+    dftfe::uInt
     getDensityDofHandlerIndex();
 
-    unsigned int
+    dftfe::uInt
     getDensityQuadratureId();
 
     const std::vector<double> &
     getKPointWeights() const;
 
-    unsigned int
+    dftfe::uInt
     getNumEigenValues() const;
 
     triangulationManager *
@@ -604,13 +600,13 @@ namespace dftfe
     dealii::AffineConstraints<double> *
     getDensityConstraint();
 
-    unsigned int
+    dftfe::uInt
     getElectroDofHandlerIndex() const;
 
-    unsigned int
+    dftfe::uInt
     getElectroQuadratureRhsId() const;
 
-    unsigned int
+    dftfe::uInt
     getElectroQuadratureAxId() const;
 
 
@@ -657,37 +653,13 @@ namespace dftfe
       const std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                                      basisOperationsPtr,
+                                              &basisOperationsPtr,
       const dealii::AffineConstraints<double> &constraintMatrix,
-      const unsigned int                       dofHandlerId,
-      const unsigned int                       quadratureId,
+      const dftfe::uInt                        dofHandlerId,
+      const dftfe::uInt                        quadratureId,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &                        quadratureValueData,
+                                &quadratureValueData,
       distributedCPUVec<double> &nodalField);
-
-    /**
-     *@brief interpolate nodal data to quadrature data using FEEvaluation
-     *
-     *@param[in] matrixFreeData matrix free data object
-     *@param[in] nodalField nodal data to be interpolated
-     *@param[out] quadratureValueData to be computed at quadrature points
-     *@param[out] quadratureGradValueData to be computed at quadrature points
-     *@param[in] isEvaluateGradData denotes a flag to evaluate gradients or not
-     */
-    void
-    interpolateElectroNodalDataToQuadratureDataGeneral(
-      const std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                              basisOperationsPtr,
-      const unsigned int               dofHandlerId,
-      const unsigned int               quadratureId,
-      const distributedCPUVec<double> &nodalField,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &quadratureValueData,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &        quadratureGradValueData,
-      const bool isEvaluateGradData = false);
 
     /// map of atom node number and atomic weight
     std::map<dealii::types::global_dof_index, double> &
@@ -697,7 +669,7 @@ namespace dftfe
     std::map<dealii::CellId, std::vector<double>> &
     getBQuadValuesAllAtoms();
 
-    unsigned int
+    dftfe::uInt
     getSmearedChargeQuadratureIdElectro();
 
     const dealii::AffineConstraints<double> *
@@ -718,7 +690,7 @@ namespace dftfe
     const MPI_Comm &
     getMPIInterBand() const override;
 
-    const std::map<dealii::CellId, std::vector<unsigned int>> &
+    const std::map<dealii::CellId, std::vector<dftfe::uInt>> &
     getbCellNonTrivialAtomIds() const;
 
     void
@@ -729,17 +701,14 @@ namespace dftfe
       const std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                basisOperationsPtr,
-      const unsigned int densityQuadratureId,
+                       &basisOperationsPtr,
+      const dftfe::uInt densityQuadratureId,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &                                                  rhoQuadValues,
+                                                          &rhoQuadValues,
       const std::map<dealii::CellId, std::vector<double>> *bQuadValues);
 
     const expConfiningPotential &
     getConfiningPotential() const;
-
-    void
-    computeFractionalOccupancies();
 
     /**
      *@brief Returns the shared ptr to hubbard class
@@ -780,11 +749,6 @@ namespace dftfe
     void
     initHubbardOperator();
 
-    void
-    determineAtomsOfInterstPseudopotential(
-      const std::vector<std::vector<double>> &atomCoordinates);
-
-
     /**
      *@brief project ground state electron density from previous mesh into
      * the new mesh to be used as initial guess for the new ground state solve
@@ -803,6 +767,78 @@ namespace dftfe
      */
     void
     loadTriaInfoAndRhoNodalData();
+    /**
+     * @brief save data of quad points to checkpoint file. Used for restart calculations, nscf and bands.
+     *
+     *  @param[in] basisOperationsPtr basisoperationsPtr object
+     *  @param[in] quadratureId  quadrature Id of quad point used in checkpoint
+     * file
+     *  @param[out] quadratureValueData  quadrature data of field that is to be
+     * saved
+     *  @param[in] fieldDimension  dimension of field.
+     *  @param[in] fieldName  file name of checkpoint data to be saved
+     *  @param[in] folderPath  restart folder name
+     *  @param[in] mpi_comm_parent parent communicator
+     *  @param[in] mpi_comm_domain  mpi_communicator for domain decomposition
+     * parallelization
+     *  @param[in] interpoolcomm  mpi_communicator for parallelization over k
+     * points
+     *  @param[in] interBandGroupComm  mpi_communicator for parallelization over
+     * bands
+     */
+    void
+    saveQuadratureData(
+      const std::shared_ptr<
+        dftfe::basis::FEBasisOperations<dataTypes::number,
+                                        double,
+                                        dftfe::utils::MemorySpace::HOST>>
+                       &basisOperationsPtr,
+      const dftfe::uInt quadratureId,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                        &quadratureValueData,
+      const dftfe::uInt  fieldDimension,
+      const std::string &fieldName,
+      const std::string &folderPath,
+      const MPI_Comm    &mpi_comm_parent,
+      const MPI_Comm    &mpi_comm_domain,
+      const MPI_Comm    &interpoolcomm,
+      const MPI_Comm    &interBandGroupComm);
+    /**
+     * @brief loads data from quad points of checkpoint file. Used for restart calculations, nscf and bands.
+     *
+     *  @param[in] basisOperationsPtr basisoperationsPtr object
+     *  @param[in] quadratureId  quadrature Id of quad point used in checkpoint
+     * file
+     *  @param[out] quadratureValueData  quadrature data of field that is to be
+     * loaded
+     *  @param[in] fieldDimension  dimension of field.
+     *  @param[in] fieldName  file name containing checkpoint data
+     *  @param[in] folderPath  restart folder name
+     *  @param[in] mpi_comm_parent parent communicator
+     *  @param[in] mpi_comm_domain  mpi_communicator for domain decomposition
+     * parallelization
+     *  @param[in] interpoolcomm  mpi_communicator for parallelization over k
+     * points
+     *  @param[in] interBandGroupComm  mpi_communicator for parallelization over
+     * bands
+     */
+    void
+    loadQuadratureData(
+      const std::shared_ptr<
+        dftfe::basis::FEBasisOperations<dataTypes::number,
+                                        double,
+                                        dftfe::utils::MemorySpace::HOST>>
+                       &basisOperationsPtr,
+      const dftfe::uInt quadratureId,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                        &quadratureValueData,
+      const dftfe::uInt  fieldDimension,
+      const std::string &fieldName,
+      const std::string &folderPath,
+      const MPI_Comm    &mpi_comm_parent,
+      const MPI_Comm    &mpi_comm_domain,
+      const MPI_Comm    &interpoolcomm,
+      const MPI_Comm    &interBandGroupComm);
 
     void
     generateMPGrid();
@@ -812,16 +848,16 @@ namespace dftfe
     /// creates datastructures related to periodic image charges
     void
     generateImageCharges(const double                      pspCutOff,
-                         std::vector<int> &                imageIds,
-                         std::vector<double> &             imageCharges,
+                         std::vector<dftfe::Int>          &imageIds,
+                         std::vector<double>              &imageCharges,
                          std::vector<std::vector<double>> &imagePositions);
 
     void
     createMasterChargeIdToImageIdMaps(
       const double                            pspCutOff,
-      const std::vector<int> &                imageIds,
+      const std::vector<dftfe::Int>          &imageIds,
       const std::vector<std::vector<double>> &imagePositions,
-      std::vector<std::vector<int>> &         globalChargeIdToImageIdMap);
+      std::vector<std::vector<dftfe::Int>>   &globalChargeIdToImageIdMap);
 
     void
     determineOrbitalFilling();
@@ -829,21 +865,20 @@ namespace dftfe
     //
     // generate mesh using a-posteriori error estimates
     //
-    void
-    aposterioriMeshGenerate();
     dataTypes::number
-    computeTraceXtHX(unsigned int numberWaveFunctionsEstimate);
+    computeTraceXtHX(dftfe::uInt numberWaveFunctionsEstimate);
     double
-    computeTraceXtKX(unsigned int numberWaveFunctionsEstimate);
+    computeTraceXtKX(dftfe::uInt numberWaveFunctionsEstimate);
 
 
     /**
      *@brief  moves the triangulation vertices using Gaussians such that the all atoms are on triangulation vertices
      */
-    void moveMeshToAtoms(dealii::Triangulation<3, 3> &triangulationMove,
-                         dealii::Triangulation<3, 3> &triangulationSerial,
-                         bool                         reuseFlag      = false,
-                         bool                         moveSubdivided = false);
+    void
+    moveMeshToAtoms(dealii::Triangulation<3, 3> &triangulationMove,
+                    dealii::Triangulation<3, 3> &triangulationSerial,
+                    bool                         reuseFlag      = false,
+                    bool                         moveSubdivided = false);
 
     /**
      *@brief  a
@@ -865,7 +900,8 @@ namespace dftfe
      * mapped here. Further finite-element nodes to be pinned for solving the
      * Poisson problem electro-static potential is set here
      */
-    void initUnmovedTriangulation(
+    void
+    initUnmovedTriangulation(
       dealii::parallel::distributed::Triangulation<3> &triangulation);
     void
     initBoundaryConditions(const bool recomputeBasisData               = true,
@@ -881,7 +917,8 @@ namespace dftfe
      * twice of the original polynomial required for Kerker mixing and
      * initialize various objects related to this refined dofHandler
      */
-    void createpRefinedDofHandler(
+    void
+    createpRefinedDofHandler(
       dealii::parallel::distributed::Triangulation<3> &triangulation);
     void
     initpRefinedObjects(const bool recomputeBasisData,
@@ -899,76 +936,9 @@ namespace dftfe
      */
     void
     applyMultipoleDirichletBC(
-      const dealii::DoFHandler<3> &            _dofHandler,
+      const dealii::DoFHandler<3>             &_dofHandler,
       const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
-      dealii::AffineConstraints<double> &      constraintMatrix);
-
-    /**
-     *@brief Sets Nonhomegeneous dirichlet boundary conditions for total potential constraints on
-     * right most non-periodic boundary (boundary id==0).
-     *
-     * @param[in] dofHandler
-     * @param[out] constraintMatrix dealii::AffineConstraints<double> object
-     *with homogeneous Dirichlet boundary condition entries added
-     */
-    void
-    applyNeumanAndHomogeneousDirichletBC(
-      const dealii::DoFHandler<3> &            _dofHandler,
-      const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
-      dealii::AffineConstraints<double> &      constraintMatrix);
-
-    /**
-     *@brief interpolate rho nodal data to quadrature data using FEEvaluation
-     *
-     *@param[in] basisOperationsPtr basisoperationsPtr object
-     *@param[in] nodalField nodal data to be interpolated
-     *@param[out] quadratureValueData to be computed at quadrature points
-     *@param[out] quadratureGradValueData to be computed at quadrature points
-     *@param[in] isEvaluateGradData denotes a flag to evaluate gradients or not
-     */
-    void
-    interpolateDensityNodalDataToQuadratureDataGeneral(
-      const std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                              basisOperationsPtr,
-      const unsigned int               dofHandlerId,
-      const unsigned int               quadratureId,
-      const distributedCPUVec<double> &nodalField,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &quadratureValueData,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &quadratureGradValueData,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &        quadratureHessianValueData,
-      const bool isEvaluateGradData    = false,
-      const bool isEvaluateHessianData = false);
-
-
-
-    /**
-     *@brief interpolate rho nodal data to quadrature data using FEEvaluation
-     *
-     *@param[in] basisOperationsPtr basisoperationsPtr object
-     *@param[in] nodalField nodal data to be interpolated
-     *@param[out] quadratureValueData to be computed at quadrature points
-     *@param[out] quadratureGradValueData to be computed at quadrature points
-     *@param[in] isEvaluateGradData denotes a flag to evaluate gradients or not
-     */
-    void
-    interpolateDensityNodalDataToQuadratureDataLpsp(
-      const std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                              basisOperationsPtr,
-      const unsigned int               dofHandlerId,
-      const unsigned int               quadratureId,
-      const distributedCPUVec<double> &nodalField,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &quadratureValueData,
-      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &        quadratureGradValueData,
-      const bool isEvaluateGradData);
+      dealii::AffineConstraints<double>       &constraintMatrix);
 
 
     /**
@@ -980,7 +950,7 @@ namespace dftfe
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &quadratureValueData,
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &        quadratureGradValueData,
+                &quadratureGradValueData,
       const bool isConsiderGradData = false);
 
 
@@ -1010,9 +980,9 @@ namespace dftfe
      */
     void
     locatePeriodicPinnedNodes(
-      const dealii::DoFHandler<3> &            _dofHandler,
+      const dealii::DoFHandler<3>             &_dofHandler,
       const dealii::AffineConstraints<double> &constraintMatrixBase,
-      dealii::AffineConstraints<double> &      constraintMatrix);
+      dealii::AffineConstraints<double>       &constraintMatrix);
 
     void
     initAtomicRho();
@@ -1021,6 +991,9 @@ namespace dftfe
 
     void
     initRho();
+
+    void
+    loadDensityFromQuadratureValues();
     void
     initCoreRho();
     void
@@ -1050,23 +1023,23 @@ namespace dftfe
     void
     readPSIRadialValues();
     void
-    loadPSIFiles(unsigned int  Z,
-                 unsigned int  n,
-                 unsigned int  l,
-                 unsigned int &flag);
+    loadPSIFiles(dftfe::uInt  Z,
+                 dftfe::uInt  n,
+                 dftfe::uInt  l,
+                 dftfe::uInt &flag);
     void
     initLocalPseudoPotential(
-      const dealii::DoFHandler<3> &            _dofHandler,
-      const unsigned int                       lpspQuadratureId,
-      const dealii::MatrixFree<3, double> &    _matrix_free_data,
-      const unsigned int                       _phiExtDofHandlerIndex,
+      const dealii::DoFHandler<3>             &_dofHandler,
+      const dftfe::uInt                        lpspQuadratureId,
+      const dealii::MatrixFree<3, double>     &_matrix_free_data,
+      const dftfe::uInt                        _phiExtDofHandlerIndex,
       const dealii::AffineConstraints<double> &phiExtConstraintMatrix,
       const std::map<dealii::types::global_dof_index, dealii::Point<3>>
-        &                                              supportPoints,
-      const vselfBinsManager<FEOrder, FEOrderElectro> &vselfBinManager,
-      distributedCPUVec<double> &                      phiExt,
-      std::map<dealii::CellId, std::vector<double>> &  _pseudoValues,
-      std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
+                                                    &supportPoints,
+      const vselfBinsManager                        &vselfBinManager,
+      distributedCPUVec<double>                     &phiExt,
+      std::map<dealii::CellId, std::vector<double>> &_pseudoValues,
+      std::map<dftfe::uInt, std::map<dealii::CellId, std::vector<double>>>
         &_pseudoValuesAtoms);
 
 
@@ -1081,9 +1054,9 @@ namespace dftfe
      */
     void
     applyHomogeneousDirichletBC(
-      const dealii::DoFHandler<3> &            _dofHandler,
+      const dealii::DoFHandler<3>             &_dofHandler,
       const dealii::AffineConstraints<double> &onlyHangingNodeConstraints,
-      dealii::AffineConstraints<double> &      constraintMatrix);
+      dealii::AffineConstraints<double>       &constraintMatrix);
 
 
 
@@ -1091,13 +1064,13 @@ namespace dftfe
      *@brief Computes total charge by integrating the electron-density
      */
     double
-    totalCharge(const dealii::DoFHandler<3> &    dofHandlerOfField,
+    totalCharge(const dealii::DoFHandler<3>     &dofHandlerOfField,
                 const distributedCPUVec<double> &rhoNodalField);
 
 
     double
     totalCharge(
-      const dealii::DoFHandler<3> &                        dofHandlerOfField,
+      const dealii::DoFHandler<3>                         &dofHandlerOfField,
       const std::map<dealii::CellId, std::vector<double>> *rhoQuadValues);
 
     double
@@ -1109,28 +1082,28 @@ namespace dftfe
 
     double
     totalCharge(const dealii::MatrixFree<3, double> &matrixFreeDataObject,
-                const distributedCPUVec<double> &    rhoNodalField);
+                const distributedCPUVec<double>     &rhoNodalField);
 
 
 
     double
     rhofieldl2Norm(const dealii::MatrixFree<3, double> &matrixFreeDataObject,
-                   const distributedCPUVec<double> &    rhoNodalField,
-                   const unsigned int                   dofHandlerId,
-                   const unsigned int                   quadratureId);
+                   const distributedCPUVec<double>     &rhoNodalField,
+                   const dftfe::uInt                    dofHandlerId,
+                   const dftfe::uInt                    quadratureId);
 
     double
     rhofieldInnerProduct(
       const dealii::MatrixFree<3, double> &matrixFreeDataObject,
-      const distributedCPUVec<double> &    rhoNodalField1,
-      const distributedCPUVec<double> &    rhoNodalField2,
-      const unsigned int                   dofHandlerId,
-      const unsigned int                   quadratureId);
+      const distributedCPUVec<double>     &rhoNodalField1,
+      const distributedCPUVec<double>     &rhoNodalField2,
+      const dftfe::uInt                    dofHandlerId,
+      const dftfe::uInt                    quadratureId);
 
 
     double
     fieldGradl2Norm(const dealii::MatrixFree<3, double> &matrixFreeDataObject,
-                    const distributedCPUVec<double> &    field);
+                    const distributedCPUVec<double>     &field);
 
 
     /**
@@ -1141,12 +1114,12 @@ namespace dftfe
       const std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                                      basisOperationsPtr,
+                                              &basisOperationsPtr,
       const dealii::AffineConstraints<double> &constraintMatrix,
-      const unsigned int                       dofHandlerId,
-      const unsigned int                       quadratureId,
+      const dftfe::uInt                        dofHandlerId,
+      const dftfe::uInt                        quadratureId,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-        &                        quadratureValueData,
+                                &quadratureValueData,
       distributedCPUVec<double> &nodalField);
 
     /**
@@ -1163,6 +1136,18 @@ namespace dftfe
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &densityQuadValues);
 
+    void
+    localCollinearMagnetizationDensity(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &densityQuadValues);
+
+    void
+    localNonCollinearMagnetizationDensity(
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &densityQuadValues);
+
     /**
      *@brief normalize the input electron density
      */
@@ -1170,7 +1155,15 @@ namespace dftfe
     normalizeRhoInQuadValues();
 
     /**
-     *@brief normalize the output electron density in each scf
+     *@brief normalize input mag electron density to total magnetization
+     *for use in constraint magnetization case (only for initial guess)
+     */
+    void
+    normalizeRhoMagInInitialGuessQuadValues();
+
+
+    /**
+     *@brief normalize the output total electron density in each scf
      */
     void
     normalizeRhoOutQuadValues();
@@ -1194,22 +1187,21 @@ namespace dftfe
     void
     applyKerkerPreconditionerToTotalDensityResidual(
 #ifdef DFTFE_WITH_DEVICE
-      kerkerSolverProblemDevice<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>
-        &                   kerkerPreconditionedResidualSolverProblemDevice,
+      kerkerSolverProblemDeviceWrapperClass
+                           &kerkerPreconditionedResidualSolverProblemDevice,
       linearSolverCGDevice &CGSolverDevice,
 #endif
-      kerkerSolverProblem<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>
-        &                 kerkerPreconditionedResidualSolverProblem,
-      dealiiLinearSolver &CGSolver,
-      const distributedCPUVec<double> &residualRho,
-      distributedCPUVec<double> &      preCondTotalDensityResidualVector);
+      kerkerSolverProblemWrapperClass
+                                &kerkerPreconditionedResidualSolverProblem,
+      dealiiLinearSolver        &CGSolver,
+      distributedCPUVec<double> &residualRho,
+      distributedCPUVec<double> &preCondTotalDensityResidualVector);
 
     double
-    lowrankApproxScfDielectricMatrixInv(const unsigned int scfIter);
+    lowrankApproxScfDielectricMatrixInv(const dftfe::uInt scfIter);
 
     double
-    lowrankApproxScfDielectricMatrixInvSpinPolarized(
-      const unsigned int scfIter);
+    lowrankApproxScfDielectricMatrixInvSpinPolarized(const dftfe::uInt scfIter);
     /**
      *@brief Computes Fermi-energy obtained by imposing separate constraints on the number of spin-up and spin-down electrons
      */
@@ -1217,16 +1209,25 @@ namespace dftfe
     compute_fermienergy_constraintMagnetization(
       const std::vector<std::vector<double>> &eigenValuesInput);
 
+
+    /**
+     *@brief Find spin-up and spin-down channel HOMO eigenvalues
+     */
+    void
+    compute_fermienergy_constraintMagnetization_purestate(
+      const std::vector<std::vector<double>> &eigenValuesInput);
+
+
     /**
      *@brief compute density of states and local density of states
      */
     void
     compute_tdos(const std::vector<std::vector<double>> &eigenValuesInput,
-                 const std::string &                     fileName);
+                 const std::string                      &fileName);
 
     void
     compute_ldos(const std::vector<std::vector<double>> &eigenValuesInput,
-                 const std::string &                     fileName);
+                 const std::string                      &fileName);
 
     /**
      *@brief compute localization length
@@ -1294,10 +1295,13 @@ namespace dftfe
       const std::vector<
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &gradDensityQuadValues,
+      const std::vector<
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+                                                          &tauQuadValues,
       const std::map<dealii::CellId, std::vector<double>> &rhoCore,
       const std::map<dealii::CellId, std::vector<double>> &gradRhoCore,
       const dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
-        &                                     eigenVectorsFlattenedMemSpace,
+                                             &eigenVectorsFlattenedMemSpace,
       const std::vector<std::vector<double>> &eigenValues,
       const double                            fermiEnergy_,
       const double                            fermiEnergyUp_,
@@ -1310,19 +1314,17 @@ namespace dftfe
     /**
      * stores required data for Kohn-Sham problem
      */
-    unsigned int numElectrons, numElectronsUp, numElectronsDown, numLevels;
-    std::set<unsigned int> atomTypes;
+    dftfe::uInt           numLevels;
+    double                numElectrons, numElectronsUp, numElectronsDown;
+    std::set<dftfe::uInt> atomTypes;
 
     /// FIXME: eventually it should be a map of atomic number to struct-
     /// {valence number, mesh input etc}
-    std::map<unsigned int, unsigned int> d_atomTypeAtributes;
+    std::map<dftfe::uInt, dftfe::uInt> d_atomTypeAtributes;
 
     /// FIXME: remove atom type atributes from atomLocations
     std::vector<std::vector<double>> atomLocations, atomLocationsFractional,
       d_reciprocalLatticeVectors, d_domainBoundingVectors, d_meshSizes;
-    std::vector<std::vector<double>> d_atomLocationsInterestPseudopotential;
-    std::map<unsigned int, unsigned int>
-                                     d_atomIdPseudopotentialInterestToGlobalId;
     std::vector<std::vector<double>> d_atomLocationsAutoMesh;
     std::vector<std::vector<double>> d_imagePositionsAutoMesh;
 
@@ -1360,7 +1362,7 @@ namespace dftfe
     std::vector<double> d_smearedChargeScaling;
 
     /// nearest atom ids for all domain atoms
-    std::vector<unsigned int> d_nearestAtomIds;
+    std::vector<dftfe::uInt> d_nearestAtomIds;
 
     /// nearest atom distances for all domain atoms
     std::vector<double> d_nearestAtomDistances;
@@ -1370,8 +1372,8 @@ namespace dftfe
 
     /// vector of lendth number of periodic image charges with corresponding
     /// master chargeIds
-    std::vector<int> d_imageIds;
-    // std::vector<int> d_imageIdsAutoMesh;
+    std::vector<dftfe::Int> d_imageIds;
+    // std::vector<dftfe::Int> d_imageIdsAutoMesh;
 
 
     /// vector of length number of periodic image charges with corresponding
@@ -1383,11 +1385,11 @@ namespace dftfe
     std::vector<std::vector<double>> d_imagePositions;
 
     /// globalChargeId to ImageChargeId Map
-    std::vector<std::vector<int>> d_globalChargeIdToImageIdMap;
+    std::vector<std::vector<dftfe::Int>> d_globalChargeIdToImageIdMap;
 
     /// vector of lendth number of periodic image charges with corresponding
     /// master chargeIds , generated with a truncated pspCutoff
-    std::vector<int> d_imageIdsTrunc;
+    std::vector<dftfe::Int> d_imageIdsTrunc;
 
     /// vector of length number of periodic image charges with corresponding
     /// charge values , generated with a truncated pspCutoff
@@ -1398,7 +1400,7 @@ namespace dftfe
     std::vector<std::vector<double>> d_imagePositionsTrunc;
 
     /// globalChargeId to ImageChargeId Map generated with a truncated pspCutOff
-    std::vector<std::vector<int>> d_globalChargeIdToImageIdMapTrunc;
+    std::vector<std::vector<dftfe::Int>> d_globalChargeIdToImageIdMapTrunc;
 
     /// distance from the domain till which periodic images will be considered
     double d_pspCutOff = 15.0;
@@ -1417,42 +1419,41 @@ namespace dftfe
     std::map<dealii::CellId, std::vector<double>> d_gradbQuadValuesAllAtoms;
 
     /// non-intersecting smeared charges atom ids of all atoms at quad points
-    std::map<dealii::CellId, std::vector<int>> d_bQuadAtomIdsAllAtoms;
+    std::map<dealii::CellId, std::vector<dftfe::Int>> d_bQuadAtomIdsAllAtoms;
 
     /// non-intersecting smeared charges atom ids of all atoms (with image atom
     /// ids separately accounted) at quad points
-    std::map<dealii::CellId, std::vector<int>> d_bQuadAtomIdsAllAtomsImages;
+    std::map<dealii::CellId, std::vector<dftfe::Int>>
+      d_bQuadAtomIdsAllAtomsImages;
 
     /// map of cell and non-trivial global atom ids (no images) for smeared
     /// charges for each bin
-    std::map<dealii::CellId, std::vector<unsigned int>>
-      d_bCellNonTrivialAtomIds;
+    std::map<dealii::CellId, std::vector<dftfe::uInt>> d_bCellNonTrivialAtomIds;
 
     /// map of cell and non-trivial global atom ids (no images) for smeared
     /// charge for each bin
-    std::vector<std::map<dealii::CellId, std::vector<unsigned int>>>
+    std::vector<std::map<dealii::CellId, std::vector<dftfe::uInt>>>
       d_bCellNonTrivialAtomIdsBins;
 
     /// map of cell and non-trivial global atom and image ids for smeared
     /// charges for each bin
-    std::map<dealii::CellId, std::vector<unsigned int>>
+    std::map<dealii::CellId, std::vector<dftfe::uInt>>
       d_bCellNonTrivialAtomImageIds;
 
     /// map of cell and non-trivial global atom and image ids for smeared charge
     /// for each bin
-    std::vector<std::map<dealii::CellId, std::vector<unsigned int>>>
+    std::vector<std::map<dealii::CellId, std::vector<dftfe::uInt>>>
       d_bCellNonTrivialAtomImageIdsBins;
 
     /// minimum smeared charge width
     const double d_smearedChargeWidthMin = 0.4;
 
     std::vector<orbital> waveFunctionsVector;
-    std::map<unsigned int,
-             std::map<unsigned int,
-                      std::map<unsigned int, alglib::spline1dinterpolant>>>
+    std::map<
+      dftfe::uInt,
+      std::map<dftfe::uInt, std::map<dftfe::uInt, alglib::spline1dinterpolant>>>
       radValues;
-    std::map<unsigned int,
-             std::map<unsigned int, std::map<unsigned int, double>>>
+    std::map<dftfe::uInt, std::map<dftfe::uInt, std::map<dftfe::uInt, double>>>
       outerValues;
 
     /**
@@ -1460,8 +1461,8 @@ namespace dftfe
      */
     triangulationManager d_mesh;
 
-    double       d_autoMeshMaxJacobianRatio;
-    unsigned int d_autoMesh;
+    double      d_autoMeshMaxJacobianRatio;
+    dftfe::uInt d_autoMesh;
 
 
     /// affine transformation object
@@ -1486,28 +1487,28 @@ namespace dftfe
     dealii::FESystem<3>   FE, FEEigen;
     dealii::DoFHandler<3> dofHandler, dofHandlerEigen, d_dofHandlerPRefined,
       d_dofHandlerRhoNodal;
-    unsigned int d_eigenDofHandlerIndex, d_phiExtDofHandlerIndexElectro,
-      d_forceDofHandlerIndex;
-    unsigned int                  d_densityDofHandlerIndex;
-    unsigned int                  d_densityDofHandlerIndexElectro;
-    unsigned int                  d_nonPeriodicDensityDofHandlerIndexElectro;
-    unsigned int                  d_baseDofHandlerIndexElectro;
-    unsigned int                  d_forceDofHandlerIndexElectro;
-    unsigned int                  d_smearedChargeQuadratureIdElectro;
-    unsigned int                  d_nlpspQuadratureId;
-    unsigned int                  d_lpspQuadratureId;
-    unsigned int                  d_feOrderPlusOneQuadratureId;
-    unsigned int                  d_lpspQuadratureIdElectro;
-    unsigned int                  d_gllQuadratureId;
-    unsigned int                  d_phiTotDofHandlerIndexElectro;
-    unsigned int                  d_phiPrimeDofHandlerIndexElectro;
-    unsigned int                  d_phiTotAXQuadratureIdElectro;
-    unsigned int                  d_helmholtzDofHandlerIndexElectro;
-    unsigned int                  d_binsStartDofHandlerIndexElectro;
-    unsigned int                  d_densityQuadratureId;
-    unsigned int                  d_densityQuadratureIdElectro;
-    unsigned int                  d_sparsityPatternQuadratureId;
-    unsigned int                  d_nOMPThreads;
+    dftfe::uInt d_eigenDofHandlerIndex, d_phiExtDofHandlerIndexElectro;
+    dftfe::uInt d_densityDofHandlerIndex;
+    dftfe::uInt d_densityDofHandlerIndexElectro;
+    dftfe::uInt d_nonPeriodicDensityDofHandlerIndexElectro;
+    dftfe::uInt d_baseDofHandlerIndexElectro;
+    dftfe::uInt d_smearedChargeQuadratureIdElectro;
+    dftfe::uInt d_nlpspQuadratureId;
+    dftfe::uInt d_lpspQuadratureId;
+    dftfe::uInt d_feOrderPlusOneQuadratureId;
+    dftfe::uInt d_lpspQuadratureIdElectro;
+    dftfe::uInt d_gllQuadratureId;
+    dftfe::uInt d_phiTotDofHandlerIndexElectro;
+    dftfe::uInt d_phiPrimeDofHandlerIndexElectro;
+    dftfe::uInt d_phiTotAXQuadratureIdElectro;
+    dftfe::uInt d_kerkerAXQuadratureIdElectro;
+    dftfe::uInt d_helmholtzDofHandlerIndexElectro;
+    dftfe::uInt d_binsStartDofHandlerIndexElectro;
+    dftfe::uInt d_densityQuadratureId;
+    dftfe::uInt d_densityQuadratureIdElectro;
+    dftfe::uInt d_sparsityPatternQuadratureId;
+    dftfe::uInt d_nOMPThreads;
+    double      d_dftfeClassStartTime;
     dealii::MatrixFree<3, double> matrix_free_data, d_matrixFreeDataPRefined;
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
@@ -1563,40 +1564,39 @@ namespace dftfe
     utils::DeviceCCLWrapper *d_devicecclMpiCommDomainPtr;
     utils::DeviceCCLWrapper *d_devicecclMpiCommPoolPtr;
 #endif
-    const MPI_Comm     d_mpiCommParent;
-    const MPI_Comm     interpoolcomm;
-    const MPI_Comm     interBandGroupComm;
-    const MPI_Comm     intrapoolcomm;
-    const unsigned int n_mpi_processes;
-    const unsigned int this_mpi_process;
-    dealii::IndexSet   locally_owned_dofs, locally_owned_dofsEigen;
-    dealii::IndexSet   locally_relevant_dofs, locally_relevant_dofsEigen,
-      d_locallyRelevantDofsPRefined, d_locallyRelevantDofsRhoNodal;
+    const MPI_Comm    d_mpiCommParent;
+    const MPI_Comm    interpoolcomm;
+    const MPI_Comm    interBandGroupComm;
+    const MPI_Comm    intrapoolcomm;
+    const dftfe::uInt n_mpi_processes;
+    const dftfe::uInt this_mpi_process;
+    dealii::IndexSet  locally_owned_dofs, locally_owned_dofsEigen;
+    dealii::IndexSet  locally_relevant_dofs, locally_relevant_dofsEigen,
+      d_locallyRelevantDofsPRefined, d_locallyRelevantDofsRhoNodal,
+      d_locallyOwnedDofsPRefined, d_locallyOwnedDofsRhoNodal;
     std::vector<dealii::types::global_dof_index> local_dof_indicesReal,
       local_dof_indicesImag;
     std::vector<dealii::types::global_dof_index> localProc_dof_indicesReal,
       localProc_dof_indicesImag;
     std::vector<bool> selectedDofsHanging;
 
-    forceClass<FEOrder, FEOrderElectro, memorySpace> *   forcePtr;
-    symmetryClass<FEOrder, FEOrderElectro, memorySpace> *symmetryPtr;
+    std::shared_ptr<dftfe::groupSymmetryClass>              groupSymmetryPtr;
+    std::shared_ptr<configurationalForceClass<memorySpace>> d_configForcePtr;
 
     elpaScalaManager *d_elpaScala;
 
-    poissonSolverProblem<FEOrder, FEOrderElectro> d_phiTotalSolverProblem;
+    poissonSolverProblemWrapperClass d_phiTotalSolverProblem;
 
-    poissonSolverProblem<FEOrder, FEOrderElectro> d_phiPrimeSolverProblem;
+    poissonSolverProblemWrapperClass d_phiPrimeSolverProblem;
 #ifdef DFTFE_WITH_DEVICE
-    poissonSolverProblemDevice<FEOrder, FEOrderElectro>
-      d_phiTotalSolverProblemDevice;
+    poissonSolverProblemDeviceWrapperClass d_phiTotalSolverProblemDevice;
 
-    poissonSolverProblemDevice<FEOrder, FEOrderElectro>
-      d_phiPrimeSolverProblemDevice;
+    poissonSolverProblemDeviceWrapperClass d_phiPrimeSolverProblemDevice;
 #endif
 
     bool d_kohnShamDFTOperatorsInitialized;
 
-    KohnShamHamiltonianOperator<memorySpace> *d_kohnShamDFTOperatorPtr;
+    KohnShamDFTBaseOperator<memorySpace> *d_kohnShamDFTOperatorPtr;
 
     const std::string d_dftfeScratchFolderName;
 
@@ -1661,9 +1661,10 @@ namespace dftfe
       d_constraintsRhoNodalInfo;
 
     /**
-     * data storage for Kohn-Sham wavefunctions
+     * data storage for Kohn-Sham eigenvalues and partial occupancies
      */
     std::vector<std::vector<double>> eigenValues;
+    std::vector<std::vector<double>> d_partialOccupancies;
 
     /**
      * data storage for the occupancy of Kohn-Sham wavefunctions
@@ -1714,13 +1715,17 @@ namespace dftfe
       d_densityResidualQuadValues;
     std::vector<distributedCPUVec<double>> d_densityInNodalValues,
       d_densityOutNodalValues, d_densityResidualNodalValues;
+    std::vector<distributedCPUVec<double>> d_tauOutNodalValues;
+    std::vector<
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      d_tauInQuadValues, d_tauOutQuadValues, d_tauResidualQuadValues;
 
     // std::map<dealii::CellId, std::vector<double>> d_phiInValues,
     // d_phiOutValues;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       d_phiInQuadValues, d_phiOutQuadValues;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-                 d_gradPhiInQuadValues, d_gradPhiOutQuadValues, d_gradPhiResQuadValues;
+      d_gradPhiInQuadValues, d_gradPhiOutQuadValues, d_gradPhiResQuadValues;
     MixingScheme d_mixingScheme;
 
     distributedCPUVec<double> d_rhoInNodalValuesRead, d_rhoOutNodalValuesSplit,
@@ -1755,15 +1760,16 @@ namespace dftfe
     std::deque<distributedCPUVec<double>> d_vSpin1containerVals;
     std::deque<distributedCPUVec<double>> d_fvSpin1containerVals;
     distributedCPUVec<double>             d_residualPredicted;
-    unsigned int                          d_rankCurrentLRD;
+    dftfe::uInt                           d_rankCurrentLRD;
     double                                d_relativeErrorJacInvApproxPrevScfLRD;
     double                                d_residualNormPredicted;
     bool                                  d_tolReached;
+    static constexpr double d_tikhonovRegularizationConstantLRD = 1.0e-6;
 
     /// for xl-bomd
     std::map<dealii::CellId, std::vector<double>> d_rhoAtomsValues,
       d_gradRhoAtomsValues, d_hessianRhoAtomsValues;
-    std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
+    std::map<dftfe::uInt, std::map<dealii::CellId, std::vector<double>>>
       d_rhoAtomsValuesSeparate, d_gradRhoAtomsValuesSeparate,
       d_hessianRhoAtomsValuesSeparate;
 
@@ -1795,7 +1801,7 @@ namespace dftfe
 
     /// Internal data:: map for cell id to Vpseudo local of individual atoms.
     /// Only for atoms whose psp tail intersects the local domain.
-    std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
+    std::map<dftfe::uInt, std::map<dealii::CellId, std::vector<double>>>
       d_pseudoVLocAtoms;
 
 
@@ -1807,12 +1813,12 @@ namespace dftfe
 
     std::map<dealii::CellId, std::vector<double>> d_gradRhoCore;
 
-    std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
+    std::map<dftfe::uInt, std::map<dealii::CellId, std::vector<double>>>
       d_gradRhoCoreAtoms;
 
     std::map<dealii::CellId, std::vector<double>> d_hessianRhoCore;
 
-    std::map<unsigned int, std::map<dealii::CellId, std::vector<double>>>
+    std::map<dftfe::uInt, std::map<dealii::CellId, std::vector<double>>>
       d_hessianRhoCoreAtoms;
 
 
@@ -1821,7 +1827,7 @@ namespace dftfe
     std::map<dealii::types::global_dof_index, double> d_atomNodeIdToChargeMap;
 
     /// vselfBinsManager object
-    vselfBinsManager<FEOrder, FEOrderElectro> d_vselfBinsManager;
+    vselfBinsManager d_vselfBinsManager;
 
     /// Gateaux derivative of vself field with respect to affine strain tensor
     /// components using central finite difference. This is used for cell stress
@@ -1840,7 +1846,7 @@ namespace dftfe
     std::vector<double> d_kPointCoordinates;
 
     /// k point crystal coordinates
-    std::vector<double> kPointReducedCoordinates;
+    std::vector<double> d_kPointCoordinatesFrac;
 
     /// k point weights
     std::vector<double> d_kPointWeights;
@@ -1850,7 +1856,7 @@ namespace dftfe
     std::vector<dealii::Tensor<1, 3, double>> d_dispClosestTriaVerticesToAtoms;
 
     /// global k index of lower bound of the local k point set
-    unsigned int lowerBoundKindex = 0;
+    int lowerBoundKindex = 0;
     /**
      * Recomputes the k point cartesian coordinates from the crystal k point
      * coordinates and the current lattice vectors, which can change in each
@@ -1870,7 +1876,7 @@ namespace dftfe
     double d_entropicEnergy;
 
     // chebyshev filter variables and functions
-    // int numPass ; // number of filter passes
+    // dftfe::Int numPass ; // number of filter passes
 
     std::vector<double> a0;
     std::vector<double> bLow;
@@ -1892,13 +1898,8 @@ namespace dftfe
     bool scfConverged;
     void
     nscf(
-      KohnShamHamiltonianOperator<memorySpace> &      kohnShamDFTEigenOperator,
+      KohnShamDFTBaseOperator<memorySpace>           &kohnShamDFTEigenOperator,
       chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver);
-    void
-    initnscf(
-      KohnShamHamiltonianOperator<memorySpace> &     kohnShamDFTEigenOperator,
-      poissonSolverProblem<FEOrder, FEOrderElectro> &phiTotalSolverProblem,
-      dealiiLinearSolver &                           CGSolver);
 
     /**
      * @brief compute the maximum of the residual norm of the highest occupied state among all k points
@@ -1908,7 +1909,8 @@ namespace dftfe
       const std::vector<std::vector<double>>
         &residualNormWaveFunctionsAllkPoints,
       const std::vector<std::vector<double>> &eigenValuesAllkPoints,
-      const double                            _fermiEnergy);
+      const double                            _fermiEnergy,
+      std::vector<double>                    &maxResidualsAllkPoints);
 
 
     /**
@@ -1919,17 +1921,18 @@ namespace dftfe
       const std::vector<std::vector<double>>
         &residualNormWaveFunctionsAllkPoints,
       const std::vector<std::vector<double>> &eigenValuesAllkPoints,
-      const unsigned int                      highestState);
+      const dftfe::uInt                       highestState,
+      std::vector<double>                    &maxResidualsAllkPoints);
 
 
 
 #ifdef DFTFE_WITH_DEVICE
     void
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
-      const unsigned int s,
-      const unsigned int kPointIndex,
-      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::DEVICE>
-        &               kohnShamDFTEigenOperator,
+      const dftfe::uInt s,
+      const dftfe::uInt kPointIndex,
+      KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::DEVICE>
+                       &kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala,
       chebyshevOrthogonalizedSubspaceIterationSolverDevice
         &subspaceIterationSolverDevice);
@@ -1938,21 +1941,11 @@ namespace dftfe
 
     void
     kohnShamEigenSpaceFirstOrderDensityMatResponse(
-      const unsigned int s,
-      const unsigned int kPointIndex,
-      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
-        &               kohnShamDFTEigenOperator,
+      const dftfe::uInt s,
+      const dftfe::uInt kPointIndex,
+      KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::HOST>
+                       &kohnShamDFTEigenOperator,
       elpaScalaManager &elpaScala);
-
-    void
-    kohnShamEigenSpaceComputeNSCF(
-      const unsigned int spinType,
-      const unsigned int kPointIndex,
-      KohnShamHamiltonianOperator<dftfe::utils::MemorySpace::HOST>
-        &                                             kohnShamDFTEigenOperator,
-      chebyshevOrthogonalizedSubspaceIterationSolver &subspaceIterationSolver,
-      std::vector<double> &                           residualNormWaveFunctions,
-      unsigned int                                    ipass);
 
     expConfiningPotential                                    d_expConfiningPot;
     std::shared_ptr<hubbard<dataTypes::number, memorySpace>> d_hubbardClassPtr;

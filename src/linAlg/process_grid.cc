@@ -33,7 +33,7 @@ namespace dftfe
      * https://github.com/elemental/Elemental/blob/master/src/core/Grid.cpp#L67-L91
      */
     inline std::pair<int, int>
-    compute_processor_grid_sizes(const MPI_Comm &   mpi_comm,
+    compute_processor_grid_sizes(const MPI_Comm    &mpi_comm,
                                  const unsigned int m,
                                  const unsigned int n,
                                  const unsigned int block_size_m,
@@ -99,7 +99,7 @@ namespace dftfe
 
 
   ProcessGrid::ProcessGrid(
-    const MPI_Comm &                             mpi_comm,
+    const MPI_Comm                              &mpi_comm,
     const std::pair<unsigned int, unsigned int> &grid_dimensions)
     : mpi_communicator(mpi_comm)
     , this_mpi_process(
@@ -184,11 +184,10 @@ namespace dftfe
     const int mpi_tag =
       dealii::Utilities::MPI::internal::Tags::process_grid_constructor;
 
-    ierr = dealii::Utilities::MPI::create_group(
-      mpi_communicator,
-      inactive_with_root_group,
-      mpi_tag,
-      &mpi_communicator_inactive_with_root);
+    ierr = MPI_Comm_create_group(mpi_communicator,
+                                 inactive_with_root_group,
+                                 mpi_tag,
+                                 &mpi_communicator_inactive_with_root);
     AssertThrowMPI(ierr);
 
     ierr = MPI_Group_free(&all_group);
@@ -207,7 +206,7 @@ namespace dftfe
 
 
 
-  ProcessGrid::ProcessGrid(const MPI_Comm &   mpi_comm,
+  ProcessGrid::ProcessGrid(const MPI_Comm    &mpi_comm,
                            const unsigned int n_rows_matrix,
                            const unsigned int n_columns_matrix,
                            const unsigned int row_block_size,
@@ -222,7 +221,7 @@ namespace dftfe
 
 
 
-  ProcessGrid::ProcessGrid(const MPI_Comm &   mpi_comm,
+  ProcessGrid::ProcessGrid(const MPI_Comm    &mpi_comm,
                            const unsigned int n_rows,
                            const unsigned int n_columns)
     : ProcessGrid(mpi_comm, std::make_pair(n_rows, n_columns))

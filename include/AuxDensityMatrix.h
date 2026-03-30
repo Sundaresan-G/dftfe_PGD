@@ -29,27 +29,49 @@ namespace dftfe
     magAxisValues
   };
 
+  enum class WfcDescriptorDataAttributes
+  {
+    tauTotal,
+    tauSpinUp,
+    tauSpinDown
+  };
+
   template <dftfe::utils::MemorySpace memorySpace>
   class AuxDensityMatrix
   {
   public:
     /**
      * @brief compute local descriptors of the aux basis electron-density
-     * representation at the supplied set of points using
+     * representation at the supplied range of Quadrature index range
      */
     virtual void
     applyLocalOperations(
-      const std::vector<double> &Points,
-      std::unordered_map<DensityDescriptorDataAttributes, std::vector<double>>
+      const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+      std::unordered_map<
+        DensityDescriptorDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &densityData) = 0;
+
+
+
+    virtual void
+    applyLocalOperations(
+      const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+      std::unordered_map<
+        WfcDescriptorDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &wfcData) = 0;
 
     /**
      * @brief Compute aux basis overlap matrix batchwise contribution from
      * supplied set of quadrature points and their associated weights
      */
     virtual void
-    evalOverlapMatrixStart(const std::vector<double> &quadpts,
-                           const std::vector<double> &quadWt) = 0;
+    evalOverlapMatrixStart(
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &quadpts,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &quadWt) = 0;
 
     /**
      * @brief for MPI accumulation
@@ -65,9 +87,11 @@ namespace dftfe
     projectDensityMatrixStart(
       const std::unordered_map<std::string, std::vector<dataTypes::number>>
         &projectionInputsDataType,
-      const std::unordered_map<std::string, std::vector<double>>
-        &       projectionInputsReal,
-      const int iSpin) = 0;
+      const std::unordered_map<
+        std::string,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+                      &projectionInputsReal,
+      const dftfe::Int iSpin) = 0;
 
     /**
      * @brief for MPI accumulation
@@ -81,7 +105,9 @@ namespace dftfe
      */
     virtual void
     projectDensityStart(
-      const std::unordered_map<std::string, std::vector<double>>
+      const std::unordered_map<
+        std::string,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &projectionInputs) = 0;
 
     /**

@@ -23,20 +23,21 @@ Finite element mesh information
 FE interpolating polynomial order for Kohn-Sham eigenvalue problem: 3
 FE interpolating polynomial order for electrostatics solve: 3
 FE interpolating polynomial order for nodal electron density computation: 5
+quadrature rule for electron density and kinetic energy density computation: 6
 number of elements: 1532
 number of degrees of freedom for the Kohn-Sham eigenvalue problem : 52279
 -------------------------------------------------
 
 Setting initial guess for wavefunctions....
 =============================================================================================================================
-number of electrons: 112
+number of electrons: 1.120000000000000000e+02
 number of eigen values: 80
 =============================================================================================================================
 
 Reading initial guess for electron-density.....
 
 Starting SCF iterations....
-SCF iterations converged to the specified tolerance after: 17 iterations.
+SCF iterations converged to the specified tolerance after: 15 iterations.
 
 Energy computations (Hartree) 
 -------------------
@@ -44,14 +45,14 @@ Energy computations (Hartree)
 
 Absolute values of ion forces (Hartree/Bohr)
 --------------------------------------------------------------------------------------------
-AtomId    0:  0.000000,0.000000,0.000000
+AtomId    0:  0.000001,0.000000,0.000000
 AtomId    1:  0.000000,0.000000,0.000000
 AtomId    2:  0.000000,0.000000,0.000000
 AtomId    3:  0.000000,0.000000,0.000000
-AtomId    4:  0.004444,0.004260,0.001392
-AtomId    5:  0.004444,0.004260,0.001392
-AtomId    6:  0.004444,0.004260,0.001392
-AtomId    7:  0.004444,0.004260,0.001392
+AtomId    4:  0.004443,0.004260,0.001391
+AtomId    5:  0.004443,0.004259,0.001391
+AtomId    6:  0.004444,0.004260,0.001391
+AtomId    7:  0.004443,0.004259,0.001391
 --------------------------------------------------------------------------------------------
 
 Absolute value of cell stress (Hartree/Bohr^3)

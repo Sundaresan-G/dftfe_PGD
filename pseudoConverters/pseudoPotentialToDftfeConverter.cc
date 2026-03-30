@@ -44,7 +44,7 @@ namespace dftfe
       cur = xmlDocGetRootElement(doc);
       // Finding the tag
 
-      for (int i = 0; i < tag_name.size(); i++)
+      for (dftfe::Int i = 0; i < tag_name.size(); i++)
         {
           cur                 = cur->children;
           const xmlChar *temp = (const xmlChar *)tag_name[i].c_str();
@@ -92,7 +92,7 @@ namespace dftfe
       cur = xmlDocGetRootElement(doc);
 
       // Finding the tag
-      for (int i = 0; i < tag_name.size(); i++)
+      for (dftfe::Int i = 0; i < tag_name.size(); i++)
         {
           cur                 = cur->children;
           const xmlChar *temp = (const xmlChar *)tag_name[i].c_str();
@@ -129,7 +129,7 @@ namespace dftfe
             }
         }
     }
-    int
+    dftfe::Int
     xmlNodeChildCount(std::vector<std::string> tag_name,
                       std::string              file_path_in)
     {
@@ -139,7 +139,7 @@ namespace dftfe
       cur = xmlDocGetRootElement(doc);
 
       // Finding the tag
-      for (int i = 0; i < tag_name.size(); i++)
+      for (dftfe::Int i = 0; i < tag_name.size(); i++)
         {
           cur                 = cur->children;
           const xmlChar *temp = (const xmlChar *)tag_name[i].c_str();
@@ -153,7 +153,7 @@ namespace dftfe
             }
         }
       // Counting children of current node
-      int child_count = xmlChildElementCount(cur);
+      dftfe::Int child_count = xmlChildElementCount(cur);
       return child_count;
     }
 
@@ -172,8 +172,8 @@ namespace dftfe
         std::vector<std::string> attr_value;
         header_tag.push_back("PP_HEADER");
         XmlTagReaderAttr(header_tag, file_path_in, &attr_type, &attr_value);
-        std::string  to_search = "has_so";
-        unsigned int index     = 0;
+        std::string to_search = "has_so";
+        dftfe::uInt index     = 0;
         auto it = std::find(attr_type.begin(), attr_type.end(), to_search);
         if (it == attr_type.end())
           {
@@ -188,8 +188,10 @@ namespace dftfe
       }
       std::vector<std::string> tag_name_parent;
       tag_name_parent.push_back("PP_NONLOCAL");
-      std::vector<int> ang_mom_list;
-      for (int i = 1; i < xmlNodeChildCount(tag_name_parent, file_path_in); i++)
+      std::vector<dftfe::Int> ang_mom_list;
+      for (dftfe::Int i = 1;
+           i < xmlNodeChildCount(tag_name_parent, file_path_in);
+           i++)
         {
           std::string pp_beta_str = "PP_BETA.";
           pp_beta_str += std::to_string(i);
@@ -199,8 +201,8 @@ namespace dftfe
           std::vector<std::string> attr_type;
           std::vector<std::string> attr_value;
           XmlTagReaderAttr(tag_name, file_path_in, &attr_type, &attr_value);
-          unsigned int index     = 0;
-          std::string  to_search = "angular_momentum";
+          dftfe::uInt index     = 0;
+          std::string to_search = "angular_momentum";
           auto it = std::find(attr_type.begin(), attr_type.end(), to_search);
           if (it == attr_type.end())
             {
@@ -214,8 +216,8 @@ namespace dftfe
             }
         }
       // Unique angular momentum values
-      std::vector<int> ang_mom_unique_list;
-      auto             is_unique =
+      std::vector<dftfe::Int> ang_mom_unique_list;
+      auto                    is_unique =
         std::adjacent_find(ang_mom_list.begin(), ang_mom_list.end()) ==
         ang_mom_list.end();
       if (!is_unique)
@@ -247,9 +249,9 @@ namespace dftfe
               std::vector<std::string> attr_type;
               std::vector<std::string> attr_value;
               XmlTagReaderAttr(tag_name, file_path_in, &attr_type, &attr_value);
-              unsigned int index     = 0;
-              std::string  to_search = "jjj";
-              auto         it =
+              dftfe::uInt index     = 0;
+              std::string to_search = "jjj";
+              auto        it =
                 std::find(attr_type.begin(), attr_type.end(), to_search);
               if (it == attr_type.end())
                 {
@@ -264,11 +266,11 @@ namespace dftfe
             }
         }
       // Multiplicity of unique angular momentum values
-      std::vector<int> ang_mom_multiplicity_list;
-      for (int i = 0; i < ang_mom_unique_list.size(); i++)
+      std::vector<dftfe::Int> ang_mom_multiplicity_list;
+      for (dftfe::Int i = 0; i < ang_mom_unique_list.size(); i++)
         {
-          int count = 0;
-          for (int j = 0; j < ang_mom_list.size(); j++)
+          dftfe::Int count = 0;
+          for (dftfe::Int j = 0; j < ang_mom_list.size(); j++)
             {
               if (ang_mom_list[j] == ang_mom_unique_list[i])
                 {
@@ -277,16 +279,16 @@ namespace dftfe
             }
           ang_mom_multiplicity_list.push_back(count);
         }
-      int                              row_index = 0;
-      int                              index     = 0;
+      dftfe::Int                       row_index = 0;
+      dftfe::Int                       index     = 0;
       std::vector<std::vector<double>> out_proj_arr;
-      for (int i = 0; i < ang_mom_unique_list.size(); i++)
+      for (dftfe::Int i = 0; i < ang_mom_unique_list.size(); i++)
         {
-          int l = ang_mom_unique_list[i];
-          for (int j = 0; j < ang_mom_multiplicity_list[i]; j++)
+          dftfe::Int l = ang_mom_unique_list[i];
+          for (dftfe::Int j = 0; j < ang_mom_multiplicity_list[i]; j++)
             {
-              int m = -l;
-              for (int k = 0; k < 2 * l + 1; k++)
+              dftfe::Int m = -l;
+              for (dftfe::Int k = 0; k < 2 * l + 1; k++)
                 {
                   out_proj_arr.push_back((std::vector<double>()));
                   out_proj_arr[row_index].push_back(index);
@@ -311,16 +313,16 @@ namespace dftfe
           file << out_proj_arr.size() << std::endl;
           file << socFlag << std::endl;
           // Projector data
-          int m = out_proj_arr.size();
-          int n = out_proj_arr[0].size();
-          for (int i = 0; i < m; i++)
+          dftfe::Int m = out_proj_arr.size();
+          dftfe::Int n = out_proj_arr[0].size();
+          for (dftfe::Int i = 0; i < m; i++)
             {
-              for (int j = 0; j < n; j++)
+              for (dftfe::Int j = 0; j < n; j++)
                 file << out_proj_arr[i][j] << " ";
               file << std::endl;
             }
 
-          for (int i = 0; i < ang_mom_unique_list.size(); i++)
+          for (dftfe::Int i = 0; i < ang_mom_unique_list.size(); i++)
             {
               std::string proj_str = "proj_l";
               proj_str += std::to_string(ang_mom_unique_list[i]);
@@ -333,7 +335,9 @@ namespace dftfe
           // Orbitals
           std::vector<std::string> pswfc_tag;
           pswfc_tag.push_back("PP_PSWFC");
-          for (int i = 1; i <= xmlNodeChildCount(pswfc_tag, file_path_in); i++)
+          for (dftfe::Int i = 1;
+               i <= xmlNodeChildCount(pswfc_tag, file_path_in);
+               i++)
             {
               // Reading chi data
               std::string pp_chi_str = "PP_CHI.";
@@ -344,9 +348,9 @@ namespace dftfe
               std::vector<std::string> attr_type;
               std::vector<std::string> attr_value;
               XmlTagReaderAttr(chi_tag, file_path_in, &attr_type, &attr_value);
-              unsigned int index     = 0;
-              std::string  to_search = "label";
-              auto         it =
+              dftfe::uInt index     = 0;
+              std::string to_search = "label";
+              auto        it =
                 std::find(attr_type.begin(), attr_type.end(), to_search);
               if (it == attr_type.end())
                 {
@@ -382,8 +386,10 @@ namespace dftfe
       // List of momentum values
       std::vector<std::string> tag_name_parent;
       tag_name_parent.push_back("PP_NONLOCAL");
-      std::vector<int> ang_mom_list;
-      for (int i = 1; i < xmlNodeChildCount(tag_name_parent, file_path_in); i++)
+      std::vector<dftfe::Int> ang_mom_list;
+      for (dftfe::Int i = 1;
+           i < xmlNodeChildCount(tag_name_parent, file_path_in);
+           i++)
         {
           std::string pp_beta_str = "PP_BETA.";
           pp_beta_str += std::to_string(i);
@@ -393,8 +399,8 @@ namespace dftfe
           std::vector<std::string> attr_type;
           std::vector<std::string> attr_value;
           XmlTagReaderAttr(tag_name, file_path_in, &attr_type, &attr_value);
-          unsigned int index     = 0;
-          std::string  to_search = "angular_momentum";
+          dftfe::uInt index     = 0;
+          std::string to_search = "angular_momentum";
           auto it = std::find(attr_type.begin(), attr_type.end(), to_search);
           if (it == attr_type.end())
             {
@@ -409,8 +415,8 @@ namespace dftfe
         }
 
       // Unique angular momentum values
-      std::vector<int> ang_mom_unique_list;
-      auto             is_unique =
+      std::vector<dftfe::Int> ang_mom_unique_list;
+      auto                    is_unique =
         std::adjacent_find(ang_mom_list.begin(), ang_mom_list.end()) ==
         ang_mom_list.end();
       if (!is_unique)
@@ -428,11 +434,11 @@ namespace dftfe
         }
 
       // Multiplicity of unique angular momentum values
-      std::vector<int> ang_mom_multiplicity_list;
-      for (int i = 0; i < ang_mom_unique_list.size(); i++)
+      std::vector<dftfe::Int> ang_mom_multiplicity_list;
+      for (dftfe::Int i = 0; i < ang_mom_unique_list.size(); i++)
         {
-          int count = 0;
-          for (int j = 0; j < ang_mom_list.size(); j++)
+          dftfe::Int count = 0;
+          for (dftfe::Int j = 0; j < ang_mom_list.size(); j++)
             {
               if (ang_mom_list[j] == ang_mom_unique_list[i])
                 {
@@ -441,11 +447,11 @@ namespace dftfe
             }
         }
       // Beta index for same angular momentum
-      std::vector<std::vector<int>> beta_index;
-      for (int i = 0; i < ang_mom_unique_list.size(); i++)
+      std::vector<std::vector<dftfe::Int>> beta_index;
+      for (dftfe::Int i = 0; i < ang_mom_unique_list.size(); i++)
         {
-          beta_index.push_back((std::vector<int>()));
-          for (int j = 0; j < ang_mom_list.size(); j++)
+          beta_index.push_back((std::vector<dftfe::Int>()));
+          for (dftfe::Int j = 0; j < ang_mom_list.size(); j++)
             {
               if (ang_mom_list[j] == ang_mom_unique_list[i])
                 {
@@ -462,13 +468,13 @@ namespace dftfe
       radial_coord = XmlTagReaderMain(radial_tag, file_path_in);
 
       // Extracting projector data according to angular momentum
-      for (int i = 0; i < ang_mom_unique_list.size(); i++)
+      for (dftfe::Int i = 0; i < ang_mom_unique_list.size(); i++)
         {
           std::vector<std::vector<double>> beta_values;
           std::string                      proj_str = "/proj_l";
           proj_str += std::to_string(ang_mom_unique_list[i]);
           proj_str += ".dat";
-          for (int j = 0; j < beta_index[i].size(); j++)
+          for (dftfe::Int j = 0; j < beta_index[i].size(); j++)
             {
               std::string pp_beta_str = "PP_BETA.";
               pp_beta_str += std::to_string(beta_index[i][j]);
@@ -486,12 +492,12 @@ namespace dftfe
           file << std::setprecision(15);
           if (file.is_open())
             {
-              for (int l = 0; l < radial_coord.size(); l++)
+              for (dftfe::Int l = 0; l < radial_coord.size(); l++)
                 {
                   if (l == 0)
                     {
                       file << radial_coord[0] << " ";
-                      for (int m = 0; m < beta_values.size(); m++)
+                      for (dftfe::Int m = 0; m < beta_values.size(); m++)
                         {
                           if (m != (beta_values.size() - 1))
                             file << beta_values[m][1] / radial_coord[1] << " ";
@@ -503,7 +509,7 @@ namespace dftfe
                   else
                     {
                       file << radial_coord[l] << " ";
-                      for (int m = 0; m < beta_values.size(); m++)
+                      for (dftfe::Int m = 0; m < beta_values.size(); m++)
                         {
                           if (m != (beta_values.size() - 1))
                             file << beta_values[m][l] / radial_coord[l] << " ";
@@ -540,7 +546,7 @@ namespace dftfe
       file << std::setprecision(12);
       if (file.is_open())
         {
-          for (int l = 0; l < radial_coord.size(); l++)
+          for (dftfe::Int l = 0; l < radial_coord.size(); l++)
             {
               file << radial_coord[l] << " " << local_pot_values[l] / 2
                    << std::endl;
@@ -561,7 +567,7 @@ namespace dftfe
 
       std::vector<std::string> tag_name_parent;
       tag_name_parent.push_back("PP_NONLOCAL");
-      int n = xmlNodeChildCount(tag_name_parent, file_path_in) - 1;
+      dftfe::Int n = xmlNodeChildCount(tag_name_parent, file_path_in) - 1;
 
       // Writing the denom.dat
       std::fstream file;
@@ -569,7 +575,7 @@ namespace dftfe
       file << std::setprecision(12);
       if (file.is_open())
         {
-          for (int l = 0; l < diagonal_mat.size(); l++)
+          for (dftfe::Int l = 0; l < diagonal_mat.size(); l++)
             {
               if (l != 0 & (l % n == 0))
                 file << std::endl;
@@ -586,9 +592,9 @@ namespace dftfe
       std::vector<std::string> attr_value;
       header_tag.push_back("PP_HEADER");
       XmlTagReaderAttr(header_tag, file_path_in, &attr_type, &attr_value);
-      unsigned int index     = 0;
-      std::string  to_search = "core_correction";
-      auto it = std::find(attr_type.begin(), attr_type.end(), to_search);
+      dftfe::uInt index     = 0;
+      std::string to_search = "core_correction";
+      auto        it = std::find(attr_type.begin(), attr_type.end(), to_search);
       if (it == attr_type.end())
         {
           throw std::invalid_argument("core correction attribute not found");
@@ -619,7 +625,7 @@ namespace dftfe
           file << std::setprecision(12);
           if (file.is_open())
             {
-              for (int l = 0; l < radial_coord.size(); l++)
+              for (dftfe::Int l = 0; l < radial_coord.size(); l++)
                 {
                   file << radial_coord[l] << " " << nlcc_values[l] << std::endl;
                 }
@@ -653,7 +659,7 @@ namespace dftfe
       file << std::setprecision(15);
       if (file.is_open())
         {
-          for (int l = 0; l < radial_coord.size(); l++)
+          for (dftfe::Int l = 0; l < radial_coord.size(); l++)
             {
               if (l == 0)
                 file << radial_coord[0] << " " << rhoatom_values[0]
@@ -677,7 +683,8 @@ namespace dftfe
       radial_coord = XmlTagReaderMain(radial_tag, file_path_in);
       std::vector<std::string> pswfc_tag;
       pswfc_tag.push_back("PP_PSWFC");
-      for (int i = 1; i <= xmlNodeChildCount(pswfc_tag, file_path_in); i++)
+      for (dftfe::Int i = 1; i <= xmlNodeChildCount(pswfc_tag, file_path_in);
+           i++)
         {
           // Reading chi data
           std::string pp_chi_str = "PP_CHI.";
@@ -690,8 +697,8 @@ namespace dftfe
           std::vector<std::string> attr_type;
           std::vector<std::string> attr_value;
           XmlTagReaderAttr(chi_tag, file_path_in, &attr_type, &attr_value);
-          unsigned int index     = 0;
-          std::string  to_search = "label";
+          dftfe::uInt index     = 0;
+          std::string to_search = "label";
           auto it = std::find(attr_type.begin(), attr_type.end(), to_search);
           if (it == attr_type.end())
             {
@@ -731,7 +738,7 @@ namespace dftfe
           file << std::setprecision(12);
           if (file.is_open())
             {
-              for (int l = 0; l < chi_values.size(); l++)
+              for (dftfe::Int l = 0; l < chi_values.size(); l++)
                 {
                   file << radial_coord[l] << " " << chi_values[l] << std::endl;
                 }
@@ -740,13 +747,13 @@ namespace dftfe
         }
     }
 
-    int
+    dftfe::Int
     pseudoPotentialToDftfeParser(const std::string file_path_in,
                                  const std::string file_path_out,
-                                 const int         verbosity,
-                                 unsigned int &    nlccFlag,
-                                 unsigned int &    socFlag,
-                                 unsigned int &    pawFlag)
+                                 const dftfe::Int  verbosity,
+                                 dftfe::uInt      &nlccFlag,
+                                 dftfe::uInt      &socFlag,
+                                 dftfe::uInt      &pawFlag)
     {
       xmltoSummaryFile(file_path_in, file_path_out);
       xmltoProjectorFile(file_path_in, file_path_out);
@@ -762,9 +769,9 @@ namespace dftfe
       header_tag.push_back("PP_HEADER");
       XmlTagReaderAttr(header_tag, file_path_in, &attr_type, &attr_value);
       // NLCC
-      unsigned int index     = 0;
-      std::string  to_search = "core_correction";
-      auto it = std::find(attr_type.begin(), attr_type.end(), to_search);
+      dftfe::uInt index     = 0;
+      std::string to_search = "core_correction";
+      auto        it = std::find(attr_type.begin(), attr_type.end(), to_search);
       if (it == attr_type.end())
         {
           throw std::invalid_argument("core correction attribute not found");

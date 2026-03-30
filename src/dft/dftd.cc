@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2017-2018  The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025  The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -36,26 +36,23 @@ namespace dftfe
 
     std::fill(d_forceDispersion.begin(), d_forceDispersion.end(), 0.0);
     std::fill(d_stressDispersion.begin(), d_stressDispersion.end(), 0.0);
-    for (unsigned int i = 0; i < d_natoms; ++i)
-      {
-        d_atomicNumbers[i] = atomLocations[i][0];
-      }
+    for (dftfe::uInt i = 0; i < d_natoms; ++i)
+      d_atomicNumbers[i] = atomLocations[i][0];
 
-    for (unsigned int irow = 0; irow < d_natoms; ++irow)
+    for (dftfe::uInt iVec = 0; iVec < 3; ++iVec)
+      for (dftfe::uInt iDim = 0; iDim < 3; ++iDim)
+        d_latticeVectors[iVec * 3 + iDim] = d_domainBoundingVectors[iVec][iDim];
+    std::vector<double> cellCentroid(3);
+    for (dftfe::uInt iDim = 0; iDim < 3; ++iDim)
       {
-        for (unsigned int icol = 0; icol < 3; ++icol)
-          {
-            d_atomCoordinates[irow * 3 + icol] = atomLocations[irow][2 + icol];
-          }
+        cellCentroid[iDim] = 0.0;
+        for (dftfe::uInt iVec = 0; iVec < 3; ++iVec)
+          cellCentroid[iDim] += d_domainBoundingVectors[iVec][iDim] * 0.5;
       }
-    for (unsigned int irow = 0; irow < 3; ++irow)
-      {
-        for (unsigned int icol = 0; icol < 3; ++icol)
-          {
-            d_latticeVectors[irow * 3 + icol] =
-              d_domainBoundingVectors[irow][icol];
-          }
-      }
+    for (dftfe::uInt iAtom = 0; iAtom < d_natoms; ++iAtom)
+      for (dftfe::uInt iDim = 0; iDim < 3; ++iDim)
+        d_atomCoordinates[iAtom * 3 + iDim] =
+          atomLocations[iAtom][2 + iDim] + cellCentroid[iDim];
   }
 
 
@@ -77,35 +74,32 @@ namespace dftfe
           {
             if (d_dftParams.XCType == "GGA-PBE")
               {
-                if (d_dftParams.dc_dispersioncorrectiontype == 1)
-                  AssertThrow(
-                    d_dftParams.dc_d3dampingtype != 4,
-                    dealii::ExcMessage(std::string(
-                      "The OP damping functions has not been parametrized for this functional")));
                 functional = "pbe";
               }
             else if (d_dftParams.XCType == "GGA-RPBE")
               {
-                if (d_dftParams.dc_dispersioncorrectiontype == 1)
-                  AssertThrow(
-                    d_dftParams.dc_d3dampingtype == 0 ||
-                      d_dftParams.dc_d3dampingtype == 1,
-                    dealii::ExcMessage(std::string(
-                      "The OP, BJM and ZEROM damping functions have not been parametrized for this functional")));
                 functional = "rpbe";
+              }
+            else if (d_dftParams.XCType == "MGGA-R2SCAN")
+              {
+                functional = "r2scan";
+              }
+
+            else if (d_dftParams.XCType == "MGGA-SCAN")
+              {
+                functional = "scan";
               }
             else
               {
                 AssertThrow(
                   false,
                   dealii::ExcMessage(std::string(
-                    "DFTD3/4 have not been parametrized for this functional")));
+                    "DFTD3/4 have not been parametrized for this functional.")));
               }
           }
         switch (d_dftParams.dc_dispersioncorrectiontype)
           {
-            case 1:
-              {
+              case 1: {
 #ifdef DFTFE_WITH_DFTD3
                 dftd3_error     error = dftd3_new_error();
                 dftd3_structure mol   = NULL;
@@ -284,8 +278,7 @@ namespace dftfe
                               "DFTFE has not been compiled with s-dftd3")));
 #endif
               }
-            case 2:
-              {
+              case 2: {
 #ifdef DFTFE_WITH_DFTD4
                 dftd4_error     error  = dftd4_new_error();
                 dftd4_structure mol    = NULL;
@@ -359,17 +352,17 @@ namespace dftfe
             default:
               break;
           }
-        for (unsigned int irow = 0; irow < d_natoms; ++irow)
+        for (dftfe::uInt irow = 0; irow < d_natoms; ++irow)
           {
-            for (unsigned int icol = 0; icol < 3; ++icol)
+            for (dftfe::uInt icol = 0; icol < 3; ++icol)
               {
                 d_forceDispersion[irow * 3 + icol] =
                   std::trunc(d_forceDispersion[irow * 3 + icol] * 1e12) * 1e-12;
               }
           }
-        for (unsigned int irow = 0; irow < 3; ++irow)
+        for (dftfe::uInt irow = 0; irow < 3; ++irow)
           {
-            for (unsigned int icol = 0; icol < 3; ++icol)
+            for (dftfe::uInt icol = 0; icol < 3; ++icol)
               {
                 d_stressDispersion[irow * 3 + icol] =
                   std::trunc(d_stressDispersion[irow * 3 + icol] * 1e12) *
@@ -399,10 +392,10 @@ namespace dftfe
 
 
   dispersionCorrection::dispersionCorrection(
-    const MPI_Comm &     mpi_comm_parent,
-    const MPI_Comm &     mpi_comm_domain,
-    const MPI_Comm &     interpool_comm,
-    const MPI_Comm &     interbandgroup_comm,
+    const MPI_Comm      &mpi_comm_parent,
+    const MPI_Comm      &mpi_comm_domain,
+    const MPI_Comm      &interpool_comm,
+    const MPI_Comm      &interbandgroup_comm,
     const dftParameters &dftParams)
     : mpi_communicator_global(mpi_comm_parent)
     , mpi_communicator_domain(mpi_comm_domain)
@@ -438,13 +431,15 @@ namespace dftfe
   }
 
   double
-  dispersionCorrection::getForceCorrection(int atomNo, int dim) const
+  dispersionCorrection::getForceCorrection(dftfe::Int atomNo,
+                                           dftfe::Int dim) const
   {
     return d_forceDispersion[atomNo * 3 + dim];
   }
 
   double
-  dispersionCorrection::getStressCorrection(int dim1, int dim2) const
+  dispersionCorrection::getStressCorrection(dftfe::Int dim1,
+                                            dftfe::Int dim2) const
   {
     return d_stressDispersion[dim1 * 3 + dim2];
   }

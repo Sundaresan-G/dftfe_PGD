@@ -30,7 +30,7 @@ namespace dftfe
    *
    * @author Phani Motamarri
    */
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   class kerkerSolverProblem : public dealiiLinearSolverProblem
   {
   public:
@@ -52,12 +52,13 @@ namespace dftfe
     init(std::shared_ptr<
            dftfe::basis::
              FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-           &                                basisOperationsPtr,
+                                           &basisOperationsPtr,
          dealii::AffineConstraints<double> &constraintMatrix,
-         distributedCPUVec<double> &        x,
+         distributedCPUVec<double>         &x,
          double                             kerkerMixingParameter,
-         const unsigned int                 matrixFreeVectorComponent,
-         const unsigned int                 matrixFreeQuadratureComponent);
+         const dftfe::uInt                  matrixFreeVectorComponent,
+         const dftfe::uInt                  matrixFreeQuadratureComponent,
+         const dftfe::uInt                  matrixFreeAxQuadratureComponent);
 
 
 
@@ -104,7 +105,7 @@ namespace dftfe
      *
      */
     void
-    precondition_Jacobi(distributedCPUVec<double> &      dst,
+    precondition_Jacobi(distributedCPUVec<double>       &dst,
                         const distributedCPUVec<double> &src,
                         const double                     omega) const;
 
@@ -120,13 +121,13 @@ namespace dftfe
     /// preconditioning
     void
     subscribe(std::atomic<bool> *const validity,
-              const std::string &      identifier = "") const {};
+              const std::string       &identifier = "") const {};
 
     /// function needed by dealii to mimic SparseMatrix for Jacobi
     /// preconditioning
     void
     unsubscribe(std::atomic<bool> *const validity,
-                const std::string &      identifier = "") const {};
+                const std::string       &identifier = "") const {};
 
     /// function needed by dealii to mimic SparseMatrix
     bool
@@ -141,10 +142,10 @@ namespace dftfe
      *
      */
     void
-    AX(const dealii::MatrixFree<3, double> &        matrixFreeData,
-       distributedCPUVec<double> &                  dst,
-       const distributedCPUVec<double> &            src,
-       const std::pair<unsigned int, unsigned int> &cell_range) const;
+    AX(const dealii::MatrixFree<3, double>       &matrixFreeData,
+       distributedCPUVec<double>                 &dst,
+       const distributedCPUVec<double>           &src,
+       const std::pair<dftfe::uInt, dftfe::uInt> &cell_range) const;
 
 
     /**
@@ -167,18 +168,18 @@ namespace dftfe
 
     /// matrix free index required to access the DofHandler and
     /// dealii::AffineConstraints<double> objects corresponding to the problem
-    unsigned int d_matrixFreeVectorComponent;
+    dftfe::uInt d_matrixFreeVectorComponent;
 
     /// matrix free quadrature index
-    unsigned int d_matrixFreeQuadratureComponent;
-
+    dftfe::uInt d_matrixFreeQuadratureComponent;
+    dftfe::uInt d_matrixFreeAxQuadratureComponent;
 
     /// pointer to electron density cell and grad residual data
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      *                                      d_residualQuadValuesPtr;
-    const dealii::DoFHandler<3> *            d_dofHandlerPRefinedPtr;
+                                            *d_residualQuadValuesPtr;
+    const dealii::DoFHandler<3>             *d_dofHandlerPRefinedPtr;
     const dealii::AffineConstraints<double> *d_constraintMatrixPRefinedPtr;
-    const dealii::MatrixFree<3, double> *    d_matrixFreeDataPRefinedPtr;
+    const dealii::MatrixFree<3, double>     *d_matrixFreeDataPRefinedPtr;
     std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
@@ -187,8 +188,8 @@ namespace dftfe
 
     const MPI_Comm             d_mpiCommParent;
     const MPI_Comm             mpi_communicator;
-    const unsigned int         n_mpi_processes;
-    const unsigned int         this_mpi_process;
+    const dftfe::uInt          n_mpi_processes;
+    const dftfe::uInt          this_mpi_process;
     dealii::ConditionalOStream pcout;
   };
 

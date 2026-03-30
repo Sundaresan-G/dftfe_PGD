@@ -106,19 +106,20 @@ template parameter instead. Available typedefs LogicError - std::logic_error
 #  include <DeviceExceptions.cu.h>
 #elif DFTFE_WITH_DEVICE_LANG_HIP
 #  include <DeviceExceptions.hip.h>
+#elif DFTFE_WITH_DEVICE_LANG_SYCL
+#  include <DeviceExceptions.sycl.h>
 #endif
 
 #define MPICHECK(cmd)                                                      \
   do                                                                       \
     {                                                                      \
-      int e = cmd;                                                         \
+      dftfe::Int e = cmd;                                                  \
       if (e != MPI_SUCCESS)                                                \
         {                                                                  \
           printf("Failed: MPI error %s:%d '%d'\n", __FILE__, __LINE__, e); \
           exit(EXIT_FAILURE);                                              \
         }                                                                  \
-    }                                                                      \
-  while (0)
+  } while (0)
 
 namespace dftfe
 {

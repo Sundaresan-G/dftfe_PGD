@@ -23,18 +23,18 @@
 namespace dftfe
 {
   meshMovementGaussianClass::meshMovementGaussianClass(
-    const MPI_Comm &     mpi_comm_parent,
-    const MPI_Comm &     mpi_comm_domain,
+    const MPI_Comm      &mpi_comm_parent,
+    const MPI_Comm      &mpi_comm_domain,
     const dftParameters &dftParams)
     : meshMovementClass(mpi_comm_parent, mpi_comm_domain, dftParams)
   {}
 
   std::pair<bool, double>
   meshMovementGaussianClass::moveMesh(
-    const std::vector<dealii::Point<3>> &            controlPointLocations,
+    const std::vector<dealii::Point<3>>             &controlPointLocations,
     const std::vector<dealii::Tensor<1, 3, double>> &controlPointDisplacements,
-    const std::vector<double> &                      gaussianWidthParameter,
-    const std::vector<double> &                      flatTopWidthParameter,
+    const std::vector<double>                       &gaussianWidthParameter,
+    const std::vector<double>                       &flatTopWidthParameter,
     const bool                                       moveSubdivided)
   {
     // writeMesh("meshUnmoved.vtu");
@@ -69,7 +69,7 @@ namespace dftfe
     const std::vector<dealii::Tensor<1, 3, double>>
       &controlPointDisplacementsInitialMove,
     const std::vector<dealii::Tensor<1, 3, double>>
-      &                        controlPointDisplacementsCurrentMove,
+                              &controlPointDisplacementsCurrentMove,
     const std::vector<double> &controllingParameterInitialMove,
     const std::vector<double> &controllingParameterCurrentMove,
     const std::vector<double> &flatTopWidthParameter,
@@ -117,12 +117,12 @@ namespace dftfe
     const std::vector<dealii::Tensor<1, 3, double>>
       &controlPointDisplacementsInitialMove,
     const std::vector<dealii::Tensor<1, 3, double>>
-      &                        controlPointDisplacementsCurrentMove,
+                              &controlPointDisplacementsCurrentMove,
     const std::vector<double> &controllingParameterInitialMove,
     const std::vector<double> &controllingParameterCurrentMove,
     const std::vector<double> &flatTopWidthParameter)
   {
-    unsigned int vertices_per_cell = dealii::GeometryInfo<3>::vertices_per_cell;
+    dftfe::uInt vertices_per_cell = dealii::GeometryInfo<3>::vertices_per_cell;
     std::vector<bool> vertex_touched(
       d_dofHandlerMoveMesh.get_triangulation().n_vertices(), false);
 
@@ -135,9 +135,9 @@ namespace dftfe
 
     for (; cell != endc; ++cell)
       if (!cell->is_artificial())
-        for (unsigned int i = 0; i < vertices_per_cell; ++i)
+        for (dftfe::uInt i = 0; i < vertices_per_cell; ++i)
           {
-            const unsigned global_vertex_no = cell->vertex_index(i);
+            const dftfe::uInt global_vertex_no = cell->vertex_index(i);
 
             if (vertex_touched[global_vertex_no])
               continue;
@@ -150,11 +150,11 @@ namespace dftfe
             vertex_touched[global_vertex_no] = true;
 
 
-            int overlappedControlPointId = -1;
+            dftfe::Int overlappedControlPointId = -1;
 
             // check for case where control point locations coincide with nodal
             // vertex locations
-            for (unsigned int jControl = 0;
+            for (dftfe::uInt jControl = 0;
                  jControl < controlPointLocationsInitialMove.size();
                  jControl++)
               {
@@ -168,7 +168,7 @@ namespace dftfe
                   }
               }
 
-            for (unsigned int iControl = 0;
+            for (dftfe::uInt iControl = 0;
                  iControl < controlPointLocationsInitialMove.size();
                  iControl++)
               {
@@ -190,9 +190,9 @@ namespace dftfe
                       controllingParameterInitialMove[iControl],
                       d_dftParams.gaussianOrderMoveMeshToAtoms);
 
-                for (unsigned int idim = 0; idim < 3; idim++)
+                for (dftfe::uInt idim = 0; idim < 3; idim++)
                   {
-                    const unsigned int globalDofIndex =
+                    const dftfe::uInt globalDofIndex =
                       cell->vertex_dof_index(i, idim);
 
                     if (!d_constraintsMoveMesh.is_constrained(globalDofIndex))
@@ -219,16 +219,16 @@ namespace dftfe
 
     for (; cellStep2 != endcStep2; ++cellStep2)
       if (!cellStep2->is_artificial())
-        for (unsigned int i = 0; i < vertices_per_cell; ++i)
+        for (dftfe::uInt i = 0; i < vertices_per_cell; ++i)
           {
-            const unsigned global_vertex_no = cellStep2->vertex_index(i);
+            const dftfe::uInt global_vertex_no = cellStep2->vertex_index(i);
 
             if (vertex_touchedNew[global_vertex_no])
               continue;
 
             vertex_touchedNew[global_vertex_no] = true;
-            int overlappedControlPointId        = -1;
-            for (unsigned int jControl = 0;
+            dftfe::Int overlappedControlPointId = -1;
+            for (dftfe::uInt jControl = 0;
                  jControl < controlPointLocationsCurrentMove.size();
                  jControl++)
               {
@@ -243,7 +243,7 @@ namespace dftfe
                   }
               }
 
-            for (unsigned int iControl = 0;
+            for (dftfe::uInt iControl = 0;
                  iControl < controlPointLocationsCurrentMove.size();
                  iControl++)
               {
@@ -265,9 +265,9 @@ namespace dftfe
                       controllingParameterCurrentMove[iControl],
                       d_dftParams.gaussianOrderForce);
 
-                for (unsigned int idim = 0; idim < 3; idim++)
+                for (dftfe::uInt idim = 0; idim < 3; idim++)
                   {
-                    const unsigned int globalDofIndex =
+                    const dftfe::uInt globalDofIndex =
                       cellStep2->vertex_dof_index(i, idim);
 
                     if (!d_constraintsMoveMesh.is_constrained(globalDofIndex))
@@ -287,12 +287,12 @@ namespace dftfe
   // words for those nodes we don't consider overlapping Gaussians
   void
   meshMovementGaussianClass::computeIncrement(
-    const std::vector<dealii::Point<3>> &            controlPointLocations,
+    const std::vector<dealii::Point<3>>             &controlPointLocations,
     const std::vector<dealii::Tensor<1, 3, double>> &controlPointDisplacements,
-    const std::vector<double> &                      gaussianWidthParameter,
-    const std::vector<double> &                      flatTopWidthParameter)
+    const std::vector<double>                       &gaussianWidthParameter,
+    const std::vector<double>                       &flatTopWidthParameter)
   {
-    unsigned int vertices_per_cell = dealii::GeometryInfo<3>::vertices_per_cell;
+    dftfe::uInt vertices_per_cell = dealii::GeometryInfo<3>::vertices_per_cell;
     std::vector<bool> vertex_touched(
       d_dofHandlerMoveMesh.get_triangulation().n_vertices(), false);
     dealii::DoFHandler<3>::active_cell_iterator cell = d_dofHandlerMoveMesh
@@ -301,17 +301,17 @@ namespace dftfe
                                                   d_dofHandlerMoveMesh.end();
     for (; cell != endc; ++cell)
       if (!cell->is_artificial())
-        for (unsigned int i = 0; i < vertices_per_cell; ++i)
+        for (dftfe::uInt i = 0; i < vertices_per_cell; ++i)
           {
-            const unsigned global_vertex_no = cell->vertex_index(i);
+            const dftfe::uInt global_vertex_no = cell->vertex_index(i);
 
             if (vertex_touched[global_vertex_no])
               continue;
             vertex_touched[global_vertex_no] = true;
             dealii::Point<3> nodalCoor       = cell->vertex(i);
 
-            int overlappedControlPointId = -1;
-            for (unsigned int jControl = 0;
+            dftfe::Int overlappedControlPointId = -1;
+            for (dftfe::uInt jControl = 0;
                  jControl < controlPointLocations.size();
                  jControl++)
               {
@@ -324,7 +324,7 @@ namespace dftfe
                   }
               }
 
-            for (unsigned int iControl = 0;
+            for (dftfe::uInt iControl = 0;
                  iControl < controlPointLocations.size();
                  iControl++)
               {
@@ -346,9 +346,9 @@ namespace dftfe
                       r,
                       gaussianWidthParameter[iControl],
                       d_dftParams.gaussianOrderMoveMeshToAtoms);
-                for (unsigned int idim = 0; idim < 3; idim++)
+                for (dftfe::uInt idim = 0; idim < 3; idim++)
                   {
-                    const unsigned int globalDofIndex =
+                    const dftfe::uInt globalDofIndex =
                       cell->vertex_dof_index(i, idim);
 
                     if (!d_constraintsMoveMesh.is_constrained(globalDofIndex))

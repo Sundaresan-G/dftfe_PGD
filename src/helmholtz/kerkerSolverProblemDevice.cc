@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2019-2020 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -20,14 +20,14 @@
 #include <constants.h>
 #include <kerkerSolverProblemDevice.h>
 #include <MemoryTransfer.h>
-#include "matrixFreeDeviceKernels.h"
+#include <feevaluationWrapper.h>
 
 namespace dftfe
 {
   //
   // constructor
   //
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   kerkerSolverProblemDevice<FEOrderElectro>::kerkerSolverProblemDevice(
     const MPI_Comm &mpi_comm_parent,
     const MPI_Comm &mpi_comm_domain)
@@ -41,25 +41,27 @@ namespace dftfe
   {}
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::init(
     std::shared_ptr<
       dftfe::basis::
-        FEBasisOperations<double, double, dftfe::utils::MemorySpace::DEVICE>>
-      &                                basisOperationsPtr,
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+                                      &basisOperationsPtr,
     dealii::AffineConstraints<double> &constraintMatrixPRefined,
-    distributedCPUVec<double> &        x,
+    distributedCPUVec<double>         &x,
     double                             kerkerMixingParameter,
-    const unsigned int                 matrixFreeVectorComponent,
-    const unsigned int                 matrixFreeQuadratureComponent)
+    const dftfe::uInt                  matrixFreeVectorComponent,
+    const dftfe::uInt                  matrixFreeQuadratureComponent,
+    const dftfe::uInt                  matrixFreeAxQuadratureComponent)
   {
-    d_basisOperationsPtr            = basisOperationsPtr;
-    d_matrixFreeDataPRefinedPtr     = &(basisOperationsPtr->matrixFreeData());
-    d_constraintMatrixPRefinedPtr   = &constraintMatrixPRefined;
-    d_gamma                         = kerkerMixingParameter;
-    d_matrixFreeVectorComponent     = matrixFreeVectorComponent;
-    d_matrixFreeQuadratureComponent = matrixFreeQuadratureComponent;
+    d_basisOperationsPtr              = basisOperationsPtr;
+    d_matrixFreeDataPRefinedPtr       = &(basisOperationsPtr->matrixFreeData());
+    d_constraintMatrixPRefinedPtr     = &constraintMatrixPRefined;
+    d_gamma                           = kerkerMixingParameter;
+    d_matrixFreeVectorComponent       = matrixFreeVectorComponent;
+    d_matrixFreeQuadratureComponent   = matrixFreeQuadratureComponent;
+    d_matrixFreeAxQuadratureComponent = matrixFreeAxQuadratureComponent;
     d_nLocalCells = d_matrixFreeDataPRefinedPtr->n_cell_batches();
 
     d_matrixFreeDataPRefinedPtr->initialize_dof_vector(
@@ -67,22 +69,44 @@ namespace dftfe
     dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
       x.get_partitioner(), 1, d_xDevice);
 
-
     d_xPtr      = &x;
     d_xLocalDof = d_xDevice.locallyOwnedSize() * d_xDevice.numVectors();
     d_xLen      = d_xDevice.localSize() * d_xDevice.numVectors();
 
     computeDiagonalA();
-
-    // Setup MatrixFree Mesh
-    setupMatrixFree();
-
-    // Setup MatrixFree Constraints
     setupConstraints();
+
+    // Setup MatrixFree
+    unsigned int nVectors = 1;
+
+    // Create BLASWrapper object pointer
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+      BLASWrapperPtr;
+
+    // Create matrixFreeWrapperDevice
+    d_matrixFreeWrapperDevice = std::make_unique<
+      dftfe::MatrixFreeWrapperClass<double,
+                                    dftfe::operatorList::Helmholtz,
+                                    dftfe::utils::MemorySpace::DEVICE,
+                                    false>>(FEOrderElectro + 1,
+                                            mpi_communicator,
+                                            d_matrixFreeDataPRefinedPtr,
+                                            constraintMatrixPRefined,
+                                            BLASWrapperPtr,
+                                            d_matrixFreeVectorComponent,
+                                            d_matrixFreeAxQuadratureComponent,
+                                            nVectors);
+
+    // Init MatrixFree
+    d_matrixFreeWrapperDevice->init();
+
+    // Set Helmholtz coefficient
+    d_matrixFreeWrapperDevice->initOperatorCoeffs(4 * M_PI * d_gamma);
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::reinit(
     distributedCPUVec<double> &x,
@@ -100,7 +124,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::setupConstraints()
   {
@@ -111,7 +135,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::distributeX()
   {
@@ -119,7 +143,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   distributedDeviceVec<double> &
   kerkerSolverProblemDevice<FEOrderElectro>::getX()
   {
@@ -127,7 +151,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::copyXfromDeviceToHost()
   {
@@ -139,7 +163,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::setX()
   {
@@ -147,7 +171,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::computeRhs(
     distributedCPUVec<double> &rhs)
@@ -156,39 +180,42 @@ namespace dftfe
 
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
 
-    dealii::FEEvaluation<3, FEOrderElectro, C_num1DQuad<FEOrderElectro>()>
-      fe_eval(*d_matrixFreeDataPRefinedPtr,
-              d_matrixFreeVectorComponent,
-              d_matrixFreeQuadratureComponent);
+    dftfe::Int feOrder1 =
+      d_matrixFreeDataPRefinedPtr->get_dof_handler(d_matrixFreeVectorComponent)
+        .get_fe()
+        .tensor_degree();
+    FEEvaluationWrapperClass<1> fe_eval(*d_matrixFreeDataPRefinedPtr,
+                                        d_matrixFreeVectorComponent,
+                                        d_matrixFreeQuadratureComponent);
 
     dealii::VectorizedArray<double> zeroVec = 0.0;
 
     dealii::AlignedVector<dealii::VectorizedArray<double>> residualQuads(
       fe_eval.n_q_points, zeroVec);
-    for (unsigned int macrocell = 0;
+    for (dftfe::uInt macrocell = 0;
          macrocell < d_matrixFreeDataPRefinedPtr->n_cell_batches();
          ++macrocell)
       {
         std::fill(residualQuads.begin(), residualQuads.end(), zeroVec);
-        const unsigned int numSubCells =
+        const dftfe::uInt numSubCells =
           d_matrixFreeDataPRefinedPtr->n_active_entries_per_cell_batch(
             macrocell);
-        for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
+        for (dftfe::uInt iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
           {
             subCellPtr = d_matrixFreeDataPRefinedPtr->get_cell_iterator(
               macrocell, iSubCell, d_matrixFreeVectorComponent);
-            dealii::CellId     subCellId = subCellPtr->id();
-            const unsigned int cellIndex =
+            dealii::CellId    subCellId = subCellPtr->id();
+            const dftfe::uInt cellIndex =
               d_basisOperationsPtr->cellIndex(subCellId);
             const double *tempVec =
               d_residualQuadValuesPtr->data() + fe_eval.n_q_points * cellIndex;
 
-            for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
+            for (dftfe::uInt q = 0; q < fe_eval.n_q_points; ++q)
               residualQuads[q][iSubCell] = -tempVec[q];
           }
 
         fe_eval.reinit(macrocell);
-        for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
+        for (dftfe::uInt q = 0; q < fe_eval.n_q_points; ++q)
           fe_eval.submit_value(residualQuads[q], q);
 
         fe_eval.integrate(dealii::EvaluationFlags::values);
@@ -204,7 +231,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::computeDiagonalA()
   {
@@ -215,14 +242,14 @@ namespace dftfe
       d_diagonalA, d_matrixFreeVectorComponent);
     d_diagonalA = 0.0;
 
-    dealii::QGauss<3>      quadrature(C_num1DQuad<FEOrderElectro>());
+    dealii::QGauss<3>      quadrature(C_num1DQuad(FEOrderElectro));
     dealii::FEValues<3>    fe_values(dofHandler.get_fe(),
                                   quadrature,
                                   dealii::update_values |
                                     dealii::update_gradients |
                                     dealii::update_JxW_values);
-    const unsigned int     dofs_per_cell   = dofHandler.get_fe().dofs_per_cell;
-    const unsigned int     num_quad_points = quadrature.size();
+    const dftfe::uInt      dofs_per_cell   = dofHandler.get_fe().dofs_per_cell;
+    const dftfe::uInt      num_quad_points = quadrature.size();
     dealii::Vector<double> elementalDiagonalA(dofs_per_cell);
     std::vector<dealii::types::global_dof_index> local_dof_indices(
       dofs_per_cell);
@@ -240,8 +267,8 @@ namespace dftfe
           cell->get_dof_indices(local_dof_indices);
 
           elementalDiagonalA = 0.0;
-          for (unsigned int i = 0; i < dofs_per_cell; ++i)
-            for (unsigned int q_point = 0; q_point < num_quad_points; ++q_point)
+          for (dftfe::uInt i = 0; i < dofs_per_cell; ++i)
+            for (dftfe::uInt q_point = 0; q_point < num_quad_points; ++q_point)
               elementalDiagonalA(i) +=
                 (fe_values.shape_grad(i, q_point) *
                    fe_values.shape_grad(i, q_point) +
@@ -274,7 +301,7 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   distributedDeviceVec<double> &
   kerkerSolverProblemDevice<FEOrderElectro>::getPreconditioner()
   {
@@ -282,155 +309,22 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrderElectro>
-  void
-  kerkerSolverProblemDevice<FEOrderElectro>::setupMatrixFree()
-  {
-    constexpr int p            = FEOrderElectro + 1;
-    constexpr int q            = p;
-    constexpr int nDofsPerCell = p * p * p;
-    constexpr int dim          = 3;
-
-    auto dofInfo =
-      d_matrixFreeDataPRefinedPtr->get_dof_info(d_matrixFreeVectorComponent);
-    auto shapeInfo = d_matrixFreeDataPRefinedPtr->get_shape_info(
-      d_matrixFreeVectorComponent, d_matrixFreeQuadratureComponent);
-    auto mappingData = d_matrixFreeDataPRefinedPtr->get_mapping_info()
-                         .cell_data[d_matrixFreeQuadratureComponent];
-    auto shapeData = shapeInfo.get_shape_data();
-
-    // Shape Function Values, Gradients and their Transposes
-    // P(q*p), D(q*q), PT(p*q), DT(q*q)
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      shapeFunction(2 * q * (p + q));
-
-    for (int i = 0; i < p; i++)
-      for (int j = 0; j < q; j++)
-        {
-#if (DEAL_II_VERSION_MAJOR >= 9 && DEAL_II_VERSION_MINOR >= 6)
-          double value = shapeData.shape_values[j + i * q] *
-                         std::sqrt(shapeData.quadrature.weight(j));
-#else
-          double value = shapeData.shape_values[j + i * q][0] *
-                         std::sqrt(shapeData.quadrature.weight(j));
-#endif
-          shapeFunction[j + i * q]               = value;
-          shapeFunction[i + j * p + q * (p + q)] = value;
-        }
-
-    for (int i = 0; i < q; i++)
-      for (int j = 0; j < q; j++)
-        {
-#if (DEAL_II_VERSION_MAJOR >= 9 && DEAL_II_VERSION_MINOR >= 6)
-          double grad = shapeData.shape_gradients_collocation[j + i * q] *
-                        std::sqrt(shapeData.quadrature.weight(j)) /
-                        std::sqrt(shapeData.quadrature.weight(i));
-#else
-          double grad = shapeData.shape_gradients_collocation[j + i * q][0] *
-                        std::sqrt(shapeData.quadrature.weight(j)) /
-                        std::sqrt(shapeData.quadrature.weight(i));
-#endif
-          shapeFunction[j + i * q + q * p]           = grad;
-          shapeFunction[i + j * q + (2 * p + q) * q] = grad;
-        }
-
-    // Jacobian
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      jacobianFactor(dim * dim * d_nLocalCells);
-
-    auto cellOffsets = mappingData.data_index_offsets;
-
-    for (int cellIdx = 0; cellIdx < d_nLocalCells; cellIdx++)
-      for (int k = 0; k < dim; k++)
-        for (int i = 0; i < dim; i++)
-          for (int j = 0; j < dim; j++)
-            jacobianFactor[j + i * dim + cellIdx * dim * dim] +=
-              mappingData
-                .JxW_values[cellOffsets[cellIdx / dofInfo.vectorization_length]]
-                           [0] *
-              mappingData
-                .jacobians[0]
-                          [cellOffsets[cellIdx / dofInfo.vectorization_length]]
-                          [k][j][0] *
-              mappingData
-                .jacobians[0]
-                          [cellOffsets[cellIdx / dofInfo.vectorization_length]]
-                          [k][i][0];
-
-    // Map making
-    dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::HOST> map(
-      nDofsPerCell * d_nLocalCells);
-
-    for (auto cellIdx = 0; cellIdx < d_nLocalCells; ++cellIdx)
-      std::memcpy(map.data() + cellIdx * nDofsPerCell,
-                  ((dofInfo.row_starts[cellIdx].second ==
-                    dofInfo.row_starts[cellIdx + 1].second) &&
-                   (dofInfo.row_starts_plain_indices[cellIdx] ==
-                    dealii::numbers::invalid_unsigned_int)) ?
-                    dofInfo.dof_indices.data() +
-                      dofInfo.row_starts[cellIdx].first :
-                    dofInfo.plain_dof_indices.data() +
-                      dofInfo.row_starts_plain_indices[cellIdx],
-                  nDofsPerCell * sizeof(unsigned int));
-
-    // Construct the device vectors
-    d_shapeFunction.resize(shapeFunction.size());
-    d_shapeFunction.copyFrom(shapeFunction);
-
-    d_jacobianFactor.resize(jacobianFactor.size());
-    d_jacobianFactor.copyFrom(jacobianFactor);
-
-    d_map.resize(map.size());
-    d_map.copyFrom(map);
-
-    d_shapeFunctionPtr  = d_shapeFunction.data();
-    d_jacobianFactorPtr = d_jacobianFactor.data();
-    d_mapPtr            = d_map.data();
-    constexpr std::size_t smem =
-      (4 * q * q * q + 2 * p * q + 2 * q * q + dim * dim) * sizeof(double);
-    matrixFreeDeviceKernels<double, p * p, q, p, dim>::
-      computeAXDeviceHelmholtzSetAttributes(smem);
-  }
-
-
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
   kerkerSolverProblemDevice<FEOrderElectro>::computeAX(
     distributedDeviceVec<double> &Ax,
     distributedDeviceVec<double> &x)
   {
-    constexpr int dim     = 3;
-    constexpr int p       = FEOrderElectro + 1;
-    constexpr int q       = p;
-    constexpr int threads = 64;
-    // constexpr int threads =
-    //  (FEOrderElectro < 7 ? 96 : FEOrderElectro == 7 ? 64 : 256);
-    const int             blocks         = d_nLocalCells;
-    const double          coeffHelmholtz = 4 * M_PI * d_gamma;
-    constexpr std::size_t smem =
-      (4 * q * q * q + 2 * p * q + 2 * q * q + dim * dim) * sizeof(double);
-
     dftfe::utils::deviceMemset(Ax.begin(), 0, d_xLen * sizeof(double));
 
     x.updateGhostValues();
 
-    d_constraintsTotalPotentialInfo.distribute(x);
+    d_matrixFreeWrapperDevice->constraintsDistribute(x.data());
 
-    matrixFreeDeviceKernels<double, p * p, q, p, dim>::computeAXDeviceHelmholtz(
-      blocks,
-      threads,
-      smem,
-      Ax.begin(),
-      x.begin(),
-      d_shapeFunctionPtr,
-      d_jacobianFactorPtr,
-      d_mapPtr,
-      coeffHelmholtz);
+    d_matrixFreeWrapperDevice->computeAX(Ax.data(), x.data());
 
-
-    d_constraintsTotalPotentialInfo.set_zero(x);
-
-    d_constraintsTotalPotentialInfo.distribute_slave_to_master(Ax);
+    d_matrixFreeWrapperDevice->constraintsDistributeTranspose(Ax.data(),
+                                                              x.data());
 
     Ax.accumulateAddLocallyOwned();
   }

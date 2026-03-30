@@ -28,7 +28,9 @@
 #    include <MemoryStorage.h>
 #    include <dftUtils.h>
 #    include <FEBasisOperations.h>
-
+#    include "BLASWrapper.h"
+#    include "MatrixFreeWrapper.h"
+#    include <DeviceAPICalls.h>
 
 namespace dftfe
 {
@@ -38,7 +40,7 @@ namespace dftfe
    *
    * @author Gourab Panigrahi
    */
-  template <unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   class kerkerSolverProblemDevice : public linearSolverProblemDevice
   {
   public:
@@ -56,16 +58,16 @@ namespace dftfe
      *
      */
     void
-    init(
-      std::shared_ptr<
-        dftfe::basis::
-          FEBasisOperations<double, double, dftfe::utils::MemorySpace::DEVICE>>
-        &                                basisOperationsPtr,
-      dealii::AffineConstraints<double> &constraintMatrix,
-      distributedCPUVec<double> &        x,
-      double                             kerkerMixingParameter,
-      const unsigned int                 matrixFreeVectorComponent,
-      const unsigned int                 matrixFreeQuadratureComponent);
+    init(std::shared_ptr<
+           dftfe::basis::
+             FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
+                                           &basisOperationsPtr,
+         dealii::AffineConstraints<double> &constraintMatrix,
+         distributedCPUVec<double>         &x,
+         double                             kerkerMixingParameter,
+         const dftfe::uInt                  matrixFreeVectorComponent,
+         const dftfe::uInt                  matrixFreeQuadratureComponent,
+         const dftfe::uInt                  matrixFreeAxQuadratureComponent);
 
 
     /**
@@ -138,29 +140,6 @@ namespace dftfe
     void
     copyXfromDeviceToHost();
 
-
-    /// function needed by dealii to mimic SparseMatrix for Jacobi
-    /// preconditioning
-    void
-    subscribe(std::atomic<bool> *const validity,
-              const std::string &      identifier = "") const {};
-
-
-    /// function needed by dealii to mimic SparseMatrix for Jacobi
-    /// preconditioning
-    void
-    unsubscribe(std::atomic<bool> *const validity,
-                const std::string &      identifier = "") const {};
-
-
-    /// function needed by dealii to mimic SparseMatrix
-    bool
-    operator!=(double val) const
-    {
-      return true;
-    };
-
-
   private:
     /**
      * @brief Sets up the matrixfree shapefunction, gradient, jacobian and map for matrixfree computeAX
@@ -196,21 +175,18 @@ namespace dftfe
 
     // number of cells local to each mpi task, number of degrees of freedom
     // locally owned and total degrees of freedom including ghost
-    int d_nLocalCells, d_xLocalDof, d_xLen;
+    dftfe::Int d_nLocalCells, d_xLocalDof, d_xLen;
 
     // kerker mixing constant
     double d_gamma;
 
-    // shape function value, gradient, jacobian and map for matrixfree
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-                                                                        d_shapeFunction, d_jacobianFactor;
-    dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE> d_map;
-
-    // Pointers to shape function value, gradient, jacobian and map for
-    // matrixfree
-    double *d_shapeFunctionPtr;
-    double *d_jacobianFactorPtr;
-    int *   d_mapPtr;
+    // Matrix free wrapper object
+    std::unique_ptr<
+      dftfe::MatrixFreeWrapperClass<double,
+                                    dftfe::operatorList::Helmholtz,
+                                    dftfe::utils::MemorySpace::DEVICE,
+                                    false>>
+      d_matrixFreeWrapperDevice;
 
     // constraints
     dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
@@ -218,29 +194,27 @@ namespace dftfe
 
     /// matrix free index required to access the DofHandler and
     /// dealii::AffineConstraints<double> objects corresponding to the problem
-    unsigned int d_matrixFreeVectorComponent;
+    dftfe::uInt d_matrixFreeVectorComponent;
 
     /// matrix free quadrature index
-    unsigned int d_matrixFreeQuadratureComponent;
-
+    dftfe::uInt d_matrixFreeQuadratureComponent;
+    dftfe::uInt d_matrixFreeAxQuadratureComponent;
 
     /// pointer to electron density cell and grad residual data
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      *                                      d_residualQuadValuesPtr;
-    const dealii::DoFHandler<3> *            d_dofHandlerPRefinedPtr;
+                                            *d_residualQuadValuesPtr;
+    const dealii::DoFHandler<3>             *d_dofHandlerPRefinedPtr;
     const dealii::AffineConstraints<double> *d_constraintMatrixPRefinedPtr;
-    const dealii::MatrixFree<3, double> *    d_matrixFreeDataPRefinedPtr;
+    const dealii::MatrixFree<3, double>     *d_matrixFreeDataPRefinedPtr;
     std::shared_ptr<
       dftfe::basis::
-        FEBasisOperations<double, double, dftfe::utils::MemorySpace::DEVICE>>
+        FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtr;
-
-
 
     const MPI_Comm             d_mpiCommParent;
     const MPI_Comm             mpi_communicator;
-    const unsigned int         n_mpi_processes;
-    const unsigned int         this_mpi_process;
+    const dftfe::uInt          n_mpi_processes;
+    const dftfe::uInt          this_mpi_process;
     dealii::ConditionalOStream pcout;
   };
 

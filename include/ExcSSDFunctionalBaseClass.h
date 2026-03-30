@@ -26,12 +26,19 @@ namespace dftfe
 {
   enum class ExcFamilyType
   {
+    /*
+    LLMGGA: Includes only Laplacian of the electron-density
+    TauMGGA: Includes only kinetic energy density
+    MGGA: Includes both the Laplacian of the electron-density and kinetic energy
+    density
+    */
     LDA,
     GGA,
     LLMGGA,
     HYBRID,
     DFTPlusU,
-    MGGA
+    MGGA,
+    TauMGGA
   };
 
   enum class densityFamilyType
@@ -83,6 +90,12 @@ namespace dftfe
                               const densityFamilyType densityFamType,
                               const std::vector<DensityDescriptorDataAttributes>
                                 &densityDescriptorAttributesList);
+    ExcSSDFunctionalBaseClass(const ExcFamilyType     excFamType,
+                              const densityFamilyType densityFamType,
+                              const std::vector<DensityDescriptorDataAttributes>
+                                &densityDescriptorAttributesList,
+                              const std::vector<WfcDescriptorDataAttributes>
+                                &wfcDescriptorAttributesList);
 
     virtual ~ExcSSDFunctionalBaseClass();
 
@@ -106,11 +119,11 @@ namespace dftfe
     virtual void
     applyWaveFunctionDependentFuncDerWrtPsi(
       const dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-        &                                                                src,
+                                                                        &src,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
-      const unsigned int inputVecSize,
-      const unsigned int kPointIndex,
-      const unsigned int spinIndex) = 0;
+      const dftfe::uInt inputVecSize,
+      const dftfe::uInt kPointIndex,
+      const dftfe::uInt spinIndex) = 0;
 
     /*
      * @brief The apply function that will be called in HXCheby() with single precision.
@@ -127,10 +140,10 @@ namespace dftfe
       const dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
                                               memorySpace> &src,
       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
-        &                dst,
-      const unsigned int inputVecSize,
-      const unsigned int kPointIndex,
-      const unsigned int spinIndex) = 0;
+                       &dst,
+      const dftfe::uInt inputVecSize,
+      const dftfe::uInt kPointIndex,
+      const dftfe::uInt spinIndex) = 0;
 
     /*
      * @brief The function that updates the Wave function dependent part
@@ -139,7 +152,7 @@ namespace dftfe
     virtual void
     updateWaveFunctionDependentFuncDerWrtPsi(
       const std::shared_ptr<AuxDensityMatrix<memorySpace>> &auxDensityMatrixPtr,
-      const std::vector<double> &                           kPointWeights) = 0;
+      const std::vector<double>                            &kPointWeights) = 0;
 
 
     /*
@@ -149,7 +162,7 @@ namespace dftfe
     virtual void
     computeWaveFunctionDependentExcEnergy(
       const std::shared_ptr<AuxDensityMatrix<memorySpace>> &auxDensityMatrix,
-      const std::vector<double> &                           kPointWeights) = 0;
+      const std::vector<double>                            &kPointWeights) = 0;
 
     /*
      * @brief Returns the Wavefunction dependent part of the Exc energy.
@@ -167,6 +180,8 @@ namespace dftfe
     virtual double
     getExpectationOfWaveFunctionDependentExcFuncDerWrtPsi() = 0;
 
+
+
     /**
      * x and c denotes exchange and correlation respectively.
      * This function computes the rho and tau dependent part of
@@ -174,12 +189,17 @@ namespace dftfe
      */
     virtual void
     computeRhoTauDependentXCData(
-      AuxDensityMatrix<memorySpace> &auxDensityMatrix,
-      const std::vector<double> &    quadPoints,
-      std::unordered_map<xcRemainderOutputDataAttributes, std::vector<double>>
+      AuxDensityMatrix<memorySpace>             &auxDensityMatrix,
+      const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+      std::unordered_map<
+        xcRemainderOutputDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &xDataOut,
-      std::unordered_map<xcRemainderOutputDataAttributes, std::vector<double>>
+      std::unordered_map<
+        xcRemainderOutputDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &cDataout) const = 0;
+
 
     ExcFamilyType
     getExcFamilyType() const;
@@ -190,14 +210,40 @@ namespace dftfe
       const = 0;
 
     virtual void
-    reinitKPointDependentVariables(unsigned int kPointIndex) = 0;
+    reinitKPointDependentVariables(dftfe::uInt kPointIndex) = 0;
 
   protected:
     const std::vector<DensityDescriptorDataAttributes>
       d_densityDescriptorAttributesList;
 
+    const std::vector<WfcDescriptorDataAttributes>
+      d_wfcDescriptorAttributesList;
+
     ExcFamilyType     d_ExcFamilyType;
     densityFamilyType d_densityFamilyType;
+
+    mutable dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      s_densityValues, s_sigmaValues, s_tauValues;
+
+    mutable dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      s_pdexDensityValuesNonNN, s_pdecDensityValuesNonNN, s_pdexTauValuesNonNN,
+      s_pdecTauValuesNonNN;
+
+    mutable dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      s_exValues, s_ecValues, s_pdexDensitySpinUpValues,
+      s_pdexDensitySpinDownValues, s_pdecDensitySpinUpValues,
+      s_pdecDensitySpinDownValues, s_pdexSigmaValues, s_pdecSigmaValues,
+      s_pdexTauSpinUpValues, s_pdexTauSpinDownValues, s_pdecTauSpinUpValues,
+      s_pdecTauSpinDownValues;
+
+    mutable dftfe::utils::MemoryStorage<double, memorySpace>
+      s_densityValuesTemp, s_sigmaValuesTemp, s_tauValuesTemp, s_exValuesTemp,
+      s_ecValuesTemp, s_pdecDensityTemp, s_pdexDensityTemp,
+      s_pdecSigmaValuesTemp, s_pdexSigmaValuesTemp, s_pdexTauValuesTemp,
+      s_pdecTauValuesTemp;
+
+    mutable void  *s_pinnedBuf = nullptr;
+    mutable size_t s_pinnedCap = 0;
   };
 } // namespace dftfe
 

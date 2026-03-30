@@ -23,7 +23,6 @@
 #include <dft.h>
 #include <dftUtils.h>
 #include <fileReaders.h>
-#include <force.h>
 #include <geoOptCell.h>
 #include <sys/stat.h>
 
@@ -33,7 +32,7 @@ namespace dftfe
   // constructor
   //
 
-  geoOptCell::geoOptCell(dftBase *       dftPtr,
+  geoOptCell::geoOptCell(dftBase        *dftPtr,
                          const MPI_Comm &mpi_comm_parent,
                          const bool      restart)
     : d_dftPtr(dftPtr)
@@ -45,15 +44,16 @@ namespace dftfe
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
     , d_isRestart(restart)
   {
-    d_isScfRestart = d_dftPtr->getParametersObject().loadRhoData;
+    d_isScfRestart = d_dftPtr->getParametersObject().loadQuadData;
   }
 
   //
   //
 
   void
-  geoOptCell::init(const std::string &restartPath)
+  geoOptCell::init(const std::string &restartPath, const dftfe::Int cycleId)
   {
+    d_cycle         = cycleId;
     d_restartPath   = restartPath + "/cellRelax";
     d_solverRestart = d_isRestart;
     if (d_dftPtr->getParametersObject().cellOptSolver == "BFGS")
@@ -62,14 +62,16 @@ namespace dftfe
       d_solver = 1;
     else if (d_dftPtr->getParametersObject().cellOptSolver == "CGPRP")
       d_solver = 2;
-    // initialize d_strainEpsilon to identity
-    d_strainEpsilon = 0;
-    for (unsigned int i = 0; i < 3; ++i)
-      d_strainEpsilon[i][i] = 1.0;
+    // initialize d_deformationGradientCurrent to identity
+    // deformation gradient is a second order tensor.
+    // We constrain it be symmetric (no rigid rotation modes)
+    // with six independent components
+    d_deformationGradientCurrent = 0;
+    for (dftfe::uInt i = 0; i < 3; ++i)
+      d_deformationGradientCurrent[i][i] = 1.0;
 
     d_domainVolumeInitial = d_dftPtr->getCellVolume();
 
-    // strain tensor is a symmetric second order with six independent components
     d_relaxationFlags.clear();
     d_relaxationFlags.resize(6, 0);
 
@@ -192,10 +194,10 @@ namespace dftfe
         std::vector<std::vector<double>> tmp, cellOptData;
         dftUtils::readFile(1, cellOptData, d_restartPath + "/cellOpt.dat");
         dftUtils::readFile(1, tmp, d_restartPath + "/step.chk");
-        int solver             = cellOptData[0][0];
-        int cellConstraintType = cellOptData[1][0];
-        d_domainVolumeInitial  = cellOptData[2][0];
-        d_totalUpdateCalls     = tmp[0][0];
+        dftfe::Int solver             = cellOptData[0][0];
+        dftfe::Int cellConstraintType = cellOptData[1][0];
+        d_domainVolumeInitial         = cellOptData[2][0];
+        d_totalUpdateCalls            = tmp[0][0];
         if (solver != d_solver)
           pcout
             << "Solver has changed since last save, the newly set solver will start from scratch."
@@ -220,7 +222,8 @@ namespace dftfe
               {
                 std::string fileName =
                   "structureEnergyForcesGSData_cellRelaxStep" +
-                  std::to_string(d_totalUpdateCalls) + ".txt";
+                  std::to_string(d_totalUpdateCalls) + "_cycle" +
+                  std::to_string(d_cycle) + ".txt";
                 d_dftPtr->writeStructureEnergyForcesDataPostProcess(fileName);
               }
           }
@@ -396,7 +399,7 @@ namespace dftfe
   }
 
 
-  int
+  dftfe::Int
   geoOptCell::run()
   {
     if (getNumberUnknowns() > 0)
@@ -411,7 +414,9 @@ namespace dftfe
             d_dftPtr->getParametersObject()
               .writeStructreEnergyForcesFileForPostProcess)
           {
-            std::string fileName = "structureEnergyForcesGSDataCellRelaxed.txt";
+            std::string fileName =
+              std::string("structureEnergyForcesGSDataCellRelaxed") + "_cycle" +
+              std::to_string(d_cycle) + ".txt";
             d_dftPtr->writeStructureEnergyForcesDataPostProcess(fileName);
           }
 
@@ -434,7 +439,7 @@ namespace dftfe
             pcout
               << "-----------Simulation Domain bounding vectors (lattice vectors in fully periodic case)-------------"
               << std::endl;
-            for (int i = 0; i < d_dftPtr->getCell().size(); ++i)
+            for (dftfe::Int i = 0; i < d_dftPtr->getCell().size(); ++i)
               {
                 pcout << "v" << i + 1 << " : " << d_dftPtr->getCell()[i][0]
                       << " " << d_dftPtr->getCell()[i][1] << " "
@@ -451,7 +456,7 @@ namespace dftfe
                 pcout
                   << "------------------Fractional coordinates of atoms--------------------"
                   << std::endl;
-                for (unsigned int i = 0;
+                for (dftfe::uInt i = 0;
                      i < d_dftPtr->getAtomLocationsCart().size();
                      ++i)
                   pcout << "AtomId " << i << ":  "
@@ -470,7 +475,7 @@ namespace dftfe
                 pcout
                   << "------------Cartesian coordinates of atoms (origin at center of domain)------------------"
                   << std::endl;
-                for (unsigned int i = 0;
+                for (dftfe::uInt i = 0;
                      i < d_dftPtr->getAtomLocationsCart().size();
                      ++i)
                   {
@@ -506,7 +511,7 @@ namespace dftfe
 
 
 
-  unsigned int
+  dftfe::uInt
   geoOptCell::getNumberUnknowns() const
   {
     return std::accumulate(d_relaxationFlags.begin(),
@@ -530,7 +535,7 @@ namespace dftfe
     gradient.clear();
     const dealii::Tensor<2, 3, double> tempGradient =
       d_dftPtr->getCellVolume() *
-      (d_dftPtr->getCellStress() * invert(d_strainEpsilon)) /
+      (d_dftPtr->getCellStress() * invert(d_deformationGradientCurrent)) /
       d_domainVolumeInitial;
 
     if (d_relaxationFlags[0] == 1)
@@ -557,7 +562,7 @@ namespace dftfe
 
 
   void
-  geoOptCell::precondition(std::vector<double> &      s,
+  geoOptCell::precondition(std::vector<double>       &s,
                            const std::vector<double> &gradient)
   {
     s.resize(getNumberUnknowns() * getNumberUnknowns(), 0.0);
@@ -574,7 +579,7 @@ namespace dftfe
                      const bool useSingleAtomSolutionsInitialGuess)
   {
     std::vector<double> bcastSolution(solution.size());
-    for (unsigned int i = 0; i < solution.size(); ++i)
+    for (dftfe::uInt i = 0; i < solution.size(); ++i)
       {
         bcastSolution[i] = solution[i];
       }
@@ -586,40 +591,41 @@ namespace dftfe
               0,
               mpi_communicator);
 
-    dealii::Tensor<2, 3, double> strainEpsilonNew = d_strainEpsilon;
+    dealii::Tensor<2, 3, double> deformationGradientNext =
+      d_deformationGradientCurrent;
 
-    unsigned int count = 0;
+    dftfe::uInt count = 0;
     if (d_relaxationFlags[0] == 1)
       {
-        strainEpsilonNew[0][0] += bcastSolution[count];
+        deformationGradientNext[0][0] += bcastSolution[count];
         count++;
       }
     if (d_relaxationFlags[1] == 1)
       {
-        strainEpsilonNew[0][1] += bcastSolution[count];
-        strainEpsilonNew[1][0] += bcastSolution[count];
+        deformationGradientNext[0][1] += bcastSolution[count];
+        deformationGradientNext[1][0] += bcastSolution[count];
         count++;
       }
     if (d_relaxationFlags[2] == 1)
       {
-        strainEpsilonNew[0][2] += bcastSolution[count];
-        strainEpsilonNew[2][0] += bcastSolution[count];
+        deformationGradientNext[0][2] += bcastSolution[count];
+        deformationGradientNext[2][0] += bcastSolution[count];
         count++;
       }
     if (d_relaxationFlags[3] == 1)
       {
-        strainEpsilonNew[1][1] += bcastSolution[count];
+        deformationGradientNext[1][1] += bcastSolution[count];
         count++;
       }
     if (d_relaxationFlags[4] == 1)
       {
-        strainEpsilonNew[1][2] += bcastSolution[count];
-        strainEpsilonNew[2][1] += bcastSolution[count];
+        deformationGradientNext[1][2] += bcastSolution[count];
+        deformationGradientNext[2][1] += bcastSolution[count];
         count++;
       }
     if (d_relaxationFlags[5] == 1)
       {
-        strainEpsilonNew[2][2] += bcastSolution[count];
+        deformationGradientNext[2][2] += bcastSolution[count];
         count++;
       }
 
@@ -627,15 +633,32 @@ namespace dftfe
     if (d_dftPtr->getParametersObject().cellConstraintType ==
         1) // isotropic (shape fixed isotropic volume optimization)
       {
-        strainEpsilonNew[1][1] = strainEpsilonNew[0][0];
-        strainEpsilonNew[2][2] = strainEpsilonNew[0][0];
+        deformationGradientNext[1][1] = deformationGradientNext[0][0];
+        deformationGradientNext[2][2] = deformationGradientNext[0][0];
       }
 
     // To transform the domain under the strain we have to first do a inverse
     // transformation to bring the domain back to the unstrained state.
     dealii::Tensor<2, 3, double> deformationGradient =
-      strainEpsilonNew * invert(d_strainEpsilon);
-    d_strainEpsilon = strainEpsilonNew;
+      deformationGradientNext * invert(d_deformationGradientCurrent);
+    d_deformationGradientCurrent = deformationGradientNext;
+
+    const double a11         = deformationGradientNext[0][0];
+    const double a12         = deformationGradientNext[0][1];
+    const double a13         = deformationGradientNext[0][2];
+    const double a21         = deformationGradientNext[1][0];
+    const double a22         = deformationGradientNext[1][1];
+    const double a23         = deformationGradientNext[1][2];
+    const double a31         = deformationGradientNext[2][0];
+    const double a32         = deformationGradientNext[2][1];
+    const double a33         = deformationGradientNext[2][2];
+    const double determinant = a11 * (a22 * a33 - a23 * a32) -
+                               a12 * (a21 * a33 - a23 * a31) +
+                               a13 * (a21 * a32 - a22 * a31);
+    AssertThrow(
+      determinant > 1e-3,
+      dealii::ExcMessage(
+        "Deformation gradient must have determinant greater than zero."));
 
     // deform fem mesh and reinit
     d_dftPtr->deformDomain(deformationGradient,
@@ -652,7 +675,9 @@ namespace dftfe
           .writeStructreEnergyForcesFileForPostProcess)
       {
         std::string fileName = "structureEnergyForcesGSData_cellRelaxStep" +
-                               std::to_string(d_totalUpdateCalls) + ".txt";
+                               std::to_string(d_totalUpdateCalls) + "_cycle" +
+                               std::to_string(d_cycle) + ".txt";
+
         d_dftPtr->writeStructureEnergyForcesDataPostProcess(fileName);
       }
   }
@@ -709,7 +734,7 @@ namespace dftfe
         stress[0] =
           (tempGradient[0][0] + tempGradient[1][1] + tempGradient[2][2]) / 3.0;
       }
-    for (int i = 0; i < stress.size(); ++i)
+    for (dftfe::Int i = 0; i < stress.size(); ++i)
       converged = converged && (std::abs(stress[i]) <
                                 d_dftPtr->getParametersObject().stressRelaxTol);
     return converged;
@@ -729,7 +754,7 @@ namespace dftfe
   }
 
 
-  std::vector<unsigned int>
+  std::vector<dftfe::uInt>
   geoOptCell::getUnknownCountFlag() const
   {
     AssertThrow(false, dftUtils::ExcNotImplementedYet());

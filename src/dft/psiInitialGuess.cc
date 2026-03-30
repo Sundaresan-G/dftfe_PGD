@@ -31,15 +31,12 @@
 
 namespace dftfe
 {
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::loadPSIFiles(
-    unsigned int  Z,
-    unsigned int  n,
-    unsigned int  l,
-    unsigned int &fileReadFlag)
+  dftClass<memorySpace>::loadPSIFiles(dftfe::uInt  Z,
+                                      dftfe::uInt  n,
+                                      dftfe::uInt  l,
+                                      dftfe::uInt &fileReadFlag)
   {
     if (radValues[Z][n].count(l) > 0)
       {
@@ -104,16 +101,16 @@ namespace dftfe
     //
     if (fileReadFlag > 0)
       {
-        double       maxTruncationRadius = 0.0;
-        unsigned int truncRowId          = 0;
+        double      maxTruncationRadius = 0.0;
+        dftfe::uInt truncRowId          = 0;
         if (!d_dftParamsPtr->reproducible_output)
           pcout << "reading data from file: " << psiFile << std::endl;
 
-        int                 numRows = values.size() - 1;
+        dftfe::Int          numRows = values.size() - 1;
         std::vector<double> xData(numRows), yData(numRows);
 
         // x
-        for (int irow = 0; irow < numRows; ++irow)
+        for (dftfe::Int irow = 0; irow < numRows; ++irow)
           {
             xData[irow] = values[irow][0];
           }
@@ -122,7 +119,7 @@ namespace dftfe
         x.setcontent(numRows, &xData[0]);
 
         // y
-        for (int irow = 0; irow < numRows; ++irow)
+        for (dftfe::Int irow = 0; irow < numRows; ++irow)
           {
             yData[irow] = values[irow][1];
 
@@ -151,17 +148,15 @@ namespace dftfe
   //
   // determine orbital ordering
   //
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::determineOrbitalFilling()
+  dftClass<memorySpace>::determineOrbitalFilling()
   {
     //
     // create a stencil following orbital filling order
     //
-    std::vector<unsigned int>              level;
-    std::vector<std::vector<unsigned int>> stencil;
+    std::vector<dftfe::uInt>              level;
+    std::vector<std::vector<dftfe::uInt>> stencil;
 
     // 1s
     level.clear();
@@ -266,26 +261,27 @@ namespace dftfe
 
 
 
-    const unsigned int numberGlobalAtoms  = atomLocations.size();
-    const int          numberImageCharges = d_imageIds.size();
-    const int totalNumberAtoms = numberGlobalAtoms + numberImageCharges;
+    const dftfe::uInt numberGlobalAtoms  = atomLocations.size();
+    const dftfe::Int  numberImageCharges = d_imageIds.size();
+    const dftfe::Int  totalNumberAtoms = numberGlobalAtoms + numberImageCharges;
+    const dftfe::uInt numWfcComponents =
+      (d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC ? 2 : 1);
+    dftfe::uInt errorReadFile            = 0;
+    dftfe::uInt fileReadFlag             = 0;
+    dftfe::uInt waveFunctionCount        = 0;
+    dftfe::uInt totalNumberWaveFunctions = d_numEigenValues;
 
-    unsigned int errorReadFile            = 0;
-    unsigned int fileReadFlag             = 0;
-    unsigned int waveFunctionCount        = 0;
-    unsigned int totalNumberWaveFunctions = d_numEigenValues;
-
-    for (std::vector<std::vector<unsigned int>>::iterator it = stencil.begin();
+    for (std::vector<std::vector<dftfe::uInt>>::iterator it = stencil.begin();
          it < stencil.end();
          it++)
       {
-        unsigned int n = (*it)[0], l = (*it)[1];
+        dftfe::uInt n = (*it)[0], l = (*it)[1];
 
-        for (int m = -l; m <= (int)l; m++)
+        for (dftfe::Int m = -l; m <= (dftfe::Int)l; m++)
           {
-            for (unsigned int iAtom = 0; iAtom < numberGlobalAtoms; iAtom++)
+            for (dftfe::uInt iAtom = 0; iAtom < numberGlobalAtoms; iAtom++)
               {
-                unsigned int Z = atomLocations[iAtom][0];
+                dftfe::uInt Z = atomLocations[iAtom][0];
 
                 //
                 // fill levels
@@ -312,18 +308,19 @@ namespace dftfe
                     temp.waveID = waveFunctionCount;
                     waveFunctionsVector.push_back(temp);
                     waveFunctionCount++;
-                    if (waveFunctionCount >= d_numEigenValues &&
+                    if (waveFunctionCount >=
+                          d_numEigenValues / numWfcComponents &&
                         waveFunctionCount >= numberGlobalAtoms)
                       break;
                   }
               }
 
-            if (waveFunctionCount >= d_numEigenValues &&
+            if (waveFunctionCount >= d_numEigenValues / numWfcComponents &&
                 waveFunctionCount >= numberGlobalAtoms)
               break;
           }
 
-        if (waveFunctionCount >= d_numEigenValues &&
+        if (waveFunctionCount >= d_numEigenValues / numWfcComponents &&
             waveFunctionCount >= numberGlobalAtoms)
           break;
 
@@ -332,9 +329,9 @@ namespace dftfe
       }
 
 
-    if (waveFunctionsVector.size() > d_numEigenValues)
+    if (waveFunctionsVector.size() > d_numEigenValues / numWfcComponents)
       {
-        d_numEigenValues = waveFunctionsVector.size();
+        d_numEigenValues = numWfcComponents * waveFunctionsVector.size();
       }
 
     pcout
@@ -365,16 +362,16 @@ namespace dftfe
   }
 
   //
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::readPSIRadialValues()
+  dftClass<memorySpace>::readPSIRadialValues()
   {
     const dealii::IndexSet &locallyOwnedSet = dofHandler.locally_owned_dofs();
-    std::vector<dealii::IndexSet::size_type> locallyOwnedDOFs;
-    locallyOwnedSet.fill_index_vector(locallyOwnedDOFs);
-    std::size_t numberDofs = locallyOwnedDOFs.size();
+    std::vector<dealii::IndexSet::size_type> locallyOwnedDOFs =
+      locallyOwnedSet.get_index_vector();
+    dftfe::uInt       numberDofs = locallyOwnedDOFs.size();
+    const dftfe::uInt numWfcComponents =
+      (d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC ? 2 : 1);
 
     std::fill(d_eigenVectorsFlattenedHost.begin(),
               d_eigenVectorsFlattenedHost.end(),
@@ -383,12 +380,13 @@ namespace dftfe
     const unsigned int numberBandGroups =
           dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
-    const unsigned int numberGlobalAtoms = atomLocations.size();
+    const dftfe::uInt numberGlobalAtoms = atomLocations.size();
 
     if (d_dftParamsPtr->verbosity >= 1)
       pcout
         << "Number of wavefunctions generated randomly to be used as initial guess for starting the SCF : "
-        << d_numEigenValues - waveFunctionsVector.size() << std::endl;
+        << d_numEigenValues - numWfcComponents * waveFunctionsVector.size()
+        << std::endl;
     //
     // loop over nodes
     //
@@ -405,8 +403,8 @@ namespace dftfe
          it < waveFunctionsVector.end();
          it++)
       {
-        const unsigned int chargeId = it->atomID;
-        dealii::Point<3>   atomCoord;
+        const dftfe::uInt chargeId = it->atomID;
+        dealii::Point<3>  atomCoord;
 
         if (chargeId < atomLocations.size())
           {
@@ -430,7 +428,8 @@ namespace dftfe
 
         if (boundingBoxTria.get_neighbor_type(boundingBoxAroundAtom) !=
             dealii::NeighborType::not_neighbors)
-          waveFunctionsVectorTruncated.push_back(*it);
+          ;
+        waveFunctionsVectorTruncated.push_back(*it);
       }
 
     boost::math::normal normDist;
@@ -441,7 +440,7 @@ namespace dftfe
       std::mt19937 randomIntGenerator(dealii::Utilities::MPI::this_mpi_process(intrapoolcomm) * d_nOMPThreads +
                                       omp_get_thread_num());
 #pragma omp for
-      for (std::size_t dof = 0; dof < numberDofs; dof++)
+      for (dftfe::uInt dof = 0; dof < numberDofs; dof++)
         {
           const dealii::types::global_dof_index dofID = locallyOwnedDOFs[dof];
           dealii::Point<3>                      node  = d_supportPoints[dofID];
@@ -450,14 +449,15 @@ namespace dftfe
               //
               // loop over wave functions
               //
-              for (int kPoint = 0;
-                   kPoint < (d_dftParamsPtr->reproducible_output ?
-                               ((1 + d_dftParamsPtr->spinPolarized) *
-                                d_kPointWeights.size()) :
-                               (1 + d_dftParamsPtr->spinPolarized));
-                   ++kPoint)
+              dftfe::uInt numKpoints = (d_dftParamsPtr->reproducible_output ?
+                                          ((1 + d_dftParamsPtr->spinPolarized) *
+                                           d_kPointWeights.size()) :
+                                          (1 + d_dftParamsPtr->spinPolarized));
+              if (d_dftParamsPtr->solverMode == "BANDS")
+                numKpoints = 1;
+              for (dftfe::Int kPoint = 0; kPoint < numKpoints; ++kPoint)
                 {
-                  // unsigned int waveFunction=0;
+                  // dftfe::uInt waveFunction=0;
                   for (std::vector<orbital>::iterator it =
                          waveFunctionsVectorTruncated.begin();
                        it < waveFunctionsVectorTruncated.end();
@@ -468,7 +468,7 @@ namespace dftfe
                       // globalChargeId (Fix me: Examine whether periodic image
                       // contributions have to be included or not) currently not
                       // including
-                      std::vector<int> imageIdsList;
+                      std::vector<dftfe::Int> imageIdsList;
                       if (d_dftParamsPtr->periodicX ||
                           d_dftParamsPtr->periodicY ||
                           d_dftParamsPtr->periodicZ)
@@ -481,8 +481,8 @@ namespace dftfe
                           imageIdsList.push_back(it->atomID);
                         }
 
-                      const unsigned int waveId = it->waveID;
-                      for (int iImageAtomCount = 0;
+                      const dftfe::uInt waveId = it->waveID;
+                      for (dftfe::Int iImageAtomCount = 0;
                            iImageAtomCount < imageIdsList.size();
                            ++iImageAtomCount)
                         {
@@ -490,7 +490,7 @@ namespace dftfe
                           // find coordinates of atom correspoding to this wave
                           // function and imageAtom
                           //
-                          int chargeId = imageIdsList[iImageAtomCount];
+                          dftfe::Int chargeId = imageIdsList[iImageAtomCount];
                           dealii::Point<3> atomCoord;
 
                           if (chargeId < numberGlobalAtoms)
@@ -543,7 +543,8 @@ namespace dftfe
                                       d_eigenVectorsFlattenedHost
                                         [kPoint * (d_numEigenValues/numberBandGroups) *
                                            numberDofs * 2 +
-                                         2 * dof * (d_numEigenValues/numberBandGroups) + waveId] +=
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         2 * waveId] +=
                                         dataTypes::number(
                                           R * boost::math::spherical_harmonic_r(
                                                 it->l, it->m, theta, phi));
@@ -551,8 +552,24 @@ namespace dftfe
                                         [kPoint * (d_numEigenValues/numberBandGroups) *
                                            numberDofs * 2 +
                                          2 * dof * (d_numEigenValues/numberBandGroups) +
-                                         (d_numEigenValues/numberBandGroups) + waveId] +=
+                                         (d_numEigenValues/numberBandGroups) + 2 * waveId] +=
                                         dataTypes::number(
+                                          R * boost::math::spherical_harmonic_r(
+                                                it->l, it->m, theta, phi));
+                                      d_eigenVectorsFlattenedHost
+                                        [kPoint * (d_numEigenValues/numberBandGroups) *
+                                           numberDofs * 2 +
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         2 * waveId + 1] +=
+                                        dataTypes::number(
+                                          R * boost::math::spherical_harmonic_r(
+                                                it->l, it->m, theta, phi));
+                                      d_eigenVectorsFlattenedHost
+                                        [kPoint * (d_numEigenValues/numberBandGroups) *
+                                           numberDofs * 2 +
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         (d_numEigenValues/numberBandGroups) + 2 * waveId + 1] +=
+                                        -dataTypes::number(
                                           R * boost::math::spherical_harmonic_r(
                                                 it->l, it->m, theta, phi));
                                     }
@@ -573,7 +590,8 @@ namespace dftfe
                                       d_eigenVectorsFlattenedHost
                                         [kPoint * (d_numEigenValues/numberBandGroups) *
                                            numberDofs * 2 +
-                                         2 * dof * (d_numEigenValues/numberBandGroups) + waveId] +=
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         2 * waveId] +=
                                         dataTypes::number(
                                           R *
                                           boost::math::spherical_harmonic_r(
@@ -583,8 +601,28 @@ namespace dftfe
                                         [kPoint * (d_numEigenValues/numberBandGroups) *
                                            numberDofs * 2 +
                                          2 * dof * (d_numEigenValues/numberBandGroups) +
-                                         (d_numEigenValues/numberBandGroups) + waveId] +=
+                                         (d_numEigenValues/numberBandGroups) + 2 * waveId] +=
                                         dataTypes::number(
+                                          R *
+                                          boost::math::spherical_harmonic_r(
+                                            it->l, it->m, theta, phi) /
+                                          std::sqrt(2.0));
+                                      d_eigenVectorsFlattenedHost
+                                        [kPoint * (d_numEigenValues/numberBandGroups) *
+                                           numberDofs * 2 +
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         2 * waveId + 1] +=
+                                        dataTypes::number(
+                                          R *
+                                          boost::math::spherical_harmonic_r(
+                                            it->l, it->m, theta, phi) /
+                                          std::sqrt(2.0));
+                                      d_eigenVectorsFlattenedHost
+                                        [kPoint * (d_numEigenValues/numberBandGroups) *
+                                           numberDofs * 2 +
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         (d_numEigenValues/numberBandGroups) + 2 * waveId + 1] +=
+                                        -dataTypes::number(
                                           R *
                                           boost::math::spherical_harmonic_r(
                                             it->l, it->m, theta, phi) /
@@ -606,7 +644,8 @@ namespace dftfe
                                       d_eigenVectorsFlattenedHost
                                         [kPoint * (d_numEigenValues/numberBandGroups) *
                                            numberDofs * 2 +
-                                         2 * dof * (d_numEigenValues/numberBandGroups) + waveId] +=
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         2 * waveId] +=
                                         dataTypes::number(
                                           R * boost::math::spherical_harmonic_r(
                                                 it->l, -(it->m), theta, phi));
@@ -614,8 +653,24 @@ namespace dftfe
                                         [kPoint * (d_numEigenValues/numberBandGroups) *
                                            numberDofs * 2 +
                                          2 * dof * (d_numEigenValues/numberBandGroups) +
-                                         (d_numEigenValues/numberBandGroups) + waveId] +=
+                                         (d_numEigenValues/numberBandGroups) + 2 * waveId] +=
                                         dataTypes::number(
+                                          R * boost::math::spherical_harmonic_r(
+                                                it->l, -(it->m), theta, phi));
+                                      d_eigenVectorsFlattenedHost
+                                        [kPoint * (d_numEigenValues/numberBandGroups) *
+                                           numberDofs * 2 +
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         2 * waveId + 1] +=
+                                        dataTypes::number(
+                                          R * boost::math::spherical_harmonic_r(
+                                                it->l, -(it->m), theta, phi));
+                                      d_eigenVectorsFlattenedHost
+                                        [kPoint * (d_numEigenValues/numberBandGroups) *
+                                           numberDofs * 2 +
+                                         2 * dof * (d_numEigenValues/numberBandGroups) +
+                                         (d_numEigenValues/numberBandGroups) + 2 * waveId + 1] +=
+                                        -dataTypes::number(
                                           R * boost::math::spherical_harmonic_r(
                                                 it->l, -(it->m), theta, phi));
                                     }
@@ -634,10 +689,12 @@ namespace dftfe
                     }
 
                   d_nonAtomicWaveFunctions = 0;
-                  if (waveFunctionsVector.size() < d_numEigenValues)
+                  if (waveFunctionsVector.size() <
+                      d_numEigenValues / numWfcComponents)
                     {
                       d_nonAtomicWaveFunctions =
-                        d_numEigenValues - waveFunctionsVector.size();
+                        d_numEigenValues -
+                        numWfcComponents * waveFunctionsVector.size();
 
                       //
                       // assign the rest of the wavefunctions using a standard
@@ -652,7 +709,8 @@ namespace dftfe
                             d_dftParamsPtr->hasSOC) ?
                              2 :
                              1);
-                      for (unsigned int iWave = waveFunctionsVector.size();
+                      for (dftfe::uInt iWave =
+                             waveFunctionsVector.size() * numWfcComponents;
                            iWave < (d_numEigenValues/numberBandGroups);
                            ++iWave)
                         {
@@ -709,10 +767,11 @@ namespace dftfe
 
     if (!d_dftParamsPtr->reproducible_output)
       {
-        for (unsigned int kPoint = 1;
-             kPoint <
-             (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
-             ++kPoint)
+        dftfe::uInt numKpoints =
+          (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
+        if (d_dftParamsPtr->solverMode == "BANDS")
+          numKpoints = 1;
+        for (dftfe::uInt kPoint = 1; kPoint < numKpoints; ++kPoint)
           {
             dataTypes::number *temp1 =
               d_eigenVectorsFlattenedHost.data() +
@@ -721,13 +780,13 @@ namespace dftfe
 
             dataTypes::number *temp2 = d_eigenVectorsFlattenedHost.data();
 
-            for (unsigned int idof = 0;
+            for (dftfe::uInt idof = 0;
                  idof <
                  numberDofs *
                    ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 :
                                                                            1);
                  idof++)
-              for (unsigned int iwave = 0; iwave < (d_numEigenValues/numberBandGroups); iwave++)
+              for (dftfe::uInt iwave = 0; iwave < (d_numEigenValues/numberBandGroups); iwave++)
                 temp1[idof * (d_numEigenValues/numberBandGroups) + iwave] =
                   temp2[idof * (d_numEigenValues/numberBandGroups) + iwave];
           }
@@ -747,11 +806,9 @@ namespace dftfe
   }
 
   //
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::readPSI()
+  dftClass<memorySpace>::readPSI()
   {
     computing_timer.enter_subsection("initialize wave functions");
     readPSIRadialValues();

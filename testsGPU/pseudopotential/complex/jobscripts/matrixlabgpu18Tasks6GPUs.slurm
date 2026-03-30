@@ -11,7 +11,9 @@ echo "Number of Nodes Allocated      = $SLURM_JOB_NUM_NODES"
 echo "Number of Tasks Allocated      = $SLURM_NTASKS"
 echo "Number of Cores/Task Allocated = $SLURM_CPUS_PER_TASK"
 
-module load cuda/12.6 openmpi/gcc13cuda126 modulefiles/compiler-rt/2025.0.4 modulefiles/tbb/2022.0 modulefiles/mkl/2025.0
+module load spack
+module load openmpi/5.0.6-gcc-13.3.0-ytficip nccl/2.23.4-1-gcc-13.3.0-xyspmp2 gdrcopy/2.4.1-gcc-13.3.0-dvwa323
+export LIBRARY_PATH="/storage/dftfeDependenciesNoMKL/linAlgLibs/install/lib:$LIBRARY_PATH"
 
 
 ###needs to change this DFTFE_PATH
@@ -38,6 +40,12 @@ mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileTiAl_mixedPrec.prm > out
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileFeCuPt2_scf.prm > outputFeCuPt2_scf
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileFeCuPt2_pdos.prm > outputFeCuPt2_pdos
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileBccFe_scf.prm > outputBccFe_scf
+mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileBccFe_scfConstraintMag.prm > outputBccFe_scfConstraintMag
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileBccFe_pdos.prm > outputBccFe_pdos
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileBccFe_relax.prm > outputBccFe_relax
-mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileBccFe_relaxFullMassMatrix.prm > outputBccFe_relaxFullMassMatrix
+mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileGaAs.prm > outputGaAs
+mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileGaAs_BANDS.prm > outputGaAs_bands
+mpirun -n 6  $DFTFE_PATH/dftfe parameterFileBccFe_relaxFullMassMatrix.prm > outputBccFe_relaxFullMassMatrix
+mpirun -n 6  $DFTFE_PATH/dftfe parameterFileBccFe_scan.prm > outputBccFe_scan
+mpirun -n 6  $DFTFE_PATH/dftfe parameterFileBccFe_scan_kerker.prm > outputBccFe_scan_kerker
+mpirun -n 6  $DFTFE_PATH/dftfe parameterFileBccFe_scan_useLibxcFalse.prm > outputBccFe_scan_useLibxcFalse

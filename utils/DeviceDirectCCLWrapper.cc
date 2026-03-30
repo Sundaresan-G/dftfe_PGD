@@ -23,7 +23,7 @@
 #  include <deviceDirectCCLWrapper.h>
 #  include <deviceKernelsGeneric.h>
 #  include <DeviceDataTypeOverloads.h>
-#  include <DeviceKernelLauncherConstants.h>
+#  include <DeviceKernelLauncherHelpers.h>
 #  include <DeviceAPICalls.h>
 #  include <Exceptions.h>
 #  if defined(DFTFE_WITH_CUDA_NCCL)
@@ -38,7 +38,9 @@ namespace dftfe
   {
     DeviceCCLWrapper::DeviceCCLWrapper()
       : d_mpiComm(MPI_COMM_NULL)
-    {}
+    {
+      d_deviceDirectDCCLInstanceCounter++;
+    }
 
     // Ensure that mpiCommDomain calls it first as static variables need to be initialized
     void
@@ -58,19 +60,6 @@ namespace dftfe
             MPI_Bcast(ncclIdPtr, sizeof(*ncclIdPtr), MPI_BYTE, 0, d_mpiComm));
           NCCLCHECK(
             ncclCommInitRank(ncclCommPtr, totalRanks, *ncclIdPtr, myRank));
-
-          // Make NCCL calls non-blocking
-          // ncclConfig_t config = NCCL_CONFIG_INITIALIZER;
-          // config.blocking = 0;
-          // NCCLCHECK(
-            // ncclCommInitRankConfig(ncclCommPtr, totalRanks, *ncclIdPtr, myRank, &config));
-
-          // ncclCommInitRankConfig(ncclCommPtr, totalRanks, *ncclIdPtr, myRank, &config);
-          // ncclResult_t state;
-          // do {
-          //   ncclCommGetAsyncError(*ncclCommPtr, &state);
-          // } while (state == ncclInProgress);
-
           ncclCommInit = true;
         }
 
@@ -89,7 +78,7 @@ namespace dftfe
 #  endif
       if (!commStreamCreated)
         {
-          dftfe::utils::deviceStreamCreate(&d_deviceCommStream, true);
+          dftfe::utils::deviceStreamCreate(d_deviceCommStream, true);
           commStreamCreated = true;
         }
     }
@@ -114,16 +103,16 @@ namespace dftfe
         delete ncclCommPvtPtr;
       }
 #  endif
-      if (commStreamCreated){
+      d_deviceDirectDCCLInstanceCounter--;
+      if (commStreamCreated && d_deviceDirectDCCLInstanceCounter == 0)
         dftfe::utils::deviceStreamDestroy(d_deviceCommStream);
         commStreamCreated = false;        
-      }
     }
 
-    int
-    DeviceCCLWrapper::deviceDirectAllReduceWrapper(const float *   send,
-                                                   float *         recv,
-                                                   int             size,
+    dftfe::Int
+    DeviceCCLWrapper::deviceDirectAllReduceWrapper(const float    *send,
+                                                   float          *recv,
+                                                   dftfe::Int      size,
                                                    deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
@@ -166,20 +155,324 @@ namespace dftfe
       return 0;
     }
 
+    dftfe::Int
+    DeviceCCLWrapper::deviceDirectAllReduceWrapper(const double   *send,
+                                                   double         *recv,
+                                                   dftfe::Int      size,
+                                                   deviceStream_t &stream)
+    {
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      if (ncclCommInit)
+        {
+
+          ncclComm_t comm = *ncclCommPtr;
+          if (dcclCommSelector != 0){
+            comm = *ncclCommPvtPtr;            
+          }
+
+          NCCLCHECK(ncclAllReduce((const void *)send,
+                                  (void *)recv,
+                                  size,
+                                  ncclDouble,
+                                  ncclSum,
+                                  comm,
+                                  stream));
+        }
+#  endif
+#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+      if (!ncclCommInit)
+        {
+          dftfe::utils::deviceStreamSynchronize(stream);
+          if (send == recv)
+            MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
+                                   recv,
+                                   size,
+                                   dataTypes::mpi_type_id(recv),
+                                   MPI_SUM,
+                                   d_mpiComm));
+          else
+            MPICHECK(MPI_Allreduce(send,
+                                   recv,
+                                   size,
+                                   dataTypes::mpi_type_id(recv),
+                                   MPI_SUM,
+                                   d_mpiComm));
+        }
+#  endif
+      return 0;
+    }
+
+
+    dftfe::Int
+    DeviceCCLWrapper::deviceDirectAllReduceWrapper(
+      const std::complex<double> *send,
+      std::complex<double>       *recv,
+      dftfe::Int                  size,
+      deviceStream_t             &stream)
+    {
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      if (ncclCommInit)
+        {
+
+          ncclComm_t comm = *ncclCommPtr;
+          if (dcclCommSelector != 0){
+            comm = *ncclCommPvtPtr;            
+          }
+
+          NCCLCHECK(ncclAllReduce((const void *)send,
+                                  (void *)recv,
+                                  size * 2,
+                                  ncclDouble,
+                                  ncclSum,
+                                  comm,
+                                  stream));
+        }
+#  endif
+#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+      if (!ncclCommInit)
+        {
+          dftfe::utils::deviceStreamSynchronize(stream);
+          if (send == recv)
+            MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
+                                   recv,
+                                   size,
+                                   dataTypes::mpi_type_id(recv),
+                                   MPI_SUM,
+                                   d_mpiComm));
+          else
+            MPICHECK(MPI_Allreduce(send,
+                                   recv,
+                                   size,
+                                   dataTypes::mpi_type_id(recv),
+                                   MPI_SUM,
+                                   d_mpiComm));
+        }
+#  endif
+
+
+      return 0;
+    }
+
+    dftfe::Int
+    DeviceCCLWrapper::deviceDirectAllReduceWrapper(
+      const std::complex<float> *send,
+      std::complex<float>       *recv,
+      dftfe::Int                 size,
+      deviceStream_t            &stream)
+    {
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      if (ncclCommInit)
+        {
+
+          ncclComm_t comm = *ncclCommPtr;
+          if (dcclCommSelector != 0){
+            comm = *ncclCommPvtPtr;            
+          }
+          
+          NCCLCHECK(ncclAllReduce((const void *)send,
+                                  (void *)recv,
+                                  size * 2,
+                                  ncclFloat,
+                                  ncclSum,
+                                  comm,
+                                  stream));
+        }
+#  endif
+#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+      if (!ncclCommInit)
+        {
+          dftfe::utils::deviceStreamSynchronize(stream);
+          if (send == recv)
+            MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
+                                   recv,
+                                   size,
+                                   dataTypes::mpi_type_id(recv),
+                                   MPI_SUM,
+                                   d_mpiComm));
+          else
+            MPICHECK(MPI_Allreduce(send,
+                                   recv,
+                                   size,
+                                   dataTypes::mpi_type_id(recv),
+                                   MPI_SUM,
+                                   d_mpiComm));
+        }
+#  endif
+
+      return 0;
+    }
+
+
+    dftfe::Int
+    DeviceCCLWrapper::deviceDirectAllReduceMixedPrecGroupWrapper(
+      const double   *send1,
+      const float    *send2,
+      double         *recv1,
+      float          *recv2,
+      dftfe::Int      size1,
+      dftfe::Int      size2,
+      deviceStream_t &stream)
+    {
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      if (ncclCommInit)
+        {
+
+          ncclComm_t comm = *ncclCommPtr;
+          if (dcclCommSelector != 0){
+            comm = *ncclCommPvtPtr;            
+          }
+
+          NCCLCHECK(ncclGroupStart());
+          NCCLCHECK(ncclAllReduce((const void *)send1,
+                                  (void *)recv1,
+                                  size1,
+                                  ncclDouble,
+                                  ncclSum,
+                                  comm,
+                                  stream));
+          NCCLCHECK(ncclAllReduce((const void *)send2,
+                                  (void *)recv2,
+                                  size2,
+                                  ncclFloat,
+                                  ncclSum,
+                                  comm,
+                                  stream));
+          NCCLCHECK(ncclGroupEnd());
+        }
+#  endif
+#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+      if (!ncclCommInit)
+        {
+          dftfe::utils::deviceStreamSynchronize(stream);
+          if (send1 == recv1 && send2 == recv2)
+            {
+              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
+                                     recv1,
+                                     size1,
+                                     dataTypes::mpi_type_id(recv1),
+                                     MPI_SUM,
+                                     d_mpiComm));
+
+              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
+                                     recv2,
+                                     size2,
+                                     dataTypes::mpi_type_id(recv2),
+                                     MPI_SUM,
+                                     d_mpiComm));
+            }
+          else
+            {
+              MPICHECK(MPI_Allreduce(send1,
+                                     recv1,
+                                     size1,
+                                     dataTypes::mpi_type_id(recv1),
+                                     MPI_SUM,
+                                     d_mpiComm));
+
+              MPICHECK(MPI_Allreduce(send2,
+                                     recv2,
+                                     size2,
+                                     dataTypes::mpi_type_id(recv2),
+                                     MPI_SUM,
+                                     d_mpiComm));
+            }
+        }
+#  endif
+      return 0;
+    }
+
+    dftfe::Int
+    DeviceCCLWrapper::deviceDirectAllReduceMixedPrecGroupWrapper(
+      const std::complex<double> *send1,
+      const std::complex<float>  *send2,
+      std::complex<double>       *recv1,
+      std::complex<float>        *recv2,
+      dftfe::Int                  size1,
+      dftfe::Int                  size2,
+      deviceStream_t             &stream)
+    {
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      if (ncclCommInit)
+        {
+
+          ncclComm_t comm = *ncclCommPtr;
+          if (dcclCommSelector != 0){
+            comm = *ncclCommPvtPtr;            
+          }
+
+          NCCLCHECK(ncclGroupStart());
+          NCCLCHECK(ncclAllReduce((const void *)send1,
+                                  (void *)recv1,
+                                  size1 * 2,
+                                  ncclDouble,
+                                  ncclSum,
+                                  comm,
+                                  stream));
+          NCCLCHECK(ncclAllReduce((const void *)send2,
+                                  (void *)recv2,
+                                  size2 * 2,
+                                  ncclFloat,
+                                  ncclSum,
+                                  comm,
+                                  stream));
+          NCCLCHECK(ncclGroupEnd());
+        }
+#  endif
+#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+      if (!ncclCommInit)
+        {
+          dftfe::utils::deviceStreamSynchronize(stream);
+          if (send1 == recv1 && send2 == recv2)
+            {
+              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
+                                     recv1,
+                                     size1,
+                                     dataTypes::mpi_type_id(recv1),
+                                     MPI_SUM,
+                                     d_mpiComm));
+
+              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
+                                     recv2,
+                                     size2,
+                                     dataTypes::mpi_type_id(recv2),
+                                     MPI_SUM,
+                                     d_mpiComm));
+            }
+          else
+            {
+              MPICHECK(MPI_Allreduce(send1,
+                                     recv1,
+                                     size1,
+                                     dataTypes::mpi_type_id(recv1),
+                                     MPI_SUM,
+                                     d_mpiComm));
+
+              MPICHECK(MPI_Allreduce(send2,
+                                     recv2,
+                                     size2,
+                                     dataTypes::mpi_type_id(recv2),
+                                     MPI_SUM,
+                                     d_mpiComm));
+            }
+        }
+#  endif
+      return 0;
+    }
+
     template <typename NumberType>
     int
     DeviceCCLWrapper::deviceDirectAllToAllWrapper(const NumberType *        send,
-                                                  size_t         sendCount,
+                                                  dftfe::uInt         sendCount,
                                                   NumberType *              recv,
-                                                  size_t         recvCount,
+                                                  dftfe::uInt         recvCount,
                                                   deviceStream_t stream /*= 0*/,
                                                   bool useDCCL /*= true*/)
     {
       unsigned int sendTo = myRank;
       unsigned int recvFrom = myRank;
 
-      size_t sendOffset = (size_t)sendTo * sendCount;
-      size_t recvOffset = (size_t)recvFrom * recvCount;
+      dftfe::uInt sendOffset = (dftfe::uInt)sendTo * sendCount;
+      dftfe::uInt recvOffset = (dftfe::uInt)recvFrom * recvCount;
 
       // use D2D copy for the first one
       dftfe::utils::deviceMemcpyAsyncD2D(
@@ -292,8 +585,8 @@ namespace dftfe
               recvFrom += (totalRanks - i);
               recvFrom %= totalRanks;
 
-              sendOffset = (size_t)sendTo * sendCount;
-              recvOffset = (size_t)recvFrom * recvCount;
+              sendOffset = (dftfe::uInt)sendTo * sendCount;
+              recvOffset = (dftfe::uInt)recvFrom * recvCount;
 
               // Printing line and file to show no error
               // {
@@ -376,8 +669,8 @@ namespace dftfe
               recvFrom += (totalRanks - i);
               recvFrom %= totalRanks;
 
-              sendOffset = (size_t)sendTo * sendCount;
-              recvOffset = (size_t)recvFrom * recvCount;
+              sendOffset = (dftfe::uInt)sendTo * sendCount;
+              recvOffset = (dftfe::uInt)recvFrom * recvCount;
 
               // if (sendOffset + sendCount > totalNumRows * totalNumCols)
               //   sendCount = totalNumRows * totalNumCols - sendOffset;
@@ -412,393 +705,14 @@ namespace dftfe
     }
 
     // initialize alltoall templates
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, size_t sendCount, double * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, dftfe::uInt sendCount, double * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, size_t sendCount, float * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, dftfe::uInt sendCount, float * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<double> * send, size_t sendCount, std::complex<double> * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<double> * send, dftfe::uInt sendCount, std::complex<double> * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<float> * send, size_t sendCount, std::complex<float> * recv, size_t recvCount, deviceStream_t stream, bool useDCCL);
+    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<float> * send, dftfe::uInt sendCount, std::complex<float> * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
 
-
-    int
-    DeviceCCLWrapper::deviceDirectAllReduceWrapper(const double *  send,
-                                                   double *        recv,
-                                                   int             size,
-                                                   deviceStream_t &stream)
-    {
-#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (ncclCommInit)
-        {
-
-          ncclComm_t comm = *ncclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
-          }
-
-          NCCLCHECK(ncclAllReduce((const void *)send,
-                                  (void *)recv,
-                                  size,
-                                  ncclDouble,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-        }
-#  endif
-#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
-      if (!ncclCommInit)
-        {
-          dftfe::utils::deviceStreamSynchronize(stream);
-          if (send == recv)
-            MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
-                                   recv,
-                                   size,
-                                   dataTypes::mpi_type_id(recv),
-                                   MPI_SUM,
-                                   d_mpiComm));
-          else
-            MPICHECK(MPI_Allreduce(send,
-                                   recv,
-                                   size,
-                                   dataTypes::mpi_type_id(recv),
-                                   MPI_SUM,
-                                   d_mpiComm));
-        }
-#  endif
-      return 0;
-    }
-
-
-    int
-    DeviceCCLWrapper::deviceDirectAllReduceWrapper(
-      const std::complex<double> *send,
-      std::complex<double> *      recv,
-      int                         size,
-      double *                    tempReal,
-      double *                    tempImag,
-      deviceStream_t &            stream)
-    {
-#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (ncclCommInit)
-        {
-          ncclComm_t comm = *ncclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
-          }
-
-          deviceKernelsGeneric::copyComplexArrToRealArrsDevice(size,
-                                                               send,
-                                                               tempReal,
-                                                               tempImag);
-          NCCLCHECK(ncclGroupStart());
-          NCCLCHECK(ncclAllReduce((const void *)tempReal,
-                                  (void *)tempReal,
-                                  size,
-                                  ncclDouble,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclAllReduce((const void *)tempImag,
-                                  (void *)tempImag,
-                                  size,
-                                  ncclDouble,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclGroupEnd());
-
-          deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size,
-                                                               tempReal,
-                                                               tempImag,
-                                                               recv);
-        }
-#  endif
-#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
-      if (!ncclCommInit)
-        {
-          dftfe::utils::deviceStreamSynchronize(stream);
-          if (send == recv)
-            MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
-                                   recv,
-                                   size,
-                                   dataTypes::mpi_type_id(recv),
-                                   MPI_SUM,
-                                   d_mpiComm));
-          else
-            MPICHECK(MPI_Allreduce(send,
-                                   recv,
-                                   size,
-                                   dataTypes::mpi_type_id(recv),
-                                   MPI_SUM,
-                                   d_mpiComm));
-        }
-#  endif
-
-
-      return 0;
-    }
-
-    int
-    DeviceCCLWrapper::deviceDirectAllReduceWrapper(
-      const std::complex<float> *send,
-      std::complex<float> *      recv,
-      int                        size,
-      float *                    tempReal,
-      float *                    tempImag,
-      deviceStream_t &           stream)
-    {
-#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (ncclCommInit)
-        {
-
-          ncclComm_t comm = *ncclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
-          }
-          deviceKernelsGeneric::copyComplexArrToRealArrsDevice(size,
-                                                               send,
-                                                               tempReal,
-                                                               tempImag);
-          NCCLCHECK(ncclGroupStart());
-          NCCLCHECK(ncclAllReduce((const void *)tempReal,
-                                  (void *)tempReal,
-                                  size,
-                                  ncclFloat,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclAllReduce((const void *)tempImag,
-                                  (void *)tempImag,
-                                  size,
-                                  ncclFloat,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclGroupEnd());
-          deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size,
-                                                               tempReal,
-                                                               tempImag,
-                                                               recv);
-        }
-#  endif
-#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
-      if (!ncclCommInit)
-        {
-          dftfe::utils::deviceStreamSynchronize(stream);
-          if (send == recv)
-            MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
-                                   recv,
-                                   size,
-                                   dataTypes::mpi_type_id(recv),
-                                   MPI_SUM,
-                                   d_mpiComm));
-          else
-            MPICHECK(MPI_Allreduce(send,
-                                   recv,
-                                   size,
-                                   dataTypes::mpi_type_id(recv),
-                                   MPI_SUM,
-                                   d_mpiComm));
-        }
-#  endif
-
-      return 0;
-    }
-
-
-    int
-    DeviceCCLWrapper::deviceDirectAllReduceMixedPrecGroupWrapper(
-      const double *  send1,
-      const float *   send2,
-      double *        recv1,
-      float *         recv2,
-      int             size1,
-      int             size2,
-      deviceStream_t &stream)
-    {
-#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (ncclCommInit)
-        {
-
-          ncclComm_t comm = *ncclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
-          }
-
-          NCCLCHECK(ncclGroupStart());
-          NCCLCHECK(ncclAllReduce((const void *)send1,
-                                  (void *)recv1,
-                                  size1,
-                                  ncclDouble,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclAllReduce((const void *)send2,
-                                  (void *)recv2,
-                                  size2,
-                                  ncclFloat,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclGroupEnd());
-        }
-#  endif
-#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
-      if (!ncclCommInit)
-        {
-          dftfe::utils::deviceStreamSynchronize(stream);
-          if (send1 == recv1 && send2 == recv2)
-            {
-              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
-                                     recv1,
-                                     size1,
-                                     dataTypes::mpi_type_id(recv1),
-                                     MPI_SUM,
-                                     d_mpiComm));
-
-              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
-                                     recv2,
-                                     size2,
-                                     dataTypes::mpi_type_id(recv2),
-                                     MPI_SUM,
-                                     d_mpiComm));
-            }
-          else
-            {
-              MPICHECK(MPI_Allreduce(send1,
-                                     recv1,
-                                     size1,
-                                     dataTypes::mpi_type_id(recv1),
-                                     MPI_SUM,
-                                     d_mpiComm));
-
-              MPICHECK(MPI_Allreduce(send2,
-                                     recv2,
-                                     size2,
-                                     dataTypes::mpi_type_id(recv2),
-                                     MPI_SUM,
-                                     d_mpiComm));
-            }
-        }
-#  endif
-      return 0;
-    }
-
-    int
-    DeviceCCLWrapper::deviceDirectAllReduceMixedPrecGroupWrapper(
-      const std::complex<double> *send1,
-      const std::complex<float> * send2,
-      std::complex<double> *      recv1,
-      std::complex<float> *       recv2,
-      int                         size1,
-      int                         size2,
-      double *                    tempReal1,
-      float *                     tempReal2,
-      double *                    tempImag1,
-      float *                     tempImag2,
-      deviceStream_t &            stream)
-    {
-#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (ncclCommInit)
-        {
-
-          ncclComm_t comm = *ncclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
-          }
-
-          deviceKernelsGeneric::copyComplexArrToRealArrsDevice(size1,
-                                                               send1,
-                                                               tempReal1,
-                                                               tempImag1);
-
-          deviceKernelsGeneric::copyComplexArrToRealArrsDevice(size2,
-                                                               send2,
-                                                               tempReal2,
-                                                               tempImag2);
-
-          NCCLCHECK(ncclGroupStart());
-          NCCLCHECK(ncclAllReduce((const void *)tempReal1,
-                                  (void *)tempReal1,
-                                  size1,
-                                  ncclDouble,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclAllReduce((const void *)tempImag1,
-                                  (void *)tempImag1,
-                                  size1,
-                                  ncclDouble,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclAllReduce((const void *)tempReal2,
-                                  (void *)tempReal2,
-                                  size2,
-                                  ncclFloat,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclAllReduce((const void *)tempImag2,
-                                  (void *)tempImag2,
-                                  size2,
-                                  ncclFloat,
-                                  ncclSum,
-                                  comm,
-                                  stream));
-          NCCLCHECK(ncclGroupEnd());
-
-          deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size1,
-                                                               tempReal1,
-                                                               tempImag1,
-                                                               recv1);
-
-          deviceKernelsGeneric::copyRealArrsToComplexArrDevice(size2,
-                                                               tempReal2,
-                                                               tempImag2,
-                                                               recv2);
-        }
-#  endif
-#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
-      if (!ncclCommInit)
-        {
-          dftfe::utils::deviceStreamSynchronize(stream);
-          if (send1 == recv1 && send2 == recv2)
-            {
-              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
-                                     recv1,
-                                     size1,
-                                     dataTypes::mpi_type_id(recv1),
-                                     MPI_SUM,
-                                     d_mpiComm));
-
-              MPICHECK(MPI_Allreduce(MPI_IN_PLACE,
-                                     recv2,
-                                     size2,
-                                     dataTypes::mpi_type_id(recv2),
-                                     MPI_SUM,
-                                     d_mpiComm));
-            }
-          else
-            {
-              MPICHECK(MPI_Allreduce(send1,
-                                     recv1,
-                                     size1,
-                                     dataTypes::mpi_type_id(recv1),
-                                     MPI_SUM,
-                                     d_mpiComm));
-
-              MPICHECK(MPI_Allreduce(send2,
-                                     recv2,
-                                     size2,
-                                     dataTypes::mpi_type_id(recv2),
-                                     MPI_SUM,
-                                     d_mpiComm));
-            }
-        }
-#  endif
-      return 0;
-    }
   } // namespace utils
 } // namespace dftfe
 #endif

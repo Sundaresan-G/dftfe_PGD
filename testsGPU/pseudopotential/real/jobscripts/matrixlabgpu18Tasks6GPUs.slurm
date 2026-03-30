@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 #SBATCH --job-name=GPUcTestReal             # Job name
 #SBATCH --ntasks-per-node=18                # Number of tasks per node
 #SBATCH --nodes=1
@@ -12,11 +11,12 @@ echo "Number of Nodes Allocated      = $SLURM_JOB_NUM_NODES"
 echo "Number of Tasks Allocated      = $SLURM_NTASKS"
 echo "Number of Cores/Task Allocated = $SLURM_CPUS_PER_TASK"
 
-module load cuda/12.6 openmpi/gcc13cuda126 modulefiles/compiler-rt/2025.0.4 modulefiles/tbb/2022.0 modulefiles/mkl/2025.0
-module load cuda/12.6 openmpi/gcc13cuda126 modulefiles/compiler-rt/2025.0.4 modulefiles/tbb/2022.0 modulefiles/mkl/2025.0
+module load spack
+module load openmpi/5.0.6-gcc-13.3.0-ytficip nccl/2.23.4-1-gcc-13.3.0-xyspmp2 gdrcopy/2.4.1-gcc-13.3.0-dvwa323
+export LIBRARY_PATH="/storage/dftfeDependenciesNoMKL/linAlgLibs/install/lib:$LIBRARY_PATH"
+
 
 ###needs to change this DFTFE_PATH
-export DFTFE_PATH=/home/kartickr/dftfe_development/DFTFE_MinvHX/build/release/real/
 export DFTFE_PATH=/home/kartickr/dftfe_development/DFTFE_MinvHX/build/release/real/
 export UCX_LOG_LEVEL=ERROR
 export OMP_NUM_THREADS=1
@@ -41,6 +41,7 @@ mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileMg2x_17.prm > outputMg2x
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFileBe.prm > outputBe
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFile_LLZO.prm > outputLLZO
 mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFile_ReS2.prm > outputReS2
+mpirun -n $SLURM_NTASKS  $DFTFE_PATH/dftfe parameterFile_ReS2FullMassMatrix.prm > outputReS2FullMassMatrix
 
 mpirun -n 6  $DFTFE_PATH/dftfe parameterFileN2_1.prm > outputN2_1
 mpirun -n 6  $DFTFE_PATH/dftfe parameterFileN2_2.prm > outputN2_2

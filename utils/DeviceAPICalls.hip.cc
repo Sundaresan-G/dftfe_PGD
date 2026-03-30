@@ -21,7 +21,8 @@
 #  include <stdio.h>
 #  include <vector>
 #  include <DeviceDataTypeOverloads.h>
-#  include <DeviceKernelLauncherConstants.h>
+#  include <DeviceTypeConfigHalfPrec.h>
+#  include <DeviceKernelLauncherHelpers.h>
 #  include <Exceptions.h>
 namespace dftfe
 {
@@ -133,12 +134,12 @@ namespace dftfe
     deviceSetValue(long int *devPtr, long int value, std::size_t size, deviceStream_t stream);
 
     template void
-    deviceSetValue(size_type *devPtr, size_type value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(unsigned int *devPtr, unsigned int value, std::size_t size, deviceStream_t stream);
 
     template void
-    deviceSetValue(global_size_type *devPtr,
-                   global_size_type  value,
-                   std::size_t       size,
+    deviceSetValue(unsigned long int *devPtr,
+                   unsigned long int  value,
+                   std::size_t        size,
                    deviceStream_t stream);
 
     template void
@@ -157,6 +158,15 @@ namespace dftfe
     deviceSetValue(std::complex<double> *devPtr,
                    std::complex<double>  value,
                    std::size_t           size,
+                   deviceStream_t stream);
+
+    template void
+    deviceSetValue(uint16_t *devPtr, uint16_t value, std::size_t size, deviceStream_t stream);
+
+    template void
+    deviceSetValue(std::complex<uint16_t> *devPtr,
+                   std::complex<uint16_t>  value,
+                   std::size_t             size,
                    deviceStream_t stream);
 
     deviceError_t
@@ -208,7 +218,7 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceMemcpyD2H_2D(void *      dst,
+    deviceMemcpyD2H_2D(void       *dst,
                        std::size_t dpitch,
                        const void *src,
                        std::size_t spitch,
@@ -223,7 +233,7 @@ namespace dftfe
 
 
     deviceError_t
-    deviceMemcpyD2D_2D(void *      dst,
+    deviceMemcpyD2D_2D(void       *dst,
                        std::size_t dpitch,
                        const void *src,
                        std::size_t spitch,
@@ -237,7 +247,7 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceMemcpyH2D_2D(void *      dst,
+    deviceMemcpyH2D_2D(void       *dst,
                        std::size_t dpitch,
                        const void *src,
                        std::size_t spitch,
@@ -259,8 +269,8 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceMemcpyAsyncD2H(void *         dst,
-                         const void *   src,
+    deviceMemcpyAsyncD2H(void          *dst,
+                         const void    *src,
                          std::size_t    count,
                          deviceStream_t stream)
     {
@@ -271,8 +281,8 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceMemcpyAsyncD2D(void *         dst,
-                         const void *   src,
+    deviceMemcpyAsyncD2D(void          *dst,
+                         const void    *src,
                          std::size_t    count,
                          deviceStream_t stream)
     {
@@ -283,8 +293,8 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceMemcpyAsyncH2D(void *         dst,
-                         const void *   src,
+    deviceMemcpyAsyncH2D(void          *dst,
+                         const void    *src,
                          std::size_t    count,
                          deviceStream_t stream)
     {
@@ -295,11 +305,11 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceStreamCreate(deviceStream_t *pStream, const bool nonBlocking)
+    deviceStreamCreate(deviceStream_t &pStream, const bool nonBlocking)
     {
       if (!nonBlocking)
         {
-          deviceError_t err = hipStreamCreate(pStream);
+          deviceError_t err = hipStreamCreate(&pStream);
           DEVICE_API_CHECK(err);
           return err;
         }
@@ -307,7 +317,7 @@ namespace dftfe
         {
           int priority;
           hipDeviceGetStreamPriorityRange(NULL, &priority);
-          deviceError_t err = hipStreamCreateWithPriority(pStream,
+          deviceError_t err = hipStreamCreateWithPriority(&pStream,
                                                           hipStreamNonBlocking,
                                                           priority);
           DEVICE_API_CHECK(err);
@@ -316,7 +326,7 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceStreamDestroy(deviceStream_t stream)
+    deviceStreamDestroy(deviceStream_t &stream)
     {
       deviceError_t err = hipStreamDestroy(stream);
       DEVICE_API_CHECK(err);
@@ -324,7 +334,7 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceStreamSynchronize(deviceStream_t stream)
+    deviceStreamSynchronize(deviceStream_t &stream)
     {
       deviceError_t err = hipStreamSynchronize(stream);
       DEVICE_API_CHECK(err);
@@ -332,15 +342,15 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceEventCreate(deviceEvent_t *pEvent)
+    deviceEventCreate(deviceEvent_t &pEvent)
     {
-      deviceError_t err = hipEventCreate(pEvent);
+      deviceError_t err = hipEventCreate(&pEvent);
       DEVICE_API_CHECK(err);
       return err;
     }
 
     deviceError_t
-    deviceEventDestroy(deviceEvent_t event)
+    deviceEventDestroy(deviceEvent_t &event)
     {
       deviceError_t err = hipEventDestroy(event);
       DEVICE_API_CHECK(err);
@@ -348,7 +358,7 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceEventRecord(deviceEvent_t event, deviceStream_t stream)
+    deviceEventRecord(deviceEvent_t &event, deviceStream_t stream)
     {
       deviceError_t err = hipEventRecord(event, stream);
       DEVICE_API_CHECK(err);
@@ -356,7 +366,7 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceEventSynchronize(deviceEvent_t event)
+    deviceEventSynchronize(deviceEvent_t &event)
     {
       deviceError_t err = hipEventSynchronize(event);
       DEVICE_API_CHECK(err);
@@ -364,9 +374,9 @@ namespace dftfe
     }
 
     deviceError_t
-    deviceStreamWaitEvent(deviceStream_t stream,
-                          deviceEvent_t  event,
-                          unsigned int   flags)
+    deviceStreamWaitEvent(deviceStream_t &stream,
+                          deviceEvent_t  &event,
+                          unsigned int    flags)
     {
       deviceError_t err = hipStreamWaitEvent(stream, event, flags);
       DEVICE_API_CHECK(err);

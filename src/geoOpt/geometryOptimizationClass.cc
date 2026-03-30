@@ -30,9 +30,9 @@ namespace dftfe
   geometryOptimizationClass::geometryOptimizationClass(
     const std::string parameter_file,
     const std::string restartFilesPath,
-    const MPI_Comm &  mpi_comm_parent,
+    const MPI_Comm   &mpi_comm_parent,
     const bool        restart,
-    const int         verbosity,
+    const dftfe::Int  verbosity,
     const bool        useDevice)
     : d_mpiCommParent(mpi_comm_parent)
     , pcout(std::cout,
@@ -41,12 +41,12 @@ namespace dftfe
     , d_restartFilesPath(restartFilesPath)
     , d_verbosity(verbosity)
   {
-    init(parameter_file, useDevice);
     if (d_restartFilesPath != "." &&
         dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
       {
         mkdir(d_restartFilesPath.c_str(), ACCESSPERMS);
       }
+    init(parameter_file, useDevice);
   }
 
   void
@@ -63,7 +63,7 @@ namespace dftfe
                            optData,
                            d_restartFilesPath +
                              "/optRestart/geometryOptimization.dat");
-        d_optMode              = (int)optData[0][0];
+        d_optMode              = (dftfe::Int)optData[0][0];
         bool        isPeriodic = optData[1][0] > 1e-6;
         std::string chkPath    = d_restartFilesPath + "/optRestart/";
         dftUtils::readFile(1, tmp, chkPath + "/cycle.chk");
@@ -72,9 +72,9 @@ namespace dftfe
         tmp.clear();
         dftUtils::readFile(1, tmp, chkPath + "/status.chk");
         d_status = tmp[0][0];
-        int  lastSavedStep;
-        bool restartFilesFound = false;
-        bool scfRestart        = true;
+        dftfe::Int lastSavedStep;
+        bool       restartFilesFound = false;
+        bool       scfRestart        = true;
         if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
           {
             while (d_cycle >= 0)
@@ -134,7 +134,7 @@ namespace dftfe
                   }
               }
           }
-        std::vector<int> broadcastData(5, 0);
+        std::vector<dftfe::Int> broadcastData(5, 0);
         if (dealii::Utilities::MPI::this_mpi_process(d_mpiCommParent) == 0)
           {
             broadcastData[0] = restartFilesFound ? 1 : 0;
@@ -143,7 +143,11 @@ namespace dftfe
             broadcastData[3] = d_cycle;
             broadcastData[4] = scfRestart ? 1 : 0;
           }
-        MPI_Bcast(broadcastData.data(), 5, MPI_INT, 0, d_mpiCommParent);
+        MPI_Bcast(broadcastData.data(),
+                  5,
+                  dftfe::dataTypes::mpi_type_id(broadcastData.data()),
+                  0,
+                  d_mpiCommParent);
         restartFilesFound = broadcastData[0] > 0;
         lastSavedStep     = broadcastData[1];
         d_status          = broadcastData[2];
@@ -153,9 +157,9 @@ namespace dftfe
                       std::to_string(d_cycle) +
                       (d_status == 0 ? "/ionRelax/step" : "/cellRelax/step") +
                       std::to_string(lastSavedStep);
-        coordinatesFile = isPeriodic ?
-                            restartPath + "/atomsFracCoordCurrent.chk" :
-                            restartPath + "/atomsCartCoordCurrent.chk";
+        coordinatesFile   = isPeriodic ?
+                              restartPath + "/atomsFracCoordCurrent.chk" :
+                              restartPath + "/atomsCartCoordCurrent.chk";
         domainVectorsFile = restartPath + "/domainBoundingVectorsCurrent.chk";
         if (!restartFilesFound)
           {
@@ -263,14 +267,20 @@ namespace dftfe
         if (d_cycle == 0 && !d_isRestart)
           {
             d_dftPtr->solve(true, true, false);
+            if (d_dftPtr->getParametersObject()
+                  .writeStructreEnergyForcesFileForPostProcess)
+              {
+                std::string fileName = "structureEnergyForcesGSData_0.txt";
+                d_dftPtr->writeStructureEnergyForcesDataPostProcess(fileName);
+              }
           }
 
         if (d_status == 0)
           {
             if (d_dftPtr->getParametersObject().verbosity >= 1)
               pcout << "Starting ion optimization" << std::endl;
-            d_geoOptIonPtr->init(restartPath);
-            int geoOptStatus = d_geoOptIonPtr->run();
+            d_geoOptIonPtr->init(restartPath, d_cycle);
+            dftfe::Int geoOptStatus = d_geoOptIonPtr->run();
             if (d_optMode == 0)
               {
                 isConverged = geoOptStatus >= 0;
@@ -291,14 +301,17 @@ namespace dftfe
                                       d_mpiCommParent);
         if (d_optMode == 2 && d_status == 1)
           {
-            d_dftPtr->trivialSolveForStress();
+            if (!d_isRestart)
+              d_dftPtr->trivialSolveForStress();
+            else
+              d_dftPtr->solve(false, true);
           }
         if (d_status == 1)
           {
             if (d_dftPtr->getParametersObject().verbosity >= 1)
               pcout << "Starting cell optimization" << std::endl;
-            d_geoOptCellPtr->init(restartPath);
-            int geoOptStatus = d_geoOptCellPtr->run();
+            d_geoOptCellPtr->init(restartPath, d_cycle);
+            dftfe::Int geoOptStatus = d_geoOptCellPtr->run();
             if (d_optMode == 1)
               {
                 isConverged = geoOptStatus >= 0;
@@ -313,6 +326,7 @@ namespace dftfe
                 ++d_cycle;
               }
           }
+        d_isRestart = false;
       }
   }
 

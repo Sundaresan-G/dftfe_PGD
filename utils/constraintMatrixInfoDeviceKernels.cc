@@ -1,4 +1,5 @@
 #include "constraintMatrixInfoDeviceKernels.h"
+#include <BLASWrapper.h>
 
 namespace dftfe
 {
@@ -7,787 +8,768 @@ namespace dftfe
   {
     namespace
     {
-      __global__ void
-      distributeKernel(
-        const unsigned int  contiguousBlockSize,
-        double *            xVec,
-        const unsigned int *constraintLocalRowIdsUnflattened,
-        const unsigned int  numConstraints,
-        const unsigned int *constraintRowSizes,
-        const unsigned int *constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened,
-        const double *      inhomogenities)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
 
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            xVec[xVecStartingIdRow + intraBlockIndex] =
-              inhomogenities[blockIndex];
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                xVec[xVecStartingIdRow + intraBlockIndex] +=
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              xVec[xVecStartingIdRow + intraBlockIndex] =
+                inhomogenities[blockIndex];
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+                  xVec[xVecStartingIdRow + intraBlockIndex] +=
+                    constraintColumnValuesAllRowsUnflattened
+                      [startingColumnNumber + i] *
+                    xVec[xVecStartingIdColumn + intraBlockIndex];
+                }
+            }
+        },
+        const dftfe::uInt  contiguousBlockSize,
+        double            *xVec,
+        const dftfe::uInt *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt  numConstraints,
+        const dftfe::uInt *constraintRowSizes,
+        const dftfe::uInt *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened,
+        const double      *inhomogenities);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              xVec[xVecStartingIdRow + intraBlockIndex] =
+                inhomogenities[blockIndex];
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+                  xVec[xVecStartingIdRow + intraBlockIndex] +=
+                    constraintColumnValuesAllRowsUnflattened
+                      [startingColumnNumber + i] *
+                    xVec[xVecStartingIdColumn + intraBlockIndex];
+                }
+            }
+        },
+        const dftfe::uInt  contiguousBlockSize,
+        float             *xVec,
+        const dftfe::uInt *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt  numConstraints,
+        const dftfe::uInt *constraintRowSizes,
+        const dftfe::uInt *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened,
+        const double      *inhomogenities);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        scaleConstraintsKernel,
+        {
+          const std::size_t numberEntries = numConstraints;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[index];
+              const dftfe::uInt numberColumns = constraintRowSizes[index];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[index];
+              const std::size_t xVecStartingIdRow = constrainedRowId;
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
                   constraintColumnValuesAllRowsUnflattened
-                    [startingColumnNumber + i] *
-                  xVec[xVecStartingIdColumn + intraBlockIndex];
-              }
-          }
-      }
+                    [startingColumnNumber + i] *= xVec[constrainedColumnId];
+                }
+            }
+        },
+        const double      *xVec,
+        const dftfe::uInt *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt  numConstraints,
+        const dftfe::uInt *constraintRowSizes,
+        const dftfe::uInt *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        double            *constraintColumnValuesAllRowsUnflattened);
 
 
-      __global__ void
-      distributeKernel(
-        const unsigned int  contiguousBlockSize,
-        float *             xVec,
-        const unsigned int *constraintLocalRowIdsUnflattened,
-        const unsigned int  numConstraints,
-        const unsigned int *constraintRowSizes,
-        const unsigned int *constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened,
-        const double *      inhomogenities)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
 
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            xVec[xVecStartingIdRow + intraBlockIndex] =
-              inhomogenities[blockIndex];
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                xVec[xVecStartingIdRow + intraBlockIndex] +=
-                  constraintColumnValuesAllRowsUnflattened
-                    [startingColumnNumber + i] *
-                  xVec[xVecStartingIdColumn + intraBlockIndex];
-              }
-          }
-      }
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
 
-      __global__ void
-      scaleConstraintsKernel(
-        const double *      xVec,
-        const unsigned int *constraintLocalRowIdsUnflattened,
-        const unsigned int  numConstraints,
-        const unsigned int *constraintRowSizes,
-        const unsigned int *constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        double *            constraintColumnValuesAllRowsUnflattened)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[index];
-            const unsigned int numberColumns = constraintRowSizes[index];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[index];
-            const std::size_t xVecStartingIdRow = constrainedRowId;
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                constraintColumnValuesAllRowsUnflattened[startingColumnNumber +
-                                                         i] *=
-                  xVec[constrainedColumnId];
-              }
-          }
-      }
-
-
-      __global__ void
-      distributeKernel(
-        const unsigned int                 contiguousBlockSize,
-        dftfe::utils::deviceDoubleComplex *xVec,
-        const unsigned int *               constraintLocalRowIdsUnflattened,
-        const unsigned int                 numConstraints,
-        const unsigned int *               constraintRowSizes,
-        const unsigned int *               constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened,
-        const double *      inhomogenities)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            dftfe::utils::copyValue(xVec + xVecStartingIdRow + intraBlockIndex,
-                                    inhomogenities[blockIndex]);
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                dftfe::utils::copyValue(
-                  xVec + xVecStartingIdRow + intraBlockIndex,
-                  dftfe::utils::add(
-                    xVec[xVecStartingIdRow + intraBlockIndex],
-                    dftfe::utils::makeComplex(
-                      xVec[xVecStartingIdColumn + intraBlockIndex].x *
-                        constraintColumnValuesAllRowsUnflattened
-                          [startingColumnNumber + i],
-                      xVec[xVecStartingIdColumn + intraBlockIndex].y *
-                        constraintColumnValuesAllRowsUnflattened
-                          [startingColumnNumber + i])));
-              }
-          }
-      }
-
-
-      __global__ void
-      distributeKernel(
-        const unsigned int                contiguousBlockSize,
-        dftfe::utils::deviceFloatComplex *xVec,
-        const unsigned int *              constraintLocalRowIdsUnflattened,
-        const unsigned int                numConstraints,
-        const unsigned int *              constraintRowSizes,
-        const unsigned int *              constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened,
-        const double *      inhomogenities)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            dftfe::utils::copyValue(xVec + xVecStartingIdRow + intraBlockIndex,
-                                    inhomogenities[blockIndex]);
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                dftfe::utils::copyValue(
-                  xVec + xVecStartingIdRow + intraBlockIndex,
-                  dftfe::utils::add(
-                    xVec[xVecStartingIdRow + intraBlockIndex],
-                    dftfe::utils::makeComplex(
-                      xVec[xVecStartingIdColumn + intraBlockIndex].x *
-                        constraintColumnValuesAllRowsUnflattened
-                          [startingColumnNumber + i],
-                      xVec[xVecStartingIdColumn + intraBlockIndex].y *
-                        constraintColumnValuesAllRowsUnflattened
-                          [startingColumnNumber + i])));
-              }
-          }
-      }
-
-      __global__ void
-      distributeSlaveToMasterKernelAtomicAdd(
-        const unsigned int  contiguousBlockSize,
-        double *            xVec,
-        const unsigned int *constraintLocalRowIdsUnflattened,
-        const unsigned int  numConstraints,
-        const unsigned int *constraintRowSizes,
-        const unsigned int *constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex]),
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              dftfe::utils::copyValue(xVec + xVecStartingIdRow +
+                                        intraBlockIndex,
+                                      inhomogenities[blockIndex]);
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+                  dftfe::utils::copyValue(
+                    xVec + xVecStartingIdRow + intraBlockIndex,
+                    dftfe::utils::add(
+                      xVec[xVecStartingIdRow + intraBlockIndex],
+                      dftfe::utils::makeComplex(
+                        dftfe::utils::realPartDevice(
+                          xVec[xVecStartingIdColumn + intraBlockIndex]) *
                           constraintColumnValuesAllRowsUnflattened
-                              [startingColumnNumber + i] *
-                            xVec[xVecStartingIdRow + intraBlockIndex]);
-              }
-            xVec[xVecStartingIdRow + intraBlockIndex] = 0.0;
-          }
-      }
-
-
-      __global__ void
-      distributeSlaveToMasterKernelAtomicAdd(
-        const unsigned int                 contiguousBlockSize,
-        dftfe::utils::deviceDoubleComplex *xVec,
-        const unsigned int *               constraintLocalRowIdsUnflattened,
-        const unsigned int                 numConstraints,
-        const unsigned int *               constraintRowSizes,
-        const unsigned int *               constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                const dftfe::utils::deviceDoubleComplex tempComplval =
-                  dftfe::utils::mult(constraintColumnValuesAllRowsUnflattened
-                                       [startingColumnNumber + i],
-                                     xVec[xVecStartingIdRow + intraBlockIndex]);
-                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex].x),
-                          tempComplval.x);
-                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex].y),
-                          tempComplval.y);
-              }
-            xVec[xVecStartingIdRow + intraBlockIndex].x = 0.0;
-            xVec[xVecStartingIdRow + intraBlockIndex].y = 0.0;
-          }
-      }
-
-      __global__ void
-      distributeSlaveToMasterKernelAtomicAdd(
-        const unsigned int  contiguousBlockSize,
-        float *             xVec,
-        const unsigned int *constraintLocalRowIdsUnflattened,
-        const unsigned int  numConstraints,
-        const unsigned int *constraintRowSizes,
-        const unsigned int *constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex]),
+                            [startingColumnNumber + i],
+                        dftfe::utils::imagPartDevice(
+                          xVec[xVecStartingIdColumn + intraBlockIndex]) *
                           constraintColumnValuesAllRowsUnflattened
-                              [startingColumnNumber + i] *
-                            xVec[xVecStartingIdRow + intraBlockIndex]);
-              }
-            xVec[xVecStartingIdRow + intraBlockIndex] = 0.0;
-          }
-      }
+                            [startingColumnNumber + i])));
+                }
+            }
+        },
+        const dftfe::uInt                  contiguousBlockSize,
+        dftfe::utils::deviceDoubleComplex *xVec,
+        const dftfe::uInt                 *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt                  numConstraints,
+        const dftfe::uInt                 *constraintRowSizes,
+        const dftfe::uInt                 *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened,
+        const double      *inhomogenities);
 
 
-      __global__ void
-      distributeSlaveToMasterKernelAtomicAdd(
-        const unsigned int                contiguousBlockSize,
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              dftfe::utils::copyValue(xVec + xVecStartingIdRow +
+                                        intraBlockIndex,
+                                      inhomogenities[blockIndex]);
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+                  dftfe::utils::copyValue(
+                    xVec + xVecStartingIdRow + intraBlockIndex,
+                    dftfe::utils::add(
+                      xVec[xVecStartingIdRow + intraBlockIndex],
+                      dftfe::utils::makeComplex(
+                        dftfe::utils::realPartDevice(
+                          xVec[xVecStartingIdColumn + intraBlockIndex]) *
+                          constraintColumnValuesAllRowsUnflattened
+                            [startingColumnNumber + i],
+                        dftfe::utils::imagPartDevice(
+                          xVec[xVecStartingIdColumn + intraBlockIndex]) *
+                          constraintColumnValuesAllRowsUnflattened
+                            [startingColumnNumber + i])));
+                }
+            }
+        },
+        const dftfe::uInt                 contiguousBlockSize,
         dftfe::utils::deviceFloatComplex *xVec,
-        const unsigned int *              constraintLocalRowIdsUnflattened,
-        const unsigned int                numConstraints,
-        const unsigned int *              constraintRowSizes,
-        const unsigned int *              constraintRowSizesAccumulated,
-        const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-        const double *      constraintColumnValuesAllRowsUnflattened)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            const unsigned int constrainedRowId =
-              constraintLocalRowIdsUnflattened[blockIndex];
-            const unsigned int numberColumns = constraintRowSizes[blockIndex];
-            const unsigned int startingColumnNumber =
-              constraintRowSizesAccumulated[blockIndex];
-            const std::size_t xVecStartingIdRow =
-              constrainedRowId * contiguousBlockSize;
-            for (unsigned int i = 0; i < numberColumns; ++i)
-              {
-                const unsigned int constrainedColumnId =
-                  constraintLocalColumnIdsAllRowsUnflattened
-                    [startingColumnNumber + i];
-                const std::size_t xVecStartingIdColumn =
-                  constrainedColumnId * contiguousBlockSize;
-                const dftfe::utils::deviceDoubleComplex tempComplval =
-                  dftfe::utils::mult(constraintColumnValuesAllRowsUnflattened
-                                       [startingColumnNumber + i],
-                                     xVec[xVecStartingIdRow + intraBlockIndex]);
-                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex].x),
-                          tempComplval.x);
-                atomicAdd(&(xVec[xVecStartingIdColumn + intraBlockIndex].y),
-                          tempComplval.y);
-              }
-            xVec[xVecStartingIdRow + intraBlockIndex].x = 0.0;
-            xVec[xVecStartingIdRow + intraBlockIndex].y = 0.0;
-          }
-      }
+        const dftfe::uInt                *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt                 numConstraints,
+        const dftfe::uInt                *constraintRowSizes,
+        const dftfe::uInt                *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened,
+        const double      *inhomogenities);
 
 
-      __global__ void
-      setzeroKernel(const unsigned int  contiguousBlockSize,
-                    double *            xVec,
-                    const unsigned int *constraintLocalRowIdsUnflattened,
-                    const unsigned int  numConstraints)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
 
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            xVec[constraintLocalRowIdsUnflattened[blockIndex] *
-                   contiguousBlockSize +
-                 intraBlockIndex]              = 0;
-          }
-      }
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeSlaveToMasterKernelAtomicAdd,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
 
-      __global__ void
-      setzeroKernel(const unsigned int  contiguousBlockSize,
-                    float *             xVec,
-                    const unsigned int *constraintLocalRowIdsUnflattened,
-                    const unsigned int  numConstraints)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            xVec[constraintLocalRowIdsUnflattened[blockIndex] *
-                   contiguousBlockSize +
-                 intraBlockIndex]              = 0;
-          }
-      }
-
-      __global__ void
-      setzeroKernel(const unsigned int                 contiguousBlockSize,
-                    dftfe::utils::deviceDoubleComplex *xVec,
-                    const unsigned int *constraintLocalRowIdsUnflattened,
-                    const unsigned int  numConstraints)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
-
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            dftfe::utils::copyValue(
-              xVec +
-                constraintLocalRowIdsUnflattened[blockIndex] *
-                  contiguousBlockSize +
-                intraBlockIndex,
-              0.0);
-          }
-      }
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+                  dftfe::utils::atomicAddWrapper(
+                    &(xVec[xVecStartingIdColumn + intraBlockIndex]),
+                    constraintColumnValuesAllRowsUnflattened
+                        [startingColumnNumber + i] *
+                      xVec[xVecStartingIdRow + intraBlockIndex]);
+                }
+              xVec[xVecStartingIdRow + intraBlockIndex] = 0.0;
+            }
+        },
+        const dftfe::uInt  contiguousBlockSize,
+        double            *xVec,
+        const dftfe::uInt *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt  numConstraints,
+        const dftfe::uInt *constraintRowSizes,
+        const dftfe::uInt *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened);
 
 
-      __global__ void
-      setzeroKernel(const unsigned int                contiguousBlockSize,
-                    dftfe::utils::deviceFloatComplex *xVec,
-                    const unsigned int *constraintLocalRowIdsUnflattened,
-                    const unsigned int  numConstraints)
-      {
-        const std::size_t globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const std::size_t numberEntries = numConstraints * contiguousBlockSize;
 
-        for (std::size_t index = globalThreadId; index < numberEntries;
-             index += blockDim.x * gridDim.x)
-          {
-            const unsigned int blockIndex      = index / contiguousBlockSize;
-            const unsigned int intraBlockIndex = index % contiguousBlockSize;
-            dftfe::utils::copyValue(
-              xVec +
-                constraintLocalRowIdsUnflattened[blockIndex] *
-                  contiguousBlockSize +
-                intraBlockIndex,
-              0.0);
-          }
-      }
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeSlaveToMasterKernelAtomicAdd,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+                  const dftfe::utils::deviceDoubleComplex tempComplval =
+                    dftfe::utils::mult(
+                      constraintColumnValuesAllRowsUnflattened
+                        [startingColumnNumber + i],
+                      xVec[xVecStartingIdRow + intraBlockIndex]);
+
+                  auto *add_real = reinterpret_cast<double *>(
+                    &xVec[xVecStartingIdColumn + intraBlockIndex]);
+                  auto *add_imag = add_real + 1;
+
+                  dftfe::utils::atomicAddWrapper(
+                    add_real, dftfe::utils::realPartDevice(tempComplval));
+                  dftfe::utils::atomicAddWrapper(
+                    add_imag, dftfe::utils::imagPartDevice(tempComplval));
+                }
+              xVec[xVecStartingIdRow + intraBlockIndex] =
+                dftfe::utils::makeComplex(0.0, 0.0);
+            }
+        },
+        const dftfe::uInt                  contiguousBlockSize,
+        dftfe::utils::deviceDoubleComplex *xVec,
+        const dftfe::uInt                 *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt                  numConstraints,
+        const dftfe::uInt                 *constraintRowSizes,
+        const dftfe::uInt                 *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeSlaveToMasterKernelAtomicAdd,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+
+                  dftfe::utils::atomicAddWrapper(
+                    &(xVec[xVecStartingIdColumn + intraBlockIndex]),
+                    constraintColumnValuesAllRowsUnflattened
+                        [startingColumnNumber + i] *
+                      xVec[xVecStartingIdRow + intraBlockIndex]);
+                }
+              xVec[xVecStartingIdRow + intraBlockIndex] = 0.0;
+            }
+        },
+        const dftfe::uInt  contiguousBlockSize,
+        float             *xVec,
+        const dftfe::uInt *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt  numConstraints,
+        const dftfe::uInt *constraintRowSizes,
+        const dftfe::uInt *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        distributeSlaveToMasterKernelAtomicAdd,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              const dftfe::uInt constrainedRowId =
+                constraintLocalRowIdsUnflattened[blockIndex];
+              const dftfe::uInt numberColumns = constraintRowSizes[blockIndex];
+              const dftfe::uInt startingColumnNumber =
+                constraintRowSizesAccumulated[blockIndex];
+              const std::size_t xVecStartingIdRow =
+                constrainedRowId * contiguousBlockSize;
+              for (dftfe::uInt i = 0; i < numberColumns; ++i)
+                {
+                  const dftfe::uInt constrainedColumnId =
+                    constraintLocalColumnIdsAllRowsUnflattened
+                      [startingColumnNumber + i];
+                  const std::size_t xVecStartingIdColumn =
+                    constrainedColumnId * contiguousBlockSize;
+                  const dftfe::utils::deviceDoubleComplex tempComplval =
+                    dftfe::utils::mult(
+                      constraintColumnValuesAllRowsUnflattened
+                        [startingColumnNumber + i],
+                      xVec[xVecStartingIdRow + intraBlockIndex]);
+
+                  auto *add_real = reinterpret_cast<float *>(
+                    &xVec[xVecStartingIdColumn + intraBlockIndex]);
+                  auto *add_imag = add_real + 1;
+
+                  dftfe::utils::atomicAddWrapper(
+                    add_real, dftfe::utils::realPartDevice(tempComplval));
+                  dftfe::utils::atomicAddWrapper(
+                    add_imag, dftfe::utils::imagPartDevice(tempComplval));
+                }
+              xVec[xVecStartingIdRow + intraBlockIndex] =
+                dftfe::utils::makeComplex((float)0.0, (float)0.0);
+            }
+        },
+        const dftfe::uInt                 contiguousBlockSize,
+        dftfe::utils::deviceFloatComplex *xVec,
+        const dftfe::uInt                *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt                 numConstraints,
+        const dftfe::uInt                *constraintRowSizes,
+        const dftfe::uInt                *constraintRowSizesAccumulated,
+        const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+        const double      *constraintColumnValuesAllRowsUnflattened);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        setzeroKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              xVec[constraintLocalRowIdsUnflattened[blockIndex] *
+                     contiguousBlockSize +
+                   intraBlockIndex]             = 0;
+            }
+        },
+        const dftfe::uInt  contiguousBlockSize,
+        double            *xVec,
+        const dftfe::uInt *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt  numConstraints);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        setzeroKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              xVec[constraintLocalRowIdsUnflattened[blockIndex] *
+                     contiguousBlockSize +
+                   intraBlockIndex]             = 0;
+            }
+        },
+        const dftfe::uInt  contiguousBlockSize,
+        float             *xVec,
+        const dftfe::uInt *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt  numConstraints);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        setzeroKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              dftfe::utils::copyValue(
+                xVec +
+                  constraintLocalRowIdsUnflattened[blockIndex] *
+                    contiguousBlockSize +
+                  intraBlockIndex,
+                0.0);
+            }
+        },
+        const dftfe::uInt                  contiguousBlockSize,
+        dftfe::utils::deviceDoubleComplex *xVec,
+        const dftfe::uInt                 *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt                  numConstraints);
+
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        setzeroKernel,
+        {
+          const std::size_t numberEntries =
+            numConstraints * contiguousBlockSize;
+
+          for (std::size_t index = globalThreadId; index < numberEntries;
+               index += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt blockIndex      = index / contiguousBlockSize;
+              const dftfe::uInt intraBlockIndex = index % contiguousBlockSize;
+              dftfe::utils::copyValue(
+                xVec +
+                  constraintLocalRowIdsUnflattened[blockIndex] *
+                    contiguousBlockSize +
+                  intraBlockIndex,
+                0.0);
+            }
+        },
+        const dftfe::uInt                 contiguousBlockSize,
+        dftfe::utils::deviceFloatComplex *xVec,
+        const dftfe::uInt                *constraintLocalRowIdsUnflattened,
+        const dftfe::uInt                 numConstraints);
+
     } // namespace
     template <typename ValueType>
     void
     distributeDevice(
-      const unsigned int  contiguousBlockSize,
-      ValueType *         xVec,
-      const unsigned int *constraintLocalRowIdsUnflattened,
-      const unsigned int  numConstraints,
-      const unsigned int *constraintRowSizes,
-      const unsigned int *constraintRowSizesAccumulated,
-      const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-      const double *      constraintColumnValuesAllRowsUnflattened,
-      const double *      inhomogenities)
+      const dftfe::uInt  contiguousBlockSize,
+      ValueType         *xVec,
+      const dftfe::uInt *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt  numConstraints,
+      const dftfe::uInt *constraintRowSizes,
+      const dftfe::uInt *constraintRowSizesAccumulated,
+      const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+      const double      *constraintColumnValuesAllRowsUnflattened,
+      const double      *inhomogenities)
     {
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      distributeKernel<<<min((contiguousBlockSize * numConstraints +
-                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                               dftfe::utils::DEVICE_BLOCK_SIZE,
-                             30000),
-                         dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-        contiguousBlockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-        constraintLocalRowIdsUnflattened,
-        numConstraints,
-        constraintRowSizes,
-        constraintRowSizesAccumulated,
-        constraintLocalColumnIdsAllRowsUnflattened,
-        constraintColumnValuesAllRowsUnflattened,
-        inhomogenities);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(distributeKernel,
-                         min((contiguousBlockSize * numConstraints +
-                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                               dftfe::utils::DEVICE_BLOCK_SIZE,
-                             30000),
-                         dftfe::utils::DEVICE_BLOCK_SIZE,
-                         0,
-                         0,
-                         contiguousBlockSize,
-                         dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-                         constraintLocalRowIdsUnflattened,
-                         numConstraints,
-                         constraintRowSizes,
-                         constraintRowSizesAccumulated,
-                         constraintLocalColumnIdsAllRowsUnflattened,
-                         constraintColumnValuesAllRowsUnflattened,
-                         inhomogenities);
-#endif
+      DFTFE_LAUNCH_KERNEL(distributeKernel,
+                          std::min((contiguousBlockSize * numConstraints +
+                                    (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                                     dftfe::utils::DEVICE_BLOCK_SIZE,
+                                   dftfe::uInt(30000)),
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::linearAlgebra::BLASWrapper<
+                            dftfe::utils::MemorySpace::DEVICE>::d_streamId,
+                          contiguousBlockSize,
+                          dftfe::utils::makeDataTypeDeviceCompatible(xVec),
+                          constraintLocalRowIdsUnflattened,
+                          numConstraints,
+                          constraintRowSizes,
+                          constraintRowSizesAccumulated,
+                          constraintLocalColumnIdsAllRowsUnflattened,
+                          constraintColumnValuesAllRowsUnflattened,
+                          inhomogenities);
     }
 
     template <typename ValueType>
     void
     distributeSlaveToMasterAtomicAddDevice(
-      const unsigned int  contiguousBlockSize,
-      ValueType *         xVec,
-      const unsigned int *constraintLocalRowIdsUnflattened,
-      const unsigned int  numConstraints,
-      const unsigned int *constraintRowSizes,
-      const unsigned int *constraintRowSizesAccumulated,
-      const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-      const double *      constraintColumnValuesAllRowsUnflattened)
+      const dftfe::uInt  contiguousBlockSize,
+      ValueType         *xVec,
+      const dftfe::uInt *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt  numConstraints,
+      const dftfe::uInt *constraintRowSizes,
+      const dftfe::uInt *constraintRowSizesAccumulated,
+      const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+      const double      *constraintColumnValuesAllRowsUnflattened)
     {
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      distributeSlaveToMasterKernelAtomicAdd<<<
-        min((contiguousBlockSize * numConstraints +
-             (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-              dftfe::utils::DEVICE_BLOCK_SIZE,
-            30000),
-        dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-        contiguousBlockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-        constraintLocalRowIdsUnflattened,
-        numConstraints,
-        constraintRowSizes,
-        constraintRowSizesAccumulated,
-        constraintLocalColumnIdsAllRowsUnflattened,
-        constraintColumnValuesAllRowsUnflattened);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(distributeSlaveToMasterKernelAtomicAdd,
-                         min((contiguousBlockSize * numConstraints +
-                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                               dftfe::utils::DEVICE_BLOCK_SIZE,
-                             30000),
-                         dftfe::utils::DEVICE_BLOCK_SIZE,
-                         0,
-                         0,
-                         contiguousBlockSize,
-                         dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-                         constraintLocalRowIdsUnflattened,
-                         numConstraints,
-                         constraintRowSizes,
-                         constraintRowSizesAccumulated,
-                         constraintLocalColumnIdsAllRowsUnflattened,
-                         constraintColumnValuesAllRowsUnflattened);
-#endif
+      DFTFE_LAUNCH_KERNEL(distributeSlaveToMasterKernelAtomicAdd,
+                          std::min((contiguousBlockSize * numConstraints +
+                                    (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                                     dftfe::utils::DEVICE_BLOCK_SIZE,
+                                   dftfe::uInt(30000)),
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::linearAlgebra::BLASWrapper<
+                            dftfe::utils::MemorySpace::DEVICE>::d_streamId,
+                          contiguousBlockSize,
+                          dftfe::utils::makeDataTypeDeviceCompatible(xVec),
+                          constraintLocalRowIdsUnflattened,
+                          numConstraints,
+                          constraintRowSizes,
+                          constraintRowSizesAccumulated,
+                          constraintLocalColumnIdsAllRowsUnflattened,
+                          constraintColumnValuesAllRowsUnflattened);
     }
     template <typename ValueType>
     void
-    setzeroDevice(const unsigned int  contiguousBlockSize,
-                  ValueType *         xVec,
-                  const unsigned int *constraintLocalRowIdsUnflattened,
-                  const unsigned int  numConstraints)
+    setzeroDevice(const dftfe::uInt  contiguousBlockSize,
+                  ValueType         *xVec,
+                  const dftfe::uInt *constraintLocalRowIdsUnflattened,
+                  const dftfe::uInt  numConstraints)
     {
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      setzeroKernel<<<min((contiguousBlockSize * numConstraints +
-                           (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                            dftfe::utils::DEVICE_BLOCK_SIZE,
-                          30000),
-                      dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-        contiguousBlockSize,
-        dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-        constraintLocalRowIdsUnflattened,
-        numConstraints);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(setzeroKernel,
-                         min((contiguousBlockSize * numConstraints +
-                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                               dftfe::utils::DEVICE_BLOCK_SIZE,
-                             30000),
-                         dftfe::utils::DEVICE_BLOCK_SIZE,
-                         0,
-                         0,
-                         contiguousBlockSize,
-                         dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-                         constraintLocalRowIdsUnflattened,
-                         numConstraints);
-#endif
+      DFTFE_LAUNCH_KERNEL(setzeroKernel,
+                          std::min((contiguousBlockSize * numConstraints +
+                                    (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                                     dftfe::utils::DEVICE_BLOCK_SIZE,
+                                   dftfe::uInt(30000)),
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::linearAlgebra::BLASWrapper<
+                            dftfe::utils::MemorySpace::DEVICE>::d_streamId,
+                          contiguousBlockSize,
+                          dftfe::utils::makeDataTypeDeviceCompatible(xVec),
+                          constraintLocalRowIdsUnflattened,
+                          numConstraints);
     }
 
     void
     scaleConstraintsDevice(
-      const double *      xVec,
-      const unsigned int *constraintLocalRowIdsUnflattened,
-      const unsigned int  numConstraints,
-      const unsigned int *constraintRowSizes,
-      const unsigned int *constraintRowSizesAccumulated,
-      const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-      double *            constraintColumnValuesAllRowsUnflattened)
+      const double      *xVec,
+      const dftfe::uInt *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt  numConstraints,
+      const dftfe::uInt *constraintRowSizes,
+      const dftfe::uInt *constraintRowSizesAccumulated,
+      const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+      double            *constraintColumnValuesAllRowsUnflattened)
     {
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      scaleConstraintsKernel<<<min((numConstraints +
+      DFTFE_LAUNCH_KERNEL(scaleConstraintsKernel,
+                          std::min((numConstraints +
                                     (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
                                      dftfe::utils::DEVICE_BLOCK_SIZE,
-                                   30000),
-                               dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-        dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-        constraintLocalRowIdsUnflattened,
-        numConstraints,
-        constraintRowSizes,
-        constraintRowSizesAccumulated,
-        constraintLocalColumnIdsAllRowsUnflattened,
-        constraintColumnValuesAllRowsUnflattened);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(scaleConstraintsKernel,
-                         min((numConstraints +
-                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                               dftfe::utils::DEVICE_BLOCK_SIZE,
-                             30000),
-                         dftfe::utils::DEVICE_BLOCK_SIZE,
-                         0,
-                         0,
-                         dftfe::utils::makeDataTypeDeviceCompatible(xVec),
-                         constraintLocalRowIdsUnflattened,
-                         numConstraints,
-                         constraintRowSizes,
-                         constraintRowSizesAccumulated,
-                         constraintLocalColumnIdsAllRowsUnflattened,
-                         constraintColumnValuesAllRowsUnflattened);
-#endif
+                                   dftfe::uInt(30000)),
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::linearAlgebra::BLASWrapper<
+                            dftfe::utils::MemorySpace::DEVICE>::d_streamId,
+                          dftfe::utils::makeDataTypeDeviceCompatible(xVec),
+                          constraintLocalRowIdsUnflattened,
+                          numConstraints,
+                          constraintRowSizes,
+                          constraintRowSizesAccumulated,
+                          constraintLocalColumnIdsAllRowsUnflattened,
+                          constraintColumnValuesAllRowsUnflattened);
     }
     template void
     distributeDevice(
-      const unsigned int  contiguousBlockSize,
-      double *            xVec,
-      const unsigned int *constraintLocalRowIdsUnflattened,
-      const unsigned int  numConstraints,
-      const unsigned int *constraintRowSizes,
-      const unsigned int *constraintRowSizesAccumulated,
-      const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-      const double *      constraintColumnValuesAllRowsUnflattened,
-      const double *      inhomogenities);
+      const dftfe::uInt  contiguousBlockSize,
+      double            *xVec,
+      const dftfe::uInt *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt  numConstraints,
+      const dftfe::uInt *constraintRowSizes,
+      const dftfe::uInt *constraintRowSizesAccumulated,
+      const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+      const double      *constraintColumnValuesAllRowsUnflattened,
+      const double      *inhomogenities);
     template void
     distributeDevice(
-      const unsigned int  contiguousBlockSize,
-      float *             xVec,
-      const unsigned int *constraintLocalRowIdsUnflattened,
-      const unsigned int  numConstraints,
-      const unsigned int *constraintRowSizes,
-      const unsigned int *constraintRowSizesAccumulated,
-      const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-      const double *      constraintColumnValuesAllRowsUnflattened,
-      const double *      inhomogenities);
+      const dftfe::uInt  contiguousBlockSize,
+      float             *xVec,
+      const dftfe::uInt *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt  numConstraints,
+      const dftfe::uInt *constraintRowSizes,
+      const dftfe::uInt *constraintRowSizesAccumulated,
+      const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+      const double      *constraintColumnValuesAllRowsUnflattened,
+      const double      *inhomogenities);
     template void
     distributeDevice(
-      const unsigned int    contiguousBlockSize,
+      const dftfe::uInt     contiguousBlockSize,
       std::complex<double> *xVec,
-      const unsigned int *  constraintLocalRowIdsUnflattened,
-      const unsigned int    numConstraints,
-      const unsigned int *  constraintRowSizes,
-      const unsigned int *  constraintRowSizesAccumulated,
-      const unsigned int *  constraintLocalColumnIdsAllRowsUnflattened,
-      const double *        constraintColumnValuesAllRowsUnflattened,
-      const double *        inhomogenities);
+      const dftfe::uInt    *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt     numConstraints,
+      const dftfe::uInt    *constraintRowSizes,
+      const dftfe::uInt    *constraintRowSizesAccumulated,
+      const dftfe::uInt    *constraintLocalColumnIdsAllRowsUnflattened,
+      const double         *constraintColumnValuesAllRowsUnflattened,
+      const double         *inhomogenities);
     template void
     distributeDevice(
-      const unsigned int   contiguousBlockSize,
+      const dftfe::uInt    contiguousBlockSize,
       std::complex<float> *xVec,
-      const unsigned int * constraintLocalRowIdsUnflattened,
-      const unsigned int   numConstraints,
-      const unsigned int * constraintRowSizes,
-      const unsigned int * constraintRowSizesAccumulated,
-      const unsigned int * constraintLocalColumnIdsAllRowsUnflattened,
-      const double *       constraintColumnValuesAllRowsUnflattened,
-      const double *       inhomogenities);
+      const dftfe::uInt   *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt    numConstraints,
+      const dftfe::uInt   *constraintRowSizes,
+      const dftfe::uInt   *constraintRowSizesAccumulated,
+      const dftfe::uInt   *constraintLocalColumnIdsAllRowsUnflattened,
+      const double        *constraintColumnValuesAllRowsUnflattened,
+      const double        *inhomogenities);
     template void
     distributeSlaveToMasterAtomicAddDevice(
-      const unsigned int  contiguousBlockSize,
-      double *            xVec,
-      const unsigned int *constraintLocalRowIdsUnflattened,
-      const unsigned int  numConstraints,
-      const unsigned int *constraintRowSizes,
-      const unsigned int *constraintRowSizesAccumulated,
-      const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-      const double *      constraintColumnValuesAllRowsUnflattened);
+      const dftfe::uInt  contiguousBlockSize,
+      double            *xVec,
+      const dftfe::uInt *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt  numConstraints,
+      const dftfe::uInt *constraintRowSizes,
+      const dftfe::uInt *constraintRowSizesAccumulated,
+      const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+      const double      *constraintColumnValuesAllRowsUnflattened);
     template void
     distributeSlaveToMasterAtomicAddDevice(
-      const unsigned int  contiguousBlockSize,
-      float *             xVec,
-      const unsigned int *constraintLocalRowIdsUnflattened,
-      const unsigned int  numConstraints,
-      const unsigned int *constraintRowSizes,
-      const unsigned int *constraintRowSizesAccumulated,
-      const unsigned int *constraintLocalColumnIdsAllRowsUnflattened,
-      const double *      constraintColumnValuesAllRowsUnflattened);
+      const dftfe::uInt  contiguousBlockSize,
+      float             *xVec,
+      const dftfe::uInt *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt  numConstraints,
+      const dftfe::uInt *constraintRowSizes,
+      const dftfe::uInt *constraintRowSizesAccumulated,
+      const dftfe::uInt *constraintLocalColumnIdsAllRowsUnflattened,
+      const double      *constraintColumnValuesAllRowsUnflattened);
     template void
     distributeSlaveToMasterAtomicAddDevice(
-      const unsigned int    contiguousBlockSize,
+      const dftfe::uInt     contiguousBlockSize,
       std::complex<double> *xVec,
-      const unsigned int *  constraintLocalRowIdsUnflattened,
-      const unsigned int    numConstraints,
-      const unsigned int *  constraintRowSizes,
-      const unsigned int *  constraintRowSizesAccumulated,
-      const unsigned int *  constraintLocalColumnIdsAllRowsUnflattened,
-      const double *        constraintColumnValuesAllRowsUnflattened);
+      const dftfe::uInt    *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt     numConstraints,
+      const dftfe::uInt    *constraintRowSizes,
+      const dftfe::uInt    *constraintRowSizesAccumulated,
+      const dftfe::uInt    *constraintLocalColumnIdsAllRowsUnflattened,
+      const double         *constraintColumnValuesAllRowsUnflattened);
     template void
     distributeSlaveToMasterAtomicAddDevice(
-      const unsigned int   contiguousBlockSize,
+      const dftfe::uInt    contiguousBlockSize,
       std::complex<float> *xVec,
-      const unsigned int * constraintLocalRowIdsUnflattened,
-      const unsigned int   numConstraints,
-      const unsigned int * constraintRowSizes,
-      const unsigned int * constraintRowSizesAccumulated,
-      const unsigned int * constraintLocalColumnIdsAllRowsUnflattened,
-      const double *       constraintColumnValuesAllRowsUnflattened);
+      const dftfe::uInt   *constraintLocalRowIdsUnflattened,
+      const dftfe::uInt    numConstraints,
+      const dftfe::uInt   *constraintRowSizes,
+      const dftfe::uInt   *constraintRowSizesAccumulated,
+      const dftfe::uInt   *constraintLocalColumnIdsAllRowsUnflattened,
+      const double        *constraintColumnValuesAllRowsUnflattened);
     template void
-    setzeroDevice(const unsigned int  contiguousBlockSize,
-                  double *            xVec,
-                  const unsigned int *constraintLocalRowIdsUnflattened,
-                  const unsigned int  numConstraints);
+    setzeroDevice(const dftfe::uInt  contiguousBlockSize,
+                  double            *xVec,
+                  const dftfe::uInt *constraintLocalRowIdsUnflattened,
+                  const dftfe::uInt  numConstraints);
     template void
-    setzeroDevice(const unsigned int  contiguousBlockSize,
-                  float *             xVec,
-                  const unsigned int *constraintLocalRowIdsUnflattened,
-                  const unsigned int  numConstraints);
+    setzeroDevice(const dftfe::uInt  contiguousBlockSize,
+                  float             *xVec,
+                  const dftfe::uInt *constraintLocalRowIdsUnflattened,
+                  const dftfe::uInt  numConstraints);
     template void
-    setzeroDevice(const unsigned int    contiguousBlockSize,
+    setzeroDevice(const dftfe::uInt     contiguousBlockSize,
                   std::complex<double> *xVec,
-                  const unsigned int *  constraintLocalRowIdsUnflattened,
-                  const unsigned int    numConstraints);
+                  const dftfe::uInt    *constraintLocalRowIdsUnflattened,
+                  const dftfe::uInt     numConstraints);
     template void
-    setzeroDevice(const unsigned int   contiguousBlockSize,
+    setzeroDevice(const dftfe::uInt    contiguousBlockSize,
                   std::complex<float> *xVec,
-                  const unsigned int * constraintLocalRowIdsUnflattened,
-                  const unsigned int   numConstraints);
+                  const dftfe::uInt   *constraintLocalRowIdsUnflattened,
+                  const dftfe::uInt    numConstraints);
 
   } // namespace dftUtils
 } // namespace dftfe

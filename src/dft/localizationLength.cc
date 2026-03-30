@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2019-2020x The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025x The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -24,21 +24,20 @@ namespace dftfe
 {
   // compute localization lengths currently implemented for spin unpolarized
   // case
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_localizationLength(
+  dftClass<memorySpace>::compute_localizationLength(
     const std::string &locLengthFileName)
   {
-    dealii::QGauss<3>   quadrature_formula(C_num1DQuad<FEOrder>());
+    dealii::QGauss<3> quadrature_formula(
+      C_num1DQuad(d_dftParamsPtr->finiteElementPolynomialOrder));
     dealii::FEValues<3> fe_values(dofHandler.get_fe(),
                                   quadrature_formula,
                                   dealii::update_values |
                                     dealii::update_JxW_values |
                                     dealii::update_quadrature_points);
-    const unsigned int  dofs_per_cell = dofHandler.get_fe().dofs_per_cell;
-    const unsigned int  n_q_points    = quadrature_formula.size();
+    const dftfe::uInt   dofs_per_cell = dofHandler.get_fe().dofs_per_cell;
+    const dftfe::uInt   n_q_points    = quadrature_formula.size();
     std::vector<double> tempQuadPointValues(n_q_points);
     std::vector<double> localizationLength, secondMoment, firstMomentX,
       firstMomentY, firstMomentZ;
@@ -56,7 +55,7 @@ namespace dftfe
     // compute integral(psi_i*(x^2 + y^2 + z^2)*psi_i), integral(psi_i*x*psi_i),
     // integral(psi_i*y*psi_i), integral(psi_i*z*psi_i)
     //
-    for (unsigned int iWave = 0; iWave < d_numEigenValues; ++iWave)
+    for (dftfe::uInt iWave = 0; iWave < d_numEigenValues; ++iWave)
       {
         vectorTools::copyFlattenedSTLVecToSingleCompVec(
           d_eigenVectorsFlattenedHost.data(),
@@ -79,7 +78,7 @@ namespace dftfe
                 fe_values.reinit(cellN);
                 fe_values.get_function_values(tempVec[0], tempQuadPointValues);
 
-                for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+                for (dftfe::uInt q_point = 0; q_point < n_q_points; ++q_point)
                   {
                     dealii::Point<3> quadPointCoor =
                       fe_values.quadrature_point(q_point);
@@ -121,7 +120,7 @@ namespace dftfe
     //
     // compute localization length using above computed integrals
     //
-    for (unsigned int iWave = 0; iWave < d_numEigenValues; ++iWave)
+    for (dftfe::uInt iWave = 0; iWave < d_numEigenValues; ++iWave)
       {
         localizationLength[iWave] =
           2.0 * std::sqrt(secondMoment[iWave] -
@@ -140,7 +139,7 @@ namespace dftfe
 
         if (outFile.is_open())
           {
-            for (unsigned int iWave = 0; iWave < d_numEigenValues; ++iWave)
+            for (dftfe::uInt iWave = 0; iWave < d_numEigenValues; ++iWave)
               {
                 outFile << std::setprecision(18) << iWave << " "
                         << localizationLength[iWave] << std::endl;

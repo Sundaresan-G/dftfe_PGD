@@ -15,6 +15,11 @@
 // ---------------------------------------------------------------------
 //
 
+/**
+ * @author Gourab Panigrahi
+ *
+ */
+
 #if defined(DFTFE_WITH_DEVICE)
 #  ifndef poissonSolverProblemDevice_H_
 #    define poissonSolverProblemDevice_H_
@@ -26,19 +31,19 @@
 #    include <headers.h>
 #    include "FEBasisOperations.h"
 #    include "BLASWrapper.h"
+#    include "MatrixFreeWrapper.h"
+#    include <DeviceAPICalls.h>
 
 namespace dftfe
 {
   /**
    * @brief poisson solver problem device class template. template parameter FEOrderElectro
-   * is the finite element polynomial order. FEOrder template parameter is used
-   * in conjunction with FEOrderElectro to determine the order of the Gauss
-   * quadrature rule. The class should not be used with FLOATING NUCLEAR
-   * CHARGES = false or POINT WISE DIRICHLET CONSTRAINT = true
+   * is the finite element polynomial order. The class should not be used with
+   * FLOATING NUCLEAR CHARGES = false or POINT WISE DIRICHLET CONSTRAINT = true
    *
    * @author Gourab Panigrahi
    */
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   class poissonSolverProblemDevice : public linearSolverProblemDevice
   {
   public:
@@ -65,29 +70,29 @@ namespace dftfe
       const std::shared_ptr<
         dftfe::basis::
           FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-        &                                      basisOperationsPtr,
-      distributedCPUVec<double> &              x,
+                                              &basisOperationsPtr,
+      distributedCPUVec<double>               &x,
       const dealii::AffineConstraints<double> &constraintMatrix,
-      const unsigned int                       matrixFreeVectorComponent,
-      const unsigned int matrixFreeQuadratureComponentRhsDensity,
-      const unsigned int matrixFreeQuadratureComponentAX,
+      const dftfe::uInt                        matrixFreeVectorComponent,
+      const dftfe::uInt matrixFreeQuadratureComponentRhsDensity,
+      const dftfe::uInt matrixFreeQuadratureComponentAX,
       const std::map<dealii::types::global_dof_index, double> &atoms,
       const std::map<dealii::CellId, std::vector<double>> &smearedChargeValues,
-      const unsigned int smearedChargeQuadratureId,
+      const dftfe::uInt smearedChargeQuadratureId,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
         &rhoValues,
       const std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                         BLASWrapperPtr,
-      const bool         isComputeDiagonalA               = true,
-      const bool         isComputeMeanValueConstraints    = false,
-      const bool         smearedNuclearCharges            = false,
-      const bool         isRhoValues                      = true,
-      const bool         isGradSmearedChargeRhs           = false,
-      const unsigned int smearedChargeGradientComponentId = 0,
-      const bool         storeSmearedChargeRhs            = false,
-      const bool         reuseSmearedChargeRhs            = false,
-      const bool         reinitializeFastConstraints      = false);
+                        BLASWrapperPtr,
+      const bool        isComputeDiagonalA               = true,
+      const bool        isComputeMeanValueConstraints    = false,
+      const bool        smearedNuclearCharges            = false,
+      const bool        isRhoValues                      = true,
+      const bool        isGradSmearedChargeRhs           = false,
+      const dftfe::uInt smearedChargeGradientComponentId = 0,
+      const bool        storeSmearedChargeRhs            = false,
+      const bool        reuseSmearedChargeRhs            = false,
+      const bool        reinitializeFastConstraints      = false);
 
     /**
      * @brief Compute A matrix multipled by x.
@@ -135,37 +140,12 @@ namespace dftfe
     void
     distributeX();
 
-    /// function needed by dealii to mimic SparseMatrix for Jacobi
-    /// preconditioning
-    void
-    subscribe(std::atomic<bool> *const validity,
-              const std::string &      identifier = "") const {};
-
-    /// function needed by dealii to mimic SparseMatrix for Jacobi
-    /// preconditioning
-    void
-    unsubscribe(std::atomic<bool> *const validity,
-                const std::string &      identifier = "") const {};
-
-    /// function needed by dealii to mimic SparseMatrix
-    bool
-    operator!=(double val) const
-    {
-      return true;
-    };
 
     void
     setX();
 
 
   private:
-    /**
-     * @brief Sets up the matrixfree shapefunction, gradient, jacobian and map for matrixfree computeAX
-     *
-     */
-    void
-    setupMatrixFree();
-
     /**
      * @brief Sets up the constraints matrix
      *
@@ -212,9 +192,6 @@ namespace dftfe
      *
      */
     void
-    meanValueConstraintSetZero(distributedDeviceVec<double> &vec) const;
-
-    void
     meanValueConstraintSetZero(distributedCPUVec<double> &vec) const;
 
     /// storage for diagonal of the A matrix
@@ -229,28 +206,23 @@ namespace dftfe
     const dealii::MatrixFree<3, double> *d_matrixFreeDataPtr;
 
     /// pointer to the x vector being solved for
-    distributedCPUVec<double> *  d_xPtr;
+    distributedCPUVec<double>   *d_xPtr;
     distributedDeviceVec<double> d_xDevice;
 
     // number of cells local to each mpi task, number of degrees of freedom
     // locally owned and total degrees of freedom including ghost
-    int d_nLocalCells, d_xLocalDof, d_xLen;
+    dftfe::Int d_nLocalCells, d_xLocalDof, d_xLen;
 
-    // shape function value, gradient, jacobian and map for matrixfree
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-                                                                        d_shapeFunction, d_jacobianFactor;
-    dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::DEVICE> d_map;
-
-    // Pointers to shape function value, gradient, jacobian and map for
-    // matrixfree
-    double *d_shapeFunctionPtr;
-    double *d_jacobianFactorPtr;
-    int *   d_mapPtr;
-
+    // Matrix free wrapper object
+    std::unique_ptr<
+      dftfe::MatrixFreeWrapperClass<double,
+                                    dftfe::operatorList::Laplace,
+                                    dftfe::utils::MemorySpace::DEVICE,
+                                    false>>
+      d_matrixFreeWrapperDevice;
 
     // constraints
     dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::DEVICE>
-      d_constraintsTotalPotentialInfo,
       d_inhomogenousConstraintsTotalPotentialInfo;
 
     /// pointer to dealii dealii::AffineConstraints<double> object
@@ -258,13 +230,13 @@ namespace dftfe
 
     /// matrix free index required to access the DofHandler and
     /// dealii::AffineConstraints<double> objects corresponding to the problem
-    unsigned int d_matrixFreeVectorComponent;
+    dftfe::uInt d_matrixFreeVectorComponent;
 
     /// matrix free quadrature index
-    unsigned int d_matrixFreeQuadratureComponentRhsDensity;
+    dftfe::uInt d_matrixFreeQuadratureComponentRhsDensity;
 
     /// matrix free quadrature index
-    unsigned int d_matrixFreeQuadratureComponentAX;
+    dftfe::uInt d_matrixFreeQuadratureComponentAX;
 
     /// pointer to electron density cell quadrature data
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
@@ -275,7 +247,7 @@ namespace dftfe
       *d_smearedChargeValuesPtr;
 
     ///
-    unsigned int d_smearedChargeQuadratureId;
+    dftfe::uInt d_smearedChargeQuadratureId;
 
     /// pointer to map between global dof index in current processor and the
     /// atomic charge on that dof
@@ -304,7 +276,7 @@ namespace dftfe
     bool d_isReuseSmearedChargeRhs;
 
     ///
-    unsigned int d_smearedChargeGradientComponentId;
+    dftfe::uInt d_smearedChargeGradientComponentId;
 
     /// mean value constraints: mean value constrained node
     dealii::types::global_dof_index d_meanValueConstraintNodeId;
@@ -314,7 +286,7 @@ namespace dftfe
 
     /// mean value constraints: constrained proc id containing the mean value
     /// constrained node
-    unsigned int d_meanValueConstraintProcId;
+    dftfe::uInt d_meanValueConstraintProcId;
 
     /// duplicate constraints object with flattened maps for faster access
     dftUtils::constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>
@@ -331,8 +303,8 @@ namespace dftfe
     bool d_isHomogenousConstraintsInitialized;
 
     const MPI_Comm             mpi_communicator;
-    const unsigned int         n_mpi_processes;
-    const unsigned int         this_mpi_process;
+    const dftfe::uInt          n_mpi_processes;
+    const dftfe::uInt          this_mpi_process;
     dealii::ConditionalOStream pcout;
   };
 

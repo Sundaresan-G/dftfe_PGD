@@ -66,35 +66,24 @@ namespace dftfe
     }
 
     inline void
-    computeOffsetVectors(std::vector<std::vector<double>> & latticeVectors,
+    computeOffsetVectors(std::vector<std::vector<double>>  &latticeVectors,
                          std::vector<dealii::Tensor<1, 3>> &offsetVectors)
     {
-      // create unitVectorsXYZ
-      std::vector<std::vector<double>> unitVectorsXYZ;
-      unitVectorsXYZ.resize(3);
-
-      for (int i = 0; i < 3; ++i)
-        {
-          unitVectorsXYZ[i].resize(3, 0.0);
-          unitVectorsXYZ[i][i] = 0.0;
-        }
-
-
       // resize offset vectors
       offsetVectors.resize(3);
 
-      for (int i = 0; i < 3; ++i)
+      for (dftfe::Int i = 0; i < 3; ++i)
         {
-          for (int j = 0; j < 3; ++j)
+          for (dftfe::Int j = 0; j < 3; ++j)
             {
-              offsetVectors[i][j] = unitVectorsXYZ[i][j] - latticeVectors[i][j];
+              offsetVectors[i][j] = -latticeVectors[i][j];
             }
         }
     }
 
 
-    inline double getCosineAngle(dealii::Tensor<1, 3> &Vector1,
-                                 std::vector<double> & Vector2)
+    inline double
+    getCosineAngle(dealii::Tensor<1, 3> &Vector1, std::vector<double> &Vector2)
     {
       double dotProduct = Vector1[0] * Vector2[0] + Vector1[1] * Vector2[1] +
                           Vector1[2] * Vector2[2];
@@ -129,11 +118,12 @@ namespace dftfe
     }
 
 
-    inline void markPeriodicFacesNonOrthogonal(
-      dealii::Triangulation<3, 3> &     triangulation,
+    inline void
+    markPeriodicFacesNonOrthogonal(
+      dealii::Triangulation<3, 3>      &triangulation,
       std::vector<std::vector<double>> &latticeVectors,
-      const MPI_Comm &                  mpiCommParent,
-      const dftParameters &             dftParams)
+      const MPI_Comm                   &mpiCommParent,
+      const dftParameters              &dftParams)
     {
       dealii::ConditionalOStream pcout(
         std::cout,
@@ -173,16 +163,16 @@ namespace dftfe
       //
       // mark faces
       //
-      // const unsigned int px=dftParameters::periodicX,
+      // const dftfe::uInt px=dftParameters::periodicX,
       // py=dftParameters::periodicX, pz=dftParameters::periodicX;
       //
       cell = triangulation.begin_active(), endc = triangulation.end();
-      const std::array<int, 3> periodic = {dftParams.periodicX,
-                                           dftParams.periodicY,
-                                           dftParams.periodicZ};
+      const std::array<dftfe::Int, 3> periodic = {dftParams.periodicX,
+                                                  dftParams.periodicY,
+                                                  dftParams.periodicZ};
       for (; cell != endc; ++cell)
         {
-          for (unsigned int f = 0; f < dealii::GeometryInfo<3>::faces_per_cell;
+          for (dftfe::uInt f = 0; f < dealii::GeometryInfo<3>::faces_per_cell;
                ++f)
             {
               const dealii::Point<3> face_center = cell->face(f)->center();
@@ -199,9 +189,9 @@ namespace dftfe
                   // "<<getCosineAngle(faceNormalVector,periodicFaceNormals[1])<<"
                   // "<<getCosineAngle(faceNormalVector,periodicFaceNormals[2])<<std::endl;
 
-                  unsigned int i = 1;
+                  dftfe::uInt i = 1;
 
-                  for (unsigned int d = 0; d < 3; ++d)
+                  for (dftfe::uInt d = 0; d < 3; ++d)
                     {
                       if (periodic[d] == 1)
                         {
@@ -221,9 +211,9 @@ namespace dftfe
             }
         }
 
-      std::vector<int> periodicDirectionVector;
+      std::vector<dftfe::Int> periodicDirectionVector;
 
-      for (unsigned int d = 0; d < 3; ++d)
+      for (dftfe::uInt d = 0; d < 3; ++d)
         {
           if (periodic[d] == 1)
             {
@@ -235,7 +225,8 @@ namespace dftfe
       std::vector<dealii::GridTools::PeriodicFacePair<
         typename dealii::Triangulation<3, 3>::cell_iterator>>
         periodicity_vector;
-      for (int i = 0; i < std::accumulate(periodic.begin(), periodic.end(), 0);
+      for (dftfe::Int i = 0;
+           i < std::accumulate(periodic.begin(), periodic.end(), 0);
            ++i)
         {
           dealii::GridTools::collect_periodic_faces(
@@ -255,7 +246,7 @@ namespace dftfe
         pcout << "Periodic Facepairs size: " << periodicity_vector.size()
               << std::endl;
       /*
-         for(unsigned int i=0; i< periodicity_vector.size(); ++i)
+         for(dftfe::uInt i=0; i< periodicity_vector.size(); ++i)
          {
          if (!periodicity_vector[i].cell[0]->active() ||
          !periodicity_vector[i].cell[1]->active()) continue; if

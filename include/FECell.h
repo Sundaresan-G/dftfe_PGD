@@ -40,7 +40,7 @@ namespace dftfe
      *
      * @author Vishal Subramanian, Bikash Kanungo
      */
-    template <size_type dim>
+    template <dftfe::uInt dim>
     class FECell : public Cell<dim>
     {
     public:
@@ -49,7 +49,7 @@ namespace dftfe
 
       FECell(
         typename dealii::DoFHandler<dim>::active_cell_iterator dealiiFECellIter,
-        const dealii::FiniteElement<dim, dim> &                fe);
+        const dealii::FiniteElement<dim, dim>                 &fe);
 
       void
       reinit(DealiiFECellIterator dealiiFECellIter);
@@ -58,7 +58,7 @@ namespace dftfe
       getVertices(std::vector<std::vector<double>> &points) const override;
 
       void
-      getVertex(size_type i, std::vector<double> &point) const override;
+      getVertex(dftfe::uInt i, std::vector<double> &point) const override;
 
       std::pair<std::vector<double>, std::vector<double>>
       getBoundingBox() const override;
@@ -73,7 +73,7 @@ namespace dftfe
 
       std::vector<double>
       getParametricPointForAllPoints(
-        unsigned int               numPoints,
+        dftfe::uInt                numPoints,
         const std::vector<double> &realPoint) const;
 
       DealiiFECellIterator &
@@ -81,18 +81,18 @@ namespace dftfe
 
       void
       getShapeFuncValuesFromParametricPoints(
-        unsigned int                    numPointsInCell,
-        const std::vector<double> &     parametricPoints,
+        dftfe::uInt                     numPointsInCell,
+        const std::vector<double>      &parametricPoints,
         std::vector<dataTypes::number> &shapeFuncValues,
-        unsigned int                    cellShapeFuncStartIndex,
-        unsigned int                    numDofsPerElement) const;
+        dftfe::uInt                     cellShapeFuncStartIndex,
+        dftfe::uInt                     numDofsPerElement) const;
 
       void
-      getShapeFuncValues(unsigned int               numPointsInCell,
+      getShapeFuncValues(dftfe::uInt                numPointsInCell,
                          const std::vector<double> &coordinatesOfPointsInCell,
                          std::vector<dataTypes::number> &shapeFuncValues,
-                         unsigned int cellShapeFuncStartIndex,
-                         unsigned int numDofsPerElement) const override;
+                         dftfe::uInt cellShapeFuncStartIndex,
+                         dftfe::uInt numDofsPerElement) const override;
 
     private:
       std::vector<double> d_lowerLeft;
@@ -110,5 +110,5 @@ namespace dftfe
 
 #include "../utils/FECell.t.cc"
 
-//#include "../utils/FECell.t.cc"
+// #include "../utils/FECell.t.cc"
 #endif // DFTFE_FECELL_H

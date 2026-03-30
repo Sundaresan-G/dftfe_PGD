@@ -46,8 +46,8 @@ namespace dftfe
      * @param lowerBoundUnWantedSpectrum Lower Bound of the UnWanted Spectrum.
      */
     chebyshevOrthogonalizedSubspaceIterationSolverDevice(
-      const MPI_Comm &     mpi_comm_parent,
-      const MPI_Comm &     mpi_comm_domain,
+      const MPI_Comm      &mpi_comm_parent,
+      const MPI_Comm      &mpi_comm_domain,
       double               lowerBoundWantedSpectrum,
       double               lowerBoundUnWantedSpectrum,
       double               upperBoundUnWantedSpectrum,
@@ -61,13 +61,13 @@ namespace dftfe
     double
     solve(operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
           std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<
-            dftfe::utils::MemorySpace::DEVICE>> &              BLASWrapperPtr,
-          elpaScalaManager &                                   elpaScala,
-          dataTypes::number *      eigenVectorsFlattenedDevice,
-          const unsigned int       localVectorSize,
-          const unsigned int       totalNumberWaveFunctions,
-          std::vector<double> &    eigenValues,
-          std::vector<double> &    residuals,
+            dftfe::utils::MemorySpace::DEVICE>>               &BLASWrapperPtr,
+          elpaScalaManager                                    &elpaScala,
+          dataTypes::number       *eigenVectorsFlattenedDevice,
+          const dftfe::uInt        flattenedSize,
+          const dftfe::uInt        totalNumberWaveFunctions,
+          std::vector<double>     &eigenValues,
+          std::vector<double>     &residuals,
           utils::DeviceCCLWrapper &devicecclMpiCommDomain,
           utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
           const MPI_Comm &         interBandGroupComm,
@@ -87,16 +87,16 @@ namespace dftfe
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                        BLASWrapperPtr,
-      dataTypes::number *        eigenVectorsFlattenedDevice,
-      const unsigned int         flattenedSize,
-      const unsigned int         totalNumberWaveFunctions,
+                                &BLASWrapperPtr,
+      dataTypes::number         *eigenVectorsFlattenedDevice,
+      const dftfe::uInt          flattenedSize,
+      const dftfe::uInt          totalNumberWaveFunctions,
       const std::vector<double> &eigenValues,
       const double               fermiEnergy,
-      std::vector<double> &      densityMatDerFermiEnergy,
-      utils::DeviceCCLWrapper &  devicecclMpiCommDomain,
-      const MPI_Comm &           interBandGroupComm,
-      dftfe::elpaScalaManager &  elpaScala);
+      std::vector<double>       &densityMatDerFermiEnergy,
+      utils::DeviceCCLWrapper   &devicecclMpiCommDomain,
+      const MPI_Comm            &interBandGroupComm,
+      dftfe::elpaScalaManager   &elpaScala);
 
 
     /**

@@ -52,24 +52,24 @@ namespace dftfe
 
 
     virtual dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &
-    getScratchFEMultivector(const unsigned int numVectors,
-                            const unsigned int index) = 0;
+    getScratchFEMultivector(const dftfe::uInt numVectors,
+                            const dftfe::uInt index) = 0;
 
     virtual dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
                                               memorySpace> &
-    getScratchFEMultivectorSinglePrec(const unsigned int numVectors,
-                                      const unsigned int index) = 0;
+    getScratchFEMultivectorSinglePrec(const dftfe::uInt numVectors,
+                                      const dftfe::uInt index) = 0;
 
     virtual void
     init(const std::vector<double> &kPointCoordinates,
          const std::vector<double> &kPointWeights) = 0;
 
     virtual void
-    reinitkPointSpinIndex(const unsigned int kPointIndex,
-                          const unsigned int spinIndex) = 0;
+    reinitkPointSpinIndex(const dftfe::uInt kPointIndex,
+                          const dftfe::uInt spinIndex) = 0;
 
     virtual void
-    reinitNumberWavefunctions(const unsigned int numWfc) = 0;
+    reinitNumberWavefunctions(const dftfe::uInt numWfc) = 0;
 
 
     virtual void
@@ -78,6 +78,16 @@ namespace dftfe
        const double scalarY,
        const double scalarX,
        dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
+       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
+
+    virtual void
+    HX(dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
+                   &src,
+       const double scalarHX,
+       const double scalarY,
+       const double scalarX,
+       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
+                 &dst,
        const bool onlyHPrimePartForFirstOrderDensityMatResponse = false) = 0;
 
     virtual void
@@ -108,9 +118,19 @@ namespace dftfe
         &dst) = 0;
 
     virtual void
+    overlapSqrtInverseMatrixTimesX(
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &src,
+      const double scalarOinvX,
+      const double scalarY,
+      const double scalarX,
+      dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
+        &dst) = 0;
+
+
+    virtual void
     overlapInverseMatrixTimesX(
       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
-        &          src,
+                  &src,
       const double scalarOinvX,
       const double scalarY,
       const double scalarX,

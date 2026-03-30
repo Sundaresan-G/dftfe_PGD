@@ -53,10 +53,10 @@ namespace dftfe
 
       enum class communicationPrecision
       {
-        single,
-        full
+        half,    // explicitly BF16
+        single,  // explicitly FP32
+        standard // same as valueType
       };
-
 
       template <typename ValueType, MemorySpace memorySpace>
       class MPICommunicatorP2P
@@ -64,21 +64,20 @@ namespace dftfe
       public:
         MPICommunicatorP2P(
           std::shared_ptr<const MPIPatternP2P<memorySpace>> mpiPatternP2P,
-          const size_type                                   blockSize);
+          const dftfe::uInt                                 blockSize);
 
         void
         updateGhostValues(MemoryStorage<ValueType, memorySpace> &dataArray,
-                          const size_type communicationChannel = 0);
+                          const dftfe::uInt communicationChannel = 0);
 
         void
         accumulateAddLocallyOwned(
           MemoryStorage<ValueType, memorySpace> &dataArray,
-          const size_type                        communicationChannel = 0);
-
+          const dftfe::uInt                      communicationChannel = 0);
 
         void
         updateGhostValuesBegin(MemoryStorage<ValueType, memorySpace> &dataArray,
-                               const size_type communicationChannel = 0);
+                               const dftfe::uInt communicationChannel = 0);
 
         void
         updateGhostValuesEnd(MemoryStorage<ValueType, memorySpace> &dataArray);
@@ -86,7 +85,7 @@ namespace dftfe
         void
         accumulateAddLocallyOwnedBegin(
           MemoryStorage<ValueType, memorySpace> &dataArray,
-          const size_type                        communicationChannel = 0);
+          const dftfe::uInt                      communicationChannel = 0);
 
         void
         accumulateAddLocallyOwnedEnd(
@@ -99,12 +98,12 @@ namespace dftfe
         void
         accumulateInsertLocallyOwned(
           MemoryStorage<ValueType, memorySpace> &dataArray,
-          const size_type                        communicationChannel = 0);
+          const dftfe::uInt                      communicationChannel = 0);
 
         void
         accumulateInsertLocallyOwnedBegin(
           MemoryStorage<ValueType, memorySpace> &dataArray,
-          const size_type                        communicationChannel = 0);
+          const dftfe::uInt                      communicationChannel = 0);
 
         void
         accumulateInsertLocallyOwnedEnd(
@@ -113,7 +112,7 @@ namespace dftfe
         std::shared_ptr<const MPIPatternP2P<memorySpace>>
         getMPIPatternP2P() const;
 
-        int
+        dftfe::Int
         getBlockSize() const;
 
         void
@@ -122,21 +121,13 @@ namespace dftfe
       private:
         std::shared_ptr<const MPIPatternP2P<memorySpace>> d_mpiPatternP2P;
 
-        size_type d_blockSize;
+        dftfe::uInt d_blockSize;
 
-        size_type d_locallyOwnedSize;
+        dftfe::uInt d_locallyOwnedSize;
 
-        size_type d_ghostSize;
+        dftfe::uInt d_ghostSize;
 
         MemoryStorage<ValueType, memorySpace> d_sendRecvBuffer;
-
-        MemoryStorage<double, memorySpace> d_tempDoubleRealArrayForAtomics;
-
-        MemoryStorage<double, memorySpace> d_tempDoubleImagArrayForAtomics;
-
-        MemoryStorage<float, memorySpace> d_tempFloatRealArrayForAtomics;
-
-        MemoryStorage<float, memorySpace> d_tempFloatImagArrayForAtomics;
 
         MemoryStorage<
           typename dftfe::dataTypes::singlePrecType<ValueType>::type,
@@ -147,6 +138,14 @@ namespace dftfe
           typename dftfe::dataTypes::singlePrecType<ValueType>::type,
           memorySpace>
           d_ghostDataCopySinglePrec;
+
+        MemoryStorage<typename dftfe::dataTypes::halfPrecType<ValueType>::type,
+                      memorySpace>
+          d_sendRecvBufferHalfPrec;
+
+        MemoryStorage<typename dftfe::dataTypes::halfPrecType<ValueType>::type,
+                      memorySpace>
+          d_ghostDataCopyHalfPrec;
 
 #ifdef DFTFE_WITH_DEVICE
         std::shared_ptr<MemoryStorage<ValueType, MemorySpace::HOST_PINNED>>
@@ -164,19 +163,27 @@ namespace dftfe
           typename dftfe::dataTypes::singlePrecType<ValueType>::type,
           MemorySpace::HOST_PINNED>>
           d_sendRecvBufferSinglePrecHostPinnedPtr;
+
+        std::shared_ptr<MemoryStorage<
+          typename dftfe::dataTypes::halfPrecType<ValueType>::type,
+          MemorySpace::HOST_PINNED>>
+          d_ghostDataCopyHalfPrecHostPinnedPtr;
+
+        std::shared_ptr<MemoryStorage<
+          typename dftfe::dataTypes::halfPrecType<ValueType>::type,
+          MemorySpace::HOST_PINNED>>
+          d_sendRecvBufferHalfPrecHostPinnedPtr;
+
 #endif // DFTFE_WITH_DEVICE
 
         std::vector<MPI_Request> d_requestsUpdateGhostValues;
         std::vector<MPI_Request> d_requestsAccumulateAddLocallyOwned;
         std::vector<MPI_Request> d_requestsAccumulateInsertLocallyOwned;
         MPI_Comm                 d_mpiCommunicator;
-#ifdef DFTFE_WITH_DEVICE
-        dftfe::utils::deviceStream_t d_deviceCommStream;
-#endif
+
         communicationProtocol  d_commProtocol;
         communicationPrecision d_commPrecision;
       };
-
     } // namespace mpi
   }   // namespace utils
 } // namespace dftfe

@@ -43,7 +43,7 @@ subsection Finite element mesh parameters
 end
 
 subsection SCF Checkpointing and Restart
-    set LOAD RHO DATA = true
+    set LOAD QUAD DATA = true
 end
 
 subsection Post-processing Options
@@ -61,5 +61,6 @@ end
 subsection SCF parameters
   subsection Eigen-solver parameters
       set CHEBYSHEV FILTER TOLERANCE  = 1e-12
+      set HIGHEST STATE OF INTEREST FOR CHEBYSHEV FILTERING    = 15
   end
 end

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2017-2018 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -33,25 +33,25 @@ namespace dftfe
   computeRhoFirstOrderResponse(
     const dftfe::utils::MemoryStorage<NumberType, memorySpace> &X,
     const dftfe::utils::MemoryStorage<NumberType, memorySpace> &XPrime,
-    const unsigned int                      totalNumWaveFunctions,
+    const dftfe::uInt                       totalNumWaveFunctions,
     const std::vector<std::vector<double>> &densityMatDerFermiEnergy,
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<NumberType, double, memorySpace>>
       &basisOperationsPtr,
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-      &                        BLASWrapperPtr,
-    const unsigned int         matrixFreeDofhandlerIndex,
-    const unsigned int         quadratureIndex,
+                              &BLASWrapperPtr,
+    const dftfe::uInt          matrixFreeDofhandlerIndex,
+    const dftfe::uInt          quadratureIndex,
     const std::vector<double> &kPointWeights,
     std::vector<
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &rhoResponseValuesHam,
     std::vector<
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-      &                  rhoResponseValuesFermiEnergy,
-    const MPI_Comm &     mpiCommParent,
-    const MPI_Comm &     interpoolcomm,
-    const MPI_Comm &     interBandGroupComm,
+                        &rhoResponseValuesFermiEnergy,
+    const MPI_Comm      &mpiCommParent,
+    const MPI_Comm      &interpoolcomm,
+    const MPI_Comm      &interBandGroupComm,
     const dftParameters &dftParams);
 
 
@@ -60,14 +60,14 @@ namespace dftfe
   computeRhoResponseFromInterpolatedValues(
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-      &                                         BLASWrapperPtr,
-    const std::pair<unsigned int, unsigned int> cellRange,
-    const std::pair<unsigned int, unsigned int> vecRange,
-    const unsigned int                          nQuadsPerCell,
-    double *                                    onesVec,
-    double *                                    partialOccupPrimeVec,
-    NumberType *                                wfcQuadPointData,
-    NumberType *                                wfcPrimeQuadPointData,
+                                             &BLASWrapperPtr,
+    const std::pair<dftfe::uInt, dftfe::uInt> cellRange,
+    const std::pair<dftfe::uInt, dftfe::uInt> vecRange,
+    const dftfe::uInt                         nQuadsPerCell,
+    double                                   *onesVec,
+    double                                   *partialOccupPrimeVec,
+    NumberType                               *wfcQuadPointData,
+    NumberType                               *wfcPrimeQuadPointData,
     double *rhoResponseHamCellsWfcContributions,
     double *rhoResponseFermiEnergyCellsWfcContributions,
     double *rhoResponseHam,

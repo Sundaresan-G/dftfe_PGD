@@ -12,12 +12,14 @@ namespace dftfe
   {
     void
     fillDensityAttributeData(
-      std::vector<double> &                        attributeData,
-      const std::vector<double> &                  values,
-      const std::pair<unsigned int, unsigned int> &indexRange)
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &attributeData,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                                                &values,
+      const std::pair<dftfe::uInt, dftfe::uInt> &indexRange)
     {
-      unsigned int startIndex = indexRange.first;
-      unsigned int endIndex   = indexRange.second;
+      dftfe::uInt startIndex = indexRange.first;
+      dftfe::uInt endIndex   = indexRange.second;
 
       attributeData.resize(endIndex - startIndex);
       if (startIndex > endIndex || endIndex > values.size())
@@ -27,7 +29,7 @@ namespace dftfe
           throw std::invalid_argument("Invalid index range for densityData");
         }
 
-      for (unsigned int i = startIndex; i < endIndex; ++i)
+      for (dftfe::uInt i = startIndex; i < endIndex; ++i)
         {
           attributeData[i - startIndex] = values[i];
         }
@@ -38,31 +40,20 @@ namespace dftfe
   template <dftfe::utils::MemorySpace memorySpace>
   void
   AuxDensityMatrixFE<memorySpace>::applyLocalOperations(
-    const std::vector<double> &points,
-    std::unordered_map<DensityDescriptorDataAttributes, std::vector<double>>
+    const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+    std::unordered_map<
+      DensityDescriptorDataAttributes,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &densityData)
   {
-    std::pair<unsigned int, unsigned int> indexRangeVal;
-    std::pair<unsigned int, unsigned int> indexRangeGrad;
+    std::pair<dftfe::uInt, dftfe::uInt> indexRangeVal;
+    std::pair<dftfe::uInt, dftfe::uInt> indexRangeGrad;
 
-    unsigned int minIndex = 0;
-    for (unsigned int i = 0; i < d_quadWeightsAll.size(); i++)
-      {
-        if ((std::abs(points[0] - d_quadPointsAll[3 * i + 0]) +
-             std::abs(points[1] - d_quadPointsAll[3 * i + 1]) +
-             std::abs(points[2] - d_quadPointsAll[3 * i + 2])) < 1e-6)
-          {
-            minIndex = i;
-            break;
-          }
-      }
+    indexRangeVal.first  = quadIndexRange.first;
+    indexRangeVal.second = quadIndexRange.second;
 
-
-    indexRangeVal.first  = minIndex;
-    indexRangeVal.second = minIndex + points.size() / 3;
-
-    indexRangeGrad.first  = minIndex * 3;
-    indexRangeGrad.second = minIndex * 3 + points.size();
+    indexRangeGrad.first  = quadIndexRange.first * 3;
+    indexRangeGrad.second = quadIndexRange.second * 3;
 
     if (densityData.find(DensityDescriptorDataAttributes::valuesTotal) !=
         densityData.end())
@@ -121,9 +112,44 @@ namespace dftfe
 
   template <dftfe::utils::MemorySpace memorySpace>
   void
+  AuxDensityMatrixFE<memorySpace>::applyLocalOperations(
+    const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+    std::unordered_map<
+      WfcDescriptorDataAttributes,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+      &wfcData)
+  {
+    std::pair<dftfe::uInt, dftfe::uInt> indexRangeVal;
+    indexRangeVal.first  = quadIndexRange.first;
+    indexRangeVal.second = quadIndexRange.second;
+
+    if (wfcData.find(WfcDescriptorDataAttributes::tauTotal) != wfcData.end())
+      {
+        fillDensityAttributeData(wfcData[WfcDescriptorDataAttributes::tauTotal],
+                                 d_tauValsTotalAllQuads,
+                                 indexRangeVal);
+      }
+    if (wfcData.find(WfcDescriptorDataAttributes::tauSpinUp) != wfcData.end())
+      {
+        fillDensityAttributeData(
+          wfcData[WfcDescriptorDataAttributes::tauSpinUp],
+          d_tauValsSpinUpAllQuads,
+          indexRangeVal);
+      }
+    if (wfcData.find(WfcDescriptorDataAttributes::tauSpinDown) != wfcData.end())
+      {
+        fillDensityAttributeData(
+          wfcData[WfcDescriptorDataAttributes::tauSpinDown],
+          d_tauValsSpinDownAllQuads,
+          indexRangeVal);
+      }
+  }
+
+  template <dftfe::utils::MemorySpace memorySpace>
+  void
   AuxDensityMatrixFE<memorySpace>::setDensityMatrixComponents(
     const dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
-      &                                     eigenVectorsFlattenedMemSpace,
+                                           &eigenVectorsFlattenedMemSpace,
     const std::vector<std::vector<double>> &fractionalOccupancies)
   {
     d_eigenVectorsFlattenedMemSpacePtr = &(eigenVectorsFlattenedMemSpace);
@@ -133,8 +159,10 @@ namespace dftfe
   template <dftfe::utils::MemorySpace memorySpace>
   void
   AuxDensityMatrixFE<memorySpace>::evalOverlapMatrixStart(
-    const std::vector<double> &quadpts,
-    const std::vector<double> &quadWt)
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &quadpts,
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &quadWt)
   {
     std::string errMsg = "Not implemented";
     dftfe::utils::throwException(false, errMsg);
@@ -154,9 +182,11 @@ namespace dftfe
   AuxDensityMatrixFE<memorySpace>::projectDensityMatrixStart(
     const std::unordered_map<std::string, std::vector<dataTypes::number>>
       &projectionInputsDataType,
-    const std::unordered_map<std::string, std::vector<double>>
-      &       projectionInputsReal,
-    const int iSpin)
+    const std::unordered_map<
+      std::string,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+                    &projectionInputsReal,
+    const dftfe::Int iSpin)
   {
     std::string errMsg = "Not implemented";
     dftfe::utils::throwException(false, errMsg);
@@ -175,54 +205,75 @@ namespace dftfe
   template <dftfe::utils::MemorySpace memorySpace>
   void
   AuxDensityMatrixFE<memorySpace>::projectDensityStart(
-    const std::unordered_map<std::string, std::vector<double>>
+    const std::unordered_map<
+      std::string,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
       &projectionInputs)
   {
     d_quadPointsAll  = projectionInputs.find("quadpts")->second;
     d_quadWeightsAll = projectionInputs.find("quadWt")->second;
-    const std::vector<double> &densityVals =
-      projectionInputs.find("densityFunc")->second;
-    const unsigned int nQ = d_quadWeightsAll.size();
+    const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &densityVals       = projectionInputs.find("densityFunc")->second;
+    const dftfe::uInt nQ = d_quadWeightsAll.size();
     d_densityValsTotalAllQuads.resize(nQ, 0);
     d_densityValsSpinUpAllQuads.resize(nQ, 0);
     d_densityValsSpinDownAllQuads.resize(nQ, 0);
-    for (unsigned int iquad = 0; iquad < nQ; iquad++)
+    for (dftfe::uInt iquad = 0; iquad < nQ; iquad++)
       d_densityValsSpinUpAllQuads[iquad] = densityVals[iquad];
 
-    for (unsigned int iquad = 0; iquad < nQ; iquad++)
+    for (dftfe::uInt iquad = 0; iquad < nQ; iquad++)
       d_densityValsSpinDownAllQuads[iquad] = densityVals[nQ + iquad];
 
-    for (unsigned int iquad = 0; iquad < nQ; iquad++)
+    for (dftfe::uInt iquad = 0; iquad < nQ; iquad++)
       d_densityValsTotalAllQuads[iquad] = d_densityValsSpinUpAllQuads[iquad] +
                                           d_densityValsSpinDownAllQuads[iquad];
 
     if (projectionInputs.find("gradDensityFunc") != projectionInputs.end())
       {
-        const std::vector<double> &gradDensityVals =
-          projectionInputs.find("gradDensityFunc")->second;
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::HOST>
+          &gradDensityVals = projectionInputs.find("gradDensityFunc")->second;
         d_gradDensityValsSpinUpAllQuads.resize(nQ * 3, 0);
         d_gradDensityValsSpinDownAllQuads.resize(nQ * 3, 0);
 
-        for (unsigned int iquad = 0; iquad < nQ; iquad++)
-          for (unsigned int idim = 0; idim < 3; idim++)
+        for (dftfe::uInt iquad = 0; iquad < nQ; iquad++)
+          for (dftfe::uInt idim = 0; idim < 3; idim++)
             d_gradDensityValsSpinUpAllQuads[3 * iquad + idim] =
               gradDensityVals[3 * iquad + idim];
 
-        for (unsigned int iquad = 0; iquad < nQ; iquad++)
-          for (unsigned idim = 0; idim < 3; idim++)
+        for (dftfe::uInt iquad = 0; iquad < nQ; iquad++)
+          for (dftfe::uInt idim = 0; idim < 3; idim++)
             d_gradDensityValsSpinDownAllQuads[3 * iquad + idim] =
               gradDensityVals[3 * nQ + 3 * iquad + idim];
       }
 
     if (projectionInputs.find("magAxis") != projectionInputs.end())
       {
-        const std::vector<double> &magAxisVals =
-          projectionInputs.find("magAxis")->second;
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::HOST>
+          &magAxisVals = projectionInputs.find("magAxis")->second;
         d_magAxisAllQuads.resize(nQ * 3, 0);
 
-        for (unsigned int iquad = 0; iquad < nQ; iquad++)
-          for (unsigned idim = 0; idim < 3; idim++)
+        for (dftfe::uInt iquad = 0; iquad < nQ; iquad++)
+          for (dftfe::uInt idim = 0; idim < 3; idim++)
             d_magAxisAllQuads[3 * iquad + idim] = magAxisVals[3 * iquad + idim];
+      }
+
+    if (projectionInputs.find("tauFunc") != projectionInputs.end())
+      {
+        const dftfe::utils::MemoryStorage<double,
+                                          dftfe::utils::MemorySpace::HOST>
+          &tauVals = projectionInputs.find("tauFunc")->second;
+        d_tauValsTotalAllQuads.resize(nQ, 0);
+        d_tauValsSpinUpAllQuads.resize(nQ, 0);
+        d_tauValsSpinDownAllQuads.resize(nQ, 0);
+        for (dftfe::uInt iquad = 0; iquad < nQ; iquad++)
+          {
+            d_tauValsSpinUpAllQuads[iquad]   = tauVals[iquad];
+            d_tauValsSpinDownAllQuads[iquad] = tauVals[nQ + iquad];
+            d_tauValsTotalAllQuads[iquad] =
+              tauVals[iquad] + tauVals[nQ + iquad];
+          }
       }
   }
 

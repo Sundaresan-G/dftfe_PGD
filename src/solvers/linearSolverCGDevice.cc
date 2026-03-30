@@ -19,15 +19,14 @@
 
 #include <linearSolverCGDevice.h>
 #include <MemoryTransfer.h>
-#include <deviceKernelsGeneric.h>
 #include "linearSolverCGDeviceKernels.h"
 
 namespace dftfe
 {
   // constructor
   linearSolverCGDevice::linearSolverCGDevice(
-    const MPI_Comm & mpi_comm_parent,
-    const MPI_Comm & mpi_comm_domain,
+    const MPI_Comm  &mpi_comm_parent,
+    const MPI_Comm  &mpi_comm_domain,
     const solverType type,
     const std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
@@ -48,8 +47,8 @@ namespace dftfe
   void
   linearSolverCGDevice::solve(linearSolverProblemDevice &problem,
                               const double               absTolerance,
-                              const unsigned int         maxNumberIterations,
-                              const int                  debugLevel,
+                              const dftfe::uInt          maxNumberIterations,
+                              const dftfe::Int           debugLevel,
                               bool                       distributeFlag)
   {
     int this_process;
@@ -88,9 +87,9 @@ namespace dftfe
     d_devSumPtr = d_devSum.data();
     d_xLocalDof = x.locallyOwnedSize() * x.numVectors();
 
-    double res = 0.0, initial_res = 0.0;
-    bool   conv = false;
-    int    it   = 0;
+    double     res = 0.0, initial_res = 0.0;
+    bool       conv = false;
+    dftfe::Int it   = 0;
 
     try
       {
@@ -111,17 +110,16 @@ namespace dftfe
             double alpha = 0.0;
             double beta  = 0.0;
             double delta = 0.0;
+
             // r = Ax
             problem.computeAX(d_rvec, x);
 
             // r = Ax - rhs
-            d_BLASWrapperPtr->add(d_rvec.begin(),
-                                  rhsDevice.begin(),
-                                  -1,
-                                  d_xLocalDof);
+            double mOne = -1.0;
+            d_BLASWrapperPtr->xaxpy(
+              d_xLocalDof, &mOne, rhsDevice.begin(), 1, d_rvec.begin(), 1);
+
             // res = r.r
-
-
             d_BLASWrapperPtr->xnrm2(
               d_xLocalDof, d_rvec.begin(), 1, mpi_communicator, &res);
             initial_res = res;
@@ -149,8 +147,7 @@ namespace dftfe
                     beta = delta / beta;
 
                     // q = beta * q - d
-                    dftfe::utils::deviceKernelsGeneric::sadd<double>(
-                      d_qvec.begin(), d_dvec.begin(), beta, d_xLocalDof);
+                    sadd(d_qvec.begin(), d_dvec.begin(), beta, d_xLocalDof);
                   }
                 else
                   {
@@ -164,8 +161,6 @@ namespace dftfe
                 problem.computeAX(d_dvec, d_qvec);
 
                 // alpha = q.d
-                // alpha =
-
                 d_BLASWrapperPtr->xdot(d_xLocalDof,
                                        d_qvec.begin(),
                                        1,

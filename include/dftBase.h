@@ -74,9 +74,6 @@ namespace dftfe
           const bool isRestartGroundStateCalcFromChk = false) = 0;
 
     virtual void
-    computeStress() = 0;
-
-    virtual void
     trivialSolveForStress() = 0;
 
     virtual double
@@ -120,7 +117,7 @@ namespace dftfe
     /**
      * @brief Gets the current image atom ids from dftClass
      */
-    virtual const std::vector<int> &
+    virtual const std::vector<dftfe::Int> &
     getImageAtomIDs() const = 0;
 
 
@@ -152,7 +149,7 @@ namespace dftfe
     /**
      * @brief Gets the current atom types from dftClass
      */
-    virtual const std::set<unsigned int> &
+    virtual const std::set<dftfe::uInt> &
     getAtomTypes() const = 0;
 
     /**

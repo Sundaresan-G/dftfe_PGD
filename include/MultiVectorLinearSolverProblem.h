@@ -40,7 +40,7 @@ namespace dftfe
     computeRhs(
       dftfe::linearAlgebra::MultiVector<double, memorySpace> &NDBCVec,
       dftfe::linearAlgebra::MultiVector<double, memorySpace> &outputVec,
-      unsigned int blockSizeInput) = 0;
+      dftfe::uInt blockSizeInput) = 0;
 
     /**
      * @brief Compute A matrix multipled by x.
@@ -49,7 +49,7 @@ namespace dftfe
     virtual void
     vmult(dftfe::linearAlgebra::MultiVector<double, memorySpace> &Ax,
           dftfe::linearAlgebra::MultiVector<double, memorySpace> &x,
-          unsigned int blockSize) = 0;
+          dftfe::uInt blockSize) = 0;
 
     /**
      * @brief Apply the constraints to the solution vector.
@@ -64,7 +64,7 @@ namespace dftfe
      */
     virtual void
     precondition_Jacobi(
-      dftfe::linearAlgebra::MultiVector<double, memorySpace> &      dst,
+      dftfe::linearAlgebra::MultiVector<double, memorySpace>       &dst,
       const dftfe::linearAlgebra::MultiVector<double, memorySpace> &src,
       const double omega) const = 0;
 
@@ -74,7 +74,7 @@ namespace dftfe
      */
     virtual void
     precondition_JacobiSqrt(
-      dftfe::linearAlgebra::MultiVector<double, memorySpace> &      dst,
+      dftfe::linearAlgebra::MultiVector<double, memorySpace>       &dst,
       const dftfe::linearAlgebra::MultiVector<double, memorySpace> &src,
       const double omega) const = 0;
   };

@@ -54,10 +54,10 @@ namespace dftfe
 {
   namespace internalWrapper
   {
-    int
-    divisor_closest(int totalSize, int desiredDivisor)
+    dftfe::Int
+    divisor_closest(dftfe::Int totalSize, dftfe::Int desiredDivisor)
     {
-      int i;
+      dftfe::Int i;
       for (i = desiredDivisor; i >= 1; --i)
         {
           if (totalSize % i == 0 && i <= desiredDivisor)
@@ -67,19 +67,19 @@ namespace dftfe
     }
 
 
-    template <int n1, int n2, dftfe::utils::MemorySpace memory>
+    template <dftfe::utils::MemorySpace memory>
     void
-    create_dftfe(const MPI_Comm &      mpi_comm_parent,
-                 const MPI_Comm &      mpi_comm_domain,
-                 const MPI_Comm &      interpoolcomm,
-                 const MPI_Comm &      interBandGroupComm,
-                 const MPI_Comm &      intrapoolcomm,
-                 const std::string &   scratchFolderName,
+    create_dftfe(const MPI_Comm       &mpi_comm_parent,
+                 const MPI_Comm       &mpi_comm_domain,
+                 const MPI_Comm       &interpoolcomm,
+                 const MPI_Comm       &interBandGroupComm,
+                 const MPI_Comm       &intrapoolcomm,
+                 const std::string    &scratchFolderName,
                  dftfe::dftParameters &dftParams,
-                 dftBase **            dftfeBaseDoublePtr)
+                 dftBase             **dftfeBaseDoublePtr)
     {
       *dftfeBaseDoublePtr =
-        new dftfe::dftClass<n1, n2, memory>(mpi_comm_parent,
+        new dftfe::dftClass<memory>(mpi_comm_parent,
                                             mpi_comm_domain,
                                             interpoolcomm,
                                             interBandGroupComm,
@@ -87,150 +87,6 @@ namespace dftfe
                                             scratchFolderName,
                                             dftParams);
     }
-
-    // Dynamically create dftClass<n> objects by order.
-    //  Note that we can't store a list of classes because the types differ,
-    //  but we can store a list of functions that use them in an n-independent
-    //  way.
-    //
-    //  Also note element 0 is order 1.
-    //
-    typedef void (*create_fnHost)(const MPI_Comm &      mpi_comm_parent,
-                                  const MPI_Comm &      mpi_comm_domain,
-                                  const MPI_Comm &      interpoolcomm,
-                                  const MPI_Comm &      interBandGroupComm,
-                                  const MPI_Comm &      intrapoolcomm,
-                                  const std::string &   scratchFolderName,
-                                  dftfe::dftParameters &dftParams,
-                                  dftBase **            dftBaseDoublePtr);
-
-    static create_fnHost order_listHost[] = {
-#ifdef DFTFE_MINIMAL_COMPILE
-      create_dftfe<2, 2, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<3, 3, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<4, 4, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<5, 5, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 6, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 7, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 8, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 9, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 7, dftfe::utils::MemorySpace::HOST>
-#else
-      create_dftfe<1, 1, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<1, 2, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<2, 2, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<2, 3, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<2, 4, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<3, 3, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<3, 4, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<3, 5, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<3, 6, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<4, 4, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<4, 5, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<4, 6, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<4, 7, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<4, 8, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<5, 5, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<5, 6, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<5, 7, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<5, 8, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<5, 9, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<5, 10, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 6, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 7, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 8, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 9, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 10, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 11, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<6, 12, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 7, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 8, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 9, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 10, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 11, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 12, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 13, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<7, 14, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 8, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 9, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 10, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 11, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 12, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 13, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 14, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 15, dftfe::utils::MemorySpace::HOST>,
-      create_dftfe<8, 16, dftfe::utils::MemorySpace::HOST>
-#endif
-    };
-#ifdef DFTFE_WITH_DEVICE
-    typedef void (*create_fnDevice)(const MPI_Comm &      mpi_comm_parent,
-                                    const MPI_Comm &      mpi_comm_domain,
-                                    const MPI_Comm &      interpoolcomm,
-                                    const MPI_Comm &      interBandGroupComm,
-                                    const MPI_Comm &      intrapoolcomm,
-                                    const std::string &   scratchFolderName,
-                                    dftfe::dftParameters &dftParams,
-                                    dftBase **            dftBaseDoublePtr);
-
-    static create_fnDevice order_listDevice[] = {
-#  ifdef DFTFE_MINIMAL_COMPILE
-      create_dftfe<2, 2, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<3, 3, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<4, 4, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 5, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 6, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 7, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 8, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 9, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 7, dftfe::utils::MemorySpace::DEVICE>
-#  else
-      create_dftfe<1, 1, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<1, 2, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<2, 2, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<2, 3, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<2, 4, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<3, 3, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<3, 4, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<3, 5, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<3, 6, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<4, 4, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<4, 5, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<4, 6, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<4, 7, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<4, 8, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 5, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 6, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 7, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 8, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 9, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<5, 10, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 6, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 7, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 8, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 9, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 10, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 11, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<6, 12, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 7, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 8, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 9, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 10, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 11, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 12, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 13, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<7, 14, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 8, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 9, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 10, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 11, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 12, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 13, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 14, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 15, dftfe::utils::MemorySpace::DEVICE>,
-      create_dftfe<8, 16, dftfe::utils::MemorySpace::DEVICE>
-#  endif
-    };
-#endif
   } // namespace internalWrapper
 
   void
@@ -282,12 +138,12 @@ namespace dftfe
   // constructor
   //
   dftfeWrapper::dftfeWrapper(const std::string parameter_file,
-                             const MPI_Comm &  mpi_comm_parent,
+                             const MPI_Comm   &mpi_comm_parent,
                              const bool        printParams,
                              const bool setDeviceToMPITaskBindingInternally,
                              const std::string mode,
                              const std::string restartFilesPath,
-                             const int         _verbosity,
+                             const dftfe::Int  _verbosity,
                              const bool        useDevice)
     : d_dftfeBasePtr(nullptr)
     , d_dftfeParamsPtr(nullptr)
@@ -311,12 +167,12 @@ namespace dftfe
   dftfeWrapper::dftfeWrapper(const std::string parameter_file,
                              const std::string restartCoordsFile,
                              const std::string restartDomainVectorsFile,
-                             const MPI_Comm &  mpi_comm_parent,
+                             const MPI_Comm   &mpi_comm_parent,
                              const bool        printParams,
                              const bool setDeviceToMPITaskBindingInternally,
                              const std::string mode,
                              const std::string restartFilesPath,
-                             const int         _verbosity,
+                             const dftfe::Int  _verbosity,
                              const bool        useDevice,
                              const bool        isScfRestart)
     : d_dftfeBasePtr(nullptr)
@@ -343,21 +199,21 @@ namespace dftfe
   // constructor
   //
   dftfeWrapper::dftfeWrapper(
-    const MPI_Comm &                       mpi_comm_parent,
+    const MPI_Comm                        &mpi_comm_parent,
     const bool                             useDevice,
     const std::vector<std::vector<double>> atomicPositionsCart,
-    const std::vector<unsigned int>        atomicNumbers,
+    const std::vector<dftfe::uInt>         atomicNumbers,
     const std::vector<std::vector<double>> cell,
     const std::vector<bool>                pbc,
-    const std::vector<unsigned int>        mpGrid,
+    const std::vector<dftfe::uInt>         mpGrid,
     const std::vector<bool>                mpGridShift,
     const bool                             spinPolarizedDFT,
     const double                           startMagnetization,
     const double                           fermiDiracSmearingTemp,
-    const unsigned int                     npkpt,
+    const dftfe::uInt                      npkpt,
     const double                           meshSize,
     const double                           scfMixingParameter,
-    const int                              verbosity,
+    const dftfe::Int                       verbosity,
     const bool                             setDeviceToMPITaskBindingInternally)
     : d_dftfeBasePtr(nullptr)
     , d_dftfeParamsPtr(nullptr)
@@ -390,12 +246,12 @@ namespace dftfe
 
   void
   dftfeWrapper::reinit(const std::string parameter_file,
-                       const MPI_Comm &  mpi_comm_parent,
+                       const MPI_Comm   &mpi_comm_parent,
                        const bool        printParams,
                        const bool        setDeviceToMPITaskBindingInternally,
                        const std::string mode,
                        const std::string restartFilesPath,
-                       const int         _verbosity,
+                       const dftfe::Int  _verbosity,
                        const bool        useDevice)
   {
     clear();
@@ -422,12 +278,12 @@ namespace dftfe
   dftfeWrapper::reinit(const std::string parameter_file,
                        const std::string restartCoordsFile,
                        const std::string restartDomainVectorsFile,
-                       const MPI_Comm &  mpi_comm_parent,
+                       const MPI_Comm   &mpi_comm_parent,
                        const bool        printParams,
                        const bool        setDeviceToMPITaskBindingInternally,
                        const std::string mode,
                        const std::string restartFilesPath,
-                       const int         _verbosity,
+                       const dftfe::Int  _verbosity,
                        const bool        useDevice,
                        const bool        isScfRestart)
   {
@@ -449,8 +305,8 @@ namespace dftfe
                                            useDevice);
         d_dftfeParamsPtr->coordinatesFile           = restartCoordsFile;
         d_dftfeParamsPtr->domainBoundingVectorsFile = restartDomainVectorsFile;
-        d_dftfeParamsPtr->loadRhoData =
-          d_dftfeParamsPtr->loadRhoData && isScfRestart;
+        d_dftfeParamsPtr->loadQuadData =
+          d_dftfeParamsPtr->loadQuadData && isScfRestart;
       }
     initialize(setDeviceToMPITaskBindingInternally, useDevice);
   }
@@ -458,27 +314,27 @@ namespace dftfe
 
   void
   dftfeWrapper::reinit(
-    const MPI_Comm &                       mpi_comm_parent,
+    const MPI_Comm                        &mpi_comm_parent,
     const bool                             useDevice,
     const std::vector<std::vector<double>> atomicPositionsCart,
-    const std::vector<unsigned int>        atomicNumbers,
+    const std::vector<dftfe::uInt>         atomicNumbers,
     const std::vector<std::vector<double>> cell,
     const std::vector<bool>                pbc,
-    const std::vector<unsigned int>        mpGrid,
+    const std::vector<dftfe::uInt>         mpGrid,
     const std::vector<bool>                mpGridShift,
     const bool                             spinPolarizedDFT,
     const double                           startMagnetization,
     const double                           fermiDiracSmearingTemp,
-    const unsigned int                     npkpt,
+    const dftfe::uInt                      npkpt,
     const double                           meshSize,
     const double                           scfMixingParameter,
-    const int                              verbosity,
+    const dftfe::Int                       verbosity,
     const bool                             setDeviceToMPITaskBindingInternally)
   {
     clear();
     if (mpi_comm_parent != MPI_COMM_NULL)
       {
-        int ierr = MPI_Comm_dup(mpi_comm_parent, &d_mpi_comm_parent);
+        dftfe::Int ierr = MPI_Comm_dup(mpi_comm_parent, &d_mpi_comm_parent);
         if (ierr != 0)
           {
             throw std::runtime_error("MPI_Comm_dup failed.");
@@ -489,7 +345,7 @@ namespace dftfe
 
     if (d_mpi_comm_parent != MPI_COMM_NULL)
       {
-        const int totalMPIProcesses =
+        const dftfe::Int totalMPIProcesses =
           dealii::Utilities::MPI::n_mpi_processes(d_mpi_comm_parent);
 
         std::string parameter_file_path =
@@ -504,11 +360,11 @@ namespace dftfe
             //
             // write pseudo.inp
             //
-            std::set<unsigned int> atomicNumbersSet;
-            for (unsigned int i = 0; i < atomicNumbers.size(); i++)
+            std::set<dftfe::uInt> atomicNumbersSet;
+            for (dftfe::uInt i = 0; i < atomicNumbers.size(); i++)
               atomicNumbersSet.insert(atomicNumbers[i]);
 
-            std::vector<unsigned int> atomicNumbersUniqueVec(
+            std::vector<dftfe::uInt> atomicNumbersUniqueVec(
               atomicNumbersSet.size());
             std::copy(atomicNumbersSet.begin(),
                       atomicNumbersSet.end(),
@@ -523,8 +379,7 @@ namespace dftfe
             std::ofstream dftfePseudoFile(dftfePseudoFileName);
             if (dftfePseudoFile.is_open())
               {
-                for (unsigned int irow = 0;
-                     irow < atomicNumbersUniqueVec.size();
+                for (dftfe::uInt irow = 0; irow < atomicNumbersUniqueVec.size();
                      ++irow)
                   {
                     const std::string upffilePath =
@@ -545,9 +400,9 @@ namespace dftfe
             //
             // write coordinates.inp
             //
-            std::map<unsigned int, unsigned int> atomicNumberToValenceNumberMap;
+            std::map<dftfe::uInt, dftfe::uInt> atomicNumberToValenceNumberMap;
 
-            for (unsigned int i = 0; i < atomicNumbersUniqueVec.size(); i++)
+            for (dftfe::uInt i = 0; i < atomicNumbersUniqueVec.size(); i++)
               {
                 const std::string upffilePath =
                   dftfePspPath + "/" +
@@ -573,20 +428,20 @@ namespace dftfe
               atomicPositionsCart.size(), std::vector<double>(5, 0));
 
             std::vector<double> cellVectorsFlattened(9, 0.0);
-            for (unsigned int idim = 0; idim < 3; idim++)
-              for (unsigned int jdim = 0; jdim < 3; jdim++)
+            for (dftfe::uInt idim = 0; idim < 3; idim++)
+              for (dftfe::uInt jdim = 0; jdim < 3; jdim++)
                 cellVectorsFlattened[3 * idim + jdim] = cell[idim][jdim];
 
             if (pbc[0] == false && pbc[1] == false && pbc[2] == false)
               {
                 std::vector<double> shift(3, 0.0);
-                for (unsigned int idim = 0; idim < 3; idim++)
+                for (dftfe::uInt idim = 0; idim < 3; idim++)
                   {
                     shift[idim] = 0;
-                    for (unsigned int jdim = 0; jdim < 3; jdim++)
+                    for (dftfe::uInt jdim = 0; jdim < 3; jdim++)
                       shift[idim] -= cell[jdim][idim] / 2.0;
                   }
-                for (unsigned int i = 0; i < dftfeCoordinates.size(); i++)
+                for (dftfe::uInt i = 0; i < dftfeCoordinates.size(); i++)
                   {
                     dftfeCoordinates[i][0] = atomicNumbers[i];
                     dftfeCoordinates[i][1] =
@@ -600,7 +455,7 @@ namespace dftfe
                     std::vector<double> frac =
                       dftUtils::getFractionalCoordinates(cellVectorsFlattened,
                                                          coord);
-                    for (unsigned int idim = 0; idim < 3; idim++)
+                    for (dftfe::uInt idim = 0; idim < 3; idim++)
                       AssertThrow(
                         frac[idim] > 1e-7 && frac[idim] < (1.0 - 1e-7),
                         dealii::ExcMessage(
@@ -616,7 +471,7 @@ namespace dftfe
               }
             else
               {
-                for (unsigned int i = 0; i < dftfeCoordinates.size(); i++)
+                for (dftfe::uInt i = 0; i < dftfeCoordinates.size(); i++)
                   {
                     dftfeCoordinates[i][0] = atomicNumbers[i];
                     dftfeCoordinates[i][1] =
@@ -629,7 +484,7 @@ namespace dftfe
                     std::vector<double> frac =
                       dftUtils::getFractionalCoordinates(cellVectorsFlattened,
                                                          coord);
-                    for (unsigned int idim = 0; idim < 3; idim++)
+                    for (dftfe::uInt idim = 0; idim < 3; idim++)
                       AssertThrow(
                         frac[idim] > -1e-7 && frac[idim] < (1.0 + 1e-7),
                         dealii::ExcMessage(
@@ -744,7 +599,7 @@ namespace dftfe
                   parameter_file_path;
             system(cmd.c_str());
 
-            const int spin = spinPolarizedDFT ? 1 : 0;
+            const dftfe::Int spin = spinPolarizedDFT ? 1 : 0;
             cmd = "sed -i 's/set SPIN POLARIZATION=.*/set SPIN POLARIZATION=" +
                   std::to_string(spin) + "/g' " + parameter_file_path;
             system(cmd.c_str());
@@ -764,9 +619,9 @@ namespace dftfe
                   parameter_file_path;
             system(cmd.c_str());
 
-            const int totalIrreducibleKpt =
+            const dftfe::Int totalIrreducibleKpt =
               mpGrid[0] * mpGrid[1] * mpGrid[2] / 2;
-            const int npkptSet =
+            const dftfe::Int npkptSet =
               npkpt > 0 ? 1 :
                           internalWrapper::divisor_closest(totalMPIProcesses,
                                                            totalIrreducibleKpt);
@@ -817,8 +672,12 @@ namespace dftfe
                   .count());
           }
 
-        int line_size = d_scratchFolderName.size();
-        MPI_Bcast(&line_size, 1, MPI_INT, 0, d_mpi_comm_parent);
+        dftfe::Int line_size = d_scratchFolderName.size();
+        MPI_Bcast(&line_size,
+                  1,
+                  dftfe::dataTypes::mpi_type_id(&line_size),
+                  0,
+                  d_mpi_comm_parent);
         if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) != 0)
           d_scratchFolderName.resize(line_size);
         MPI_Bcast(const_cast<char *>(d_scratchFolderName.data()),
@@ -867,9 +726,6 @@ namespace dftfe
                                              d_dftfeParamsPtr->nbandGrps,
                                              d_dftfeParamsPtr->verbosity);
 
-        std::srand(dealii::Utilities::MPI::this_mpi_process(
-          bandGroupsPool.get_intrapool_comm()));
-
         if (d_dftfeParamsPtr->verbosity >= 1)
           {
             dealii::ConditionalOStream pcout(
@@ -904,94 +760,36 @@ namespace dftfe
         // set stdout precision
         std::cout << std::scientific << std::setprecision(18);
 
-        int order = d_dftfeParamsPtr->finiteElementPolynomialOrder;
-        int orderElectro =
+        dftfe::Int order = d_dftfeParamsPtr->finiteElementPolynomialOrder;
+        dftfe::Int orderElectro =
           d_dftfeParamsPtr->finiteElementPolynomialOrderElectrostatics;
 
-#ifdef DFTFE_MINIMAL_COMPILE
-        if (order < 2 || order > 7)
-          {
-            std::cout << "Invalid DFT-FE order " << order << std::endl;
-            exit(1);
-          }
-
-        if (order > 5 && order < 7)
-          {
-            if (orderElectro < order || orderElectro > (order + 3))
-              {
-                std::cout << "Invalid DFT-FE order electrostatics "
-                          << orderElectro << std::endl;
-                exit(1);
-              }
-          }
-        else
-          {
-            if (orderElectro != order)
-              {
-                std::cout << "Invalid DFT-FE order electrostatics "
-                          << orderElectro << std::endl;
-                exit(1);
-              }
-          }
-
-        int listIndex = 0;
-        for (int i = 2; i <= order; i++)
-          {
-            int maxElectroOrder = (i < order) ? (i + 3) : orderElectro;
-            if (i != 6)
-              maxElectroOrder = i;
-            for (int j = i; j <= maxElectroOrder; j++)
-              listIndex++;
-          }
-#else
-        if (order < 1 || order > 8)
-          {
-            std::cout << "Invalid DFT-FE order " << order << std::endl;
-            exit(1);
-          }
-
-        if (orderElectro < order || orderElectro > order * 2)
-          {
-            std::cout << "Invalid DFT-FE order electrostatics " << orderElectro
-                      << std::endl;
-            exit(1);
-          }
-
-
-        int listIndex = 0;
-        for (int i = 1; i <= order; i++)
-          {
-            int maxElectroOrder = (i < order) ? 2 * i : orderElectro;
-            for (int j = i; j <= maxElectroOrder; j++)
-              listIndex++;
-          }
-#endif
         if (!useDevice)
           {
-            internalWrapper::create_fnHost create =
-              internalWrapper::order_listHost[listIndex - 1];
-            create(d_mpi_comm_parent,
-                   bandGroupsPool.get_intrapool_comm(),
-                   kPointPool.get_interpool_comm(),
-                   bandGroupsPool.get_interpool_comm(),
-                   kPointPool.get_intrapool_comm(),
-                   d_scratchFolderName,
-                   *d_dftfeParamsPtr,
-                   &d_dftfeBasePtr);
+            dftfe::internalWrapper::create_dftfe<
+              dftfe::utils::MemorySpace::HOST>(
+                  d_mpi_comm_parent,
+                  bandGroupsPool.get_intrapool_comm(),
+                  kPointPool.get_interpool_comm(),
+                  bandGroupsPool.get_interpool_comm(),
+                  kPointPool.get_intrapool_comm(),
+                  d_scratchFolderName,
+                  *d_dftfeParamsPtr,
+                  &d_dftfeBasePtr);
           }
 #ifdef DFTFE_WITH_DEVICE
         else if (useDevice)
           {
-            internalWrapper::create_fnDevice create =
-              internalWrapper::order_listDevice[listIndex - 1];
-            create(d_mpi_comm_parent,
-                   bandGroupsPool.get_intrapool_comm(),
-                   kPointPool.get_interpool_comm(),
-                   bandGroupsPool.get_interpool_comm(),
-                   kPointPool.get_intrapool_comm(),
-                   d_scratchFolderName,
-                   *d_dftfeParamsPtr,
-                   &d_dftfeBasePtr);
+            dftfe::internalWrapper::create_dftfe<
+              dftfe::utils::MemorySpace::DEVICE>(
+                  d_mpi_comm_parent,
+                  bandGroupsPool.get_intrapool_comm(),
+                  kPointPool.get_interpool_comm(),
+                  bandGroupsPool.get_interpool_comm(),
+                  kPointPool.get_intrapool_comm(),
+                  d_scratchFolderName,
+                  *d_dftfeParamsPtr,
+                  &d_dftfeBasePtr);
           }
 #endif
         d_dftfeBasePtr->set();
@@ -1062,17 +860,6 @@ namespace dftfe
                            std::get<1>(t));
   }
 
-  void
-  dftfeWrapper::computeStress()
-  {
-    AssertThrow(
-      d_mpi_comm_parent != MPI_COMM_NULL,
-      dealii::ExcMessage(
-        "DFT-FE Error: dftfeWrapper cannot be used on MPI_COMM_NULL."));
-
-    d_dftfeBasePtr->computeStress();
-  }
-
   double
   dftfeWrapper::getDFTFreeEnergy() const
   {
@@ -1106,8 +893,8 @@ namespace dftfe
       d_dftfeBasePtr->getForceonAtoms().size() / 3,
       std::vector<double>(3, 0.0));
     std::vector<double> ionicForcesVec = d_dftfeBasePtr->getForceonAtoms();
-    for (unsigned int i = 0; i < ionicForces.size(); ++i)
-      for (unsigned int j = 0; j < 3; ++j)
+    for (dftfe::uInt i = 0; i < ionicForces.size(); ++i)
+      for (dftfe::uInt j = 0; j < 3; ++j)
         ionicForces[i][j] = -ionicForcesVec[3 * i + j];
     return ionicForces;
   }
@@ -1123,8 +910,8 @@ namespace dftfe
     dealii::Tensor<2, 3, double>     cellStressTensor =
       d_dftfeBasePtr->getCellStress();
 
-    for (unsigned int i = 0; i < 3; ++i)
-      for (unsigned int j = 0; j < 3; ++j)
+    for (dftfe::uInt i = 0; i < 3; ++i)
+      for (dftfe::uInt j = 0; j < 3; ++j)
         cellStress[i][j] = -cellStressTensor[i][j];
     return cellStress;
   }
@@ -1144,8 +931,8 @@ namespace dftfe
         "DFT-FE error: Incorrect size of atomsDisplacements vector."));
     std::vector<dealii::Tensor<1, 3, double>> dispVec(
       atomsDisplacements.size());
-    for (unsigned int i = 0; i < dispVec.size(); ++i)
-      for (unsigned int j = 0; j < 3; ++j)
+    for (dftfe::uInt i = 0; i < dispVec.size(); ++i)
+      for (dftfe::uInt j = 0; j < 3; ++j)
         dispVec[i][j] = atomsDisplacements[i][j];
     d_dftfeBasePtr->updateAtomPositionsAndMoveMesh(dispVec);
   }
@@ -1159,8 +946,8 @@ namespace dftfe
       dealii::ExcMessage(
         "DFT-FE Error: dftfeWrapper cannot be used on MPI_COMM_NULL."));
     dealii::Tensor<2, 3, double> defGradTensor;
-    for (unsigned int i = 0; i < 3; ++i)
-      for (unsigned int j = 0; j < 3; ++j)
+    for (dftfe::uInt i = 0; i < 3; ++i)
+      for (dftfe::uInt j = 0; j < 3; ++j)
         defGradTensor[i][j] = deformationGradient[i][j];
     d_dftfeBasePtr->deformDomain(defGradTensor);
   }
@@ -1181,15 +968,15 @@ namespace dftfe
 
     std::vector<std::vector<double>> cell = d_dftfeBasePtr->getCell();
     std::vector<double>              shift(3, 0.0);
-    for (unsigned int idim = 0; idim < 3; idim++)
+    for (dftfe::uInt idim = 0; idim < 3; idim++)
       {
         shift[idim] = 0;
-        for (unsigned int jdim = 0; jdim < 3; jdim++)
+        for (dftfe::uInt jdim = 0; jdim < 3; jdim++)
           shift[idim] += cell[jdim][idim] / 2.0;
       }
 
-    for (unsigned int i = 0; i < atomLocationsCart.size(); ++i)
-      for (unsigned int j = 0; j < 3; ++j)
+    for (dftfe::uInt i = 0; i < atomLocationsCart.size(); ++i)
+      for (dftfe::uInt j = 0; j < 3; ++j)
         atomLocationsCart[i][j] = temp[i][j + 2] + shift[j];
     return atomLocationsCart;
   }
@@ -1206,8 +993,8 @@ namespace dftfe
     std::vector<std::vector<double>> atomLocationsFrac(
       d_dftfeBasePtr->getAtomLocationsFrac().size(),
       std::vector<double>(3, 0.0));
-    for (unsigned int i = 0; i < atomLocationsFrac.size(); ++i)
-      for (unsigned int j = 0; j < 3; ++j)
+    for (dftfe::uInt i = 0; i < atomLocationsFrac.size(); ++i)
+      for (dftfe::uInt j = 0; j < 3; ++j)
         atomLocationsFrac[i][j] = temp[i][j + 2];
     return atomLocationsFrac;
   }
@@ -1236,7 +1023,7 @@ namespace dftfe
     return pbc;
   }
 
-  std::vector<int>
+  std::vector<dftfe::Int>
   dftfeWrapper::getAtomicNumbers() const
   {
     AssertThrow(
@@ -1245,15 +1032,15 @@ namespace dftfe
         "DFT-FE Error: dftfeWrapper cannot be used on MPI_COMM_NULL."));
     std::vector<std::vector<double>> temp =
       d_dftfeBasePtr->getAtomLocationsCart();
-    std::vector<int> atomicNumbers(
+    std::vector<dftfe::Int> atomicNumbers(
       d_dftfeBasePtr->getAtomLocationsCart().size(), 0);
-    for (unsigned int i = 0; i < atomicNumbers.size(); ++i)
+    for (dftfe::uInt i = 0; i < atomicNumbers.size(); ++i)
       atomicNumbers[i] = temp[i][0];
     return atomicNumbers;
   }
 
 
-  std::vector<int>
+  std::vector<dftfe::Int>
   dftfeWrapper::getValenceElectronNumbers() const
   {
     AssertThrow(
@@ -1262,9 +1049,9 @@ namespace dftfe
         "DFT-FE Error: dftfeWrapper cannot be used on MPI_COMM_NULL."));
     std::vector<std::vector<double>> temp =
       d_dftfeBasePtr->getAtomLocationsCart();
-    std::vector<int> valenceNumbers(
+    std::vector<dftfe::Int> valenceNumbers(
       d_dftfeBasePtr->getAtomLocationsCart().size(), 0);
-    for (unsigned int i = 0; i < valenceNumbers.size(); ++i)
+    for (dftfe::uInt i = 0; i < valenceNumbers.size(); ++i)
       valenceNumbers[i] = temp[i][1];
     return valenceNumbers;
   }
@@ -1301,7 +1088,4 @@ namespace dftfe
         "DFT-FE Error: dftfeWrapper cannot be used on MPI_COMM_NULL."));
     d_dftfeBasePtr->writeDomainAndAtomCoordinates(Path);
   }
-
-
-
 } // namespace dftfe

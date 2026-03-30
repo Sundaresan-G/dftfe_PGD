@@ -40,9 +40,9 @@ namespace dftfe
      */
     geometryOptimizationClass(const std::string parameter_file,
                               const std::string restartFilesPath,
-                              const MPI_Comm &  mpi_comm_parent,
+                              const MPI_Comm   &mpi_comm_parent,
                               const bool        restart,
-                              const int         verbosity,
+                              const dftfe::Int  verbosity,
                               const bool        useDevice);
 
 
@@ -62,14 +62,14 @@ namespace dftfe
     std::unique_ptr<dftfeWrapper> d_dftfeWrapper;
     std::unique_ptr<geoOptIon>    d_geoOptIonPtr;
     std::unique_ptr<geoOptCell>   d_geoOptCellPtr;
-    dftBase *                     d_dftPtr;
+    dftBase                      *d_dftPtr;
 
     // restart parameters
-    const bool        d_isRestart;
+    bool              d_isRestart;
     const std::string d_restartFilesPath;
-    const int         d_verbosity;
+    const dftfe::Int  d_verbosity;
     // status parameters
-    int d_status, d_cycle, d_optMode;
+    dftfe::Int d_status, d_cycle, d_optMode;
     // parallel communication objects
     const MPI_Comm d_mpiCommParent;
 

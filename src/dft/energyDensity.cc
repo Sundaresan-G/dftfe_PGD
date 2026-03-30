@@ -23,7 +23,6 @@
 //
 #include <dft.h>
 #include <densityCalculator.h>
-#include <kineticEnergyDensityCalculator.h>
 #include <fileReaders.h>
 #include <dftUtils.h>
 #include <fileReaders.h>
@@ -34,63 +33,17 @@
 
 namespace dftfe
 {
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   double
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::computeAndPrintKE(
+  dftClass<memorySpace>::computeAndPrintKE(
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       &kineticEnergyDensityValues)
   {
     const dealii::Quadrature<3> &quadratureFormula =
       matrix_free_data.get_quadrature(d_densityQuadratureId);
-    const unsigned int n_q_points = quadratureFormula.size();
-
-    //
-    // compute kinetic energy density values
-    //
-#ifdef DFTFE_WITH_DEVICE
-    if (d_dftParamsPtr->useDevice)
-      computeKineticEnergyDensity(*d_BLASWrapperPtr,
-                                  &d_eigenVectorsFlattenedDevice,
-                                  d_numEigenValues,
-                                  eigenValues,
-                                  fermiEnergy,
-                                  fermiEnergyUp,
-                                  fermiEnergyDown,
-                                  d_basisOperationsPtrDevice,
-                                  d_densityQuadratureId,
-                                  d_kPointCoordinates,
-                                  d_kPointWeights,
-                                  kineticEnergyDensityValues,
-                                  d_mpiCommParent,
-                                  interpoolcomm,
-                                  interBandGroupComm,
-                                  mpi_communicator,
-                                  *d_dftParamsPtr);
-#endif
-    if (!d_dftParamsPtr->useDevice)
-      computeKineticEnergyDensity(*d_BLASWrapperPtrHost,
-                                  &d_eigenVectorsFlattenedHost,
-                                  d_numEigenValues,
-                                  eigenValues,
-                                  fermiEnergy,
-                                  fermiEnergyUp,
-                                  fermiEnergyDown,
-                                  d_basisOperationsPtrHost,
-                                  d_densityQuadratureId,
-                                  d_kPointCoordinates,
-                                  d_kPointWeights,
-                                  kineticEnergyDensityValues,
-                                  d_mpiCommParent,
-                                  interpoolcomm,
-                                  interBandGroupComm,
-                                  mpi_communicator,
-                                  *d_dftParamsPtr);
+    const dftfe::uInt n_q_points = quadratureFormula.size();
 
     MPI_Barrier(MPI_COMM_WORLD);
-
-
 
     double kineticEnergy = 0;
 
@@ -107,13 +60,13 @@ namespace dftfe
       cell = dofHandler.begin_active(),
       endc = dofHandler.end();
 
-    unsigned int iElem = 0;
+    dftfe::uInt iElem = 0;
     for (; cell != endc; ++cell)
       if (cell->is_locally_owned())
         {
           feValues.reinit(cell);
 
-          for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+          for (dftfe::uInt q_point = 0; q_point < n_q_points; ++q_point)
             {
               const dealii::Point<3> &quadPoint =
                 feValues.quadrature_point(q_point);

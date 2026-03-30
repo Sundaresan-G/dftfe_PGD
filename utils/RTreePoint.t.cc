@@ -31,11 +31,11 @@ namespace dftfe
       namespace BGI  = boost::geometry::index;
       namespace BGIA = boost::geometry::index::adaptors;
 
-      template <size_type dim>
+      template <dftfe::uInt dim>
       void
       assignValueToBoostPoint(
         boost::geometry::model::point<double, dim, BG::cs::cartesian> &p,
-        const std::vector<double> &                                    vec)
+        const std::vector<double>                                     &vec)
       {
         throwException(
           false,
@@ -46,7 +46,7 @@ namespace dftfe
       void
       assignValueToBoostPoint<3>(
         boost::geometry::model::point<double, 3, BG::cs::cartesian> &p,
-        const std::vector<double> &                                  vec)
+        const std::vector<double>                                   &vec)
       {
         boost::geometry::assign_values(p, vec[0], vec[1], vec[2]);
       }
@@ -55,7 +55,7 @@ namespace dftfe
       void
       assignValueToBoostPoint<2>(
         boost::geometry::model::point<double, 2, BG::cs::cartesian> &p,
-        const std::vector<double> &                                  vec)
+        const std::vector<double>                                   &vec)
       {
         boost::geometry::assign_values(p, vec[0], vec[1]);
       }
@@ -64,7 +64,7 @@ namespace dftfe
       void
       assignValueToBoostPoint<1>(
         boost::geometry::model::point<double, 1, BG::cs::cartesian> &p,
-        const std::vector<double> &                                  vec)
+        const std::vector<double>                                   &vec)
       {
         p.set<0>(vec[0]);
       }
@@ -72,7 +72,7 @@ namespace dftfe
 
     namespace RTreePointInternal
     {
-      template <size_type dim>
+      template <dftfe::uInt dim>
       BG::model::box<BG::model::point<double, dim, BG::cs::cartesian>>
       convertToBBox(const std::vector<double> &ll,
                     const std::vector<double> &ur)
@@ -87,44 +87,71 @@ namespace dftfe
       }
     } // namespace RTreePointInternal
 
-    template <size_type dim, size_type M>
+    template <dftfe::uInt dim, dftfe::uInt M>
     RTreePoint<dim, M>::RTreePoint(
       const std::vector<std::vector<double>> &srcPts)
     {
-      const size_type nPts = srcPts.size();
-      std::vector<
-        std::pair<BG::model::point<double, dim, BG::cs::cartesian>, size_type>>
+      const dftfe::uInt nPts = srcPts.size();
+      std::vector<std::pair<BG::model::point<double, dim, BG::cs::cartesian>,
+                            dftfe::uInt>>
         srcPtsI(nPts);
-      for (size_type i = 0; i < nPts; ++i)
+      for (dftfe::uInt i = 0; i < nPts; ++i)
         {
           boost::geometry::model::point<double, dim, BG::cs::cartesian> p;
           assignValueToBoostPoint<dim>(p, srcPts[i]);
           srcPtsI[i] = std::make_pair(p, i);
         }
 
-      d_rtreePtr = std::make_shared<BGI::rtree<
-        std::pair<BG::model::point<double, dim, BG::cs::cartesian>, size_type>,
-        BGI::quadratic<M>>>(srcPtsI.begin(), srcPtsI.end());
+      d_rtreePtr = std::make_shared<
+        BGI::rtree<std::pair<BG::model::point<double, dim, BG::cs::cartesian>,
+                             dftfe::uInt>,
+                   BGI::quadratic<M>>>(srcPtsI.begin(), srcPtsI.end());
     }
 
-    template <size_type dim, size_type M>
-    std::vector<size_type>
+    template <dftfe::uInt dim, dftfe::uInt M>
+    std::vector<dftfe::uInt>
     RTreePoint<dim, M>::getPointIdsInsideBox(
       const std::vector<double> &lowerLeft,
       const std::vector<double> &upperRight)
     {
-      std::vector<
-        std::pair<BG::model::point<double, dim, BG::cs::cartesian>, size_type>>
-                             foundPointI(0);
-      std::vector<size_type> pointIds(0);
+      std::vector<std::pair<BG::model::point<double, dim, BG::cs::cartesian>,
+                            dftfe::uInt>>
+                               foundPointI(0);
+      std::vector<dftfe::uInt> pointIds(0);
       BG::model::box<BG::model::point<double, dim, BG::cs::cartesian>> bbox =
         RTreePointInternal::convertToBBox<dim>(lowerLeft, upperRight);
       d_rtreePtr->query(BGI::covered_by(bbox), std::back_inserter(foundPointI));
-      const size_type nPointsInside = foundPointI.size();
-      for (size_type j = 0; j < nPointsInside; ++j)
+      const dftfe::uInt nPointsInside = foundPointI.size();
+      for (dftfe::uInt j = 0; j < nPointsInside; ++j)
         pointIds.push_back(foundPointI[j].second);
 
       return pointIds;
+    }
+
+    template <dftfe::uInt dim, dftfe::uInt M>
+    std::vector<dftfe::uInt>
+    RTreePoint<dim, M>::getPointIdsNearInputPoint(
+      const std::vector<double> &inputPoint,
+      dftfe::uInt                nNearestNeighbours)
+    {
+      BG::model::point<double, dim, BG::cs::cartesian> bgInputPoint;
+      assignValueToBoostPoint<dim>(bgInputPoint, inputPoint);
+
+      std::vector<std::pair<BG::model::point<double, dim, BG::cs::cartesian>,
+                            dftfe::uInt>>
+        result;
+
+      result.resize(0);
+      d_rtreePtr->query(BGI::nearest(bgInputPoint, nNearestNeighbours),
+                        std::back_inserter(result));
+
+      std::vector<dftfe::uInt> outputVec;
+      outputVec.resize(result.size());
+      for (dftfe::uInt j = 0; j < result.size(); j++)
+        {
+          outputVec[j] = result[j].second;
+        }
+      return outputVec;
     }
   } // end of namespace utils
 } // end of namespace dftfe

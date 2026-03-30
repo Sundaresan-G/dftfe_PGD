@@ -53,7 +53,7 @@ namespace dftfe
         dftUtils::verifyCheckpointFileExists(filename1);
         try
           {
-            d_serialTriangulationUnmoved.load(filename1.c_str(), false);
+            d_serialTriangulationUnmoved.load(filename1.c_str());
           }
         catch (...)
           {
@@ -69,19 +69,19 @@ namespace dftfe
   void
   triangulationManager::saveTriangulationsSolutionVectors(
     std::string                                           path,
-    const unsigned int                                    feOrder,
-    const unsigned int                                    nComponents,
+    const dftfe::uInt                                     feOrder,
+    const dftfe::uInt                                     nComponents,
     const std::vector<const distributedCPUVec<double> *> &solutionVectors,
-    const MPI_Comm &                                      interpoolComm,
-    const MPI_Comm &                                      interBandGroupComm)
+    const MPI_Comm                                       &interpoolComm,
+    const MPI_Comm                                       &interBandGroupComm)
   {
-    const unsigned int poolId =
+    const dftfe::uInt poolId =
       dealii::Utilities::MPI::this_mpi_process(interpoolComm);
-    const unsigned int bandGroupId =
+    const dftfe::uInt bandGroupId =
       dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
-    const unsigned int minPoolId =
+    const dftfe::uInt minPoolId =
       dealii::Utilities::MPI::min(poolId, interpoolComm);
-    const unsigned int minBandGroupId =
+    const dftfe::uInt minBandGroupId =
       dealii::Utilities::MPI::min(bandGroupId, interBandGroupComm);
 
     if (poolId == minPoolId && bandGroupId == minBandGroupId)
@@ -117,8 +117,8 @@ namespace dftfe
   void
   triangulationManager::loadTriangulationsSolutionVectors(
     std::string                               path,
-    const unsigned int                        feOrder,
-    const unsigned int                        nComponents,
+    const dftfe::uInt                         feOrder,
+    const dftfe::uInt                         nComponents,
     std::vector<distributedCPUVec<double> *> &solutionVectors)
   {
     loadSupportTriangulations(path);
@@ -146,16 +146,15 @@ namespace dftfe
       SolutionTransfer<3, typename dftfe::distributedCPUVec<double>>
         solTrans(dofHandler);
 
-    dealii::IndexSet locally_relevant_dofs;
-    dealii::DoFTools::extract_locally_relevant_dofs(dofHandler,
-                                                    locally_relevant_dofs);
+    dealii::IndexSet locally_relevant_dofs =
+      dealii::DoFTools::extract_locally_relevant_dofs(dofHandler);
 
     const dealii::IndexSet &locally_owned_dofs =
       dofHandler.locally_owned_dofs();
     dealii::IndexSet ghost_indices = locally_relevant_dofs;
     ghost_indices.subtract_set(locally_owned_dofs);
 
-    for (unsigned int i = 0; i < solutionVectors.size(); ++i)
+    for (dftfe::uInt i = 0; i < solutionVectors.size(); ++i)
       {
         solutionVectors[i]->reinit(locally_owned_dofs,
                                    ghost_indices,

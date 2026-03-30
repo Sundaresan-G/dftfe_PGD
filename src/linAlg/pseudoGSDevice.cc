@@ -30,19 +30,19 @@ namespace dftfe
     void
     pseudoGramSchmidtOrthogonalization(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-      elpaScalaManager &                                   elpaScala,
-      dataTypes::number *                                  X,
-      distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::number> &            HXb,
-      const unsigned int                                   M,
-      const unsigned int                                   N,
-      const MPI_Comm &                                     mpiCommParent,
-      const MPI_Comm &                                     mpiCommDomain,
+      elpaScalaManager                                    &elpaScala,
+      dataTypes::number                                   *X,
+      distributedDeviceVec<dataTypes::number>             &Xb,
+      distributedDeviceVec<dataTypes::number>             &HXb,
+      const dftfe::uInt                                    M,
+      const dftfe::uInt                                    N,
+      const MPI_Comm                                      &mpiCommParent,
+      const MPI_Comm                                      &mpiCommDomain,
       utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-      const MPI_Comm &         interBandGroupComm,
+      const MPI_Comm          &interBandGroupComm,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
+                          &BLASWrapperPtr,
       const dftParameters &dftParams,
       const bool           useMixedPrecOverall)
     {
@@ -53,12 +53,12 @@ namespace dftfe
       dealii::TimerOutput computing_timer(mpiCommDomain,
                                           pcout,
                                           dftParams.reproducible_output ||
-                                              dftParams.verbosity < 4 ?
+                                              dftParams.verbosity < 3 ?
                                             dealii::TimerOutput::never :
                                             dealii::TimerOutput::summary,
                                           dealii::TimerOutput::wall_times);
 
-      const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
+      const dftfe::uInt rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
         elpaScala.getProcessGridDftfeScalaWrapper();
 
@@ -282,12 +282,12 @@ namespace dftfe
         dftfe::LAPACKSupport::Property::lower_triangular);
 
       if (processGrid->is_process_active())
-        for (unsigned int i = 0; i < LMatPar.local_n(); ++i)
+        for (dftfe::uInt i = 0; i < LMatPar.local_n(); ++i)
           {
-            const unsigned int glob_i = LMatPar.global_column(i);
-            for (unsigned int j = 0; j < LMatPar.local_m(); ++j)
+            const dftfe::uInt glob_i = LMatPar.global_column(i);
+            for (dftfe::uInt j = 0; j < LMatPar.local_m(); ++j)
               {
-                const unsigned int glob_j = LMatPar.global_row(j);
+                const dftfe::uInt glob_j = LMatPar.global_row(j);
                 if (glob_j < glob_i)
                   LMatPar.local_el(j, i) = dataTypes::number(0);
                 else
@@ -340,25 +340,25 @@ namespace dftfe
                                   false,
                                   true);
 
-      const unsigned int numberBandGroups =
+      const dftfe::uInt numberBandGroups =
         dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
 
       if (numberBandGroups > 1)
         {
           // band group parallelization data structures
-          const unsigned int bandGroupTaskId =
+          const dftfe::uInt bandGroupTaskId =
             dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
-          std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+          std::vector<dftfe::uInt> bandGroupLowHighPlusOneIndices;
           dftUtils::createBandParallelizationIndices(
             interBandGroupComm, N, bandGroupLowHighPlusOneIndices);
 
-          const unsigned int vectorsBlockSize =
+          const dftfe::uInt vectorsBlockSize =
             std::min(dftParams.wfcBlockSize, N);
-          for (unsigned int jvec = 0; jvec < N; jvec += vectorsBlockSize)
+          for (dftfe::uInt jvec = 0; jvec < N; jvec += vectorsBlockSize)
             {
               // Correct block dimensions if block "goes off edge of" the matrix
-              const unsigned int BVec = std::min(vectorsBlockSize, N - jvec);
+              const dftfe::uInt BVec = std::min(vectorsBlockSize, N - jvec);
 
               if (!((jvec + BVec) <=
                       bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId + 1] &&

@@ -27,7 +27,7 @@
 #include <DeviceAPICalls.h>
 #include <DeviceDataTypeOverloads.h>
 #include <DeviceTypeConfig.h>
-#include <DeviceKernelLauncherConstants.h>
+#include <DeviceKernelLauncherHelpers.h>
 
 
 namespace dftfe
@@ -36,25 +36,22 @@ namespace dftfe
   void
   computeAuxProjectedDensityMatrixFromPSI(
     const dftfe::utils::MemoryStorage<NumberType, memorySpace> &X,
-    const unsigned int                      totalNumWaveFunctions,
-    const std::vector<std::vector<double>> &eigenValues,
-    const double                            fermiEnergy,
-    const double                            fermiEnergyUp,
-    const double                            fermiEnergyDown,
+    const dftfe::uInt                       totalNumWaveFunctions,
+    const std::vector<std::vector<double>> &partialOccupancies,
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<NumberType, double, memorySpace>>
       &basisOperationsPtr,
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-      &                            BLASWrapperPtr,
-    const unsigned int             matrixFreeDofhandlerIndex,
-    const unsigned int             quadratureIndex,
-    const std::vector<double> &    kPointWeights,
+                                  &BLASWrapperPtr,
+    const dftfe::uInt              matrixFreeDofhandlerIndex,
+    const dftfe::uInt              quadratureIndex,
+    const std::vector<double>     &kPointWeights,
     AuxDensityMatrix<memorySpace> &auxDensityMatrixRepresentation,
-    const MPI_Comm &               mpiCommParent,
-    const MPI_Comm &               domainComm,
-    const MPI_Comm &               interpoolcomm,
-    const MPI_Comm &               interBandGroupComm,
-    const dftParameters &          dftParams)
+    const MPI_Comm                &mpiCommParent,
+    const MPI_Comm                &domainComm,
+    const MPI_Comm                &interpoolcomm,
+    const MPI_Comm                &interBandGroupComm,
+    const dftParameters           &dftParams)
   {
     int this_process;
     MPI_Comm_rank(mpiCommParent, &this_process);
@@ -63,38 +60,38 @@ namespace dftfe
       dftfe::utils::deviceSynchronize();
 #endif
     MPI_Barrier(mpiCommParent);
-    double             project_time = MPI_Wtime();
-    const unsigned int numKPoints   = kPointWeights.size();
-    const unsigned int numLocalDofs = basisOperationsPtr->nOwnedDofs();
-    const unsigned int totalLocallyOwnedCells = basisOperationsPtr->nCells();
-    const unsigned int numNodesPerElement = basisOperationsPtr->nDofsPerCell();
+    double            project_time           = MPI_Wtime();
+    const dftfe::uInt numKPoints             = kPointWeights.size();
+    const dftfe::uInt numLocalDofs           = basisOperationsPtr->nOwnedDofs();
+    const dftfe::uInt totalLocallyOwnedCells = basisOperationsPtr->nCells();
+    const dftfe::uInt numNodesPerElement = basisOperationsPtr->nDofsPerCell();
     // band group parallelization data structures
-    const unsigned int numberBandGroups =
+    const dftfe::uInt numberBandGroups =
       dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
-    const unsigned int bandGroupTaskId =
+    const dftfe::uInt bandGroupTaskId =
       dealii::Utilities::MPI::this_mpi_process(interBandGroupComm);
-    std::vector<unsigned int> bandGroupLowHighPlusOneIndices;
+    std::vector<dftfe::uInt> bandGroupLowHighPlusOneIndices;
     dftUtils::createBandParallelizationIndices(interBandGroupComm,
                                                totalNumWaveFunctions,
                                                bandGroupLowHighPlusOneIndices);
 
-    const unsigned int BVec =
+    const dftfe::uInt BVec =
       std::min(dftParams.chebyWfcBlockSize, bandGroupLowHighPlusOneIndices[1]);
 
     const double spinPolarizedFactor =
       (dftParams.spinPolarized == 1) ? 1.0 : 2.0;
-    const unsigned int numSpinComponents =
+    const dftfe::uInt numSpinComponents =
       (dftParams.spinPolarized == 1) ? 2 : 1;
 
     const NumberType zero = 0;
 
-    const unsigned int cellsBlockSize =
+    const dftfe::uInt cellsBlockSize =
       memorySpace == dftfe::utils::MemorySpace::DEVICE ? 50 : 1;
-    const unsigned int numCellBlocks = totalLocallyOwnedCells / cellsBlockSize;
-    const unsigned int remCellBlockSize =
+    const dftfe::uInt numCellBlocks = totalLocallyOwnedCells / cellsBlockSize;
+    const dftfe::uInt remCellBlockSize =
       totalLocallyOwnedCells - numCellBlocks * cellsBlockSize;
     basisOperationsPtr->reinit(BVec, cellsBlockSize, quadratureIndex);
-    const unsigned int numQuadPoints = basisOperationsPtr->nQuadsPerCell();
+    const dftfe::uInt numQuadPoints = basisOperationsPtr->nQuadsPerCell();
 
     dftfe::utils::MemoryStorage<NumberType, memorySpace> wfcQuadPointData;
     dftfe::utils::MemoryStorage<NumberType, dftfe::utils::MemorySpace::HOST>
@@ -131,23 +128,23 @@ namespace dftfe
     //
     // compute S matrix of aux basis
     //
-    for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
+    for (dftfe::Int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
       {
-        const unsigned int currentCellsBlockSize =
+        const dftfe::uInt currentCellsBlockSize =
           (iblock == numCellBlocks) ? remCellBlockSize : cellsBlockSize;
         if (currentCellsBlockSize > 0)
           {
-            const unsigned int startingCellId = iblock * cellsBlockSize;
+            const dftfe::uInt startingCellId = iblock * cellsBlockSize;
 
-            std::vector<double> quadPointsBatch(currentCellsBlockSize *
-                                                numQuadPoints * 3);
-            std::vector<double> quadWeightsBatch(currentCellsBlockSize *
-                                                 numQuadPoints);
-            for (unsigned int iQuad = 0;
+            dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+              quadPointsBatch(currentCellsBlockSize * numQuadPoints * 3);
+            dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+              quadWeightsBatch(currentCellsBlockSize * numQuadPoints);
+            for (dftfe::uInt iQuad = 0;
                  iQuad < currentCellsBlockSize * numQuadPoints;
                  ++iQuad)
               {
-                for (unsigned int idim = 0; idim < 3; ++idim)
+                for (dftfe::uInt idim = 0; idim < 3; ++idim)
                   quadPointsBatch[3 * iQuad + idim] =
                     allQuadPointsHost[startingCellId * numQuadPoints * 3 +
                                       3 * iQuad + idim];
@@ -164,26 +161,27 @@ namespace dftfe
 
     std::unordered_map<std::string, std::vector<NumberType>>
       densityMatrixProjectionInputsDataType;
-    std::unordered_map<std::string, std::vector<double>>
+    std::unordered_map<
+      std::string,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
                              densityMatrixProjectionInputsRealType;
     std::vector<NumberType> &wfcQuadPointDataBatchHost =
       densityMatrixProjectionInputsDataType["psiFunc"];
-    std::vector<double> &quadPointsBatch =
-      densityMatrixProjectionInputsRealType["quadpts"];
-    std::vector<double> &quadWeightsBatch =
-      densityMatrixProjectionInputsRealType["quadWt"];
-    std::vector<double> &fValuesBatch =
-      densityMatrixProjectionInputsRealType["fValues"];
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &quadPointsBatch = densityMatrixProjectionInputsRealType["quadpts"];
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &quadWeightsBatch = densityMatrixProjectionInputsRealType["quadWt"];
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      &fValuesBatch = densityMatrixProjectionInputsRealType["fValues"];
 
-    for (unsigned int kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
-      for (unsigned int spinIndex = 0; spinIndex < numSpinComponents;
+    for (dftfe::uInt kPoint = 0; kPoint < kPointWeights.size(); ++kPoint)
+      for (dftfe::uInt spinIndex = 0; spinIndex < numSpinComponents;
            ++spinIndex)
         {
           wfcQuadPointData.setValue(zero);
-          for (unsigned int jvec = 0; jvec < totalNumWaveFunctions;
-               jvec += BVec)
+          for (dftfe::uInt jvec = 0; jvec < totalNumWaveFunctions; jvec += BVec)
             {
-              const unsigned int currentBlockSize =
+              const dftfe::uInt currentBlockSize =
                 std::min(BVec, totalNumWaveFunctions - jvec);
               flattenedArrayBlock =
                 &(basisOperationsPtr->getMultiVector(currentBlockSize, 0));
@@ -193,47 +191,19 @@ namespace dftfe
                   (jvec + currentBlockSize) >
                     bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId])
                 {
-                  if (dftParams.constraintMagnetization)
-                    {
-                      const double fermiEnergyConstraintMag =
-                        spinIndex == 0 ? fermiEnergyUp : fermiEnergyDown;
-                      for (unsigned int iEigenVec = 0;
-                           iEigenVec < currentBlockSize;
-                           ++iEigenVec)
-                        {
-                          if (eigenValues[kPoint]
-                                         [totalNumWaveFunctions * spinIndex +
-                                          jvec + iEigenVec] >
-                              fermiEnergyConstraintMag)
-                            *(partialOccupVecHost.begin() + iEigenVec) = 0;
-                          else
-                            *(partialOccupVecHost.begin() + iEigenVec) =
-                              kPointWeights[kPoint] * spinPolarizedFactor;
-                        }
-                    }
-                  else
-                    {
-                      for (unsigned int iEigenVec = 0;
-                           iEigenVec < currentBlockSize;
-                           ++iEigenVec)
-                        {
-                          *(partialOccupVecHost.begin() + iEigenVec) =
-                            dftUtils::getPartialOccupancy(
-                              eigenValues[kPoint]
-                                         [totalNumWaveFunctions * spinIndex +
-                                          jvec + iEigenVec],
-                              fermiEnergy,
-                              C_kb,
-                              dftParams.TVal) *
-                            kPointWeights[kPoint] * spinPolarizedFactor;
-                        }
-                    }
+                  for (dftfe::uInt iEigenVec = 0; iEigenVec < currentBlockSize;
+                       ++iEigenVec)
+                    *(partialOccupVecHost.begin() + iEigenVec) =
+                      partialOccupancies[kPoint]
+                                        [totalNumWaveFunctions * spinIndex +
+                                         jvec + iEigenVec] *
+                      kPointWeights[kPoint] * spinPolarizedFactor;
 #if defined(DFTFE_WITH_DEVICE)
                   partialOccupVec.copyFrom(partialOccupVecHost);
 #endif
                   partialOccupVecHost.copyTo(fValuesBatch);
                   if (memorySpace == dftfe::utils::MemorySpace::HOST)
-                    for (unsigned int iNode = 0; iNode < numLocalDofs; ++iNode)
+                    for (dftfe::uInt iNode = 0; iNode < numLocalDofs; ++iNode)
                       std::memcpy(flattenedArrayBlock->data() +
                                     iNode * currentBlockSize,
                                   X.data() +
@@ -261,14 +231,15 @@ namespace dftfe
                   flattenedArrayBlock->updateGhostValues();
                   basisOperationsPtr->distribute(*(flattenedArrayBlock));
 
-                  for (int iblock = 0; iblock < (numCellBlocks + 1); iblock++)
+                  for (dftfe::Int iblock = 0; iblock < (numCellBlocks + 1);
+                       iblock++)
                     {
-                      const unsigned int currentCellsBlockSize =
+                      const dftfe::uInt currentCellsBlockSize =
                         (iblock == numCellBlocks) ? remCellBlockSize :
                                                     cellsBlockSize;
                       if (currentCellsBlockSize > 0)
                         {
-                          const unsigned int startingCellId =
+                          const dftfe::uInt startingCellId =
                             iblock * cellsBlockSize;
 
 
@@ -276,11 +247,11 @@ namespace dftfe
                                                  numQuadPoints * 3);
                           quadWeightsBatch.resize(currentCellsBlockSize *
                                                   numQuadPoints);
-                          for (unsigned int iQuad = 0;
+                          for (dftfe::uInt iQuad = 0;
                                iQuad < currentCellsBlockSize * numQuadPoints;
                                ++iQuad)
                             {
-                              for (unsigned int idim = 0; idim < 3; ++idim)
+                              for (dftfe::uInt idim = 0; idim < 3; ++idim)
                                 quadPointsBatch[3 * iQuad + idim] =
                                   allQuadPointsHost[startingCellId *
                                                       numQuadPoints * 3 +
@@ -295,7 +266,7 @@ namespace dftfe
                             *(flattenedArrayBlock),
                             wfcQuadPointData.data(),
                             NULL,
-                            std::pair<unsigned int, unsigned int>(
+                            std::pair<dftfe::uInt, dftfe::uInt>(
                               startingCellId,
                               startingCellId + currentCellsBlockSize));
 
@@ -354,11 +325,8 @@ namespace dftfe
   computeAuxProjectedDensityMatrixFromPSI(
     const dftfe::utils::MemoryStorage<dataTypes::number,
                                       dftfe::utils::MemorySpace::DEVICE> &X,
-    const unsigned int                      totalNumWaveFunctions,
-    const std::vector<std::vector<double>> &eigenValues,
-    const double                            fermiEnergy,
-    const double                            fermiEnergyUp,
-    const double                            fermiEnergyDown,
+    const dftfe::uInt                       totalNumWaveFunctions,
+    const std::vector<std::vector<double>> &partialOccupancies,
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,
@@ -366,27 +334,24 @@ namespace dftfe
       &basisOperationsPtr,
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-      &                        BLASWrapperPtr,
-    const unsigned int         matrixFreeDofhandlerIndex,
-    const unsigned int         quadratureIndex,
+                              &BLASWrapperPtr,
+    const dftfe::uInt          matrixFreeDofhandlerIndex,
+    const dftfe::uInt          quadratureIndex,
     const std::vector<double> &kPointWeights,
     AuxDensityMatrix<dftfe::utils::MemorySpace::DEVICE>
-      &                  auxDensityMatrixRepresentation,
-    const MPI_Comm &     mpiCommParent,
-    const MPI_Comm &     domainComm,
-    const MPI_Comm &     interpoolcomm,
-    const MPI_Comm &     interBandGroupComm,
+                        &auxDensityMatrixRepresentation,
+    const MPI_Comm      &mpiCommParent,
+    const MPI_Comm      &domainComm,
+    const MPI_Comm      &interpoolcomm,
+    const MPI_Comm      &interBandGroupComm,
     const dftParameters &dftParams);
 #endif
   template void
   computeAuxProjectedDensityMatrixFromPSI(
     const dftfe::utils::MemoryStorage<dataTypes::number,
                                       dftfe::utils::MemorySpace::HOST> &X,
-    const unsigned int                      totalNumWaveFunctions,
-    const std::vector<std::vector<double>> &eigenValues,
-    const double                            fermiEnergy,
-    const double                            fermiEnergyUp,
-    const double                            fermiEnergyDown,
+    const dftfe::uInt                       totalNumWaveFunctions,
+    const std::vector<std::vector<double>> &partialOccupancies,
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,
@@ -394,15 +359,15 @@ namespace dftfe
       &basisOperationsPtr,
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
-      &                        BLASWrapperPtr,
-    const unsigned int         matrixFreeDofhandlerIndex,
-    const unsigned int         quadratureIndex,
+                              &BLASWrapperPtr,
+    const dftfe::uInt          matrixFreeDofhandlerIndex,
+    const dftfe::uInt          quadratureIndex,
     const std::vector<double> &kPointWeights,
     AuxDensityMatrix<dftfe::utils::MemorySpace::HOST>
-      &                  auxDensityMatrixRepresentation,
-    const MPI_Comm &     mpiCommParent,
-    const MPI_Comm &     domainComm,
-    const MPI_Comm &     interpoolcomm,
-    const MPI_Comm &     interBandGroupComm,
+                        &auxDensityMatrixRepresentation,
+    const MPI_Comm      &mpiCommParent,
+    const MPI_Comm      &domainComm,
+    const MPI_Comm      &interpoolcomm,
+    const MPI_Comm      &interBandGroupComm,
     const dftParameters &dftParams);
 } // namespace dftfe

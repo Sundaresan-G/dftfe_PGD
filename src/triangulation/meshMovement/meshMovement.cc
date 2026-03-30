@@ -30,27 +30,27 @@ namespace dftfe
       // lapack Ax=b
       //
       void
-      dgesv_(int *   N,
-             int *   NRHS,
-             double *A,
-             int *   LDA,
-             int *   IPIV,
-             double *B,
-             int *   LDB,
-             int *   INFO);
+      dgesv_(dftfe::Int *N,
+             dftfe::Int *NRHS,
+             double     *A,
+             dftfe::Int *LDA,
+             dftfe::Int *IPIV,
+             double     *B,
+             dftfe::Int *LDB,
+             dftfe::Int *INFO);
     }
 
 
     std::vector<double>
     getFractionalCoordinates(const std::vector<double> &latticeVectors,
-                             const dealii::Point<3> &   point,
-                             const dealii::Point<3> &   corner)
+                             const dealii::Point<3>    &point,
+                             const dealii::Point<3>    &corner)
     {
       //
       // recenter vertex about corner
       //
       std::vector<double> recenteredPoint(3);
-      for (int i = 0; i < 3; ++i)
+      for (dftfe::Int i = 0; i < 3; ++i)
         recenteredPoint[i] = point[i] - corner[i];
 
       std::vector<double> latticeVectorsDup = latticeVectors;
@@ -59,11 +59,11 @@ namespace dftfe
       // to get the fractionalCoords, solve a linear
       // system of equations
       //
-      int N    = 3;
-      int NRHS = 1;
-      int LDA  = 3;
-      int IPIV[3];
-      int info;
+      dftfe::Int N    = 3;
+      dftfe::Int NRHS = 1;
+      dftfe::Int LDA  = 3;
+      dftfe::Int IPIV[3];
+      dftfe::Int info;
 
       dgesv_(&N,
              &NRHS,
@@ -87,8 +87,8 @@ namespace dftfe
   //
   // constructor
   //
-  meshMovementClass::meshMovementClass(const MPI_Comm &     mpi_comm_parent,
-                                       const MPI_Comm &     mpi_comm_domain,
+  meshMovementClass::meshMovementClass(const MPI_Comm      &mpi_comm_parent,
+                                       const MPI_Comm      &mpi_comm_domain,
                                        const dftParameters &dftParams)
     : FEMoveMesh(dealii::FE_Q<3>(dealii::QGaussLobatto<1>(2)), 3)
     , d_mpiCommParent(mpi_comm_parent)
@@ -100,9 +100,10 @@ namespace dftfe
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
   {}
 
-  void meshMovementClass::init(
-    dealii::Triangulation<3, 3> &           triangulation,
-    dealii::Triangulation<3, 3> &           serialTriangulation,
+  void
+  meshMovementClass::init(
+    dealii::Triangulation<3, 3>            &triangulation,
+    dealii::Triangulation<3, 3>            &serialTriangulation,
     const std::vector<std::vector<double>> &domainBoundingVectors)
   {
     d_domainBoundingVectors = domainBoundingVectors;
@@ -128,52 +129,34 @@ namespace dftfe
     d_locally_owned_dofs.clear();
     d_locally_relevant_dofs.clear();
     d_locally_owned_dofs = d_dofHandlerMoveMesh.locally_owned_dofs();
-    dealii::DoFTools::extract_locally_relevant_dofs(d_dofHandlerMoveMesh,
-                                                    d_locally_relevant_dofs);
+    d_locally_relevant_dofs =
+      dealii::DoFTools::extract_locally_relevant_dofs(d_dofHandlerMoveMesh);
 
     d_constraintsMoveMesh.clear();
-    d_constraintsMoveMesh.reinit(d_locally_relevant_dofs);
+    d_constraintsMoveMesh.reinit(d_locally_owned_dofs, d_locally_relevant_dofs);
     dealii::DoFTools::make_hanging_node_constraints(d_dofHandlerMoveMesh,
                                                     d_constraintsMoveMesh);
     d_periodicity_vector.clear();
-
-    // create unitVectorsXYZ
-    std::vector<std::vector<double>> unitVectorsXYZ;
-    unitVectorsXYZ.resize(3);
-
-    for (int i = 0; i < 3; ++i)
-      {
-        unitVectorsXYZ[i].resize(3, 0.0);
-        unitVectorsXYZ[i][i] = 0.0;
-      }
 
     std::vector<dealii::Tensor<1, 3>> offsetVectors;
     // resize offset vectors
     offsetVectors.resize(3);
 
-    for (int i = 0; i < 3; ++i)
-      {
-        for (int j = 0; j < 3; ++j)
-          {
-            offsetVectors[i][j] =
-              unitVectorsXYZ[i][j] - domainBoundingVectors[i][j];
-          }
-      }
+    for (dftfe::Int i = 0; i < 3; ++i)
+      for (dftfe::Int j = 0; j < 3; ++j)
+        offsetVectors[i][j] = -domainBoundingVectors[i][j];
 
-    const std::array<int, 3> periodic = {d_dftParams.periodicX,
-                                         d_dftParams.periodicY,
-                                         d_dftParams.periodicZ};
+    const std::array<dftfe::Int, 3> periodic = {d_dftParams.periodicX,
+                                                d_dftParams.periodicY,
+                                                d_dftParams.periodicZ};
 
-    std::vector<int> periodicDirectionVector;
-    for (unsigned int d = 0; d < 3; ++d)
-      {
-        if (periodic[d] == 1)
-          {
-            periodicDirectionVector.push_back(d);
-          }
-      }
+    std::vector<dftfe::Int> periodicDirectionVector;
+    for (dftfe::uInt d = 0; d < 3; ++d)
+      if (periodic[d] == 1)
+        periodicDirectionVector.push_back(d);
 
-    for (int i = 0; i < std::accumulate(periodic.begin(), periodic.end(), 0);
+    for (dftfe::Int i = 0;
+         i < std::accumulate(periodic.begin(), periodic.end(), 0);
          ++i)
       {
         dealii::GridTools::collect_periodic_faces(
@@ -187,7 +170,8 @@ namespace dftfe
 
     dealii::DoFTools::make_periodicity_constraints<3, 3>(d_periodicity_vector,
                                                          d_constraintsMoveMesh);
-    d_constraintsMoveMesh.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      d_dofHandlerMoveMesh, d_constraintsMoveMesh);
 
     if (d_dftParams.createConstraintsFromSerialDofhandler)
       {
@@ -219,9 +203,7 @@ namespace dftfe
   void
   meshMovementClass::initIncrementField()
   {
-    // d_incrementalDisplacement.reinit(d_locally_relevant_dofs.size());
-    // d_incrementalDisplacement=0;
-    dealii::IndexSet ghost_indices = d_locally_relevant_dofs;
+    dealii::IndexSet ghost_indices = d_constraintsMoveMesh.get_local_lines();
     ghost_indices.subtract_set(d_locally_owned_dofs);
 
     d_incrementalDisplacement.reinit(d_locally_owned_dofs,
@@ -261,20 +243,21 @@ namespace dftfe
       {
         if (cell->is_locally_owned())
           {
-            for (unsigned int vertex_no = 0;
+            for (dftfe::uInt vertex_no = 0;
                  vertex_no < dealii::GeometryInfo<3>::vertices_per_cell;
                  ++vertex_no)
               {
-                const unsigned global_vertex_no = cell->vertex_index(vertex_no);
+                const dftfe::uInt global_vertex_no =
+                  cell->vertex_index(vertex_no);
 
                 if (vertex_moved[global_vertex_no] ||
                     !locally_owned_vertices[global_vertex_no])
                   continue;
 
                 dealii::Point<3> vertexDisplacement;
-                for (unsigned int d = 0; d < 3; ++d)
+                for (dftfe::uInt d = 0; d < 3; ++d)
                   {
-                    const unsigned int globalDofIndex =
+                    const dftfe::uInt globalDofIndex =
                       cell->vertex_dof_index(vertex_no, d);
                     vertexDisplacement[d] =
                       d_incrementalDisplacement[globalDofIndex];
@@ -327,32 +310,17 @@ namespace dftfe
     // sanity check to make sure periodic boundary conditions are maintained
     MPI_Barrier(mpi_communicator);
 
-    // create unitVectorsXYZ
-    std::vector<std::vector<double>> unitVectorsXYZ;
-    unitVectorsXYZ.resize(3);
-
-    for (int i = 0; i < 3; ++i)
-      {
-        unitVectorsXYZ[i].resize(3, 0.0);
-        unitVectorsXYZ[i][i] = 0.0;
-      }
-
     std::vector<dealii::Tensor<1, 3>> offsetVectors;
     // resize offset vectors
     offsetVectors.resize(3);
 
-    for (int i = 0; i < 3; ++i)
-      {
-        for (int j = 0; j < 3; ++j)
-          {
-            offsetVectors[i][j] =
-              unitVectorsXYZ[i][j] - d_domainBoundingVectors[i][j];
-          }
-      }
+    for (dftfe::Int i = 0; i < 3; ++i)
+      for (dftfe::Int j = 0; j < 3; ++j)
+        offsetVectors[i][j] = -d_domainBoundingVectors[i][j];
     /*
        if (d_dftParams.verbosity>=4)
        pcout << "Sanity check for periodic matched faces on moved
-       triangulation..." << std::endl; for(unsigned int i=0; i<
+       triangulation..." << std::endl; for(dftfe::uInt i=0; i<
        d_periodicity_vector.size(); ++i)
        {
        if (!d_periodicity_vector[i].cell[0]->active() ||
@@ -361,7 +329,7 @@ namespace dftfe
        d_periodicity_vector[i].cell[1]->is_artificial()) continue;
 
        std::vector<bool> isPeriodicFace(3);
-       for(unsigned int idim=0; idim<3; ++idim){
+       for(dftfe::uInt idim=0; idim<3; ++idim){
        isPeriodicFace[idim]=dealii::GridTools::orthogonal_equality(d_periodicity_vector[i].cell[0]->face(d_periodicity_vector[i].face_idx[0]),d_periodicity_vector[i].cell[1]->face(d_periodicity_vector[i].face_idx[1]),idim,offsetVectors[idim]);
        }
 
@@ -406,10 +374,10 @@ namespace dftfe
     dealii::FEValues<3>     fe_values(FEMoveMesh,
                                   quadrature,
                                   dealii::update_JxW_values);
-    const unsigned int      num_quad_points = quadrature.size();
+    const dftfe::uInt       num_quad_points = quadrature.size();
     cell = d_dofHandlerMoveMesh.get_triangulation().begin_active();
-    int    isNegativeJacobianDeterminant = 0;
-    double maxJacobianRatio              = 1;
+    dftfe::Int isNegativeJacobianDeterminant = 0;
+    double     maxJacobianRatio              = 1;
     for (; cell != endc; ++cell)
       {
         if (cell->is_locally_owned())
@@ -418,7 +386,7 @@ namespace dftfe
             fe_values.reinit(cell);
             double maxJacobian = -1e+6;
             double minJacobian = 1e+6;
-            for (unsigned int q_point = 0; q_point < num_quad_points; ++q_point)
+            for (dftfe::uInt q_point = 0; q_point < num_quad_points; ++q_point)
               {
                 double jw = fe_values.JxW(q_point);
                 double j  = jw / quadrature.weight(q_point);
@@ -453,29 +421,29 @@ namespace dftfe
   void
   meshMovementClass::findClosestVerticesToDestinationPoints(
     const std::vector<dealii::Point<3>> &destinationPoints,
-    std::vector<dealii::Point<3>> &      closestTriaVertexToDestPointsLocation,
+    std::vector<dealii::Point<3>>       &closestTriaVertexToDestPointsLocation,
     std::vector<dealii::Tensor<1, 3, double>>
       &dispClosestTriaVerticesToDestPoints)
   {
     closestTriaVertexToDestPointsLocation.clear();
     dispClosestTriaVerticesToDestPoints.clear();
-    unsigned int vertices_per_cell = dealii::GeometryInfo<3>::vertices_per_cell;
+    dftfe::uInt vertices_per_cell = dealii::GeometryInfo<3>::vertices_per_cell;
     std::vector<double> latticeVectorsFlattened(9, 0.0);
-    for (unsigned int idim = 0; idim < 3; idim++)
-      for (unsigned int jdim = 0; jdim < 3; jdim++)
+    for (dftfe::uInt idim = 0; idim < 3; idim++)
+      for (dftfe::uInt jdim = 0; jdim < 3; jdim++)
         latticeVectorsFlattened[3 * idim + jdim] =
           d_domainBoundingVectors[idim][jdim];
     dealii::Point<3> corner;
-    for (unsigned int idim = 0; idim < 3; idim++)
+    for (dftfe::uInt idim = 0; idim < 3; idim++)
       {
         corner[idim] = 0;
-        for (unsigned int jdim = 0; jdim < 3; jdim++)
+        for (dftfe::uInt jdim = 0; jdim < 3; jdim++)
           corner[idim] -= d_domainBoundingVectors[jdim][idim] / 2.0;
       }
     std::vector<double> latticeVectorsMagnitudes(3, 0.0);
-    for (unsigned int idim = 0; idim < 3; idim++)
+    for (dftfe::uInt idim = 0; idim < 3; idim++)
       {
-        for (unsigned int jdim = 0; jdim < 3; jdim++)
+        for (dftfe::uInt jdim = 0; jdim < 3; jdim++)
           latticeVectorsMagnitudes[idim] +=
             d_domainBoundingVectors[idim][jdim] *
             d_domainBoundingVectors[idim][jdim];
@@ -492,7 +460,7 @@ namespace dftfe
       vectorTools::createBoundingBoxTriaLocallyOwned(d_dofHandlerMoveMesh));
     ;
 
-    for (unsigned int idest = 0; idest < destinationPoints.size(); idest++)
+    for (dftfe::uInt idest = 0; idest < destinationPoints.size(); idest++)
       {
         std::vector<bool> isDestPointOnPeriodicSurface(3, false);
 
@@ -502,7 +470,7 @@ namespace dftfe
                                                       corner);
         // std::cout<< "destFracCoords: "<< destFracCoords[0] << ","
         // <<destFracCoords[1] <<"," <<destFracCoords[2]<<std::endl;
-        for (unsigned int idim = 0; idim < 3; idim++)
+        for (dftfe::uInt idim = 0; idim < 3; idim++)
           {
             if ((std::fabs(destFracCoords[idim] - 0.0) <
                    1e-5 / latticeVectorsMagnitudes[idim] ||
@@ -547,9 +515,10 @@ namespace dftfe
             {
               if (cell->is_locally_owned())
                 {
-                  for (unsigned int i = 0; i < vertices_per_cell; ++i)
+                  for (dftfe::uInt i = 0; i < vertices_per_cell; ++i)
                     {
-                      const unsigned global_vertex_no = cell->vertex_index(i);
+                      const dftfe::uInt global_vertex_no =
+                        cell->vertex_index(i);
 
                       if (vertex_touched[global_vertex_no])
                         continue;
@@ -577,7 +546,7 @@ namespace dftfe
                           std::vector<double> nodeFracCoords =
                             meshMovementUtils::getFractionalCoordinates(
                               latticeVectorsFlattened, nodalCoor, corner);
-                          for (int idim = 0; idim < 3; idim++)
+                          for (dftfe::Int idim = 0; idim < 3; idim++)
                             {
                               if ((std::fabs(nodeFracCoords[idim] - 0.0) <
                                      1e-5 / latticeVectorsMagnitudes[idim] ||
@@ -625,7 +594,7 @@ namespace dftfe
         // "<<globalMinDistance << " closest vertex location: "<<
         // closestTriaVertexLocation <<std::endl;
 
-        int minProcIdWithGlobalMinDistance = 1e+6;
+        dftfe::Int minProcIdWithGlobalMinDistance = 1e+6;
 
 
         if (std::fabs(minDistance - globalMinDistance) < 1e-5)

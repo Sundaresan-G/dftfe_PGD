@@ -20,44 +20,23 @@
 #ifndef DFTFE_ONCVCLASS_H
 #define DFTFE_ONCVCLASS_H
 
-#include "vector"
-#include "map"
-#include "AtomCenteredSphericalFunctionValenceDensitySpline.h"
-#include "AtomCenteredSphericalFunctionCoreDensitySpline.h"
-#include "AtomCenteredSphericalFunctionLocalPotentialSpline.h"
-#include "AtomCenteredSphericalFunctionProjectorSpline.h"
-#include "AtomCenteredSphericalFunctionContainer.h"
-#include "AtomicCenteredNonLocalOperator.h"
-#include <memory>
-#include <MemorySpaceType.h>
-#include <headers.h>
-#include <TypeConfig.h>
-#include <dftUtils.h>
-#include "FEBasisOperations.h"
-#include <BLASWrapper.h>
-#include <xc.h>
-#include <excManager.h>
-#ifdef _OPENMP
-#  include <omp.h>
-#else
-#  define omp_get_thread_num() 0
-#endif
+#include <pseudopotentialBaseClass.h>
 namespace dftfe
 {
   template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-  class oncvClass
+  class oncvClass : public pseudopotentialBaseClass<ValueType, memorySpace>
   {
   public:
-    oncvClass(const MPI_Comm &              mpi_comm_parent,
-              const std::string &           scratchFolderName,
-              const std::set<unsigned int> &atomTypes,
-              const bool                    floatingNuclearCharges,
-              const unsigned int            nOMPThreads,
-              const std::map<unsigned int, unsigned int> &atomAttributes,
-              const bool                                  reproducibleOutput,
-              const int                                   verbosity,
-              const bool                                  useDevice,
-              const bool                                  memOptMode);
+    oncvClass(const MPI_Comm                           &mpi_comm_parent,
+              const std::string                        &scratchFolderName,
+              const std::set<dftfe::uInt>              &atomTypes,
+              const bool                                floatingNuclearCharges,
+              const dftfe::uInt                         nOMPThreads,
+              const std::map<dftfe::uInt, dftfe::uInt> &atomAttributes,
+              const bool                                reproducibleOutput,
+              const dftfe::Int                          verbosity,
+              const bool                                useDevice,
+              const bool                                memOptMode);
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
      * @param[in] densityQuadratureId quadratureId for density.
@@ -95,16 +74,18 @@ namespace dftfe
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
         BLASWrapperPtrDevice,
 #endif
-      unsigned int                             densityQuadratureId,
-      unsigned int                             localContributionQuadratureId,
-      unsigned int                             sparsityPatternQuadratureId,
-      unsigned int                             nlpspQuadratureId,
-      unsigned int                             densityQuadratureIdElectro,
+      dftfe::uInt                              densityQuadratureId,
+      dftfe::uInt                              localContributionQuadratureId,
+      dftfe::uInt                              sparsityPatternQuadratureId,
+      dftfe::uInt                              nlpspQuadratureId,
+      dftfe::uInt                              densityQuadratureIdElectro,
       std::shared_ptr<excManager<memorySpace>> excFunctionalPtr,
-      const std::vector<std::vector<double>> & atomLocations,
-      unsigned int                             numEigenValues,
+      const std::vector<std::vector<double>>  &atomLocations,
+      dftfe::uInt                              numEigenValues,
       const bool                               singlePrecNonLocalOperator,
-      const bool computeSphericalFnTimesXNonLocalOperator = true);
+      const bool                               floatingNuclearCharges,
+      const bool                               computeForce,
+      const bool                               computeStress);
 
     /**
      * @brief Initialises all the data members with addresses/values to/of dftClass.
@@ -124,29 +105,27 @@ namespace dftfe
      */
     void
     initialiseNonLocalContribution(
-      const std::vector<std::vector<double>> &atomLocations,
-      const std::vector<int> &                imageIds,
+      const std::vector<dftfe::Int>          &imageIds,
       const std::vector<std::vector<double>> &periodicCoords,
-      const std::vector<double> &             kPointWeights,
-      const std::vector<double> &             kPointCoordinates,
+      const std::vector<double>              &kPointWeights,
+      const std::vector<double>              &kPointCoordinates,
       const bool                              updateNonlocalSparsity);
 
 
     void
     initialiseNonLocalContribution(
-      const std::vector<std::vector<double>> &        atomLocations,
-      const std::vector<int> &                        imageIds,
-      const std::vector<std::vector<double>> &        periodicCoords,
-      const std::vector<double> &                     kPointWeights,
-      const std::vector<double> &                     kPointCoordinates,
-      const bool                                      updateNonlocalSparsity,
-      const std::map<unsigned int, std::vector<int>> &sparsityPattern,
+      const std::vector<dftfe::Int>          &imageIds,
+      const std::vector<std::vector<double>> &periodicCoords,
+      const std::vector<double>              &kPointWeights,
+      const std::vector<double>              &kPointCoordinates,
+      const bool                              updateNonlocalSparsity,
+      const std::map<dftfe::uInt, std::vector<dftfe::Int>> &sparsityPattern,
       const std::vector<std::vector<dealii::CellId>>
         &elementIdsInAtomCompactSupport,
-      const std::vector<std::vector<unsigned int>>
-        &                              elementIndexesInAtomCompactSupport,
-      const std::vector<unsigned int> &atomIdsInCurrentProcess,
-      unsigned int                     numberElements);
+      const std::vector<std::vector<dftfe::uInt>>
+                                     &elementIndexesInAtomCompactSupport,
+      const std::vector<dftfe::uInt> &atomIdsInCurrentProcess,
+      dftfe::uInt                     numberElements);
 
 
     /**
@@ -156,48 +135,49 @@ namespace dftfe
     initLocalPotential();
 
     void
-    getRadialValenceDensity(unsigned int         Znum,
+    getRadialValenceDensity(dftfe::uInt          Znum,
                             double               rad,
                             std::vector<double> &Val);
 
     double
-    getRadialValenceDensity(unsigned int Znum, double rad);
+    getRadialValenceDensity(dftfe::uInt Znum, double rad);
 
     double
-    getRmaxValenceDensity(unsigned int Znum);
+    getRmaxValenceDensity(dftfe::uInt Znum);
 
     void
-    getRadialCoreDensity(unsigned int         Znum,
+    getRadialCoreDensity(dftfe::uInt          Znum,
                          double               rad,
                          std::vector<double> &Val);
 
     double
-    getRadialCoreDensity(unsigned int Znum, double rad);
+    getRadialCoreDensity(dftfe::uInt Znum, double rad);
 
     double
-    getRmaxCoreDensity(unsigned int Znum);
+    getRmaxCoreDensity(dftfe::uInt Znum);
 
     double
-    getRadialLocalPseudo(unsigned int Znum, double rad);
+    getRadialLocalPseudo(dftfe::uInt Znum, double rad);
 
     double
-    getRmaxLocalPot(unsigned int Znum);
+    getRmaxLocalPot(dftfe::uInt Znum);
 
     bool
-    coreNuclearDensityPresent(unsigned int Znum);
+    coreNuclearDensityPresent(dftfe::uInt Znum);
     // Returns the number of Projectors for the given atomID in cooridnates List
-    unsigned int
-    getTotalNumberOfSphericalFunctionsForAtomId(unsigned int atomId);
+    dftfe::uInt
+    getTotalNumberOfSphericalFunctionsForAtomId(dftfe::uInt atomId);
     // Returns the Total Number of atoms with support in the processor
-    unsigned int
+    dftfe::uInt
     getTotalNumberOfAtomsInCurrentProcessor();
     // Returns the atomID in coordinates list for the iAtom index.
-    unsigned int
-    getAtomIdInCurrentProcessor(unsigned int iAtom);
+    dftfe::uInt
+    getAtomIdInCurrentProcessor(dftfe::uInt iAtom);
 
 
     const dftfe::utils::MemoryStorage<ValueType, memorySpace> &
-    getCouplingMatrix();
+    getCouplingMatrix(
+      CouplingType couplingtype = CouplingType::HamiltonianEntries);
 
 
     const std::shared_ptr<
@@ -207,7 +187,8 @@ namespace dftfe
     const dftfe::utils::MemoryStorage<
       typename dftfe::dataTypes::singlePrecType<ValueType>::type,
       memorySpace> &
-    getCouplingMatrixSinglePrec();
+    getCouplingMatrixSinglePrec(
+      CouplingType couplingtype = CouplingType::HamiltonianEntries);
 
 
     const std::shared_ptr<AtomicCenteredNonLocalOperator<
@@ -215,8 +196,16 @@ namespace dftfe
       memorySpace>>
     getNonLocalOperatorSinglePrec();
 
+    void
+    determineAtomsOfInterstPseudopotential(
+      const std::vector<std::vector<double>> &atomCoordinates);
+
+    const std::map<dftfe::uInt, dftfe::uInt> &
+    getPSPAtomIdToGlobalIdMap();
+
     const bool
     hasSOC() const;
+
 
   private:
     /**
@@ -229,9 +218,9 @@ namespace dftfe
      */
     void
     setImageCoordinates(const std::vector<std::vector<double>> &atomLocations,
-                        const std::vector<int> &                imageIds,
+                        const std::vector<dftfe::Int>          &imageIds,
                         const std::vector<std::vector<double>> &periodicCoords,
-                        std::vector<unsigned int> &             imageIdsTemp,
+                        std::vector<dftfe::uInt>               &imageIdsTemp,
                         std::vector<double> &imageCoordsTemp);
     /**
      * @brief Creating Density splines for all atomTypes
@@ -255,8 +244,8 @@ namespace dftfe
       d_BLASWrapperDevicePtr;
 #endif
     std::vector<std::vector<double>> d_nonLocalPseudoPotentialConstants;
-    std::map<unsigned int, std::vector<double>>
-                                                        d_atomicNonLocalPseudoPotentialConstants;
+    std::map<dftfe::uInt, std::vector<double>>
+      d_atomicNonLocalPseudoPotentialConstants;
     dftfe::utils::MemoryStorage<ValueType, memorySpace> d_couplingMatrixEntries;
     dftfe::utils::MemoryStorage<
       typename dftfe::dataTypes::singlePrecType<ValueType>::type,
@@ -269,24 +258,24 @@ namespace dftfe
       d_atomicWaveFnsVector;
     std::shared_ptr<AtomCenteredSphericalFunctionContainer>
       d_atomicProjectorFnsContainer;
-    std::map<std::pair<unsigned int, unsigned int>,
+    std::map<std::pair<dftfe::uInt, dftfe::uInt>,
              std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsMap;
 
     // parallel communication objects
-    const MPI_Comm     d_mpiCommParent;
-    const unsigned int d_this_mpi_process;
+    const MPI_Comm    d_mpiCommParent;
+    const dftfe::uInt d_this_mpi_process;
 
     // conditional stream object
     dealii::ConditionalOStream               pcout;
     bool                                     d_useDevice;
     bool                                     d_memoryOptMode;
-    unsigned int                             d_densityQuadratureId;
-    unsigned int                             d_localContributionQuadratureId;
-    unsigned int                             d_nuclearChargeQuadratureIdElectro;
-    unsigned int                             d_densityQuadratureIdElectro;
-    unsigned int                             d_sparsityPatternQuadratureId;
-    unsigned int                             d_nlpspQuadratureId;
+    dftfe::uInt                              d_densityQuadratureId;
+    dftfe::uInt                              d_localContributionQuadratureId;
+    dftfe::uInt                              d_nuclearChargeQuadratureIdElectro;
+    dftfe::uInt                              d_densityQuadratureIdElectro;
+    dftfe::uInt                              d_sparsityPatternQuadratureId;
+    dftfe::uInt                              d_nlpspQuadratureId;
     std::shared_ptr<excManager<memorySpace>> d_excManagerPtr;
     std::shared_ptr<
       dftfe::basis::
@@ -299,18 +288,18 @@ namespace dftfe
       d_BasisOperatorDevicePtr;
 #endif
 
-    std::map<unsigned int, bool>     d_atomTypeCoreFlagMap;
+    std::map<dftfe::uInt, bool>      d_atomTypeCoreFlagMap;
     bool                             d_floatingNuclearCharges;
     bool                             d_singlePrecNonLocalOperator;
-    int                              d_verbosity;
+    dftfe::Int                       d_verbosity;
     std::vector<std::vector<double>> d_atomLocations;
-    std::set<unsigned int>           d_atomTypes;
-    std::map<unsigned int, std::vector<unsigned int>> d_atomTypesList;
-    std::string                                       d_dftfeScratchFolderName;
-    std::vector<int>                                  d_imageIds;
-    std::vector<std::vector<double>>                  d_imagePositions;
-    unsigned int                                      d_numEigenValues;
-    unsigned int                                      d_nOMPThreads;
+    std::set<dftfe::uInt>            d_atomTypes;
+    std::map<dftfe::uInt, std::vector<dftfe::uInt>> d_atomTypesList;
+    std::string                                     d_dftfeScratchFolderName;
+    std::vector<dftfe::Int>                         d_imageIds;
+    std::vector<std::vector<double>>                d_imagePositions;
+    dftfe::uInt                                     d_numEigenValues;
+    dftfe::uInt                                     d_nOMPThreads;
 
     // Creating Object for Atom Centerd Nonlocal Operator
     std::shared_ptr<AtomicCenteredNonLocalOperator<ValueType, memorySpace>>
@@ -324,14 +313,14 @@ namespace dftfe
 
     std::vector<std::shared_ptr<AtomCenteredSphericalFunctionBase>>
       d_atomicProjectorFnsVector;
-    std::vector<std::map<unsigned int,
-                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
+    std::vector<
+      std::map<dftfe::uInt, std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
       d_atomicLocalPotVector;
-    std::vector<std::map<unsigned int,
-                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
+    std::vector<
+      std::map<dftfe::uInt, std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
       d_atomicValenceDensityVector;
-    std::vector<std::map<unsigned int,
-                         std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
+    std::vector<
+      std::map<dftfe::uInt, std::shared_ptr<AtomCenteredSphericalFunctionBase>>>
       d_atomicCoreDensityVector;
     std::map<unsigned int, std::map<unsigned int, std::array<double, 4>>>
          d_atomicProjectorFnsljmValues;
@@ -339,7 +328,10 @@ namespace dftfe
     bool d_hasSOC;
     /// FIXME: eventually it should be a map of atomic number to struct-
     /// {valence number, mesh input etc}
-    std::map<unsigned int, unsigned int> d_atomTypeAtributes;
+    std::map<dftfe::uInt, dftfe::uInt> d_atomTypeAtributes;
+    std::vector<std::vector<double>>   d_atomLocationsInterestPseudopotential;
+    std::map<dftfe::uInt, dftfe::uInt>
+      d_atomIdPseudopotentialInterestToGlobalId;
 
 
 

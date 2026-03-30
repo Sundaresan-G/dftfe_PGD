@@ -16,23 +16,23 @@ namespace dftfe
     ~NNLLMGGA();
 
     void
-    evaluateexc(const double *     rho,
-                const double *     sigma,
-                const double *     laprho,
-                const unsigned int numPoints,
-                double *           exc);
+    evaluateexc(const double     *rho,
+                const double     *sigma,
+                const double     *laprho,
+                const dftfe::uInt numPoints,
+                double           *exc);
     void
-    evaluatevxc(const double *     rho,
-                const double *     sigma,
-                const double *     laprho,
-                const unsigned int numPoints,
-                double *           exc,
-                double *           dexc);
+    evaluatevxc(const double     *rho,
+                const double     *sigma,
+                const double     *laprho,
+                const dftfe::uInt numPoints,
+                double           *exc,
+                double           *dexc);
 
   private:
     std::string                          d_modelFilename;
     std::string                          d_ptcFilename;
-    torch::jit::script::Module *         d_model;
+    torch::jit::script::Module          *d_model;
     const bool                           d_isSpinPolarized;
     double                               d_rhoTol;
     double                               d_sThreshold;

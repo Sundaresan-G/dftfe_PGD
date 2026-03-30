@@ -14,21 +14,23 @@
 //
 // ---------------------------------------------------------------------
 //
-// @author Gourab Panigrahi
-//
+
+/**
+ * @author Gourab Panigrahi
+ *
+ */
 
 #include <poissonSolverProblemDevice.h>
 #include <MemoryTransfer.h>
-#include "matrixFreeDeviceKernels.h"
-
+#include <feevaluationWrapper.h>
 namespace dftfe
 {
   //
   // constructor
   //
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::
-    poissonSolverProblemDevice(const MPI_Comm &mpi_comm)
+  template <dftfe::uInt FEOrderElectro>
+  poissonSolverProblemDevice<FEOrderElectro>::poissonSolverProblemDevice(
+    const MPI_Comm &mpi_comm)
     : mpi_communicator(mpi_comm)
     , n_mpi_processes(dealii::Utilities::MPI::n_mpi_processes(mpi_comm))
     , this_mpi_process(dealii::Utilities::MPI::this_mpi_process(mpi_comm))
@@ -46,9 +48,9 @@ namespace dftfe
     d_smearedChargeValuesPtr             = NULL;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::clear()
+  poissonSolverProblemDevice<FEOrderElectro>::clear()
   {
     d_diagonalA.reinit(0);
     d_rhsSmearedCharge.reinit(0);
@@ -65,35 +67,35 @@ namespace dftfe
     d_smearedChargeValuesPtr             = NULL;
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::reinit(
+  poissonSolverProblemDevice<FEOrderElectro>::reinit(
     const std::shared_ptr<
       dftfe::basis::
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
-      &                                      basisOperationsPtr,
-    distributedCPUVec<double> &              x,
+                                            &basisOperationsPtr,
+    distributedCPUVec<double>               &x,
     const dealii::AffineConstraints<double> &constraintMatrix,
-    const unsigned int                       matrixFreeVectorComponent,
-    const unsigned int matrixFreeQuadratureComponentRhsDensity,
-    const unsigned int matrixFreeQuadratureComponentAX,
+    const dftfe::uInt                        matrixFreeVectorComponent,
+    const dftfe::uInt matrixFreeQuadratureComponentRhsDensity,
+    const dftfe::uInt matrixFreeQuadratureComponentAX,
     const std::map<dealii::types::global_dof_index, double> &atoms,
     const std::map<dealii::CellId, std::vector<double>> &smearedChargeValues,
-    const unsigned int smearedChargeQuadratureId,
+    const dftfe::uInt smearedChargeQuadratureId,
     const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       &rhoValues,
     const std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                       BLASWrapperPtr,
-    const bool         isComputeDiagonalA,
-    const bool         isComputeMeanValueConstraint,
-    const bool         smearedNuclearCharges,
-    const bool         isRhoValues,
-    const bool         isGradSmearedChargeRhs,
-    const unsigned int smearedChargeGradientComponentId,
-    const bool         storeSmearedChargeRhs,
-    const bool         reuseSmearedChargeRhs,
-    const bool         reinitializeFastConstraints)
+                      BLASWrapperPtr,
+    const bool        isComputeDiagonalA,
+    const bool        isComputeMeanValueConstraint,
+    const bool        smearedNuclearCharges,
+    const bool        isRhoValues,
+    const bool        isGradSmearedChargeRhs,
+    const dftfe::uInt smearedChargeGradientComponentId,
+    const bool        storeSmearedChargeRhs,
+    const bool        reuseSmearedChargeRhs,
+    const bool        reinitializeFastConstraints)
   {
     int this_process;
     MPI_Comm_rank(mpi_communicator, &this_process);
@@ -112,7 +114,6 @@ namespace dftfe
                                                d_xDevice.numVectors(),
                                              d_xDevice.begin(),
                                              d_xPtr->begin());
-
 
     d_constraintMatrixPtr       = &constraintMatrix;
     d_matrixFreeVectorComponent = matrixFreeVectorComponent;
@@ -154,20 +155,37 @@ namespace dftfe
             matrixFreeVectorComponent),
           constraintMatrix);
 
-        // Setup MatrixFree Mesh
-        setupMatrixFree();
-
-        // Setup MatrixFree Constraints
         setupConstraints();
+
+        // Setup MatrixFree
+        unsigned int nVectors = 1;
+
+        // Create matrixFreeWrapperDevice
+        d_matrixFreeWrapperDevice = std::make_unique<
+          dftfe::MatrixFreeWrapperClass<double,
+                                        dftfe::operatorList::Laplace,
+                                        dftfe::utils::MemorySpace::DEVICE,
+                                        false>>(
+          FEOrderElectro + 1,
+          mpi_communicator,
+          d_matrixFreeDataPtr,
+          constraintMatrix,
+          d_BLASWrapperPtr,
+          d_matrixFreeVectorComponent,
+          d_matrixFreeQuadratureComponentAX,
+          nVectors);
+
+        // Init MatrixFree
+        d_matrixFreeWrapperDevice->init();
 
         d_isFastConstraintsInitialized       = true;
         d_isHomogenousConstraintsInitialized = true;
       }
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::copyXfromDeviceToHost()
+  poissonSolverProblemDevice<FEOrderElectro>::copyXfromDeviceToHost()
   {
     dftfe::utils::MemoryTransfer<
       dftfe::utils::MemorySpace::HOST,
@@ -176,9 +194,9 @@ namespace dftfe
                                                d_xDevice.begin());
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::distributeX()
+  poissonSolverProblemDevice<FEOrderElectro>::distributeX()
   {
     d_inhomogenousConstraintsTotalPotentialInfo.distribute(d_xDevice);
 
@@ -186,17 +204,17 @@ namespace dftfe
       meanValueConstraintDistribute(d_xDevice);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   distributedDeviceVec<double> &
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::getX()
+  poissonSolverProblemDevice<FEOrderElectro>::getX()
   {
     return d_xDevice;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::computeRhs(
+  poissonSolverProblemDevice<FEOrderElectro>::computeRhs(
     distributedCPUVec<double> &rhs)
   {
     dealii::DoFHandler<3>::active_cell_iterator subCellPtr;
@@ -212,7 +230,7 @@ namespace dftfe
     const dealii::DoFHandler<3> &dofHandler =
       d_matrixFreeDataPtr->get_dof_handler(d_matrixFreeVectorComponent);
 
-    const unsigned int     dofs_per_cell = dofHandler.get_fe().dofs_per_cell;
+    const dftfe::uInt      dofs_per_cell = dofHandler.get_fe().dofs_per_cell;
     dealii::Vector<double> elementalRhs(dofs_per_cell);
     std::vector<dealii::types::global_dof_index> local_dof_indices(
       dofs_per_cell);
@@ -232,22 +250,27 @@ namespace dftfe
       d_matrixFreeVectorComponent,
       d_matrixFreeQuadratureComponentAX);
 
-    int isPerformStaticCondensation = (tempvec.linfty_norm() > 1e-10) ? 1 : 0;
+    dftfe::Int isPerformStaticCondensation =
+      (tempvec.linfty_norm() > 1e-10) ? 1 : 0;
 
-    MPI_Bcast(&isPerformStaticCondensation, 1, MPI_INT, 0, mpi_communicator);
+    MPI_Bcast(&isPerformStaticCondensation,
+              1,
+              dftfe::dataTypes::mpi_type_id(&isPerformStaticCondensation),
+              0,
+              mpi_communicator);
 
     if (isPerformStaticCondensation == 1)
       {
         dealii::VectorizedArray<double> quarter =
           dealii::make_vectorized_array(1.0 / (4.0 * M_PI));
-        for (unsigned int macrocell = 0;
+        for (dftfe::uInt macrocell = 0;
              macrocell < d_matrixFreeDataPtr->n_cell_batches();
              ++macrocell)
           {
             fe_eval.reinit(macrocell);
             fe_eval.read_dof_values_plain(tempvec);
             fe_eval.evaluate(dealii::EvaluationFlags::gradients);
-            for (unsigned int q = 0; q < fe_eval.n_q_points; ++q)
+            for (dftfe::uInt q = 0; q < fe_eval.n_q_points; ++q)
               {
                 fe_eval.submit_gradient(-quarter * fe_eval.get_gradient(q), q);
               }
@@ -259,17 +282,14 @@ namespace dftfe
     // rhs contribution from electronic charge
     if (d_rhoValuesPtr)
       {
-        dealii::FEEvaluation<
-          3,
-          FEOrderElectro,
-          C_num1DQuad<C_rhoNodalPolyOrder<FEOrder, FEOrderElectro>()>()>
-          fe_eval_density(*d_matrixFreeDataPtr,
-                          d_matrixFreeVectorComponent,
-                          d_matrixFreeQuadratureComponentRhsDensity);
+        FEEvaluationWrapperClass<1> fe_eval_density(
+          *d_matrixFreeDataPtr,
+          d_matrixFreeVectorComponent,
+          d_matrixFreeQuadratureComponentRhsDensity);
 
         dealii::AlignedVector<dealii::VectorizedArray<double>> rhoQuads(
           fe_eval_density.n_q_points, dealii::make_vectorized_array(0.0));
-        for (unsigned int macrocell = 0;
+        for (dftfe::uInt macrocell = 0;
              macrocell < d_matrixFreeDataPtr->n_cell_batches();
              ++macrocell)
           {
@@ -278,24 +298,24 @@ namespace dftfe
             std::fill(rhoQuads.begin(),
                       rhoQuads.end(),
                       dealii::make_vectorized_array(0.0));
-            const unsigned int numSubCells =
+            const dftfe::uInt numSubCells =
               d_matrixFreeDataPtr->n_active_entries_per_cell_batch(macrocell);
-            for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
+            for (dftfe::uInt iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
               {
                 subCellPtr = d_matrixFreeDataPtr->get_cell_iterator(
                   macrocell, iSubCell, d_matrixFreeVectorComponent);
                 dealii::CellId subCellId = subCellPtr->id();
-                unsigned int   cellIndex =
+                dftfe::uInt    cellIndex =
                   d_basisOperationsPtr->cellIndex(subCellId);
                 const double *tempVec = d_rhoValuesPtr->data() +
                                         cellIndex * fe_eval_density.n_q_points;
 
-                for (unsigned int q = 0; q < fe_eval_density.n_q_points; ++q)
+                for (dftfe::uInt q = 0; q < fe_eval_density.n_q_points; ++q)
                   rhoQuads[q][iSubCell] = tempVec[q];
               }
 
 
-            for (unsigned int q = 0; q < fe_eval_density.n_q_points; ++q)
+            for (dftfe::uInt q = 0; q < fe_eval_density.n_q_points; ++q)
               {
                 fe_eval_density.submit_value(rhoQuads[q], q);
               }
@@ -312,7 +332,7 @@ namespace dftfe
            ++it)
         {
           std::vector<dealii::AffineConstraints<double>::size_type>
-                                 local_dof_indices_origin(1, it->first); // atomic node
+            local_dof_indices_origin(1, it->first); // atomic node
           dealii::Vector<double> cell_rhs_origin(1);
           cell_rhs_origin(0) = -(it->second); // atomic charge
 
@@ -322,28 +342,28 @@ namespace dftfe
     else if (d_smearedChargeValuesPtr != NULL && !d_isGradSmearedChargeRhs &&
              !d_isReuseSmearedChargeRhs)
       {
-        // const unsigned int   num_quad_points_sc =
+        // const dftfe::uInt   num_quad_points_sc =
         // d_matrixFreeDataPtr->get_quadrature(d_smearedChargeQuadratureId).size();
 
         dealii::FEEvaluation<3, -1> fe_eval_sc(*d_matrixFreeDataPtr,
                                                d_matrixFreeVectorComponent,
                                                d_smearedChargeQuadratureId);
 
-        const unsigned int numQuadPointsSmearedb = fe_eval_sc.n_q_points;
+        const dftfe::uInt numQuadPointsSmearedb = fe_eval_sc.n_q_points;
 
         dealii::AlignedVector<dealii::VectorizedArray<double>> smearedbQuads(
           numQuadPointsSmearedb, dealii::make_vectorized_array(0.0));
-        for (unsigned int macrocell = 0;
+        for (dftfe::uInt macrocell = 0;
              macrocell < d_matrixFreeDataPtr->n_cell_batches();
              ++macrocell)
           {
             std::fill(smearedbQuads.begin(),
                       smearedbQuads.end(),
                       dealii::make_vectorized_array(0.0));
-            bool               isMacroCellTrivial = true;
-            const unsigned int numSubCells =
+            bool              isMacroCellTrivial = true;
+            const dftfe::uInt numSubCells =
               d_matrixFreeDataPtr->n_active_entries_per_cell_batch(macrocell);
-            for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
+            for (dftfe::uInt iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
               {
                 subCellPtr = d_matrixFreeDataPtr->get_cell_iterator(
                   macrocell, iSubCell, d_matrixFreeVectorComponent);
@@ -353,7 +373,7 @@ namespace dftfe
                 if (tempVec.size() == 0)
                   continue;
 
-                for (unsigned int q = 0; q < numQuadPointsSmearedb; ++q)
+                for (dftfe::uInt q = 0; q < numQuadPointsSmearedb; ++q)
                   smearedbQuads[q][iSubCell] = tempVec[q];
 
                 isMacroCellTrivial = false;
@@ -362,7 +382,7 @@ namespace dftfe
             if (!isMacroCellTrivial)
               {
                 fe_eval_sc.reinit(macrocell);
-                for (unsigned int q = 0; q < fe_eval_sc.n_q_points; ++q)
+                for (dftfe::uInt q = 0; q < fe_eval_sc.n_q_points; ++q)
                   {
                     fe_eval_sc.submit_value(smearedbQuads[q], q);
                   }
@@ -373,7 +393,7 @@ namespace dftfe
                 if (d_isStoreSmearedChargeRhs)
                   {
                     fe_eval_sc.reinit(macrocell);
-                    for (unsigned int q = 0; q < fe_eval_sc.n_q_points; ++q)
+                    for (dftfe::uInt q = 0; q < fe_eval_sc.n_q_points; ++q)
                       {
                         fe_eval_sc.submit_value(smearedbQuads[q], q);
                       }
@@ -390,26 +410,26 @@ namespace dftfe
                                                 d_matrixFreeVectorComponent,
                                                 d_smearedChargeQuadratureId);
 
-        const unsigned int numQuadPointsSmearedb = fe_eval_sc2.n_q_points;
+        const dftfe::uInt numQuadPointsSmearedb = fe_eval_sc2.n_q_points;
 
         dealii::Tensor<1, 3, dealii::VectorizedArray<double>> zeroTensor;
-        for (unsigned int i = 0; i < 3; i++)
+        for (dftfe::uInt i = 0; i < 3; i++)
           zeroTensor[i] = dealii::make_vectorized_array(0.0);
 
         dealii::AlignedVector<
           dealii::Tensor<1, 3, dealii::VectorizedArray<double>>>
           smearedbQuads(numQuadPointsSmearedb, zeroTensor);
-        for (unsigned int macrocell = 0;
+        for (dftfe::uInt macrocell = 0;
              macrocell < d_matrixFreeDataPtr->n_cell_batches();
              ++macrocell)
           {
             std::fill(smearedbQuads.begin(),
                       smearedbQuads.end(),
                       dealii::make_vectorized_array(0.0));
-            bool               isMacroCellTrivial = true;
-            const unsigned int numSubCells =
+            bool              isMacroCellTrivial = true;
+            const dftfe::uInt numSubCells =
               d_matrixFreeDataPtr->n_active_entries_per_cell_batch(macrocell);
-            for (unsigned int iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
+            for (dftfe::uInt iSubCell = 0; iSubCell < numSubCells; ++iSubCell)
               {
                 subCellPtr = d_matrixFreeDataPtr->get_cell_iterator(
                   macrocell, iSubCell, d_matrixFreeVectorComponent);
@@ -419,7 +439,7 @@ namespace dftfe
                 if (tempVec.size() == 0)
                   continue;
 
-                for (unsigned int q = 0; q < numQuadPointsSmearedb; ++q)
+                for (dftfe::uInt q = 0; q < numQuadPointsSmearedb; ++q)
                   smearedbQuads[q][d_smearedChargeGradientComponentId]
                                [iSubCell] = tempVec[q];
 
@@ -429,7 +449,7 @@ namespace dftfe
             if (!isMacroCellTrivial)
               {
                 fe_eval_sc2.reinit(macrocell);
-                for (unsigned int q = 0; q < fe_eval_sc2.n_q_points; ++q)
+                for (dftfe::uInt q = 0; q < fe_eval_sc2.n_q_points; ++q)
                   {
                     fe_eval_sc2.submit_gradient(smearedbQuads[q], q);
                   }
@@ -459,15 +479,15 @@ namespace dftfe
   // Compute and fill value at mean value constrained dof
   // u_o= -\sum_{i \neq o} a_i * u_i where i runs over all dofs
   // except the mean value constrained dof (o^{th})
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::
-    meanValueConstraintDistribute(distributedDeviceVec<double> &vec) const
+  poissonSolverProblemDevice<FEOrderElectro>::meanValueConstraintDistribute(
+    distributedDeviceVec<double> &vec) const
   {
     // -\sum_{i \neq o} a_i * u_i computation which involves summation across
     // MPI tasks
-    const unsigned int one                  = 1;
-    double             constrainedNodeValue = 0.0;
+    const dftfe::uInt one                  = 1;
+    double            constrainedNodeValue = 0.0;
 
     d_BLASWrapperPtr->xdot(d_xLocalDof,
                            d_meanValueConstraintDeviceVec.begin(),
@@ -487,9 +507,9 @@ namespace dftfe
 
   // Distribute value at mean value constrained dof (u_o) to all other dofs
   // u_i+= -a_i * u_o, and subsequently set u_o to 0
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::
+  poissonSolverProblemDevice<FEOrderElectro>::
     meanValueConstraintDistributeSlaveToMaster(
       distributedDeviceVec<double> &vec) const
   {
@@ -514,10 +534,12 @@ namespace dftfe
 
 
 
-    d_BLASWrapperPtr->add(vec.begin(),
-                          d_meanValueConstraintDeviceVec.begin(),
-                          constrainedNodeValue,
-                          d_xLocalDof);
+    d_BLASWrapperPtr->xaxpy(d_xLocalDof,
+                            &constrainedNodeValue,
+                            d_meanValueConstraintDeviceVec.begin(),
+                            1,
+                            vec.begin(),
+                            1);
 
     // meanValueConstraintSetZero
     if (d_isMeanValueConstraintComputed)
@@ -529,9 +551,9 @@ namespace dftfe
 
   // Distribute value at mean value constrained dof (u_o) to all other dofs
   // u_i+= -a_i * u_o, and subsequently set u_o to 0
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::
+  poissonSolverProblemDevice<FEOrderElectro>::
     meanValueConstraintDistributeSlaveToMaster(
       distributedCPUVec<double> &vec) const
   {
@@ -552,10 +574,10 @@ namespace dftfe
     meanValueConstraintSetZero(vec);
   }
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::
-    meanValueConstraintSetZero(distributedCPUVec<double> &vec) const
+  poissonSolverProblemDevice<FEOrderElectro>::meanValueConstraintSetZero(
+    distributedCPUVec<double> &vec) const
   {
     if (d_isMeanValueConstraintComputed)
       if (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) ==
@@ -566,10 +588,9 @@ namespace dftfe
   //
   // Compute mean value constraint which is required in case of fully periodic
   // boundary conditions
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder,
-                             FEOrderElectro>::computeMeanValueConstraint()
+  poissonSolverProblemDevice<FEOrderElectro>::computeMeanValueConstraint()
   {
     // allocate parallel distibuted vector to store mean value constraint
     d_meanValueConstraintVec.reinit(*d_xPtr);
@@ -590,8 +611,8 @@ namespace dftfe
                                   quadrature,
                                   dealii::update_values |
                                     dealii::update_JxW_values);
-    const unsigned int     dofs_per_cell   = dofHandler.get_fe().dofs_per_cell;
-    const unsigned int     num_quad_points = quadrature.size();
+    const dftfe::uInt      dofs_per_cell   = dofHandler.get_fe().dofs_per_cell;
+    const dftfe::uInt      num_quad_points = quadrature.size();
     dealii::Vector<double> elementalValues(dofs_per_cell);
     std::vector<dealii::types::global_dof_index> local_dof_indices(
       dofs_per_cell);
@@ -608,8 +629,8 @@ namespace dftfe
           cell->get_dof_indices(local_dof_indices);
 
           elementalValues = 0.0;
-          for (unsigned int i = 0; i < dofs_per_cell; i++)
-            for (unsigned int q_point = 0; q_point < num_quad_points; ++q_point)
+          for (dftfe::uInt i = 0; i < dofs_per_cell; i++)
+            for (dftfe::uInt q_point = 0; q_point < num_quad_points; ++q_point)
               elementalValues(i) +=
                 fe_values.shape_value(i, q_point) * fe_values.JxW(q_point);
 
@@ -623,9 +644,8 @@ namespace dftfe
     dealii::IndexSet locallyOwnedElements =
       d_meanValueConstraintVec.locally_owned_elements();
 
-    dealii::IndexSet locallyRelevantElements;
-    dealii::DoFTools::extract_locally_relevant_dofs(dofHandler,
-                                                    locallyRelevantElements);
+    dealii::IndexSet locallyRelevantElements =
+      d_constraintMatrixPtr->get_local_lines();
 
     // pick mean value constrained node such that it is not part
     // of periodic and hanging node constraint equations (both slave and master
@@ -642,7 +662,7 @@ namespace dftfe
           const std::vector<std::pair<dealii::types::global_dof_index, double>>
             *rowData = d_constraintMatrixPtr->get_constraint_entries(lineDof);
           tempSet.push_back(lineDof);
-          for (unsigned int j = 0; j < rowData->size(); ++j)
+          for (dftfe::uInt j = 0; j < rowData->size(); ++j)
             tempSet.push_back((*rowData)[j].first);
         }
 
@@ -657,23 +677,24 @@ namespace dftfe
     locallyOwnedElements.subtract_set(allIndicesTouchedByConstraints);
 
 
-    const unsigned int localSizeOfPotentialChoices =
+    const dftfe::uInt localSizeOfPotentialChoices =
       locallyOwnedElements.n_elements();
-    const unsigned int totalProcs =
+    const dftfe::uInt totalProcs =
       dealii::Utilities::MPI::n_mpi_processes(mpi_communicator);
-    const unsigned int this_mpi_process =
+    const dftfe::uInt this_mpi_process =
       dealii::Utilities::MPI::this_mpi_process(mpi_communicator);
-    std::vector<unsigned int> localSizesOfPotentialChoices(totalProcs, 0);
+    std::vector<dftfe::uInt> localSizesOfPotentialChoices(totalProcs, 0);
     MPI_Allgather(&localSizeOfPotentialChoices,
                   1,
-                  MPI_UNSIGNED,
+                  dftfe::dataTypes::mpi_type_id(&localSizeOfPotentialChoices),
                   &localSizesOfPotentialChoices[0],
                   1,
-                  MPI_UNSIGNED,
+                  dftfe::dataTypes::mpi_type_id(
+                    localSizesOfPotentialChoices.data()),
                   mpi_communicator);
 
     d_meanValueConstraintProcId = 0;
-    for (unsigned int iproc = 0; iproc < totalProcs; iproc++)
+    for (dftfe::uInt iproc = 0; iproc < totalProcs; iproc++)
       {
         if (localSizesOfPotentialChoices[iproc] > 0)
           {
@@ -720,9 +741,9 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::computeDiagonalA()
+  poissonSolverProblemDevice<FEOrderElectro>::computeDiagonalA()
   {
     d_diagonalA.reinit(*d_xPtr);
     d_diagonalA = 0;
@@ -737,8 +758,8 @@ namespace dftfe
                                   dealii::update_values |
                                     dealii::update_gradients |
                                     dealii::update_JxW_values);
-    const unsigned int     dofs_per_cell   = dofHandler.get_fe().dofs_per_cell;
-    const unsigned int     num_quad_points = quadrature.size();
+    const dftfe::uInt      dofs_per_cell   = dofHandler.get_fe().dofs_per_cell;
+    const dftfe::uInt      num_quad_points = quadrature.size();
     dealii::Vector<double> elementalDiagonalA(dofs_per_cell);
     std::vector<dealii::types::global_dof_index> local_dof_indices(
       dofs_per_cell);
@@ -755,8 +776,8 @@ namespace dftfe
           cell->get_dof_indices(local_dof_indices);
 
           elementalDiagonalA = 0.0;
-          for (unsigned int i = 0; i < dofs_per_cell; i++)
-            for (unsigned int q_point = 0; q_point < num_quad_points; ++q_point)
+          for (dftfe::uInt i = 0; i < dofs_per_cell; i++)
+            for (dftfe::uInt q_point = 0; q_point < num_quad_points; ++q_point)
               elementalDiagonalA(i) += (1.0 / (4.0 * M_PI)) *
                                        (fe_values.shape_grad(i, q_point) *
                                         fe_values.shape_grad(i, q_point)) *
@@ -788,171 +809,39 @@ namespace dftfe
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::setX()
+  poissonSolverProblemDevice<FEOrderElectro>::setX()
   {
     AssertThrow(false, dftUtils::ExcNotImplementedYet());
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   distributedDeviceVec<double> &
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::getPreconditioner()
+  poissonSolverProblemDevice<FEOrderElectro>::getPreconditioner()
   {
     return d_diagonalAdevice;
   }
 
 
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::setupConstraints()
+  poissonSolverProblemDevice<FEOrderElectro>::setupConstraints()
   {
-    if (!d_isHomogenousConstraintsInitialized)
-      d_constraintsTotalPotentialInfo.initialize(
-        d_matrixFreeDataPtr->get_vector_partitioner(
-          d_matrixFreeVectorComponent),
-        *d_constraintMatrixPtr,
-        false);
     d_inhomogenousConstraintsTotalPotentialInfo.initialize(
       d_matrixFreeDataPtr->get_vector_partitioner(d_matrixFreeVectorComponent),
       *d_constraintMatrixPtr);
   }
 
 
-
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
-  void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::setupMatrixFree()
-  {
-    constexpr int    p              = FEOrderElectro + 1;
-    constexpr int    q              = p;
-    constexpr int    nDofsPerCell   = p * p * p;
-    constexpr int    dim            = 3;
-    constexpr double coeffLaplacian = 1.0 / (4.0 * M_PI);
-
-    auto dofInfo =
-      d_matrixFreeDataPtr->get_dof_info(d_matrixFreeVectorComponent);
-    auto shapeInfo =
-      d_matrixFreeDataPtr->get_shape_info(d_matrixFreeVectorComponent,
-                                          d_matrixFreeQuadratureComponentAX);
-    auto mappingData = d_matrixFreeDataPtr->get_mapping_info()
-                         .cell_data[d_matrixFreeQuadratureComponentAX];
-    auto shapeData = shapeInfo.get_shape_data();
-
-    // Shape Function Values, Gradients and their Transposes
-    // P(q*p), D(q*q), PT(p*q), DT(q*q)
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      shapeFunction(2 * q * (p + q));
-
-    for (int i = 0; i < p; i++)
-      for (int j = 0; j < q; j++)
-        {
-#if (DEAL_II_VERSION_MAJOR >= 9 && DEAL_II_VERSION_MINOR >= 6)
-          double value = shapeData.shape_values[j + i * q] *
-                         std::sqrt(shapeData.quadrature.weight(j));
-#else
-          double value = shapeData.shape_values[j + i * q][0] *
-                         std::sqrt(shapeData.quadrature.weight(j));
-#endif
-          shapeFunction[j + i * q]               = value;
-          shapeFunction[i + j * p + q * (p + q)] = value;
-        }
-
-    for (int i = 0; i < q; i++)
-      for (int j = 0; j < q; j++)
-        {
-#if (DEAL_II_VERSION_MAJOR >= 9 && DEAL_II_VERSION_MINOR >= 6)
-          double grad = shapeData.shape_gradients_collocation[j + i * q] *
-                        std::sqrt(shapeData.quadrature.weight(j)) /
-                        std::sqrt(shapeData.quadrature.weight(i));
-#else
-          double grad = shapeData.shape_gradients_collocation[j + i * q][0] *
-                        std::sqrt(shapeData.quadrature.weight(j)) /
-                        std::sqrt(shapeData.quadrature.weight(i));
-#endif
-          shapeFunction[j + i * q + q * p]           = grad;
-          shapeFunction[i + j * q + (2 * p + q) * q] = grad;
-        }
-
-    // Jacobian
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-      jacobianFactor(dim * dim * d_nLocalCells);
-
-    auto cellOffsets = mappingData.data_index_offsets;
-
-    for (int cellIdx = 0; cellIdx < d_nLocalCells; cellIdx++)
-      for (int k = 0; k < dim; k++)
-        for (int i = 0; i < dim; i++)
-          for (int j = 0; j < dim; j++)
-            jacobianFactor[j + i * dim + cellIdx * dim * dim] +=
-              coeffLaplacian *
-              mappingData
-                .JxW_values[cellOffsets[cellIdx / dofInfo.vectorization_length]]
-                           [0] *
-              mappingData
-                .jacobians[0]
-                          [cellOffsets[cellIdx / dofInfo.vectorization_length]]
-                          [k][j][0] *
-              mappingData
-                .jacobians[0]
-                          [cellOffsets[cellIdx / dofInfo.vectorization_length]]
-                          [k][i][0];
-
-    // Map making
-    dftfe::utils::MemoryStorage<int, dftfe::utils::MemorySpace::HOST> map(
-      nDofsPerCell * d_nLocalCells);
-
-    for (auto cellIdx = 0; cellIdx < d_nLocalCells; ++cellIdx)
-      std::memcpy(map.data() + cellIdx * nDofsPerCell,
-                  ((dofInfo.row_starts[cellIdx].second ==
-                    dofInfo.row_starts[cellIdx + 1].second) &&
-                   (dofInfo.row_starts_plain_indices[cellIdx] ==
-                    dealii::numbers::invalid_unsigned_int)) ?
-                    dofInfo.dof_indices.data() +
-                      dofInfo.row_starts[cellIdx].first :
-                    dofInfo.plain_dof_indices.data() +
-                      dofInfo.row_starts_plain_indices[cellIdx],
-                  nDofsPerCell * sizeof(unsigned int));
-
-    // Construct the device vectors
-    d_shapeFunction.resize(shapeFunction.size());
-    d_shapeFunction.copyFrom(shapeFunction);
-
-    d_jacobianFactor.resize(jacobianFactor.size());
-    d_jacobianFactor.copyFrom(jacobianFactor);
-
-    d_map.resize(map.size());
-    d_map.copyFrom(map);
-
-    d_shapeFunctionPtr  = d_shapeFunction.data();
-    d_jacobianFactorPtr = d_jacobianFactor.data();
-    d_mapPtr            = d_map.data();
-
-    constexpr std::size_t smem =
-      (4 * q * q * q + 2 * p * q + 2 * q * q + dim * dim) * sizeof(double);
-    matrixFreeDeviceKernels<double, p * p, q, p, dim>::
-      computeAXDevicePoissonSetAttributes(smem);
-  }
-
-
   // computeAX
-  template <unsigned int FEOrder, unsigned int FEOrderElectro>
+  template <dftfe::uInt FEOrderElectro>
   void
-  poissonSolverProblemDevice<FEOrder, FEOrderElectro>::computeAX(
+  poissonSolverProblemDevice<FEOrderElectro>::computeAX(
     distributedDeviceVec<double> &Ax,
     distributedDeviceVec<double> &x)
   {
-    constexpr int dim     = 3;
-    constexpr int p       = FEOrderElectro + 1;
-    constexpr int q       = p;
-    constexpr int threads = 64;
-    // constexpr int threads =
-    //  (FEOrderElectro < 7 ? 96 : FEOrderElectro == 7 ? 64 : 256);
-    const int             blocks = d_nLocalCells;
-    constexpr std::size_t smem =
-      (4 * q * q * q + 2 * p * q + 2 * q * q + dim * dim) * sizeof(double);
-
     dftfe::utils::deviceMemset(Ax.begin(), 0, d_xLen * sizeof(double));
 
     if (d_isMeanValueConstraintComputed)
@@ -960,22 +849,12 @@ namespace dftfe
 
     x.updateGhostValues();
 
-    d_constraintsTotalPotentialInfo.distribute(x);
+    d_matrixFreeWrapperDevice->constraintsDistribute(x.data());
 
-    matrixFreeDeviceKernels<double, p * p, q, p, dim>::computeAXDevicePoisson(
-      blocks,
-      threads,
-      smem,
-      Ax.begin(),
-      x.begin(),
-      d_shapeFunctionPtr,
-      d_jacobianFactorPtr,
-      d_mapPtr);
+    d_matrixFreeWrapperDevice->computeAX(Ax.data(), x.data());
 
-
-    d_constraintsTotalPotentialInfo.set_zero(x);
-
-    d_constraintsTotalPotentialInfo.distribute_slave_to_master(Ax);
+    d_matrixFreeWrapperDevice->constraintsDistributeTranspose(Ax.data(),
+                                                              x.data());
 
     Ax.accumulateAddLocallyOwned();
 

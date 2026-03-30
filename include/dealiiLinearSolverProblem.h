@@ -63,7 +63,7 @@ namespace dftfe
      *
      */
     virtual void
-    precondition_Jacobi(distributedCPUVec<double> &      dst,
+    precondition_Jacobi(distributedCPUVec<double>       &dst,
                         const distributedCPUVec<double> &src,
                         const double                     omega) const = 0;
 
@@ -78,22 +78,19 @@ namespace dftfe
     /// preconditioning
     virtual void
     subscribe(std::atomic<bool> *const validity,
-              const std::string &      identifier = "") const = 0;
+              const std::string       &identifier = "") const = 0;
 
     /// function needed by dealii to mimic SparseMatrix for Jacobi
     /// preconditioning
     virtual void
     unsubscribe(std::atomic<bool> *const validity,
-                const std::string &      identifier = "") const = 0;
+                const std::string       &identifier = "") const = 0;
 
     /// function needed by dealii to mimic SparseMatrix
     virtual bool
     operator!=(double val) const = 0;
 
     // protected:
-
-    /// typedef declaration needed by dealii
-    typedef dealii::types::global_dof_index size_type;
   };
 
 } // namespace dftfe

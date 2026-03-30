@@ -50,8 +50,8 @@ namespace dftfe
     inline UpdateFlags
     operator|(const UpdateFlags f1, const UpdateFlags f2)
     {
-      return static_cast<UpdateFlags>(static_cast<unsigned int>(f1) |
-                                      static_cast<unsigned int>(f2));
+      return static_cast<UpdateFlags>(static_cast<dftfe::uInt>(f1) |
+                                      static_cast<dftfe::uInt>(f2));
     }
 
 
@@ -64,10 +64,11 @@ namespace dftfe
     }
 
 
-    inline UpdateFlags operator&(const UpdateFlags f1, const UpdateFlags f2)
+    inline UpdateFlags
+    operator&(const UpdateFlags f1, const UpdateFlags f2)
     {
-      return static_cast<UpdateFlags>(static_cast<unsigned int>(f1) &
-                                      static_cast<unsigned int>(f2));
+      return static_cast<UpdateFlags>(static_cast<dftfe::uInt>(f1) &
+                                      static_cast<dftfe::uInt>(f2));
     }
 
 
@@ -91,10 +92,10 @@ namespace dftfe
       mutable dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
         tempCellGradientsBlock, tempCellGradientsBlock2, tempCellValuesBlock,
         tempCellMatrixBlock;
-      mutable dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
+      mutable dftfe::utils::MemoryStorage<dftfe::uInt, memorySpace>
         zeroIndexVec;
       mutable dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
-        tempCellValuesBlockCoeff;
+        tempCellValuesBlockCoeff, tempCellGradientsBlockCoeff;
       std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
         d_BLASWrapperPtr;
 
@@ -131,12 +132,12 @@ namespace dftfe
        * MatrixFree object.
        */
       void
-        init(dealii::MatrixFree<3, ValueTypeBasisData> &matrixFreeData,
-             std::vector<const dealii::AffineConstraints<ValueTypeBasisData> *>
-               &                              constraintsVector,
-             const unsigned int &             dofHandlerID,
-             const std::vector<unsigned int> &quadratureID,
-             const std::vector<UpdateFlags>   updateFlags);
+      init(dealii::MatrixFree<3, ValueTypeBasisData> &matrixFreeData,
+           std::vector<const dealii::AffineConstraints<ValueTypeBasisData> *>
+                                          &constraintsVector,
+           const dftfe::uInt              &dofHandlerID,
+           const std::vector<dftfe::uInt> &quadratureID,
+           const std::vector<UpdateFlags>  updateFlags);
 
       /**
        * @brief fills required data structures from another FEBasisOperations object
@@ -160,13 +161,14 @@ namespace dftfe
        * @param[in] isResizeTempStorage whether to resize internal tempstorage.
        */
       void
-      reinit(const unsigned int &vecBlockSize,
-             const unsigned int &cellBlockSize,
-             const unsigned int &quadratureID,
-             const bool          isResizeTempStorageForInerpolation = true,
-             const bool          isResizeTempStorageForCellMatrices = false);
+      reinit(const dftfe::uInt &vecBlockSize,
+             const dftfe::uInt &cellBlockSize,
+             const dftfe::uInt &quadratureID,
+             const bool         isResizeTempStorageForInerpolation = true,
+             const bool         isResizeTempStorageForCellMatrices = false,
+             const bool isResizeTempStorageForIntegralEvaluations  = false);
 
-      dftfe::utils::MemoryStorage<dftfe::global_size_type,
+      dftfe::utils::MemoryStorage<dftfe::uInt,
                                   dftfe::utils::MemorySpace::HOST> &
       getFlattenedMapsHost();
 
@@ -222,37 +224,87 @@ namespace dftfe
        * @brief Computes the cell-level stiffness matrix.
        */
       void
-      computeCellStiffnessMatrix(const unsigned int quadratureID,
-                                 const unsigned int cellsBlockSize,
-                                 const bool         basisType = false,
-                                 const bool         ceoffType = true);
+      computeCellStiffnessMatrix(const dftfe::uInt quadratureID,
+                                 const dftfe::uInt cellsBlockSize,
+                                 const bool        basisType = false,
+                                 const bool        ceoffType = true);
 
       void
-      computeCellMassMatrix(const unsigned int quadratureID,
-                            const unsigned int cellsBlockSize,
-                            const bool         basisType = false,
-                            const bool         ceoffType = true);
+      computeCellMassMatrix(const dftfe::uInt quadratureID,
+                            const dftfe::uInt cellsBlockSize,
+                            const bool        basisType = false,
+                            const bool        ceoffType = true);
 
       void
       computeWeightedCellMassMatrix(
-        const std::pair<unsigned int, unsigned int> cellRangeTotal,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRangeTotal,
         dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
         dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
           &weightedCellMassMatrix) const;
 
       void
+      computeScalarFieldTimesShapeFunctionIntegral(
+        const std::vector<dftfe::uInt> &cellIndices,
+        const dftfe::uInt              &noKpoints,
+        const dftfe::uInt              &noOfVectors,
+        const dftfe::uInt              &totalElements,
+        const dftfe::uInt              &iElemStart,
+        const dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+          &scalarField,
+        dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+          &scalarFieldTimesShapeFunctionIntegral) const;
+
+      void
+      computeScalarFieldTimesGradientShapeFunctionIntegral(
+        const std::vector<dftfe::uInt> &cellIndices,
+        const dftfe::uInt              &noKpoints,
+        const dftfe::uInt              &noOfVectors,
+        const dftfe::uInt              &totalElements,
+        const dftfe::uInt              &iElemStart,
+        const dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+          &scalarField,
+        dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+          &scalarFieldTimesGradientShapeFunctionIntegral) const;
+
+      void
+      computeVectorFieldDyadicGradientShapeFunctionIntegral(
+        const std::vector<dftfe::uInt> &cellIndices,
+        const dftfe::uInt              &noKpoints,
+        const dftfe::uInt              &noOfVectors,
+        const dftfe::uInt              &totalElements,
+        const dftfe::uInt              &iElemStart,
+        const dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+          &vectorField,
+        dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
+          &vectorFieldDyadicGradientShapeFunctionIntegral) const;
+
+      void
       computeWeightedCellNjGradNiMatrix(
-        const std::pair<unsigned int, unsigned int> cellRangeTotal,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRangeTotal,
         dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
         dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
           &weightedCellNjGradNiMatrix) const;
 
       void
       computeWeightedCellNjGradNiPlusNiGradNjMatrix(
-        const std::pair<unsigned int, unsigned int> cellRangeTotal,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRangeTotal,
         dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
         dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
           &weightedCellNjGradNiPlusNiGradNjMatrix) const;
+
+      void
+      computeWeightedCellNjGradNiMinusNiGradNjMatrix(
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRangeTotal,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+          &weightedCellNjGradNiPlusNiGradNjMatrix) const;
+
+      void
+      computeWeightedCellStiffnessMatrix(
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRangeTotal,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace> &weights,
+        dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>
+          &weightedCellStiffnessMatrix) const;
 
       void
       computeInverseSqrtMassVector(const bool basisType = true,
@@ -271,41 +323,42 @@ namespace dftfe
        */
       void
       resizeTempStorage(const bool isResizeTempStorageForInerpolation,
-                        const bool isResizeTempStorageForCellMatrices);
+                        const bool isResizeTempStorageForCellMatrices,
+                        const bool isResizeTempStorageForIntegralEvaluations);
 
       /**
        * @brief Number of quadrature points per cell for the quadratureID set in reinit.
        */
-      unsigned int
+      dftfe::uInt
       nQuadsPerCell() const;
 
       /**
        * @brief Number of vectors set in reinit.
        */
-      unsigned int
+      dftfe::uInt
       nVectors() const;
       /**
        * @brief Number of DoFs per cell for the dofHandlerID set in init.
        */
-      unsigned int
+      dftfe::uInt
       nDofsPerCell() const;
 
       /**
        * @brief Number of locally owned cells on the current processor.
        */
-      unsigned int
+      dftfe::uInt
       nCells() const;
 
       /**
        * @brief Number of DoFs on the current processor, locally owned + ghosts.
        */
-      unsigned int
+      dftfe::uInt
       nRelaventDofs() const;
 
       /**
        * @brief Number of locally owned DoFs on the current processor.
        */
-      unsigned int
+      dftfe::uInt
       nOwnedDofs() const;
 
       /**
@@ -355,6 +408,13 @@ namespace dftfe
       const dftfe::utils::MemoryStorage<ValueTypeBasisData,
                                         dftfe::utils::MemorySpace::HOST> &
       quadPoints() const;
+
+      /**
+       * @brief quad point coordinates for each cell.
+       */
+      const dftfe::utils::MemoryStorage<ValueTypeBasisData,
+                                        dftfe::utils::MemorySpace::HOST> &
+      cellCentroids() const;
 
       /**
        * @brief Shape function values at quadrature points in ValueTypeBasisData.
@@ -756,7 +816,7 @@ namespace dftfe
        * @brief returns 2 if all cells on current processor are Cartesian,
        * 1 if all cells on current processor are affine and 0 otherwise.
        */
-      unsigned int
+      dftfe::uInt
       cellsTypeFlag() const;
 
       /**
@@ -764,20 +824,20 @@ namespace dftfe
        * @param[in] iElem cell Index
        */
       dealii::CellId
-      cellID(const unsigned int iElem) const;
+      cellID(const dftfe::uInt iElem) const;
       /**
        * @brief returns the deal.ii cell_iterator corresponing to given cell Index.
        * @param[in] iElem cell Index
        */
 
       dealii::DoFHandler<3>::active_cell_iterator
-      getCellIterator(const unsigned int iElem) const;
+      getCellIterator(const dftfe::uInt iElem) const;
 
       /**
        * @brief returns the cell index corresponding to given deal.ii cellID.
        * @param[in] iElem cell Index
        */
-      unsigned int
+      dftfe::uInt
       cellIndex(const dealii::CellId cellid) const;
 
       /**
@@ -787,7 +847,7 @@ namespace dftfe
        */
       void
       createMultiVector(
-        const unsigned int blocksize,
+        const dftfe::uInt blocksize,
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
           &multiVector) const;
 
@@ -798,7 +858,7 @@ namespace dftfe
        */
       void
       createMultiVectorSinglePrec(
-        const unsigned int blocksize,
+        const dftfe::uInt blocksize,
         dftfe::linearAlgebra::MultiVector<
           typename dftfe::dataTypes::singlePrecType<ValueTypeBasisCoeff>::type,
           memorySpace> &multiVector) const;
@@ -810,8 +870,8 @@ namespace dftfe
        * this vecBlockSize.
        */
       void
-      createScratchMultiVectors(const unsigned int vecBlockSize,
-                                const unsigned int numMultiVecs = 1) const;
+      createScratchMultiVectors(const dftfe::uInt vecBlockSize,
+                                const dftfe::uInt numMultiVecs = 1) const;
 
       /**
        * @brief Creates single precision scratch multivectors.
@@ -821,8 +881,8 @@ namespace dftfe
        */
       void
       createScratchMultiVectorsSinglePrec(
-        const unsigned int vecBlockSize,
-        const unsigned int numMultiVecs = 1) const;
+        const dftfe::uInt vecBlockSize,
+        const dftfe::uInt numMultiVecs = 1) const;
 
       /**
        * @brief Clears scratch multivectors.
@@ -837,8 +897,8 @@ namespace dftfe
        * same vecBlockSize.
        */
       dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace> &
-      getMultiVector(const unsigned int vecBlockSize,
-                     const unsigned int index = 0) const;
+      getMultiVector(const dftfe::uInt vecBlockSize,
+                     const dftfe::uInt index = 0) const;
 
       /**
        * @brief Gets single precision scratch multivectors.
@@ -849,8 +909,8 @@ namespace dftfe
       dftfe::linearAlgebra::MultiVector<
         typename dftfe::dataTypes::singlePrecType<ValueTypeBasisCoeff>::type,
         memorySpace> &
-      getMultiVectorSinglePrec(const unsigned int vecBlockSize,
-                               const unsigned int index = 0) const;
+      getMultiVectorSinglePrec(const dftfe::uInt vecBlockSize,
+                               const dftfe::uInt index = 0) const;
 
       /**
        * @brief Apply constraints on given multivector.
@@ -859,8 +919,8 @@ namespace dftfe
       void
       distribute(dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff,
                                                    memorySpace> &multiVector,
-                 unsigned int constraintIndex =
-                   std::numeric_limits<unsigned int>::max()) const;
+                 dftfe::uInt constraintIndex =
+                   std::numeric_limits<dftfe::uInt>::max()) const;
 
 
 
@@ -879,67 +939,69 @@ namespace dftfe
 
 
       std::vector<dftUtils::constraintMatrixInfo<memorySpace>> d_constraintInfo;
-      unsigned int                                             d_nOMPThreads;
+      dftfe::uInt                                              d_nOMPThreads;
       std::vector<const dealii::AffineConstraints<ValueTypeBasisData> *>
-        *                                              d_constraintsVector;
+                                                      *d_constraintsVector;
       const dealii::MatrixFree<3, ValueTypeBasisData> *d_matrixFreeDataPtr;
-      dftfe::utils::MemoryStorage<dftfe::global_size_type,
-                                  dftfe::utils::MemorySpace::HOST>
+      dftfe::utils::MemoryStorage<dftfe::uInt, dftfe::utils::MemorySpace::HOST>
         d_cellDofIndexToProcessDofIndexMap;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData,
                                            dftfe::utils::MemorySpace::HOST>>
         d_quadPoints;
-      dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
+      dftfe::utils::MemoryStorage<ValueTypeBasisData,
+                                  dftfe::utils::MemorySpace::HOST>
+        d_cellCentroids;
+      dftfe::utils::MemoryStorage<dftfe::uInt, memorySpace>
                                   d_flattenedCellDofIndexToProcessDofIndexMap;
       std::vector<dealii::CellId> d_cellIndexToCellIdMap;
       std::vector<dealii::DoFHandler<3>::active_cell_iterator>
-                                             d_cellIndexToCellIteratorMap;
-      std::map<dealii::CellId, unsigned int> d_cellIdToCellIndexMap;
-      std::map<unsigned int,
+                                            d_cellIndexToCellIteratorMap;
+      std::map<dealii::CellId, dftfe::uInt> d_cellIdToCellIndexMap;
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_inverseJacobianData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_JxWData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_shapeFunctionData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_shapeFunctionGradientDataInternalLayout;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_collocationShapeFunctionGradientData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_shapeFunctionGradientData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_shapeFunctionDataTranspose;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>>
         d_shapeFunctionGradientDataTranspose;
 
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>>
         d_inverseJacobianBasisData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>>
         d_JxWBasisData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>>
         d_shapeFunctionBasisData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>>
         d_collocationShapeFunctionGradientBasisData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>>
         d_shapeFunctionGradientBasisData;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>>
         d_shapeFunctionBasisDataTranspose;
-      std::map<unsigned int,
+      std::map<dftfe::uInt,
                dftfe::utils::MemoryStorage<ValueTypeBasisData, memorySpace>>
         d_shapeFunctionGradientBasisDataTranspose;
 
@@ -993,7 +1055,7 @@ namespace dftfe
       dftfe::utils::MemoryStorage<ValueTypeBasisCoeff, memorySpace>
         d_sqrtMassVectorCoeffType;
       mutable std::map<
-        unsigned int,
+        dftfe::uInt,
         std::vector<
           dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>>>
         scratchMultiVectors;
@@ -1034,30 +1096,60 @@ namespace dftfe
 
 
       mutable std::map<
-        unsigned int,
+        dftfe::uInt,
         std::vector<dftfe::linearAlgebra::MultiVector<
           typename dftfe::dataTypes::singlePrecType<ValueTypeBasisCoeff>::type,
           memorySpace>>>
         scratchMultiVectorsSinglePrec;
 
-      std::vector<unsigned int> d_quadratureIDsVector;
-      unsigned int              d_quadratureID;
-      unsigned int              d_quadratureIndex;
-      std::vector<unsigned int> d_nQuadsPerCell;
-      unsigned int              d_dofHandlerID;
-      unsigned int              d_nVectors;
-      unsigned int              d_nCells;
-      unsigned int              d_cellsBlockSize;
-      unsigned int              d_nDofsPerCell;
-      unsigned int              d_localSize;
-      unsigned int              d_locallyOwnedSize;
-      bool                      areAllCellsAffine;
-      bool                      areAllCellsCartesian;
-      std::vector<UpdateFlags>  d_updateFlags;
+      std::vector<dftfe::uInt> d_quadratureIDsVector;
+      dftfe::uInt              d_quadratureID;
+      dftfe::uInt              d_quadratureIndex;
+      std::vector<dftfe::uInt> d_nQuadsPerCell;
+      dftfe::uInt              d_dofHandlerID;
+      dftfe::uInt              d_nVectors;
+      dftfe::uInt              d_nCells;
+      dftfe::uInt              d_cellsBlockSize;
+      dftfe::uInt              d_nDofsPerCell;
+      dftfe::uInt              d_localSize;
+      dftfe::uInt              d_locallyOwnedSize;
+      bool                     areAllCellsAffine;
+      bool                     areAllCellsCartesian;
+      std::vector<UpdateFlags> d_updateFlags;
 
       std::shared_ptr<const utils::mpi::MPIPatternP2P<memorySpace>>
         mpiPatternP2P;
 
+
+      void
+      interpolate(
+        distributedCPUVec<double> &nodalField,
+        const dftfe::uInt          dofHandlerId,
+        const dftfe::uInt          quadratureId,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          &quadratureValueData,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          &quadratureGradValueData,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                  &quadratureHessianValueData,
+        const bool isEvaluateGradData    = false,
+        const bool isEvaluateHessianData = false,
+        const bool isEvaluateData        = true) const;
+
+      void
+      interpolateNoConstraints(
+        const distributedCPUVec<double> &nodalField,
+        const dftfe::uInt                dofHandlerId,
+        const dftfe::uInt                quadratureId,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          &quadratureValueData,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+          &quadratureGradValueData,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                  &quadratureHessianValueData,
+        const bool isEvaluateGradData    = false,
+        const bool isEvaluateHessianData = false,
+        const bool isEvaluateData        = true) const;
 
       /**
        * @brief Interpolate process level nodal data to cell level quadrature data.
@@ -1091,7 +1183,7 @@ namespace dftfe
         ValueTypeBasisCoeff *quadratureGradients,
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
           &nodalData,
-        dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
+        dftfe::utils::MemoryStorage<dftfe::uInt, memorySpace>
           &mapQuadIdToProcId) const;
 
       /**
@@ -1104,7 +1196,7 @@ namespace dftfe
       void
       extractToCellNodalData(
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
-          &                  nodalData,
+                            &nodalData,
         ValueTypeBasisCoeff *cellNodalDataPtr) const;
       // FIXME Untested function
       /**
@@ -1135,9 +1227,9 @@ namespace dftfe
       interpolateKernel(
         const dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff,
                                                 memorySpace> &nodalData,
-        ValueTypeBasisCoeff *                                 quadratureValues,
-        ValueTypeBasisCoeff *                       quadratureGradients,
-        const std::pair<unsigned int, unsigned int> cellRange) const;
+        ValueTypeBasisCoeff                                  *quadratureValues,
+        ValueTypeBasisCoeff                      *quadratureGradients,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const;
 
       /**
        * @brief Interpolate cell level nodal data to cell level quadrature data.
@@ -1153,10 +1245,10 @@ namespace dftfe
        */
       void
       interpolateKernel(
-        const ValueTypeBasisCoeff *                 nodalData,
-        ValueTypeBasisCoeff *                       quadratureValues,
-        ValueTypeBasisCoeff *                       quadratureGradients,
-        const std::pair<unsigned int, unsigned int> cellRange) const;
+        const ValueTypeBasisCoeff                *nodalData,
+        ValueTypeBasisCoeff                      *quadratureValues,
+        ValueTypeBasisCoeff                      *quadratureGradients,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const;
 
       // FIXME Untested function
       /**
@@ -1176,9 +1268,9 @@ namespace dftfe
         const ValueTypeBasisCoeff *quadratureGradients,
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
           &nodalData,
-        dftfe::utils::MemoryStorage<dftfe::global_size_type, memorySpace>
-          &                                         mapQuadIdToProcId,
-        const std::pair<unsigned int, unsigned int> cellRange) const;
+        dftfe::utils::MemoryStorage<dftfe::uInt, memorySpace>
+                                                 &mapQuadIdToProcId,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const;
 
 
       /**
@@ -1194,8 +1286,8 @@ namespace dftfe
       extractToCellNodalDataKernel(
         const dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff,
                                                 memorySpace> &nodalData,
-        ValueTypeBasisCoeff *                                 cellNodalDataPtr,
-        const std::pair<unsigned int, unsigned int>           cellRange) const;
+        ValueTypeBasisCoeff                                  *cellNodalDataPtr,
+        const std::pair<dftfe::uInt, dftfe::uInt>             cellRange) const;
 
       // FIXME Untested function
       /**
@@ -1210,8 +1302,8 @@ namespace dftfe
       accumulateFromCellNodalDataKernel(
         const ValueTypeBasisCoeff *cellNodalDataPtr,
         dftfe::linearAlgebra::MultiVector<ValueTypeBasisCoeff, memorySpace>
-          &                                         nodalData,
-        const std::pair<unsigned int, unsigned int> cellRange) const;
+                                                 &nodalData,
+        const std::pair<dftfe::uInt, dftfe::uInt> cellRange) const;
     };
   } // end of namespace basis
 } // end of namespace dftfe

@@ -2,7 +2,7 @@
 #define linearAlgebraOperationsDeviceKernels_H
 #include <DeviceAPICalls.h>
 #include <DeviceDataTypeOverloads.h>
-#include <DeviceKernelLauncherConstants.h>
+#include <DeviceKernelLauncherHelpers.h>
 namespace dftfe
 {
   namespace linearAlgebraOperationsDevice
@@ -12,67 +12,67 @@ namespace dftfe
     convertLayout(
       ValueType2 *                   copyTo,
       const ValueType1 *             copyFromVec,
-      const dftfe::global_size_type  blockSize,
-      const dftfe::global_size_type  initBlockRows,
-      const dftfe::global_size_type  initBlockCols,
+      const dftfe::uInt              blockSize,
+      const dftfe::uInt              initBlockRows,
+      const dftfe::uInt              initBlockCols,
       const dftfe::utils::deviceStream_t   streamId = 0);
 
     template <typename ValueType1, typename ValueType2>
     void
-    addSubspaceRotatedBlockToX(const unsigned int            BDof,
-                               const unsigned int            BVec,
-                               const ValueType1 *            rotatedXBlockSP,
-                               ValueType2 *                  X,
-                               const unsigned int            startingDofId,
-                               const unsigned int            startingVecId,
-                               const unsigned int            N,
+    addSubspaceRotatedBlockToX(const dftfe::uInt             BDof,
+                               const dftfe::uInt             BVec,
+                               const ValueType1             *rotatedXBlockSP,
+                               ValueType2                   *X,
+                               const dftfe::uInt             startingDofId,
+                               const dftfe::uInt             startingVecId,
+                               const dftfe::uInt             N,
                                dftfe::utils::deviceStream_t &streamCompute);
 
     template <typename ValueType1, typename ValueType2>
     void
     copyFromOverlapMatBlockToDPSPBlocks(
-      const unsigned int            B,
-      const unsigned int            D,
-      const ValueType1 *            overlapMatrixBlock,
-      ValueType1 *                  overlapMatrixBlockDP,
-      ValueType2 *                  overlapMatrixBlockSP,
+      const dftfe::uInt             B,
+      const dftfe::uInt             D,
+      const ValueType1             *overlapMatrixBlock,
+      ValueType1                   *overlapMatrixBlockDP,
+      ValueType2                   *overlapMatrixBlockSP,
       dftfe::utils::deviceStream_t &streamDataMove);
 
     template <typename ValueType1, typename ValueType2>
     void
-    computeDiagQTimesX(const ValueType1 * diagValues,
-                       ValueType2 *       X,
-                       const unsigned int N,
-                       const unsigned int M);
+    computeDiagQTimesX(const ValueType1 *diagValues,
+                       ValueType2       *X,
+                       const dftfe::uInt N,
+                       const dftfe::uInt M);
 
     template <typename ValueType>
     void
-    computeResidualDevice(const unsigned int numVectors,
-                          const unsigned int numDofs,
-                          const unsigned int N,
-                          const unsigned int startingVecId,
-                          const double *     eigenValues,
-                          const ValueType *  X,
-                          const ValueType *  Y,
-                          double *           r);
+    computeResidualDevice(const dftfe::uInt numVectors,
+                          const dftfe::uInt numDofs,
+                          const dftfe::uInt N,
+                          const dftfe::uInt startingVecId,
+                          const double     *eigenValues,
+                          const ValueType  *X,
+                          const ValueType  *Y,
+                          double           *r);
 
     template <typename ValueType>
     void
-    computeGeneralisedResidualDevice(const unsigned int numVectors,
-                                     const unsigned int numDofs,
-                                     const unsigned int N,
-                                     const unsigned int startingVecId,
-                                     const ValueType *  X,
-                                     double *           residualSqDevice);
+    computeGeneralisedResidualDevice(const dftfe::uInt numVectors,
+                                     const dftfe::uInt numDofs,
+                                     const dftfe::uInt N,
+                                     const dftfe::uInt startingVecId,
+                                     const ValueType  *X,
+                                     double           *residualSqDevice);
 
 
     template <typename ValueType>
     void
-    setZero(const unsigned int BVec,
-            const unsigned int M,
-            const unsigned int N,
-            ValueType *        yVec,
-            const unsigned int startingXVecId);
+    setZero(const dftfe::uInt BVec,
+            const dftfe::uInt M,
+            const dftfe::uInt N,
+            ValueType        *yVec,
+            const dftfe::uInt startingXVecId);
 
   } // namespace linearAlgebraOperationsDevice
 } // namespace dftfe

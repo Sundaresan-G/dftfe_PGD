@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2019-2020x The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025x The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -20,24 +20,21 @@
 #include <fileReaders.h>
 #include <vectorUtilities.h>
 #include <sys/stat.h>
-#include <boost/math/distributions/normal.hpp>
-#include <boost/math/special_functions/spherical_harmonic.hpp>
-#include <boost/random/normal_distribution.hpp>
 
 namespace dftfe
 {
   void
   loadSingleAtomPSIFiles(
-    unsigned int  Z,
-    unsigned int  n,
-    unsigned int  l,
-    unsigned int &fileReadFlag,
-    double &      wfcInitTruncation,
-    std::map<unsigned int,
-             std::map<unsigned int,
-                      std::map<unsigned int, alglib::spline1dinterpolant>>>
-      &                  radValues,
-    const MPI_Comm &     mpiCommParent,
+    dftfe::uInt  Z,
+    dftfe::uInt  n,
+    dftfe::uInt  l,
+    dftfe::uInt &fileReadFlag,
+    double      &wfcInitTruncation,
+    std::map<
+      dftfe::uInt,
+      std::map<dftfe::uInt, std::map<dftfe::uInt, alglib::spline1dinterpolant>>>
+                        &radValues,
+    const MPI_Comm      &mpiCommParent,
     const dftParameters &dftParams)
   {
     if (radValues[Z][n].count(l) > 0)
@@ -93,19 +90,19 @@ namespace dftfe
     //
     if (fileReadFlag > 0)
       {
-        double       maxTruncationRadius = 0.0;
-        unsigned int truncRowId          = 0;
+        double      maxTruncationRadius = 0.0;
+        dftfe::uInt truncRowId          = 0;
         if (!dftParams.reproducible_output)
           {
             if (dealii::Utilities::MPI::this_mpi_process(mpiCommParent) == 0)
               std::cout << "reading data from file: " << psiFile << std::endl;
           }
 
-        int                 numRows = values.size() - 1;
+        dftfe::Int          numRows = values.size() - 1;
         std::vector<double> xData(numRows), yData(numRows);
 
         // x
-        for (int irow = 0; irow < numRows; ++irow)
+        for (dftfe::Int irow = 0; irow < numRows; ++irow)
           {
             xData[irow] = values[irow][0];
           }
@@ -113,7 +110,7 @@ namespace dftfe
         x.setcontent(numRows, &xData[0]);
 
         // y
-        for (int irow = 0; irow < numRows; ++irow)
+        for (dftfe::Int irow = 0; irow < numRows; ++irow)
           {
             yData[irow] = values[irow][1];
 
@@ -141,21 +138,19 @@ namespace dftfe
 
 
   // compute tdos
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_tdos(
+  dftClass<memorySpace>::compute_tdos(
     const std::vector<std::vector<double>> &eigenValuesInput,
-    const std::string &                     dosFileName)
+    const std::string                      &dosFileName)
   {
     computing_timer.enter_subsection("DOS computation");
 
     // from 0th spin as this is only to get a printing range
     std::vector<double> eigenValuesAllkPoints;
-    for (int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
-      for (int statesIter = 0;
-           statesIter <= d_highestStateForResidualComputation;
+    for (dftfe::Int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
+      for (dftfe::Int statesIter = 0;
+           statesIter <= d_dftParamsPtr->highestStateOfInterestForChebFiltering;
            ++statesIter)
         eigenValuesAllkPoints.push_back(eigenValuesInput[kPoint][statesIter]);
 
@@ -187,7 +182,7 @@ namespace dftfe
     upperBoundEpsilon =
       upperBoundEpsilon + 0.1 * (upperBoundEpsilon - lowerBoundEpsilon);
 
-    const unsigned int numberIntervals =
+    const dftfe::uInt numberIntervals =
       std::ceil((upperBoundEpsilon - lowerBoundEpsilon) / intervalSize);
 
     std::vector<double> densityOfStates, densityOfStatesUp, densityOfStatesDown;
@@ -197,17 +192,19 @@ namespace dftfe
       {
         densityOfStatesUp.resize(numberIntervals, 0.0);
         densityOfStatesDown.resize(numberIntervals, 0.0);
-        for (int epsInt = 0; epsInt < numberIntervals; ++epsInt)
+        for (dftfe::Int epsInt = 0; epsInt < numberIntervals; ++epsInt)
           {
             double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
-            for (int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
+            for (dftfe::Int kPoint = 0; kPoint < d_kPointWeights.size();
+                 ++kPoint)
               {
-                for (unsigned int spinType = 0;
+                for (dftfe::uInt spinType = 0;
                      spinType < 1 + d_dftParamsPtr->spinPolarized;
                      ++spinType)
                   {
-                    for (unsigned int statesIter = 0;
-                         statesIter <= d_highestStateForResidualComputation;
+                    for (dftfe::uInt statesIter = 0;
+                         statesIter <=
+                         d_dftParamsPtr->highestStateOfInterestForChebFiltering;
                          ++statesIter)
                       {
                         double term1 =
@@ -247,13 +244,15 @@ namespace dftfe
     else
       {
         densityOfStates.resize(numberIntervals, 0.0);
-        for (int epsInt = 0; epsInt < numberIntervals; ++epsInt)
+        for (dftfe::Int epsInt = 0; epsInt < numberIntervals; ++epsInt)
           {
             double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
-            for (int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
+            for (dftfe::Int kPoint = 0; kPoint < d_kPointWeights.size();
+                 ++kPoint)
               {
-                for (unsigned int statesIter = 0;
-                     statesIter <= d_highestStateForResidualComputation;
+                for (dftfe::uInt statesIter = 0;
+                     statesIter <=
+                     d_dftParamsPtr->highestStateOfInterestForChebFiltering;
                      ++statesIter)
                   {
                     double term1 =
@@ -296,8 +295,7 @@ namespace dftfe
               outFile << "# E(eV)          Dos" << std::endl;
             if (d_dftParamsPtr->spinPolarized == 1)
               {
-                for (unsigned int epsInt = 0; epsInt < numberIntervals;
-                     ++epsInt)
+                for (dftfe::uInt epsInt = 0; epsInt < numberIntervals; ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
                     outFile << std::setprecision(18) << epsValue * C_haToeV
@@ -329,8 +327,7 @@ namespace dftfe
               }
             else
               {
-                for (unsigned int epsInt = 0; epsInt < numberIntervals;
-                     ++epsInt)
+                for (dftfe::uInt epsInt = 0; epsInt < numberIntervals; ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
                     outFile << std::setprecision(18) << epsValue * C_haToeV
@@ -360,13 +357,11 @@ namespace dftfe
 
 
   // compute local density of states
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
+  template <dftfe::utils::MemorySpace memorySpace>
   void
-  dftClass<FEOrder, FEOrderElectro, memorySpace>::compute_ldos(
+  dftClass<memorySpace>::compute_ldos(
     const std::vector<std::vector<double>> &eigenValuesInput,
-    const std::string &                     ldosFileName)
+    const std::string                      &ldosFileName)
   {
     computing_timer.enter_subsection("LDOS computation");
     //
@@ -375,9 +370,9 @@ namespace dftfe
 
     // loop over elements
     std::vector<double> eigenValuesAllkPoints;
-    for (int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
+    for (dftfe::Int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
       {
-        for (int statesIter = 0; statesIter < eigenValuesInput[0].size();
+        for (dftfe::Int statesIter = 0; statesIter < eigenValuesInput[0].size();
              ++statesIter)
           {
             eigenValuesAllkPoints.push_back(
@@ -408,16 +403,16 @@ namespace dftfe
                   MPI_MAX,
                   interpoolcomm);
 
-    unsigned int numberIntervals =
+    dftfe::uInt numberIntervals =
       std::ceil((upperBoundEpsilon - lowerBoundEpsilon) / intervalSize);
-    unsigned int numberGlobalAtoms = atomLocations.size();
+    dftfe::uInt numberGlobalAtoms = atomLocations.size();
 
     // map each cell to an atom based on closest atom to the centroid of each
     // cell
     typename dealii::DoFHandler<3>::active_cell_iterator
       cell = dofHandler.begin_active(),
       endc = dofHandler.end();
-    std::map<dealii::CellId, unsigned int> cellToAtomIdMap;
+    std::map<dealii::CellId, dftfe::uInt> cellToAtomIdMap;
     for (; cell != endc; ++cell)
       {
         if (cell->is_locally_owned())
@@ -427,8 +422,8 @@ namespace dftfe
             // loop over all atoms
             double           distanceToClosestAtom = 1e8;
             dealii::Point<3> closestAtom;
-            unsigned int     closestAtomId;
-            for (unsigned int n = 0; n < atomLocations.size(); n++)
+            dftfe::uInt      closestAtomId;
+            for (dftfe::uInt n = 0; n < atomLocations.size(); n++)
               {
                 dealii::Point<3> atom(atomLocations[n][2],
                                       atomLocations[n][3],
@@ -455,22 +450,23 @@ namespace dftfe
       }
 
     // access finite-element data
-    dealii::QGauss<3>   quadrature_formula(C_num1DQuad<FEOrder>());
+    dealii::QGauss<3> quadrature_formula(
+      C_num1DQuad(d_dftParamsPtr->finiteElementPolynomialOrder));
     dealii::FEValues<3> fe_values(dofHandler.get_fe(),
                                   quadrature_formula,
                                   dealii::update_values |
                                     dealii::update_JxW_values);
-    const unsigned int  dofs_per_cell = dofHandler.get_fe().dofs_per_cell;
-    const unsigned int  n_q_points    = quadrature_formula.size();
+    const dftfe::uInt   dofs_per_cell = dofHandler.get_fe().dofs_per_cell;
+    const dftfe::uInt   n_q_points    = quadrature_formula.size();
 
 
-    const unsigned int blockSize =
+    const dftfe::uInt blockSize =
       std::min(d_dftParamsPtr->wfcBlockSize, d_numEigenValues);
 
     std::vector<double> tempContribution(blockSize, 0.0);
     std::vector<double> tempQuadPointValues(n_q_points);
 
-    const unsigned int localVectorSize =
+    const dftfe::uInt localVectorSize =
       matrix_free_data.get_vector_partitioner()->locally_owned_size();
     std::vector<std::vector<distributedCPUVec<double>>> eigenVectors(
       (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size());
@@ -478,20 +474,20 @@ namespace dftfe
       eigenVectorsFlattenedBlock((1 + d_dftParamsPtr->spinPolarized) *
                                  d_kPointWeights.size());
 
-    for (unsigned int ivec = 0; ivec < d_numEigenValues; ivec += blockSize)
+    for (dftfe::uInt ivec = 0; ivec < d_numEigenValues; ivec += blockSize)
       {
-        const unsigned int currentBlockSize =
+        const dftfe::uInt currentBlockSize =
           std::min(blockSize, d_numEigenValues - ivec);
 
         if (currentBlockSize != blockSize || ivec == 0)
           {
-            for (unsigned int kPoint = 0;
+            for (dftfe::uInt kPoint = 0;
                  kPoint <
                  (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
                  ++kPoint)
               {
                 eigenVectors[kPoint].resize(currentBlockSize);
-                for (unsigned int i = 0; i < currentBlockSize; ++i)
+                for (dftfe::uInt i = 0; i < currentBlockSize; ++i)
                   eigenVectors[kPoint][i].reinit(d_tempEigenVec);
 
 
@@ -509,8 +505,8 @@ namespace dftfe
           std::vector<double>((1 + d_dftParamsPtr->spinPolarized) *
                                 currentBlockSize,
                               0.0));
-        for (unsigned int kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
-          for (unsigned int iWave = 0; iWave < currentBlockSize; ++iWave)
+        for (dftfe::uInt kPoint = 0; kPoint < d_kPointWeights.size(); ++kPoint)
+          for (dftfe::uInt iWave = 0; iWave < currentBlockSize; ++iWave)
             {
               blockedEigenValues[kPoint][iWave] =
                 eigenValues[kPoint][ivec + iWave];
@@ -519,13 +515,13 @@ namespace dftfe
                   eigenValues[kPoint][d_numEigenValues + ivec + iWave];
             }
 
-        for (unsigned int kPoint = 0;
+        for (dftfe::uInt kPoint = 0;
              kPoint <
              (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size();
              ++kPoint)
           {
-            for (unsigned int iNode = 0; iNode < localVectorSize; ++iNode)
-              for (unsigned int iWave = 0; iWave < currentBlockSize; ++iWave)
+            for (dftfe::uInt iNode = 0; iNode < localVectorSize; ++iNode)
+              for (dftfe::uInt iWave = 0; iWave < currentBlockSize; ++iWave)
                 eigenVectorsFlattenedBlock[kPoint].local_element(
                   iNode * currentBlockSize + iWave) =
                   d_eigenVectorsFlattenedHost[kPoint * d_numEigenValues *
@@ -555,7 +551,7 @@ namespace dftfe
             // for ghost nodes- use true for the last argument in
             // copyFlattenedDealiiVecToSingleCompVec(..) above and supress
             // underlying call.
-            for (unsigned int i = 0; i < currentBlockSize; ++i)
+            for (dftfe::uInt i = 0; i < currentBlockSize; ++i)
               eigenVectors[kPoint][i].update_ghost_values();
 #else
             vectorTools::copyFlattenedDealiiVecToSingleCompVec(
@@ -570,7 +566,7 @@ namespace dftfe
 
         if (d_dftParamsPtr->spinPolarized == 1)
           {
-            for (unsigned int spinType = 0; spinType < 2; ++spinType)
+            for (dftfe::uInt spinType = 0; spinType < 2; ++spinType)
               {
                 typename dealii::DoFHandler<3>::active_cell_iterator
                   cellN = dofHandler.begin_active(),
@@ -581,10 +577,9 @@ namespace dftfe
                     if (cellN->is_locally_owned())
                       {
                         fe_values.reinit(cellN);
-                        unsigned int globalAtomId =
-                          cellToAtomIdMap[cellN->id()];
+                        dftfe::uInt globalAtomId = cellToAtomIdMap[cellN->id()];
 
-                        for (unsigned int iEigenVec = 0;
+                        for (dftfe::uInt iEigenVec = 0;
                              iEigenVec < currentBlockSize;
                              ++iEigenVec)
                           {
@@ -593,7 +588,7 @@ namespace dftfe
                               tempQuadPointValues);
 
                             tempContribution[iEigenVec] = 0.0;
-                            for (unsigned int q_point = 0; q_point < n_q_points;
+                            for (dftfe::uInt q_point = 0; q_point < n_q_points;
                                  ++q_point)
                               {
                                 tempContribution[iEigenVec] +=
@@ -603,11 +598,10 @@ namespace dftfe
                               }
                           }
 
-                        for (unsigned int iEigenVec = 0;
+                        for (dftfe::uInt iEigenVec = 0;
                              iEigenVec < currentBlockSize;
                              ++iEigenVec)
-                          for (unsigned int epsInt = 0;
-                               epsInt < numberIntervals;
+                          for (dftfe::uInt epsInt = 0; epsInt < numberIntervals;
                                ++epsInt)
                             {
                               double epsValue =
@@ -649,9 +643,9 @@ namespace dftfe
                 if (cellN->is_locally_owned())
                   {
                     fe_values.reinit(cellN);
-                    unsigned int globalAtomId = cellToAtomIdMap[cellN->id()];
+                    dftfe::uInt globalAtomId = cellToAtomIdMap[cellN->id()];
 
-                    for (unsigned int iEigenVec = 0;
+                    for (dftfe::uInt iEigenVec = 0;
                          iEigenVec < currentBlockSize;
                          ++iEigenVec)
                       {
@@ -659,7 +653,7 @@ namespace dftfe
                           eigenVectors[0][iEigenVec], tempQuadPointValues);
 
                         tempContribution[iEigenVec] = 0.0;
-                        for (unsigned int q_point = 0; q_point < n_q_points;
+                        for (dftfe::uInt q_point = 0; q_point < n_q_points;
                              ++q_point)
                           {
                             tempContribution[iEigenVec] +=
@@ -669,10 +663,10 @@ namespace dftfe
                           }
                       }
 
-                    for (unsigned int iEigenVec = 0;
+                    for (dftfe::uInt iEigenVec = 0;
                          iEigenVec < currentBlockSize;
                          ++iEigenVec)
-                      for (unsigned int epsInt = 0; epsInt < numberIntervals;
+                      for (dftfe::uInt epsInt = 0; epsInt < numberIntervals;
                            ++epsInt)
                         {
                           double epsValue =
@@ -719,13 +713,12 @@ namespace dftfe
           {
             if (d_dftParamsPtr->spinPolarized == 1)
               {
-                for (unsigned int epsInt = 0; epsInt < numberIntervals;
-                     ++epsInt)
+                for (dftfe::uInt epsInt = 0; epsInt < numberIntervals; ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
                     outFile << std::setprecision(18) << epsValue * C_haToeV
                             << " ";
-                    for (unsigned int iAtom = 0; iAtom < numberGlobalAtoms;
+                    for (dftfe::uInt iAtom = 0; iAtom < numberGlobalAtoms;
                          ++iAtom)
                       {
                         outFile
@@ -750,13 +743,12 @@ namespace dftfe
               }
             else
               {
-                for (unsigned int epsInt = 0; epsInt < numberIntervals;
-                     ++epsInt)
+                for (dftfe::uInt epsInt = 0; epsInt < numberIntervals; ++epsInt)
                   {
                     double epsValue = lowerBoundEpsilon + epsInt * intervalSize;
                     outFile << std::setprecision(18) << epsValue * C_haToeV
                             << " ";
-                    for (unsigned int iAtom = 0; iAtom < numberGlobalAtoms;
+                    for (dftfe::uInt iAtom = 0; iAtom < numberGlobalAtoms;
                          ++iAtom)
                       {
                         outFile

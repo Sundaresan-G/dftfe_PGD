@@ -32,9 +32,9 @@ namespace dftfe
 {
   struct ContractedGaussian
   {
-    int                 nC; // number of primitive Gaussians that are contracted
-    int                 l;  // azimuthal (angular) quantum number
-    int                 m;  // magnetic quantum number
+    dftfe::Int          nC; // number of primitive Gaussians that are contracted
+    dftfe::Int          l;  // azimuthal (angular) quantum number
+    dftfe::Int          m;  // magnetic quantum number
     std::vector<double> alpha; // exponent of each of the primtive Gaussians
     std::vector<double> c;     // coefficient of each of the primtive Gaussians
     std::vector<double> norm;  // normalization constant for the radial part of
@@ -43,8 +43,8 @@ namespace dftfe
 
   struct GaussianBasisInfo
   {
-    const std::string *       symbol; // atom symbol
-    const double *            center; // atom center coordinates
+    const std::string        *symbol; // atom symbol
+    const double             *center; // atom center coordinates
     const ContractedGaussian *cg;     // pointer to the ContractedGaussian
   };
 
@@ -58,22 +58,22 @@ namespace dftfe
     void
     constructBasisSet(
       const std::vector<std::pair<std::string, std::vector<double>>>
-        &                                                 atomCoords,
+                                                         &atomCoords,
       const std::unordered_map<std::string, std::string> &atomBasisFileNames);
 
-    int
+    dftfe::Int
     getNumBasis() const;
 
     std::vector<double>
-    getBasisValue(const unsigned int         basisId,
+    getBasisValue(const dftfe::uInt          basisId,
                   const std::vector<double> &x) const;
 
     std::vector<double>
-    getBasisGradient(const unsigned int         basisId,
+    getBasisGradient(const dftfe::uInt          basisId,
                      const std::vector<double> &x) const;
 
     std::vector<double>
-    getBasisLaplacian(const unsigned int         basisId,
+    getBasisLaplacian(const dftfe::uInt          basisId,
                       const std::vector<double> &x) const;
 
   private:

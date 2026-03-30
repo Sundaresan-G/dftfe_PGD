@@ -29,24 +29,21 @@ namespace dftfe
   void
   computeAuxProjectedDensityMatrixFromPSI(
     const dftfe::utils::MemoryStorage<NumberType, memorySpace> &X,
-    const unsigned int                      totalNumWaveFunctions,
-    const std::vector<std::vector<double>> &eigenValues,
-    const double                            fermiEnergy,
-    const double                            fermiEnergyUp,
-    const double                            fermiEnergyDown,
+    const dftfe::uInt                       totalNumWaveFunctions,
+    const std::vector<std::vector<double>> &partialOccupancies,
     std::shared_ptr<
       dftfe::basis::FEBasisOperations<NumberType, double, memorySpace>>
       &basisOperationsPtr,
     std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<memorySpace>>
-      &                            BLASWrapperPtr,
-    const unsigned int             matrixFreeDofhandlerIndex,
-    const unsigned int             quadratureIndex,
-    const std::vector<double> &    kPointWeights,
+                                  &BLASWrapperPtr,
+    const dftfe::uInt              matrixFreeDofhandlerIndex,
+    const dftfe::uInt              quadratureIndex,
+    const std::vector<double>     &kPointWeights,
     AuxDensityMatrix<memorySpace> &auxDensityMatrixRepresentation,
-    const MPI_Comm &               mpiCommParent,
-    const MPI_Comm &               domainComm,
-    const MPI_Comm &               interpoolcomm,
-    const MPI_Comm &               interBandGroupComm,
-    const dftParameters &          dftParams);
+    const MPI_Comm                &mpiCommParent,
+    const MPI_Comm                &domainComm,
+    const MPI_Comm                &interpoolcomm,
+    const MPI_Comm                &interBandGroupComm,
+    const dftParameters           &dftParams);
 } // namespace dftfe
 #endif

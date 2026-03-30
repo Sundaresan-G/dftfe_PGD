@@ -32,47 +32,59 @@ namespace dftfe
     //
 
     void
-    callaxpy(const unsigned int *n,
-             const double *      alpha,
-             double *            x,
-             const unsigned int *incx,
-             double *            y,
-             const unsigned int *incy)
+    callaxpy(const dftfe::uInt *n,
+             const double      *alpha,
+             double            *x,
+             const dftfe::uInt *incx,
+             double            *y,
+             const dftfe::uInt *incy)
     {
-      daxpy_(n, alpha, x, incx, y, incy);
+      const unsigned int nTmp    = *n;
+      const unsigned int incxTmp = *incx;
+      const unsigned int incyTmp = *incy;
+      daxpy_(&nTmp, alpha, x, &incxTmp, y, &incyTmp);
     }
 
     void
-    callaxpy(const unsigned int *        n,
+    callaxpy(const dftfe::uInt          *n,
              const std::complex<double> *alpha,
-             std::complex<double> *      x,
-             const unsigned int *        incx,
-             std::complex<double> *      y,
-             const unsigned int *        incy)
+             std::complex<double>       *x,
+             const dftfe::uInt          *incx,
+             std::complex<double>       *y,
+             const dftfe::uInt          *incy)
     {
-      zaxpy_(n, alpha, x, incx, y, incy);
+      const unsigned int nTmp    = *n;
+      const unsigned int incxTmp = *incx;
+      const unsigned int incyTmp = *incy;
+      zaxpy_(&nTmp, alpha, x, &incxTmp, y, &incyTmp);
     }
 
     void
-    callaxpy(const unsigned int *n,
-             const float *       alpha,
-             float *             x,
-             const unsigned int *incx,
-             float *             y,
-             const unsigned int *incy)
+    callaxpy(const dftfe::uInt *n,
+             const float       *alpha,
+             float             *x,
+             const dftfe::uInt *incx,
+             float             *y,
+             const dftfe::uInt *incy)
     {
-      saxpy_(n, alpha, x, incx, y, incy);
+      const unsigned int nTmp    = *n;
+      const unsigned int incxTmp = *incx;
+      const unsigned int incyTmp = *incy;
+      saxpy_(&nTmp, alpha, x, &incxTmp, y, &incyTmp);
     }
 
     void
-    callaxpy(const unsigned int *       n,
+    callaxpy(const dftfe::uInt         *n,
              const std::complex<float> *alpha,
-             std::complex<float> *      x,
-             const unsigned int *       incx,
-             std::complex<float> *      y,
-             const unsigned int *       incy)
+             std::complex<float>       *x,
+             const dftfe::uInt         *incx,
+             std::complex<float>       *y,
+             const dftfe::uInt         *incy)
     {
-      caxpy_(n, alpha, x, incx, y, incy);
+      const unsigned int nTmp    = *n;
+      const unsigned int incxTmp = *incx;
+      const unsigned int incyTmp = *incy;
+      caxpy_(&nTmp, alpha, x, &incxTmp, y, &incyTmp);
     }
 
 
@@ -99,7 +111,7 @@ namespace dftfe
     void
     constraintMatrixInfo<memorySpace>::initialize(
       const std::shared_ptr<const dealii::Utilities::MPI::Partitioner>
-        &                                      partitioner,
+                                              &partitioner,
       const dealii::AffineConstraints<double> &constraintMatrixData)
 
     {
@@ -121,7 +133,7 @@ namespace dftfe
                 constraintMatrixData.get_constraint_entries(lineDof);
 
               bool isConstraintRhsExpandingOutOfIndexSet = false;
-              for (unsigned int j = 0; j < rowData->size(); ++j)
+              for (dftfe::uInt j = 0; j < rowData->size(); ++j)
                 {
                   if (!(partitioner->is_ghost_entry((*rowData)[j].first) ||
                         partitioner->in_local_range((*rowData)[j].first)))
@@ -131,15 +143,17 @@ namespace dftfe
                     }
                 }
 
-              if (isConstraintRhsExpandingOutOfIndexSet)
-                continue;
+              Assert(
+                !isConstraintRhsExpandingOutOfIndexSet,
+                dealii::ExcMessage(
+                  "Master nodes are not locally available for constraints"));
 
               d_rowIdsLocal.push_back(partitioner->global_to_local(lineDof));
               d_rowIdsGlobal.push_back(lineDof);
               d_inhomogenities.push_back(
                 constraintMatrixData.get_inhomogeneity(lineDof));
               d_rowSizes.push_back(rowData->size());
-              for (unsigned int j = 0; j < rowData->size(); ++j)
+              for (dftfe::uInt j = 0; j < rowData->size(); ++j)
                 {
                   // Assert((*rowData)[j].first < partitioner->size(),
                   //       dealii::ExcMessage("Index out of bounds"));
@@ -165,7 +179,7 @@ namespace dftfe
                 constraintMatrixData.get_constraint_entries(lineDof);
 
               bool isConstraintRhsExpandingOutOfIndexSet = false;
-              for (unsigned int j = 0; j < rowData->size(); ++j)
+              for (dftfe::uInt j = 0; j < rowData->size(); ++j)
                 {
                   if (!(partitioner->is_ghost_entry((*rowData)[j].first) ||
                         partitioner->in_local_range((*rowData)[j].first)))
@@ -175,15 +189,17 @@ namespace dftfe
                     }
                 }
 
-              if (isConstraintRhsExpandingOutOfIndexSet)
-                continue;
+              Assert(
+                !isConstraintRhsExpandingOutOfIndexSet,
+                dealii::ExcMessage(
+                  "Master nodes are not locally available for constraints"));
 
               d_rowIdsLocal.push_back(partitioner->global_to_local(lineDof));
               d_rowIdsGlobal.push_back(lineDof);
               d_inhomogenities.push_back(
                 constraintMatrixData.get_inhomogeneity(lineDof));
               d_rowSizes.push_back(rowData->size());
-              for (unsigned int j = 0; j < rowData->size(); ++j)
+              for (dftfe::uInt j = 0; j < rowData->size(); ++j)
                 {
                   // Assert((*rowData)[j].first < partitioner->size(),
                   //       dealii::ExcMessage("Index out of bounds"));
@@ -201,10 +217,10 @@ namespace dftfe
     constraintMatrixInfo<memorySpace>::initializeScaledConstraints(
       const dftfe::utils::MemoryStorage<double, memorySpace> &invSqrtMassVec)
     {
-      unsigned int count = 0;
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      dftfe::uInt count = 0;
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
-          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+          for (dftfe::uInt j = 0; j < d_rowSizes[i]; ++j)
             {
               d_columnValues[count] *= invSqrtMassVec[d_columnIdsLocal[count]];
               count++;
@@ -218,10 +234,10 @@ namespace dftfe
     constraintMatrixInfo<memorySpace>::initializeScaledConstraints(
       const distributedCPUVec<double> &invSqrtMassVec)
     {
-      unsigned int count = 0;
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      dftfe::uInt count = 0;
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
-          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+          for (dftfe::uInt j = 0; j < d_rowSizes[i]; ++j)
             {
               d_columnValues[count] *=
                 invSqrtMassVec.local_element(d_columnIdsLocal[count]);
@@ -240,11 +256,11 @@ namespace dftfe
       distributedCPUVec<double> &fieldVector) const
     {
       fieldVector.update_ghost_values();
-      unsigned int count = 0;
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      dftfe::uInt count = 0;
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           double new_value = d_inhomogenities[i];
-          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+          for (dftfe::uInt j = 0; j < d_rowSizes[i]; ++j)
             {
               new_value += fieldVector.local_element(d_columnIdsLocal[count]) *
                            d_columnValues[count];
@@ -260,12 +276,12 @@ namespace dftfe
     void
     constraintMatrixInfo<memorySpace>::distribute(
       distributedCPUVec<T> &fieldVector,
-      const unsigned int    blockSize) const
+      const dftfe::uInt     blockSize) const
     {
-      unsigned int       count = 0;
-      const unsigned int inc   = 1;
-      std::vector<T>     newValuesBlock(blockSize, 0.0);
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      dftfe::uInt       count = 0;
+      const dftfe::uInt inc   = 1;
+      std::vector<T>    newValuesBlock(blockSize, 0.0);
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           std::fill(newValuesBlock.begin(),
                     newValuesBlock.end(),
@@ -274,7 +290,7 @@ namespace dftfe
           const dealii::types::global_dof_index startingLocalDofIndexRow =
             d_rowIdsLocal[i] * blockSize;
 
-          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+          for (dftfe::uInt j = 0; j < d_rowSizes[i]; ++j)
             {
               Assert(
                 count < d_columnIdsGlobal.size(),
@@ -309,11 +325,11 @@ namespace dftfe
     constraintMatrixInfo<memorySpace>::distribute(
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &fieldVector) const
     {
-      const unsigned int blockSize = fieldVector.numVectors();
-      unsigned int       count     = 0;
-      const unsigned int inc       = 1;
-      std::vector<T>     newValuesBlock(blockSize, 0.0);
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      const dftfe::uInt blockSize = fieldVector.numVectors();
+      dftfe::uInt       count     = 0;
+      const dftfe::uInt inc       = 1;
+      std::vector<T>    newValuesBlock(blockSize, 0.0);
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           std::fill(newValuesBlock.begin(),
                     newValuesBlock.end(),
@@ -322,7 +338,7 @@ namespace dftfe
           const dealii::types::global_dof_index startingLocalDofIndexRow =
             d_rowIdsLocal[i] * blockSize;
 
-          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+          for (dftfe::uInt j = 0; j < d_rowSizes[i]; ++j)
             {
               Assert(
                 count < d_columnIdsGlobal.size(),
@@ -361,15 +377,15 @@ namespace dftfe
     void
     constraintMatrixInfo<memorySpace>::distribute_slave_to_master(
       distributedCPUVec<T> &fieldVector,
-      const unsigned int    blockSize) const
+      const dftfe::uInt     blockSize) const
     {
-      unsigned int       count = 0;
-      const unsigned int inc   = 1;
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      dftfe::uInt       count = 0;
+      const dftfe::uInt inc   = 1;
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
             d_rowIdsLocal[i] * blockSize;
-          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+          for (dftfe::uInt j = 0; j < d_rowSizes[i]; ++j)
             {
               const dealii::types::global_dof_index
                 startingLocalDofIndexColumn =
@@ -402,14 +418,14 @@ namespace dftfe
     constraintMatrixInfo<memorySpace>::distribute_slave_to_master(
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &fieldVector) const
     {
-      const unsigned int blockSize = fieldVector.numVectors();
-      unsigned int       count     = 0;
-      const unsigned int inc       = 1;
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      const dftfe::uInt blockSize = fieldVector.numVectors();
+      dftfe::uInt       count     = 0;
+      const dftfe::uInt inc       = 1;
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
             d_rowIdsLocal[i] * blockSize;
-          for (unsigned int j = 0; j < d_rowSizes[i]; ++j)
+          for (dftfe::uInt j = 0; j < d_rowSizes[i]; ++j)
             {
               const dealii::types::global_dof_index
                 startingLocalDofIndexColumn =
@@ -441,9 +457,9 @@ namespace dftfe
     void
     constraintMatrixInfo<memorySpace>::set_zero(
       distributedCPUVec<T> &fieldVector,
-      const unsigned int    blockSize) const
+      const dftfe::uInt     blockSize) const
     {
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
             d_rowIdsLocal[i] * blockSize;
@@ -461,8 +477,8 @@ namespace dftfe
     constraintMatrixInfo<memorySpace>::set_zero(
       dftfe::linearAlgebra::MultiVector<T, memorySpace> &fieldVector) const
     {
-      const unsigned int blockSize = fieldVector.numVectors();
-      for (unsigned int i = 0; i < d_rowIdsLocal.size(); ++i)
+      const dftfe::uInt blockSize = fieldVector.numVectors();
+      for (dftfe::uInt i = 0; i < d_rowIdsLocal.size(); ++i)
         {
           const dealii::types::global_dof_index startingLocalDofIndexRow =
             d_rowIdsLocal[i] * blockSize;
@@ -495,18 +511,18 @@ namespace dftfe
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::distribute(
       distributedCPUVec<dataTypes::number> &fieldVector,
-      const unsigned int                    blockSize) const;
+      const dftfe::uInt                     blockSize) const;
 
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::
       distribute_slave_to_master(
         distributedCPUVec<dataTypes::number> &fieldVector,
-        const unsigned int                    blockSize) const;
+        const dftfe::uInt                     blockSize) const;
 
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::set_zero(
       distributedCPUVec<dataTypes::number> &fieldVector,
-      const unsigned int                    blockSize) const;
+      const dftfe::uInt                     blockSize) const;
 
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::distribute(

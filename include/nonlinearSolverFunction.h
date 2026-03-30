@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 //
-// Copyright (c) 2017-2018 The Regents of the University of Michigan and DFT-FE
+// Copyright (c) 2017-2025 The Regents of the University of Michigan and DFT-FE
 // authors.
 //
 // This file is part of the DFT-FE code.
@@ -37,8 +37,8 @@ namespace dftfe
 
     virtual void
     getForceVector(const std::vector<distributedCPUVec<double>> &x,
-                   std::vector<distributedCPUVec<double>> &      force,
-                   std::vector<double> &                         loss) = 0;
+                   std::vector<distributedCPUVec<double>>       &force,
+                   std::vector<double>                          &loss) = 0;
 
     virtual void
     setSolution(const std::vector<distributedCPUVec<double>> &x) = 0;

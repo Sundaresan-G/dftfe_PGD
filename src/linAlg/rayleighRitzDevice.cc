@@ -29,20 +29,20 @@ namespace dftfe
     void
     rayleighRitz(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-      elpaScalaManager &                                   elpaScala,
-      dataTypes::number *                                  X,
-      distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::number> &            HXb,
-      const unsigned int                                   M,
-      const unsigned int                                   N,
-      const MPI_Comm &                                     mpiCommParent,
-      const MPI_Comm &                                     mpiCommDomain,
+      elpaScalaManager                                    &elpaScala,
+      dataTypes::number                                   *X,
+      distributedDeviceVec<dataTypes::number>             &Xb,
+      distributedDeviceVec<dataTypes::number>             &HXb,
+      const dftfe::uInt                                    M,
+      const dftfe::uInt                                    N,
+      const MPI_Comm                                      &mpiCommParent,
+      const MPI_Comm                                      &mpiCommDomain,
       utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-      const MPI_Comm &         interBandGroupComm,
-      std::vector<double> &    eigenValues,
+      const MPI_Comm          &interBandGroupComm,
+      std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
+                          &BLASWrapperPtr,
       const dftParameters &dftParams,
       const bool           useMixedPrecOverall)
     {
@@ -53,7 +53,7 @@ namespace dftfe
       dealii::TimerOutput computing_timer(mpiCommDomain,
                                           pcout,
                                           dftParams.reproducible_output ||
-                                              dftParams.verbosity < 4 ?
+                                              dftParams.verbosity < 3 ?
                                             dealii::TimerOutput::never :
                                             dealii::TimerOutput::summary,
                                           dealii::TimerOutput::wall_times);
@@ -61,7 +61,7 @@ namespace dftfe
       //
       // compute projected Hamiltonian conjugate HConjProj= X^{T}*HConj*XConj
       //
-      const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
+      const dftfe::uInt rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
         elpaScala.getProcessGridDftfeScalaWrapper();
 
@@ -169,7 +169,7 @@ namespace dftfe
       // compute eigendecomposition of ProjHam HConjProj= QConj*D*QConj^{C} (C
       // denotes conjugate transpose LAPACK notation)
       //
-      const unsigned int numberEigenValues = N;
+      const dftfe::uInt numberEigenValues = N;
       eigenValues.resize(numberEigenValues);
       if (dftParams.useELPA)
         {
@@ -207,12 +207,12 @@ namespace dftfe
                          dataTypes::number(1.0));
 
           if (processGrid->is_process_active())
-            for (unsigned int i = 0; i < projHamPar.local_n(); ++i)
+            for (dftfe::uInt i = 0; i < projHamPar.local_n(); ++i)
               {
-                const unsigned int glob_i = projHamPar.global_column(i);
-                for (unsigned int j = 0; j < projHamPar.local_m(); ++j)
+                const dftfe::uInt glob_i = projHamPar.global_column(i);
+                for (dftfe::uInt j = 0; j < projHamPar.local_m(); ++j)
                   {
-                    const unsigned int glob_j = projHamPar.global_row(j);
+                    const dftfe::uInt glob_j = projHamPar.global_row(j);
                     if (glob_i == glob_j)
                       projHamPar.local_el(j, i) *= dataTypes::number(0.5);
                   }
@@ -315,20 +315,20 @@ namespace dftfe
     void
     rayleighRitzGEP(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-      elpaScalaManager &                                   elpaScala,
-      dataTypes::number *                                  X,
-      distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::number> &            HXb,
-      const unsigned int                                   M,
-      const unsigned int                                   N,
-      const MPI_Comm &                                     mpiCommParent,
-      const MPI_Comm &                                     mpiCommDomain,
+      elpaScalaManager                                    &elpaScala,
+      dataTypes::number                                   *X,
+      distributedDeviceVec<dataTypes::number>             &Xb,
+      distributedDeviceVec<dataTypes::number>             &HXb,
+      const dftfe::uInt                                    M,
+      const dftfe::uInt                                    N,
+      const MPI_Comm                                      &mpiCommParent,
+      const MPI_Comm                                      &mpiCommDomain,
       utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-      const MPI_Comm &         interBandGroupComm,
-      std::vector<double> &    eigenValues,
+      const MPI_Comm          &interBandGroupComm,
+      std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
+                          &BLASWrapperPtr,
       const dftParameters &dftParams,
       const bool           useMixedPrecOverall)
     {
@@ -344,7 +344,7 @@ namespace dftfe
                                             dealii::TimerOutput::every_call,
                                           dealii::TimerOutput::wall_times);
 
-      const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
+      const dftfe::uInt rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
         elpaScala.getProcessGridDftfeScalaWrapper();
       //
@@ -561,12 +561,12 @@ namespace dftfe
                      dataTypes::number(1.0));
 
       if (processGrid->is_process_active())
-        for (unsigned int i = 0; i < projHamPar.local_n(); ++i)
+        for (dftfe::uInt i = 0; i < projHamPar.local_n(); ++i)
           {
-            const unsigned int glob_i = projHamPar.global_column(i);
-            for (unsigned int j = 0; j < projHamPar.local_m(); ++j)
+            const dftfe::uInt glob_i = projHamPar.global_column(i);
+            for (dftfe::uInt j = 0; j < projHamPar.local_m(); ++j)
               {
-                const unsigned int glob_j = projHamPar.global_row(j);
+                const dftfe::uInt glob_j = projHamPar.global_row(j);
                 if (glob_i == glob_j)
                   projHamPar.local_el(j, i) *= dataTypes::number(0.5);
               }
@@ -581,7 +581,7 @@ namespace dftfe
       //
       // compute standard eigendecomposition HSConjProj: {QConjPrime,D}
       // HSConjProj=QConjPrime*D*QConjPrime^{C} QConj={Lc^{-1}}^{C}*QConjPrime
-      const unsigned int numberEigenValues = N;
+      const dftfe::uInt numberEigenValues = N;
       eigenValues.resize(numberEigenValues);
       if (dftParams.useELPA)
         {
@@ -626,6 +626,11 @@ namespace dftfe
                             "DFT-FE Error: elpa_eigenvectors error."));
             }
 
+
+          MPI_Bcast(
+            &eigenValues[0], eigenValues.size(), MPI_DOUBLE, 0, mpiCommDomain);
+
+
           projHamPar.copy_conjugate_transposed(eigenVectors);
 
           if (dftParams.deviceFineGrainedTimings)
@@ -661,12 +666,12 @@ namespace dftfe
             dftfe::LAPACKSupport::Property::lower_triangular);
 
           if (processGrid->is_process_active())
-            for (unsigned int i = 0; i < LMatPar.local_n(); ++i)
+            for (dftfe::uInt i = 0; i < LMatPar.local_n(); ++i)
               {
-                const unsigned int glob_i = LMatPar.global_column(i);
-                for (unsigned int j = 0; j < LMatPar.local_m(); ++j)
+                const dftfe::uInt glob_i = LMatPar.global_column(i);
+                for (dftfe::uInt j = 0; j < LMatPar.local_m(); ++j)
                   {
-                    const unsigned int glob_j = LMatPar.global_row(j);
+                    const dftfe::uInt glob_j = LMatPar.global_row(j);
                     if (glob_j < glob_i)
                       LMatPar.local_el(j, i) = dataTypes::number(0);
                     else
@@ -709,9 +714,6 @@ namespace dftfe
             computing_timer.leave_subsection(
               "ScaLAPACK eigen decomp, RR GEP step");
         }
-
-      MPI_Bcast(
-        &eigenValues[0], eigenValues.size(), MPI_DOUBLE, 0, mpiCommDomain);
 
       linearAlgebraOperations::internal::broadcastAcrossInterCommScaLAPACKMat(
         processGrid, projHamPar, interBandGroupComm, 0);
@@ -844,8 +846,8 @@ namespace dftfe
       static dftfe::utils::deviceStream_t streamCompute = 0, streamDataMove = 0;
 
       if (streamCompute == 0 && streamDataMove == 0){
-        dftfe::utils::deviceStreamCreate(&streamCompute);
-        dftfe::utils::deviceStreamCreate(&streamDataMove);
+        dftfe::utils::deviceStreamCreate(streamCompute);
+        dftfe::utils::deviceStreamCreate(streamDataMove);
       }
 
       // FIXME: May not be needed at all
@@ -1480,22 +1482,22 @@ namespace dftfe
     void
     densityMatrixEigenBasisFirstOrderResponse(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-      dataTypes::number *                                  X,
-      distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::number> &            HXb,
-      const unsigned int                                   M,
-      const unsigned int                                   N,
-      const MPI_Comm &                                     mpiCommParent,
-      const MPI_Comm &                                     mpiCommDomain,
-      utils::DeviceCCLWrapper &  devicecclMpiCommDomain,
-      const MPI_Comm &           interBandGroupComm,
+      dataTypes::number                                   *X,
+      distributedDeviceVec<dataTypes::number>             &Xb,
+      distributedDeviceVec<dataTypes::number>             &HXb,
+      const dftfe::uInt                                    M,
+      const dftfe::uInt                                    N,
+      const MPI_Comm                                      &mpiCommParent,
+      const MPI_Comm                                      &mpiCommDomain,
+      utils::DeviceCCLWrapper   &devicecclMpiCommDomain,
+      const MPI_Comm            &interBandGroupComm,
       const std::vector<double> &eigenValues,
       const double               fermiEnergy,
-      std::vector<double> &      densityMatDerFermiEnergy,
-      dftfe::elpaScalaManager &  elpaScala,
+      std::vector<double>       &densityMatDerFermiEnergy,
+      dftfe::elpaScalaManager   &elpaScala,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
+                          &BLASWrapperPtr,
       const dftParameters &dftParams)
     {
       dealii::ConditionalOStream pcout(
@@ -1511,7 +1513,7 @@ namespace dftfe
                                           dealii::TimerOutput::wall_times);
 
 
-      const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
+      const dftfe::uInt rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
         elpaScala.getProcessGridDftfeScalaWrapper();
 
@@ -1591,13 +1593,13 @@ namespace dftfe
             "Recursive fermi operator expansion operations, DMFOR step");
         }
 
-      const int    m    = 10;
-      const double beta = 1.0 / C_kb / dftParams.TVal;
-      const double c    = std::pow(2.0, -2.0 - m) * beta;
+      const dftfe::Int m    = 10;
+      const double     beta = 1.0 / C_kb / dftParams.TVal;
+      const double     c    = std::pow(2.0, -2.0 - m) * beta;
 
       std::vector<double> H0 = eigenValues;
       std::vector<double> X0(N, 0.0);
-      for (unsigned int i = 0; i < N; ++i)
+      for (dftfe::uInt i = 0; i < N; ++i)
         {
           X0[i] = 0.5 - c * (H0[i] - fermiEnergy);
         }
@@ -1620,7 +1622,7 @@ namespace dftfe
 
       std::vector<double> Y0Temp(N, 0.0);
 
-      for (unsigned int i = 0; i < m; ++i)
+      for (dftfe::uInt i = 0; i < m; ++i)
         {
           // step1
           X1Temp.add(densityMatPrimePar,
@@ -1634,7 +1636,7 @@ namespace dftfe
           X1Temp.add(X1Tempb, dataTypes::number(1.0), dataTypes::number(1.0));
 
           // step2 and 3
-          for (unsigned int j = 0; j < N; ++j)
+          for (dftfe::uInt j = 0; j < N; ++j)
             {
               Y0Temp[j] = 1.0 / (2.0 * X0[j] * (X0[j] - 1.0) + 1.0);
               X0[j]     = Y0Temp[j] * X0[j] * X0[j];
@@ -1663,7 +1665,7 @@ namespace dftfe
 
       std::vector<double> Pmu0(N, 0.0);
       double              sum = 0.0;
-      for (unsigned int i = 0; i < N; ++i)
+      for (dftfe::uInt i = 0; i < N; ++i)
         {
           Pmu0[i] = beta * X0[i] * (1.0 - X0[i]);
           sum += Pmu0[i];
@@ -1707,12 +1709,12 @@ namespace dftfe
                              dataTypes::number(1.0));
 
       if (processGrid->is_process_active())
-        for (unsigned int i = 0; i < densityMatPrimePar.local_n(); ++i)
+        for (dftfe::uInt i = 0; i < densityMatPrimePar.local_n(); ++i)
           {
-            const unsigned int glob_i = densityMatPrimePar.global_column(i);
-            for (unsigned int j = 0; j < densityMatPrimePar.local_m(); ++j)
+            const dftfe::uInt glob_i = densityMatPrimePar.global_column(i);
+            for (dftfe::uInt j = 0; j < densityMatPrimePar.local_m(); ++j)
               {
-                const unsigned int glob_j = densityMatPrimePar.global_row(j);
+                const dftfe::uInt glob_j = densityMatPrimePar.global_row(j);
                 if (glob_i == glob_j)
                   densityMatPrimePar.local_el(j, i) *= dataTypes::number(0.5);
               }

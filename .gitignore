@@ -33,6 +33,7 @@
 *.swp
 *.nfs*
 .*.swp
+.vscode/
 
 #CMAKE files
 CMakeCache.txt
@@ -92,3 +93,4 @@ latex/
 .idea/**/dictionaries
 .idea/**/shelf
 indentationStandard/programs/
+include/git_info.h

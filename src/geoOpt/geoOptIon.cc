@@ -23,7 +23,6 @@
 #include <dft.h>
 #include <dftUtils.h>
 #include <fileReaders.h>
-#include <force.h>
 #include <geoOptIon.h>
 #include <sys/stat.h>
 
@@ -34,7 +33,7 @@ namespace dftfe
   // constructor
   //
 
-  geoOptIon::geoOptIon(dftBase *       dftPtr,
+  geoOptIon::geoOptIon(dftBase        *dftPtr,
                        const MPI_Comm &mpi_comm_parent,
                        const bool      restart)
     : d_dftPtr(dftPtr)
@@ -46,15 +45,16 @@ namespace dftfe
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
     , d_isRestart(restart)
   {
-    d_isScfRestart = d_dftPtr->getParametersObject().loadRhoData;
+    d_isScfRestart = d_dftPtr->getParametersObject().loadQuadData;
   }
 
   //
   //
 
   void
-  geoOptIon::init(const std::string &restartPath)
+  geoOptIon::init(const std::string &restartPath, const dftfe::Int cycleId)
   {
+    d_cycle         = cycleId;
     d_restartPath   = restartPath + "/ionRelax";
     d_solverRestart = d_isRestart;
     if (d_dftPtr->getParametersObject().ionOptSolver == "BFGS")
@@ -63,11 +63,12 @@ namespace dftfe
       d_solver = 1;
     else if (d_dftPtr->getParametersObject().ionOptSolver == "CGPRP")
       d_solver = 2;
-    const int numberGlobalAtoms = d_dftPtr->getAtomLocationsCart().size();
+    const dftfe::Int numberGlobalAtoms =
+      d_dftPtr->getAtomLocationsCart().size();
     if (d_dftPtr->getParametersObject().ionRelaxFlagsFile != "")
       {
-        std::vector<std::vector<int>>    tempRelaxFlagsData;
-        std::vector<std::vector<double>> tempForceData;
+        std::vector<std::vector<dftfe::Int>> tempRelaxFlagsData;
+        std::vector<std::vector<double>>     tempForceData;
         dftUtils::readRelaxationFlagsFile(
           6,
           tempRelaxFlagsData,
@@ -78,9 +79,9 @@ namespace dftfe
                       "Incorrect number of entries in relaxationFlags file"));
         d_relaxationFlags.clear();
         d_externalForceOnAtom.clear();
-        for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
           {
-            for (unsigned int j = 0; j < 3; ++j)
+            for (dftfe::uInt j = 0; j < 3; ++j)
               {
                 d_relaxationFlags.push_back(tempRelaxFlagsData[i][j]);
                 d_externalForceOnAtom.push_back(tempForceData[i][j]);
@@ -91,9 +92,9 @@ namespace dftfe
       {
         d_relaxationFlags.clear();
         d_externalForceOnAtom.clear();
-        for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
           {
-            for (unsigned int j = 0; j < 3; ++j)
+            for (dftfe::uInt j = 0; j < 3; ++j)
               {
                 d_relaxationFlags.push_back(1.0);
                 d_externalForceOnAtom.push_back(0.0);
@@ -105,9 +106,9 @@ namespace dftfe
         std::vector<std::vector<double>> tmp, ionOptData;
         dftUtils::readFile(1, ionOptData, d_restartPath + "/ionOpt.dat");
         dftUtils::readFile(1, tmp, d_restartPath + "/step.chk");
-        int  solver            = ionOptData[0][0];
-        bool usePreconditioner = ionOptData[1][0] > 1e-6;
-        d_totalUpdateCalls     = tmp[0][0];
+        dftfe::Int solver            = ionOptData[0][0];
+        bool       usePreconditioner = ionOptData[1][0] > 1e-6;
+        d_totalUpdateCalls           = tmp[0][0];
         tmp.clear();
         dftUtils::readFile(1,
                            tmp,
@@ -117,13 +118,14 @@ namespace dftfe
         d_maximumAtomForceToBeRelaxed = tmp[0][0];
         d_relaxationFlags.resize(numberGlobalAtoms * 3);
         bool relaxationFlagsMatch = true;
-        for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
           {
-            for (unsigned int j = 0; j < 3; ++j)
+            for (dftfe::uInt j = 0; j < 3; ++j)
               {
-                relaxationFlagsMatch = (d_relaxationFlags[i * 3 + j] ==
-                                        (int)ionOptData[i * 3 + j + 2][0]) &&
-                                       relaxationFlagsMatch;
+                relaxationFlagsMatch =
+                  (d_relaxationFlags[i * 3 + j] ==
+                   (dftfe::Int)ionOptData[i * 3 + j + 2][0]) &&
+                  relaxationFlagsMatch;
               }
           }
         if (solver != d_solver ||
@@ -150,7 +152,8 @@ namespace dftfe
               {
                 std::string fileName =
                   "structureEnergyForcesGSData_ionRelaxStep" +
-                  std::to_string(d_totalUpdateCalls) + ".txt";
+                  std::to_string(d_totalUpdateCalls) + "_cycle" +
+                  std::to_string(d_cycle) + ".txt";
                 d_dftPtr->writeStructureEnergyForcesDataPostProcess(fileName);
               }
           }
@@ -166,9 +169,9 @@ namespace dftfe
         ionOptData[0][0] = d_solver;
         ionOptData[1][0] =
           d_dftPtr->getParametersObject().usePreconditioner ? 1 : 0;
-        for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
           {
-            for (unsigned int j = 0; j < 3; ++j)
+            for (dftfe::uInt j = 0; j < 3; ++j)
               {
                 ionOptData[i * 3 + j + 2][0] = d_relaxationFlags[i * 3 + j];
               }
@@ -208,7 +211,7 @@ namespace dftfe
       {
         pcout << " --------------Ion force relaxation flags----------------"
               << std::endl;
-        for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
           {
             pcout << d_relaxationFlags[i * 3] << "  "
                   << d_relaxationFlags[i * 3 + 1] << "  "
@@ -331,7 +334,7 @@ namespace dftfe
   }
 
 
-  int
+  dftfe::Int
   geoOptIon::run()
   {
     if (getNumberUnknowns() > 0)
@@ -345,7 +348,10 @@ namespace dftfe
             d_dftPtr->getParametersObject()
               .writeStructreEnergyForcesFileForPostProcess)
           {
-            std::string fileName = "structureEnergyForcesGSDataIonRelaxed.txt";
+            std::string fileName =
+              std::string("structureEnergyForcesGSDataIonRelaxed") + "_cycle" +
+              std::to_string(d_cycle) + ".txt";
+
             d_dftPtr->writeStructureEnergyForcesDataPostProcess(fileName);
           }
 
@@ -368,7 +374,7 @@ namespace dftfe
             pcout
               << "-----------Simulation Domain bounding vectors (lattice vectors in fully periodic case)-------------"
               << std::endl;
-            for (int i = 0; i < d_dftPtr->getCell().size(); ++i)
+            for (dftfe::Int i = 0; i < d_dftPtr->getCell().size(); ++i)
               {
                 pcout << "v" << i + 1 << " : " << d_dftPtr->getCell()[i][0]
                       << " " << d_dftPtr->getCell()[i][1] << " "
@@ -385,12 +391,12 @@ namespace dftfe
                 pcout
                   << "-------------------Fractional coordinates of atoms----------------------"
                   << std::endl;
-                for (unsigned int i = 0;
+                for (dftfe::uInt i = 0;
                      i < d_dftPtr->getAtomLocationsCart().size();
                      ++i)
-                  pcout << (unsigned int)d_dftPtr->getAtomLocationsFrac()[i][0]
+                  pcout << (dftfe::uInt)d_dftPtr->getAtomLocationsFrac()[i][0]
                         << " "
-                        << (unsigned int)d_dftPtr->getAtomLocationsFrac()[i][1]
+                        << (dftfe::uInt)d_dftPtr->getAtomLocationsFrac()[i][1]
                         << " " << d_dftPtr->getAtomLocationsFrac()[i][2] << " "
                         << d_dftPtr->getAtomLocationsFrac()[i][3] << " "
                         << d_dftPtr->getAtomLocationsFrac()[i][4] << "\n";
@@ -406,17 +412,17 @@ namespace dftfe
                 pcout
                   << "------------Cartesian coordinates of atoms (origin at center of domain)------------------"
                   << std::endl;
-                for (unsigned int i = 0;
+                for (dftfe::uInt i = 0;
                      i < d_dftPtr->getAtomLocationsCart().size();
                      ++i)
                   {
-                    pcout
-                      << (unsigned int)d_dftPtr->getAtomLocationsCart()[i][0]
-                      << " "
-                      << (unsigned int)d_dftPtr->getAtomLocationsCart()[i][1]
-                      << " " << d_dftPtr->getAtomLocationsCart()[i][2] << " "
-                      << d_dftPtr->getAtomLocationsCart()[i][3] << " "
-                      << d_dftPtr->getAtomLocationsCart()[i][4] << "\n";
+                    pcout << (dftfe::uInt)d_dftPtr->getAtomLocationsCart()[i][0]
+                          << " "
+                          << (dftfe::uInt)d_dftPtr->getAtomLocationsCart()[i][1]
+                          << " " << d_dftPtr->getAtomLocationsCart()[i][2]
+                          << " " << d_dftPtr->getAtomLocationsCart()[i][3]
+                          << " " << d_dftPtr->getAtomLocationsCart()[i][4]
+                          << "\n";
                   }
                 pcout
                   << "-----------------------------------------------------------------------------------------"
@@ -445,7 +451,7 @@ namespace dftfe
 
 
 
-  unsigned int
+  dftfe::uInt
   geoOptIon::getNumberUnknowns() const
   {
     return std::accumulate(d_relaxationFlags.begin(),
@@ -470,13 +476,14 @@ namespace dftfe
   geoOptIon::gradient(std::vector<double> &gradient)
   {
     gradient.clear();
-    const int numberGlobalAtoms = d_dftPtr->getAtomLocationsCart().size();
+    const dftfe::Int numberGlobalAtoms =
+      d_dftPtr->getAtomLocationsCart().size();
     const std::vector<double> tempGradient = d_dftPtr->getForceonAtoms();
     AssertThrow(tempGradient.size() == numberGlobalAtoms * 3,
                 dealii::ExcMessage("Atom forces have wrong size"));
-    for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+    for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
       {
-        for (unsigned int j = 0; j < 3; ++j)
+        for (dftfe::uInt j = 0; j < 3; ++j)
           {
             if (d_relaxationFlags[3 * i + j] == 1)
               {
@@ -488,7 +495,7 @@ namespace dftfe
 
     d_maximumAtomForceToBeRelaxed = -1.0;
 
-    for (unsigned int i = 0; i < gradient.size(); ++i)
+    for (dftfe::uInt i = 0; i < gradient.size(); ++i)
       {
         const double temp = std::sqrt(gradient[i] * gradient[i]);
         if (temp > d_maximumAtomForceToBeRelaxed)
@@ -498,7 +505,7 @@ namespace dftfe
 
 
   void
-  geoOptIon::precondition(std::vector<double> &      s,
+  geoOptIon::precondition(std::vector<double>       &s,
                           const std::vector<double> &gradient)
   {
     if (d_solverRestart)
@@ -513,7 +520,7 @@ namespace dftfe
                       "Incorrect preconditioner size in preconditioner.dat"));
         s.clear();
         s.resize(getNumberUnknowns() * getNumberUnknowns(), 0.0);
-        for (int i = 0; i < preconData.size(); ++i)
+        for (dftfe::Int i = 0; i < preconData.size(); ++i)
           {
             s[i] = preconData[i][0];
           }
@@ -521,19 +528,21 @@ namespace dftfe
       }
     else
       {
-        const int numberGlobalAtoms = d_dftPtr->getAtomLocationsCart().size();
-        const int numberImageAtoms =
+        const dftfe::Int numberGlobalAtoms =
+          d_dftPtr->getAtomLocationsCart().size();
+        const dftfe::Int numberImageAtoms =
           d_dftPtr->getImageAtomLocationsCart().size();
         std::vector<std::vector<double>> NNdistances(numberGlobalAtoms);
         double                           rNN = 0;
-        for (int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::Int i = 0; i < numberGlobalAtoms; ++i)
           {
             double riMin = 0;
-            for (int j = 0; j < numberGlobalAtoms + numberImageAtoms; ++j)
+            for (dftfe::Int j = 0; j < numberGlobalAtoms + numberImageAtoms;
+                 ++j)
               {
                 double rij = 0;
                 if (j < numberGlobalAtoms)
-                  for (int k = 2; k < 5; ++k)
+                  for (dftfe::Int k = 2; k < 5; ++k)
                     {
                       rij += (d_dftPtr->getAtomLocationsCart()[i][k] -
                               d_dftPtr->getAtomLocationsCart()[j][k]) *
@@ -541,7 +550,7 @@ namespace dftfe
                               d_dftPtr->getAtomLocationsCart()[j][k]);
                     }
                 else
-                  for (int k = 2; k < 5; ++k)
+                  for (dftfe::Int k = 2; k < 5; ++k)
                     {
                       rij +=
                         (d_dftPtr->getAtomLocationsCart()[i][k] -
@@ -568,17 +577,18 @@ namespace dftfe
         if (d_dftPtr->getParametersObject().verbosity >= 2)
           pcout << "Cutoff radius for preconditoner:" << rCut << std::endl;
         std::vector<double> L(numberGlobalAtoms * numberGlobalAtoms, 0.0);
-        for (int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::Int i = 0; i < numberGlobalAtoms; ++i)
           {
-            for (int j = i + 1; j < numberGlobalAtoms + numberImageAtoms; ++j)
+            for (dftfe::Int j = i + 1; j < numberGlobalAtoms + numberImageAtoms;
+                 ++j)
               {
-                double rij = 0;
-                int    jatomId =
+                double     rij = 0;
+                dftfe::Int jatomId =
                   j < numberGlobalAtoms ?
                     j :
                     d_dftPtr->getImageAtomIDs()[j - numberGlobalAtoms];
                 if (j < numberGlobalAtoms)
-                  for (int k = 2; k < 5; ++k)
+                  for (dftfe::Int k = 2; k < 5; ++k)
                     {
                       rij += (d_dftPtr->getAtomLocationsCart()[i][k] -
                               d_dftPtr->getAtomLocationsCart()[j][k]) *
@@ -586,7 +596,7 @@ namespace dftfe
                               d_dftPtr->getAtomLocationsCart()[j][k]);
                     }
                 else
-                  for (int k = 2; k < 5; ++k)
+                  for (dftfe::Int k = 2; k < 5; ++k)
                     {
                       rij +=
                         (d_dftPtr->getAtomLocationsCart()[i][k] -
@@ -611,9 +621,9 @@ namespace dftfe
                   }
               }
           }
-        for (int i = 0; i < numberGlobalAtoms; ++i)
+        for (dftfe::Int i = 0; i < numberGlobalAtoms; ++i)
           {
-            for (int j = 0; j < numberGlobalAtoms; ++j)
+            for (dftfe::Int j = 0; j < numberGlobalAtoms; ++j)
               {
                 if (i != j)
                   {
@@ -626,14 +636,14 @@ namespace dftfe
 
         s.clear();
         s.resize(getNumberUnknowns() * getNumberUnknowns(), 0.0);
-        int icount = 0;
+        dftfe::Int icount = 0;
         for (auto i = 0; i < numberGlobalAtoms; ++i)
           {
             for (auto k = 0; k < 3; ++k)
               {
                 if (d_relaxationFlags[i * 3 + k] == 1)
                   {
-                    int jcount = 0;
+                    dftfe::Int jcount = 0;
                     for (auto j = 0; j < numberGlobalAtoms; ++j)
                       {
                         for (auto l = 0; l < 3; ++l)
@@ -653,7 +663,7 @@ namespace dftfe
         std::vector<std::vector<double>> preconData(getNumberUnknowns() *
                                                       getNumberUnknowns(),
                                                     std::vector<double>(1, 0));
-        for (int i = 0; i < preconData.size(); ++i)
+        for (dftfe::Int i = 0; i < preconData.size(); ++i)
           {
             preconData[i][0] = s[i];
           }
@@ -670,14 +680,14 @@ namespace dftfe
                     const bool                 computeForces,
                     const bool useSingleAtomSolutionsInitialGuess)
   {
-    const unsigned int numberGlobalAtoms =
+    const dftfe::uInt numberGlobalAtoms =
       d_dftPtr->getAtomLocationsCart().size();
     std::vector<dealii::Tensor<1, 3, double>> globalAtomsDisplacements(
       numberGlobalAtoms);
-    int count = 0;
-    for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+    dftfe::Int count = 0;
+    for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
       {
-        for (unsigned int j = 0; j < 3; ++j)
+        for (dftfe::uInt j = 0; j < 3; ++j)
           {
             globalAtomsDisplacements[i][j] = 0.0;
             if (this_mpi_process == 0)
@@ -733,7 +743,9 @@ namespace dftfe
           .writeStructreEnergyForcesFileForPostProcess)
       {
         std::string fileName = "structureEnergyForcesGSData_ionRelaxStep" +
-                               std::to_string(d_totalUpdateCalls) + ".txt";
+                               std::to_string(d_totalUpdateCalls) + "_cycle" +
+                               std::to_string(d_cycle) + ".txt";
+
         d_dftPtr->writeStructureEnergyForcesDataPostProcess(fileName);
       }
   }
@@ -748,7 +760,8 @@ namespace dftfe
           d_restartPath + "/step" + std::to_string(d_totalUpdateCalls);
         if (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) == 0)
           mkdir(savePath.c_str(), ACCESSPERMS);
-        const int numberGlobalAtoms = d_dftPtr->getAtomLocationsCart().size();
+        const dftfe::Int numberGlobalAtoms =
+          d_dftPtr->getAtomLocationsCart().size();
         const std::vector<double> tempGradient = d_dftPtr->getForceonAtoms();
         std::vector<std::vector<double>> forceData(1,
                                                    std::vector<double>(1, 0.0));
@@ -770,16 +783,17 @@ namespace dftfe
   bool
   geoOptIon::isConverged() const
   {
-    bool      converged              = true;
-    const int numberGlobalAtoms      = d_dftPtr->getAtomLocationsCart().size();
+    bool             converged = true;
+    const dftfe::Int numberGlobalAtoms =
+      d_dftPtr->getAtomLocationsCart().size();
     std::vector<double> tempGradient = d_dftPtr->getForceonAtoms();
     if (tempGradient.size() != numberGlobalAtoms * 3)
       {
         return false;
       }
-    for (unsigned int i = 0; i < numberGlobalAtoms; ++i)
+    for (dftfe::uInt i = 0; i < numberGlobalAtoms; ++i)
       {
-        for (unsigned int j = 0; j < 3; ++j)
+        for (dftfe::uInt j = 0; j < 3; ++j)
           {
             if (d_relaxationFlags[3 * i + j] == 1)
               {
@@ -807,7 +821,7 @@ namespace dftfe
   }
 
 
-  std::vector<unsigned int>
+  std::vector<dftfe::uInt>
   geoOptIon::getUnknownCountFlag() const
   {
     AssertThrow(false, dftUtils::ExcNotImplementedYet());

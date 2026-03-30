@@ -20,21 +20,34 @@ namespace dftfe
     void
     setDensityMatrixComponents(
       const dftfe::utils::MemoryStorage<dataTypes::number, memorySpace>
-        &                                     eigenVectorsFlattenedMemSpace,
+                                             &eigenVectorsFlattenedMemSpace,
       const std::vector<std::vector<double>> &fractionalOccupancies);
 
 
-
-    // CAUTION: points have to be a contiguous subset of d_quadPointsSet
     void
     applyLocalOperations(
-      const std::vector<double> &points,
-      std::unordered_map<DensityDescriptorDataAttributes, std::vector<double>>
+      const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+      std::unordered_map<
+        DensityDescriptorDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &densityData) override;
 
+
+
     void
-    evalOverlapMatrixStart(const std::vector<double> &quadpts,
-                           const std::vector<double> &quadWt) override;
+    applyLocalOperations(
+      const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+      std::unordered_map<
+        WfcDescriptorDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+        &wfcData) override;
+
+    void
+    evalOverlapMatrixStart(
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &quadpts,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+        &quadWt) override;
 
     void
     evalOverlapMatrixEnd(const MPI_Comm &mpiComm) override;
@@ -43,9 +56,11 @@ namespace dftfe
     projectDensityMatrixStart(
       const std::unordered_map<std::string, std::vector<dataTypes::number>>
         &projectionInputsDataType,
-      const std::unordered_map<std::string, std::vector<double>>
-        &       projectionInputsReal,
-      const int iSpin) override;
+      const std::unordered_map<
+        std::string,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+                      &projectionInputsReal,
+      const dftfe::Int iSpin) override;
 
     void
     projectDensityMatrixEnd(const MPI_Comm &mpiComm) override;
@@ -73,7 +88,9 @@ namespace dftfe
      */
     void
     projectDensityStart(
-      const std::unordered_map<std::string, std::vector<double>>
+      const std::unordered_map<
+        std::string,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &projectionInputs) override;
 
     void
@@ -91,14 +108,29 @@ namespace dftfe
 
     const std::vector<std::vector<double>> *d_fractionalOccupancies;
 
-    std::vector<double> d_densityValsTotalAllQuads;
-    std::vector<double> d_densityValsSpinUpAllQuads;
-    std::vector<double> d_densityValsSpinDownAllQuads;
-    std::vector<double> d_magAxisAllQuads;
-    std::vector<double> d_gradDensityValsSpinUpAllQuads;
-    std::vector<double> d_gradDensityValsSpinDownAllQuads;
-    std::vector<double> d_quadPointsAll;
-    std::vector<double> d_quadWeightsAll;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_densityValsTotalAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_densityValsSpinUpAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_densityValsSpinDownAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_magAxisAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_gradDensityValsSpinUpAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_gradDensityValsSpinDownAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_tauValsTotalAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_tauValsSpinUpAllQuads;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_tauValsSpinDownAllQuads;
+
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_quadPointsAll;
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+      d_quadWeightsAll;
   };
 } // namespace dftfe
 

@@ -26,26 +26,35 @@ namespace dftfe
   class excDensityGGAClass : public ExcSSDFunctionalBaseClass<memorySpace>
   {
   public:
-    excDensityGGAClass(std::shared_ptr<xc_func_type> funcXPtr,
-                       std::shared_ptr<xc_func_type> funcCPtr);
+    excDensityGGAClass(std::shared_ptr<xc_func_type> &funcXPtr,
+                       std::shared_ptr<xc_func_type> &funcCPtr,
+                       const bool                     useLibXC,
+                       std::string                    XCType);
 
 
-    excDensityGGAClass(std::shared_ptr<xc_func_type> funcXPtr,
-                       std::shared_ptr<xc_func_type> funcCPtr,
-                       std::string                   modelXCInputFile);
+    excDensityGGAClass(std::shared_ptr<xc_func_type> &funcXPtr,
+                       std::shared_ptr<xc_func_type> &funcCPtr,
+                       std::string                    modelXCInputFile,
+                       const bool                     useLibXC,
+                       std::string                    XCType);
 
 
     ~excDensityGGAClass();
 
+
+
     void
     computeRhoTauDependentXCData(
-      AuxDensityMatrix<memorySpace> &auxDensityMatrix,
-      const std::vector<double> &    quadPoints,
-      std::unordered_map<xcRemainderOutputDataAttributes, std::vector<double>>
+      AuxDensityMatrix<memorySpace>             &auxDensityMatrix,
+      const std::pair<dftfe::uInt, dftfe::uInt> &quadIndexRange,
+      std::unordered_map<
+        xcRemainderOutputDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &xDataOut,
-      std::unordered_map<xcRemainderOutputDataAttributes, std::vector<double>>
+      std::unordered_map<
+        xcRemainderOutputDataAttributes,
+        dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &cDataout) const override;
-
     void
     checkInputOutputDataAttributesConsistency(
       const std::vector<xcRemainderOutputDataAttributes> &outputDataAttributes)
@@ -54,11 +63,11 @@ namespace dftfe
     void
     applyWaveFunctionDependentFuncDerWrtPsi(
       const dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace>
-        &                                                                src,
+                                                                        &src,
       dftfe::linearAlgebra::MultiVector<dataTypes::number, memorySpace> &dst,
-      const unsigned int inputVecSize,
-      const unsigned int kPointIndex,
-      const unsigned int spinIndex) override;
+      const dftfe::uInt inputVecSize,
+      const dftfe::uInt kPointIndex,
+      const dftfe::uInt spinIndex) override;
 
     /*
      * @brief The apply function that will be called in HXCheby() with single precision.
@@ -75,10 +84,10 @@ namespace dftfe
       const dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32,
                                               memorySpace> &src,
       dftfe::linearAlgebra::MultiVector<dataTypes::numberFP32, memorySpace>
-        &                dst,
-      const unsigned int inputVecSize,
-      const unsigned int kPointIndex,
-      const unsigned int spinIndex) override;
+                       &dst,
+      const dftfe::uInt inputVecSize,
+      const dftfe::uInt kPointIndex,
+      const dftfe::uInt spinIndex) override;
 
     void
     updateWaveFunctionDependentFuncDerWrtPsi(
@@ -96,14 +105,16 @@ namespace dftfe
     getExpectationOfWaveFunctionDependentExcFuncDerWrtPsi() override;
 
     void
-    reinitKPointDependentVariables(unsigned int kPointIndex) override;
+    reinitKPointDependentVariables(dftfe::uInt kPointIndex) override;
 
   private:
-    NNGGA *                       d_NNGGAPtr;
+    NNGGA                        *d_NNGGAPtr;
     std::shared_ptr<xc_func_type> d_funcXPtr;
     std::shared_ptr<xc_func_type> d_funcCPtr;
     std::vector<double>           d_spacingFDStencil;
-    unsigned int                  d_vxcDivergenceTermFDStencilSize;
+    dftfe::uInt                   d_vxcDivergenceTermFDStencilSize;
+    bool        d_useLibXC; ///< Flag to indicate whether to use libxc or not
+    std::string d_XCType;
   };
 } // namespace dftfe
 #endif // DFTFE_EXCDENSITYGGACLASS_H

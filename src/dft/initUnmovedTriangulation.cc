@@ -31,7 +31,6 @@
 #endif
 #include <AtomicBasis.h>
 #include <AuxDensityMatrixFE.h>
-#include <AuxDensityMatrixAtomicBasis.h>
 #include <PeriodicTable.h>
 
 
@@ -47,7 +46,7 @@ namespace dftfe
       if (file.is_open())
         {
           std::string line;
-          int         lineNumber = 0;
+          dftfe::Int  lineNumber = 0;
           while (std::getline(file, line))
             {
               lineNumber++;
@@ -84,10 +83,9 @@ namespace dftfe
   } // namespace
 
 
-  template <unsigned int              FEOrder,
-            unsigned int              FEOrderElectro,
-            dftfe::utils::MemorySpace memorySpace>
-  void dftClass<FEOrder, FEOrderElectro, memorySpace>::initUnmovedTriangulation(
+  template <dftfe::utils::MemorySpace memorySpace>
+  void
+  dftClass<memorySpace>::initUnmovedTriangulation(
     dealii::parallel::distributed::Triangulation<3> &triangulation)
   {
     computing_timer.enter_subsection("unmoved setup");
@@ -126,19 +124,19 @@ namespace dftfe
     // extract locally owned dofs
     //
     locally_owned_dofs = dofHandler.locally_owned_dofs();
-    dealii::DoFTools::extract_locally_relevant_dofs(dofHandler,
-                                                    locally_relevant_dofs);
-    dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
-                                                 dofHandler,
-                                                 d_supportPoints);
+    locally_relevant_dofs =
+      dealii::DoFTools::extract_locally_relevant_dofs(dofHandler);
+    d_supportPoints =
+      dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
+                                                   dofHandler);
 
 
     locally_owned_dofsEigen = dofHandlerEigen.locally_owned_dofs();
-    dealii::DoFTools::extract_locally_relevant_dofs(dofHandlerEigen,
-                                                    locally_relevant_dofsEigen);
-    dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
-                                                 dofHandlerEigen,
-                                                 d_supportPointsEigen);
+    locally_relevant_dofsEigen =
+      dealii::DoFTools::extract_locally_relevant_dofs(dofHandlerEigen);
+    d_supportPointsEigen =
+      dealii::DoFTools::map_dofs_to_support_points(dealii::MappingQ1<3, 3>(),
+                                                   dofHandlerEigen);
 
 
     //
@@ -158,7 +156,7 @@ namespace dftfe
     localProc_dof_indicesReal.clear();
     local_dof_indicesImag.clear();
     localProc_dof_indicesImag.clear();
-    for (unsigned int i = 0; i < locally_owned_dofsEigen.n_elements(); i++)
+    for (dftfe::uInt i = 0; i < locally_owned_dofsEigen.n_elements(); i++)
       {
         if (selectedDofsReal.is_element(
               locally_owned_dofsEigen.nth_index_in_set(i)))
@@ -189,54 +187,37 @@ namespace dftfe
     //
     constraintsNone.clear();
     constraintsNoneEigen.clear();
-    constraintsNone.reinit(locally_relevant_dofs);
-    constraintsNoneEigen.reinit(locally_relevant_dofsEigen);
+    constraintsNone.reinit(locally_owned_dofs, locally_relevant_dofs);
+    constraintsNoneEigen.reinit(locally_owned_dofsEigen,
+                                locally_relevant_dofsEigen);
     dealii::DoFTools::make_hanging_node_constraints(dofHandler,
                                                     constraintsNone);
     dealii::DoFTools::make_hanging_node_constraints(dofHandlerEigen,
                                                     constraintsNoneEigen);
 
-    // create unitVectorsXYZ
-    std::vector<std::vector<double>> unitVectorsXYZ;
-    unitVectorsXYZ.resize(3);
-
-    for (int i = 0; i < 3; ++i)
-      {
-        unitVectorsXYZ[i].resize(3, 0.0);
-        unitVectorsXYZ[i][i] = 0.0;
-      }
-
     std::vector<dealii::Tensor<1, 3>> offsetVectors;
     // resize offset vectors
     offsetVectors.resize(3);
 
-    for (int i = 0; i < 3; ++i)
-      {
-        for (int j = 0; j < 3; ++j)
-          {
-            offsetVectors[i][j] =
-              unitVectorsXYZ[i][j] - d_domainBoundingVectors[i][j];
-          }
-      }
+    for (dftfe::Int i = 0; i < 3; ++i)
+      for (dftfe::Int j = 0; j < 3; ++j)
+        offsetVectors[i][j] = -d_domainBoundingVectors[i][j];
 
     std::vector<dealii::GridTools::PeriodicFacePair<
       typename dealii::DoFHandler<3>::cell_iterator>>
       periodicity_vector2, periodicity_vector2Eigen;
 
-    std::vector<int>         periodicDirectionVector;
-    const std::array<int, 3> periodic = {d_dftParamsPtr->periodicX,
-                                         d_dftParamsPtr->periodicY,
-                                         d_dftParamsPtr->periodicZ};
-    for (unsigned int d = 0; d < 3; ++d)
-      {
-        if (periodic[d] == 1)
-          {
-            periodicDirectionVector.push_back(d);
-          }
-      }
+    std::vector<dftfe::Int>         periodicDirectionVector;
+    const std::array<dftfe::Int, 3> periodic = {d_dftParamsPtr->periodicX,
+                                                d_dftParamsPtr->periodicY,
+                                                d_dftParamsPtr->periodicZ};
+    for (dftfe::uInt d = 0; d < 3; ++d)
+      if (periodic[d] == 1)
+        periodicDirectionVector.push_back(d);
 
 
-    for (int i = 0; i < std::accumulate(periodic.begin(), periodic.end(), 0);
+    for (dftfe::Int i = 0;
+         i < std::accumulate(periodic.begin(), periodic.end(), 0);
          ++i)
       {
         dealii::GridTools::collect_periodic_faces(
@@ -260,24 +241,27 @@ namespace dftfe
     dealii::DoFTools::make_periodicity_constraints<3, 3>(
       periodicity_vector2Eigen, constraintsNoneEigen);
 
-
-
-    constraintsNone.close();
-    constraintsNoneEigen.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      dofHandler, constraintsNone);
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      dofHandlerEigen, constraintsNoneEigen);
 
     //
     // create a constraint matrix without only hanging node constraints
     //
     d_noConstraints.clear();
     dealii::AffineConstraints<double> noConstraintsEigen;
-    d_noConstraints.reinit(locally_relevant_dofs);
-    noConstraintsEigen.reinit(locally_relevant_dofsEigen);
+    d_noConstraints.reinit(locally_owned_dofs, locally_relevant_dofs);
+    noConstraintsEigen.reinit(locally_owned_dofsEigen,
+                              locally_relevant_dofsEigen);
     dealii::DoFTools::make_hanging_node_constraints(dofHandler,
                                                     d_noConstraints);
     dealii::DoFTools::make_hanging_node_constraints(dofHandlerEigen,
                                                     noConstraintsEigen);
-    d_noConstraints.close();
-    noConstraintsEigen.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      dofHandler, d_noConstraints);
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(
+      dofHandlerEigen, noConstraintsEigen);
 
     if (d_dftParamsPtr->createConstraintsFromSerialDofhandler)
       {
@@ -321,14 +305,14 @@ namespace dftfe
           d_dftParamsPtr->periodicY,
           d_dftParamsPtr->periodicZ);
         constraintsNoneEigen.clear();
-        constraintsNoneEigen.reinit(locally_relevant_dofs);
+        constraintsNoneEigen.reinit(locally_owned_dofs, locally_relevant_dofs);
         constraintsNoneEigen.merge(constraintsNone,
                                    dealii::AffineConstraints<double>::
                                      MergeConflictBehavior::right_object_wins);
         constraintsNoneEigen.close();
 
         noConstraintsEigen.clear();
-        noConstraintsEigen.reinit(locally_relevant_dofs);
+        noConstraintsEigen.reinit(locally_owned_dofs, locally_relevant_dofs);
         noConstraintsEigen.merge(d_noConstraints,
                                  dealii::AffineConstraints<double>::
                                    MergeConflictBehavior::right_object_wins);
@@ -345,22 +329,13 @@ namespace dftfe
       dftUtils::printCurrentMemoryUsage(
         intrapoolcomm, "Created the basic constraint matrices");
 
-    forcePtr->initUnmoved(triangulation,
-                          d_mesh.getSerialMeshUnmoved(),
-                          d_domainBoundingVectors,
-                          false);
-    forcePtr->initUnmoved(triangulation,
-                          d_mesh.getSerialMeshUnmoved(),
-                          d_domainBoundingVectors,
-                          true);
-
-    if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "Force initUnmoved");
-
-
     d_excManagerPtr->init(d_dftParamsPtr->XCType,
                           true,
-                          d_dftParamsPtr->modelXCInputFile);
+                          d_dftParamsPtr->modelXCInputFile,
+                          dealii::Utilities::MPI::this_mpi_process(
+                            d_mpiCommParent) == 0 &&
+                            d_dftParamsPtr->verbosity >= 1,
+                          d_dftParamsPtr->useLibXCForXCEvaluation);
 
     if (d_dftParamsPtr->auxBasisTypeXC == "FE")
       {
@@ -371,60 +346,6 @@ namespace dftfe
       }
     else if (d_dftParamsPtr->auxBasisTypeXC == "SLATER")
       {
-        std::vector<std::pair<std::string, std::vector<double>>> atomCoords;
-        dftfe::pseudoUtils::PeriodicTable                        pTable;
-
-        for (const auto &atom : atomLocations)
-          {
-            int         atomicNumber = static_cast<int>(atom[0]);
-            std::string atomicSymbol = pTable.symbol(atomicNumber);
-
-            // Assuming atom[2], atom[3], atom[4] are x, y, z coordinates
-            std::vector<double> coords = {atom[2], atom[3], atom[4]};
-
-            atomCoords.emplace_back(atomicSymbol, coords);
-          }
-
-        const auto atomToAtomicBasisFileName =
-          readAtomToAtomicBasisFileName(d_dftParamsPtr->auxBasisDataXC);
-
-        d_auxDensityMatrixXCInPtr =
-          std::make_shared<AuxDensityMatrixAtomicBasis<memorySpace>>();
-        auto derivedInPtr =
-          std::dynamic_pointer_cast<AuxDensityMatrixAtomicBasis<memorySpace>>(
-            d_auxDensityMatrixXCInPtr);
-        if (derivedInPtr)
-          {
-            derivedInPtr->reinit(AtomicBasis::BasisType::SLATER,
-                                 atomCoords,
-                                 atomToAtomicBasisFileName,
-                                 2,
-                                 1);
-          }
-        else
-          {
-            throw std::runtime_error(
-              "Error: Failed to cast to AuxDensityMatrixAtomicBasis.");
-          }
-
-        d_auxDensityMatrixXCOutPtr =
-          std::make_shared<AuxDensityMatrixAtomicBasis<memorySpace>>();
-        auto derivedOutPtr =
-          std::dynamic_pointer_cast<AuxDensityMatrixAtomicBasis<memorySpace>>(
-            d_auxDensityMatrixXCOutPtr);
-        if (derivedOutPtr)
-          {
-            derivedOutPtr->reinit(AtomicBasis::BasisType::SLATER,
-                                  atomCoords,
-                                  atomToAtomicBasisFileName,
-                                  2,
-                                  1);
-          }
-        else
-          {
-            throw std::runtime_error(
-              "Error: Failed to cast to AuxDensityMatrixAtomicBasis.");
-          }
       }
 
     computing_timer.leave_subsection("unmoved setup");

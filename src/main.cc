@@ -26,6 +26,7 @@
 #include "molecularDynamicsClass.h"
 #include "nudgedElasticBandClass.h"
 #include "geometryOptimizationClass.h"
+#include <git_info.h>
 
 #include <dftUtils.h>
 
@@ -51,8 +52,8 @@ main(int argc, char *argv[])
   MPI_Init(&argc, &argv);
 
 #if defined(DFTFE_WITH_MDI)
-  MPI_Comm mpi_world_comm;
-  int      ret;
+  MPI_Comm   mpi_world_comm;
+  dftfe::Int ret;
   // Initialize MDI
   ret = MDI_Init(&argc, &argv);
   if (ret != 0)
@@ -62,7 +63,7 @@ main(int argc, char *argv[])
     }
 
   // Confirm that MDI was initialized successfully
-  int initialized_mdi;
+  dftfe::Int initialized_mdi;
   ret = MDI_Initialized(&initialized_mdi);
   if (ret != 0)
     {
@@ -160,6 +161,44 @@ main(int argc, char *argv[])
       std::cout
         << "=========================================================================================================="
         << std::endl;
+      std::cout << " DFT-FE branch: " << GIT_BRANCH
+                << ", commit: " << GIT_COMMIT << std::endl;
+      std::cout << " compiled ";
+#  ifdef DFTFE_WITH_DEVICE
+      std::cout << "with GPU support, ";
+#    ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+      std::cout << "using CUDA, ";
+#    elif DFTFE_WITH_DEVICE_LANG_HIP
+      std::cout << "using HIP, ";
+#    endif
+#    if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+      std::cout << "with device-aware MPI support, ";
+#    endif
+#    if defined(DFTFE_WITH_CUDA_NCCL)
+      std::cout << "with NCCL support, ";
+#    endif
+#    if defined(DFTFE_WITH_HIP_RCCL)
+      std::cout << "with RCCL support, ";
+#    endif
+#  else
+      std::cout << "without GPU support, ";
+#  endif
+#  ifdef _OPENMP
+      std::cout << "with OpenMP support, ";
+#  endif
+#  ifdef DFTFE_WITH_64BIT_INT
+      std::cout << "with 64 bit integers, ";
+#  else
+      std::cout << "with 32 bit integers, ";
+#  endif
+#  ifdef DFTFE_WITH_HIGHERQUAD_PSP
+      std::cout << "and with HIGHERQUAD_PSP" << std::endl;
+#  else
+      std::cout << "and without HIGHERQUAD_PSP" << std::endl;
+#  endif
+      std::cout
+        << "=========================================================================================================="
+        << std::endl;
 
       runParams.print_parameters();
     }
@@ -174,7 +213,7 @@ main(int argc, char *argv[])
                                             runParams.verbosity,
                                             runParams.useDevice);
 
-      int status = mdClass.runMD();
+      dftfe::Int status = mdClass.runMD();
     }
 
   else if (runParams.solvermode == "NEB")
@@ -201,7 +240,7 @@ main(int argc, char *argv[])
         runParams.domainVectorsFileNEB,
         runParams.ionRelaxFlagsFile);
 
-      int status = nebClass.findMEP();
+      dftfe::Int status = nebClass.findMEP();
     }
   else if (runParams.solvermode == "GEOOPT")
     {
@@ -232,6 +271,18 @@ main(int argc, char *argv[])
                                        true,
                                        true,
                                        "NSCF",
+                                       runParams.restartFilesPath,
+                                       runParams.verbosity,
+                                       runParams.useDevice);
+      dftfeWrapped.run();
+    }
+  else if (runParams.solvermode == "BANDS")
+    {
+      dftfe::dftfeWrapper dftfeWrapped(parameter_file,
+                                       MPI_COMM_WORLD,
+                                       true,
+                                       true,
+                                       "BANDS",
                                        runParams.restartFilesPath,
                                        runParams.verbosity,
                                        runParams.useDevice);

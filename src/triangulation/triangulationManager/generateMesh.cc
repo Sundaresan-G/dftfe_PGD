@@ -27,14 +27,14 @@ namespace dftfe
     void
     checkTriangulationEqualityAcrossProcessorPools(
       const dealii::parallel::distributed::Triangulation<3>
-        &                parallelTriangulation,
-      const unsigned int numLocallyOwnedCells,
-      const MPI_Comm &   interpool_comm)
+                       &parallelTriangulation,
+      const dftfe::uInt numLocallyOwnedCells,
+      const MPI_Comm   &interpool_comm)
     {
-      const unsigned int numberGlobalCellsParallelMinPools =
+      const dftfe::uInt numberGlobalCellsParallelMinPools =
         dealii::Utilities::MPI::min(
           parallelTriangulation.n_global_active_cells(), interpool_comm);
-      const unsigned int numberGlobalCellsParallelMaxPools =
+      const dftfe::uInt numberGlobalCellsParallelMaxPools =
         dealii::Utilities::MPI::max(
           parallelTriangulation.n_global_active_cells(), interpool_comm);
       AssertThrow(numberGlobalCellsParallelMinPools ==
@@ -42,9 +42,9 @@ namespace dftfe
                   dealii::ExcMessage(
                     "Number of global cells are different across pools."));
 
-      const unsigned int numberLocalCellsMinPools =
+      const dftfe::uInt numberLocalCellsMinPools =
         dealii::Utilities::MPI::min(numLocallyOwnedCells, interpool_comm);
-      const unsigned int numberLocalCellsMaxPools =
+      const dftfe::uInt numberLocalCellsMaxPools =
         dealii::Utilities::MPI::max(numLocallyOwnedCells, interpool_comm);
       AssertThrow(
         numberLocalCellsMinPools == numberLocalCellsMaxPools,
@@ -55,20 +55,20 @@ namespace dftfe
 
     void
     computeMeshMetrics(const dealii::parallel::distributed::Triangulation<3>
-                         &                               parallelTriangulation,
-                       const std::string &               printCommand,
+                                                        &parallelTriangulation,
+                       const std::string                &printCommand,
                        const dealii::ConditionalOStream &pcout,
-                       const MPI_Comm &                  mpi_comm,
-                       const MPI_Comm &                  interpool_comm1,
-                       const MPI_Comm &                  interpool_comm2,
-                       const dftParameters &             dftParams)
+                       const MPI_Comm                   &mpi_comm,
+                       const MPI_Comm                   &interpool_comm1,
+                       const MPI_Comm                   &interpool_comm2,
+                       const dftParameters              &dftParams)
 
     {
       //
       // compute some adaptive mesh metrics
       //
-      double       minElemLength        = dftParams.meshSizeOuterDomain;
-      unsigned int numLocallyOwnedCells = 0;
+      double      minElemLength        = dftParams.meshSizeOuterDomain;
+      dftfe::uInt numLocallyOwnedCells = 0;
       typename dealii::parallel::distributed::Triangulation<
         3>::active_cell_iterator cell,
         endc;
@@ -107,10 +107,10 @@ namespace dftfe
 
     void
     computeLocalFiniteElementError(
-      const dealii::DoFHandler<3> &                         dofHandler,
+      const dealii::DoFHandler<3>                          &dofHandler,
       const std::vector<const distributedCPUVec<double> *> &eigenVectorsArray,
-      std::vector<double> &                                 errorInEachCell,
-      const unsigned int                                    FEOrder)
+      std::vector<double>                                  &errorInEachCell,
+      const dftfe::uInt                                     FEOrder)
     {
       typename dealii::DoFHandler<3>::active_cell_iterator cell, endc;
       cell = dofHandler.begin_active();
@@ -127,7 +127,7 @@ namespace dftfe
                                     dealii::update_values |
                                       dealii::update_JxW_values |
                                       dealii::update_3rd_derivatives);
-      const unsigned int  num_quad_points = quadrature.size();
+      const dftfe::uInt   num_quad_points = quadrature.size();
 
       std::vector<dealii::Tensor<3, 3, double>> thirdDerivatives(
         num_quad_points);
@@ -145,20 +145,20 @@ namespace dftfe
               // Estimate the error for the current mesh
               //
               double derPsiSquare = 0.0;
-              for (unsigned int iwave = 0; iwave < eigenVectorsArray.size();
+              for (dftfe::uInt iwave = 0; iwave < eigenVectorsArray.size();
                    ++iwave)
                 {
                   fe_values.get_function_third_derivatives(
                     *eigenVectorsArray[iwave], thirdDerivatives);
-                  for (unsigned int q_point = 0; q_point < num_quad_points;
+                  for (dftfe::uInt q_point = 0; q_point < num_quad_points;
                        ++q_point)
                     {
                       double sum = 0.0;
-                      for (unsigned int i = 0; i < 3; ++i)
+                      for (dftfe::uInt i = 0; i < 3; ++i)
                         {
-                          for (unsigned int j = 0; j < 3; ++j)
+                          for (dftfe::uInt j = 0; j < 3; ++j)
                             {
-                              for (unsigned int k = 0; k < 3; ++k)
+                              for (dftfe::uInt k = 0; k < 3; ++k)
                                 {
                                   sum += std::abs(
                                            thirdDerivatives[q_point][i][j][k]) *
@@ -185,7 +185,8 @@ namespace dftfe
 
   } // namespace internal
 
-  void triangulationManager::generateCoarseMesh(
+  void
+  triangulationManager::generateCoarseMesh(
     dealii::parallel::distributed::Triangulation<3> &parallelTriangulation)
   {
     //
@@ -216,7 +217,7 @@ namespace dftfe
     if (d_dftParams.meshSizesFile != "")
       {
         largestMeshSizeAroundAtom = 1e-6;
-        for (unsigned int n = 0; n < d_atomPositions.size(); n++)
+        for (dftfe::uInt n = 0; n < d_atomPositions.size(); n++)
           {
             if (d_meshSizes[n][0] > largestMeshSizeAroundAtom)
               largestMeshSizeAroundAtom = d_meshSizes[n][0];
@@ -309,7 +310,7 @@ namespace dftfe
     dealii::Point<3> basisVectors[3] = {vector1, vector2, vector3};
 
 
-    for (unsigned int i = 0; i < 3; i++)
+    for (dftfe::uInt i = 0; i < 3; i++)
       {
         const double temp = numberIntervalsEachDirection[i] -
                             std::floor(numberIntervalsEachDirection[i]);
@@ -345,12 +346,13 @@ namespace dftfe
             << parallelTriangulation.n_global_active_cells() << std::endl;
   }
 
-  bool triangulationManager::refinementAlgorithmA(
+  bool
+  triangulationManager::refinementAlgorithmA(
     dealii::parallel::distributed::Triangulation<3> &parallelTriangulation,
-    std::vector<unsigned int> &             locallyOwnedCellsRefineFlags,
-    std::map<dealii::CellId, unsigned int> &cellIdToCellRefineFlagMapLocal,
-    const bool                              smoothenCellsOnPeriodicBoundary,
-    const double                            smootheningFactor)
+    std::vector<dftfe::uInt>              &locallyOwnedCellsRefineFlags,
+    std::map<dealii::CellId, dftfe::uInt> &cellIdToCellRefineFlagMapLocal,
+    const bool                             smoothenCellsOnPeriodicBoundary,
+    const double                           smootheningFactor)
   {
     //
     // compute magnitudes of domainBounding Vectors
@@ -376,8 +378,8 @@ namespace dftfe
     cell = parallelTriangulation.begin_active();
     endc = parallelTriangulation.end();
 
-    std::map<dealii::CellId, unsigned int> cellIdToLocallyOwnedId;
-    unsigned int                           locallyOwnedCount = 0;
+    std::map<dealii::CellId, dftfe::uInt> cellIdToLocallyOwnedId;
+    dftfe::uInt                           locallyOwnedCount = 0;
 
     bool   isAnyCellRefined           = false;
     double smallestMeshSizeAroundAtom = d_dftParams.meshSizeOuterBall;
@@ -385,18 +387,18 @@ namespace dftfe
     if (d_dftParams.meshSizesFile != "")
       {
         smallestMeshSizeAroundAtom = 1e+6;
-        for (unsigned int n = 0; n < d_meshSizes.size(); n++)
+        for (dftfe::uInt n = 0; n < d_meshSizes.size(); n++)
           {
             if (d_meshSizes[n][0] < smallestMeshSizeAroundAtom)
               smallestMeshSizeAroundAtom = d_meshSizes[n][0];
           }
       }
 
-    std::vector<double>       atomPointsLocal;
-    std::vector<unsigned int> atomIdsLocal;
-    std::vector<double>       meshSizeAroundAtomLocalAtoms;
-    std::vector<double>       outerAtomBallRadiusLocalAtoms;
-    for (unsigned int iAtom = 0;
+    std::vector<double>      atomPointsLocal;
+    std::vector<dftfe::uInt> atomIdsLocal;
+    std::vector<double>      meshSizeAroundAtomLocalAtoms;
+    std::vector<double>      outerAtomBallRadiusLocalAtoms;
+    for (dftfe::uInt iAtom = 0;
          iAtom < (d_atomPositions.size() + d_imageAtomPositions.size());
          iAtom++)
       {
@@ -417,11 +419,11 @@ namespace dftfe
           }
         else
           {
-            const unsigned int iImageCharge = iAtom - d_atomPositions.size();
+            const dftfe::uInt iImageCharge = iAtom - d_atomPositions.size();
             atomPointsLocal.push_back(d_imageAtomPositions[iImageCharge][0]);
             atomPointsLocal.push_back(d_imageAtomPositions[iImageCharge][1]);
             atomPointsLocal.push_back(d_imageAtomPositions[iImageCharge][2]);
-            const unsigned int imageChargeId = d_imageIds[iImageCharge];
+            const dftfe::uInt imageChargeId = d_imageIds[iImageCharge];
             atomIdsLocal.push_back(imageChargeId);
 
             meshSizeAroundAtomLocalAtoms.push_back(
@@ -474,8 +476,8 @@ namespace dftfe
             // loop over all atoms
             double           distanceToClosestAtom = 1e8;
             dealii::Point<3> closestAtom;
-            unsigned int     closestId = 0;
-            for (unsigned int n = 0; n < atomPointsLocal.size() / 3; n++)
+            dftfe::uInt      closestId = 0;
+            for (dftfe::uInt n = 0; n < atomPointsLocal.size() / 3; n++)
               {
                 dealii::Point<3> atom(atomPointsLocal[3 * n],
                                       atomPointsLocal[3 * n + 1],
@@ -564,10 +566,10 @@ namespace dftfe
               {}
 
             cellRefineFlag =
-              dealii::Utilities::MPI::max((unsigned int)cellRefineFlag,
+              dealii::Utilities::MPI::max((dftfe::uInt)cellRefineFlag,
                                           interpoolcomm);
             cellRefineFlag =
-              dealii::Utilities::MPI::max((unsigned int)cellRefineFlag,
+              dealii::Utilities::MPI::max((dftfe::uInt)cellRefineFlag,
                                           interBandGroupComm);
 
             //
@@ -598,7 +600,7 @@ namespace dftfe
         cell              = parallelTriangulation.begin_active();
         endc              = parallelTriangulation.end();
 
-        const unsigned int faces_per_cell =
+        const dftfe::uInt faces_per_cell =
           dealii::GeometryInfo<3>::faces_per_cell;
 
         for (; cell != endc; ++cell)
@@ -610,7 +612,7 @@ namespace dftfe
                       (d_dftParams.autoAdaptBaseMeshSize ? 1.5 : 1) *
                         smootheningFactor * smallestMeshSizeAroundAtom &&
                     !cell->refine_flag_set())
-                  for (unsigned int iFace = 0; iFace < faces_per_cell; ++iFace)
+                  for (dftfe::uInt iFace = 0; iFace < faces_per_cell; ++iFace)
                     if (cell->has_periodic_neighbor(iFace))
                       {
                         cell->set_refine_flag();
@@ -632,10 +634,11 @@ namespace dftfe
   // internal function which sets refinement flags to have consistent refinement
   // across periodic boundary
   //
-  bool triangulationManager::consistentPeriodicBoundaryRefinement(
+  bool
+  triangulationManager::consistentPeriodicBoundaryRefinement(
     dealii::parallel::distributed::Triangulation<3> &parallelTriangulation,
-    std::vector<unsigned int> &             locallyOwnedCellsRefineFlags,
-    std::map<dealii::CellId, unsigned int> &cellIdToCellRefineFlagMapLocal)
+    std::vector<dftfe::uInt>              &locallyOwnedCellsRefineFlags,
+    std::map<dealii::CellId, dftfe::uInt> &cellIdToCellRefineFlagMapLocal)
   {
     locallyOwnedCellsRefineFlags.clear();
     cellIdToCellRefineFlagMapLocal.clear();
@@ -648,8 +651,8 @@ namespace dftfe
     //
     // populate maps refinement flag maps to zero values
     //
-    std::map<dealii::CellId, unsigned int> cellIdToLocallyOwnedId;
-    unsigned int                           locallyOwnedCount = 0;
+    std::map<dealii::CellId, dftfe::uInt> cellIdToLocallyOwnedId;
+    dftfe::uInt                           locallyOwnedCount = 0;
     for (; cell != endc; ++cell)
       if (cell->is_locally_owned())
         {
@@ -668,13 +671,13 @@ namespace dftfe
     // boundary-> query if cell has a periodic neighbour which is coarser -> if
     // yes and the coarse cell is locally owned set refinement flag on that cell
     //
-    const unsigned int faces_per_cell = dealii::GeometryInfo<3>::faces_per_cell;
-    bool               isAnyCellRefined = false;
+    const dftfe::uInt faces_per_cell = dealii::GeometryInfo<3>::faces_per_cell;
+    bool              isAnyCellRefined = false;
     for (; cell != endc; ++cell)
       {
         if ((cell->is_locally_owned() || cell->is_ghost()) &&
             cell->at_boundary())
-          for (unsigned int iFace = 0; iFace < faces_per_cell; ++iFace)
+          for (dftfe::uInt iFace = 0; iFace < faces_per_cell; ++iFace)
             if (cell->has_periodic_neighbor(iFace))
               if (cell->periodic_neighbor_is_coarser(iFace))
                 {
@@ -699,7 +702,8 @@ namespace dftfe
   //
   // check that triangulation has consistent refinement across periodic boundary
   //
-  bool triangulationManager::checkPeriodicSurfaceRefinementConsistency(
+  bool
+  triangulationManager::checkPeriodicSurfaceRefinementConsistency(
     dealii::parallel::distributed::Triangulation<3> &parallelTriangulation)
   {
     typename dealii::parallel::distributed::Triangulation<
@@ -708,12 +712,12 @@ namespace dftfe
     cell = parallelTriangulation.begin_active();
     endc = parallelTriangulation.end();
 
-    const unsigned int faces_per_cell = dealii::GeometryInfo<3>::faces_per_cell;
+    const dftfe::uInt faces_per_cell = dealii::GeometryInfo<3>::faces_per_cell;
 
-    unsigned int notConsistent = 0;
+    dftfe::uInt notConsistent = 0;
     for (; cell != endc; ++cell)
       if ((cell->is_locally_owned() || cell->is_ghost()) && cell->at_boundary())
-        for (unsigned int iFace = 0; iFace < faces_per_cell; ++iFace)
+        for (dftfe::uInt iFace = 0; iFace < faces_per_cell; ++iFace)
           if (cell->has_periodic_neighbor(iFace))
             {
               typename dealii::parallel::distributed::Triangulation<
@@ -734,7 +738,8 @@ namespace dftfe
   // check that FEOrder=1 dofHandler using the triangulation has parallel
   // consistent combined hanging node and periodic constraints
   //
-  bool triangulationManager::checkConstraintsConsistency(
+  bool
+  triangulationManager::checkConstraintsConsistency(
     dealii::parallel::distributed::Triangulation<3> &parallelTriangulation)
   {
     dealii::FESystem<3> FE(
@@ -744,47 +749,36 @@ namespace dftfe
     dealii::DoFHandler<3> dofHandler;
     dofHandler.reinit(parallelTriangulation);
     dofHandler.distribute_dofs(FE);
-    dealii::IndexSet locally_relevant_dofs;
-    dealii::DoFTools::extract_locally_relevant_dofs(dofHandler,
-                                                    locally_relevant_dofs);
+    dealii::IndexSet locally_relevant_dofs =
+      dealii::DoFTools::extract_locally_relevant_dofs(dofHandler);
+    dealii::IndexSet locally_owned_dofs = dofHandler.locally_owned_dofs();
 
     dealii::AffineConstraints<double> constraints;
     constraints.clear();
-    constraints.reinit(locally_relevant_dofs);
+    constraints.reinit(locally_owned_dofs, locally_relevant_dofs);
     dealii::DoFTools::make_hanging_node_constraints(dofHandler, constraints);
     std::vector<dealii::GridTools::PeriodicFacePair<
       typename dealii::DoFHandler<3>::cell_iterator>>
       periodicity_vector;
 
-    // create unitVectorsXYZ
-    std::vector<std::vector<double>> unitVectorsXYZ;
-    unitVectorsXYZ.resize(3);
-
-    for (int i = 0; i < 3; ++i)
-      {
-        unitVectorsXYZ[i].resize(3, 0.0);
-        unitVectorsXYZ[i][i] = 0.0;
-      }
-
     std::vector<dealii::Tensor<1, 3>> offsetVectors;
     // resize offset vectors
     offsetVectors.resize(3);
 
-    for (int i = 0; i < 3; ++i)
+    for (dftfe::Int i = 0; i < 3; ++i)
       {
-        for (int j = 0; j < 3; ++j)
+        for (dftfe::Int j = 0; j < 3; ++j)
           {
-            offsetVectors[i][j] =
-              unitVectorsXYZ[i][j] - d_domainBoundingVectors[i][j];
+            offsetVectors[i][j] = -d_domainBoundingVectors[i][j];
           }
       }
 
-    const std::array<int, 3> periodic = {d_dftParams.periodicX,
-                                         d_dftParams.periodicY,
-                                         d_dftParams.periodicZ};
+    const std::array<dftfe::Int, 3> periodic = {d_dftParams.periodicX,
+                                                d_dftParams.periodicY,
+                                                d_dftParams.periodicZ};
 
-    std::vector<int> periodicDirectionVector;
-    for (unsigned int d = 0; d < 3; ++d)
+    std::vector<dftfe::Int> periodicDirectionVector;
+    for (dftfe::uInt d = 0; d < 3; ++d)
       {
         if (periodic[d] == 1)
           {
@@ -792,7 +786,8 @@ namespace dftfe
           }
       }
 
-    for (int i = 0; i < std::accumulate(periodic.begin(), periodic.end(), 0);
+    for (dftfe::Int i = 0;
+         i < std::accumulate(periodic.begin(), periodic.end(), 0);
          ++i)
       {
         dealii::GridTools::collect_periodic_faces(
@@ -806,11 +801,11 @@ namespace dftfe
 
     dealii::DoFTools::make_periodicity_constraints<3, 3>(periodicity_vector,
                                                          constraints);
-    constraints.close();
+    dftfe::vectorTools::makeAffineConstraintsConsistentInParallel(dofHandler,
+                                                                  constraints);
 
-    dealii::IndexSet locally_active_dofs_debug;
-    dealii::DoFTools::extract_locally_active_dofs(dofHandler,
-                                                  locally_active_dofs_debug);
+    dealii::IndexSet locally_active_dofs_debug =
+      dealii::DoFTools::extract_locally_active_dofs(dofHandler);
 
     const std::vector<dealii::IndexSet> &locally_owned_dofs_debug =
       dealii::Utilities::MPI::all_gather(mpi_communicator,
@@ -828,10 +823,10 @@ namespace dftfe
   //
   void
   triangulationManager::generateAutomaticMeshApriori(
-    const dealii::DoFHandler<3> &                    dofHandler,
+    const dealii::DoFHandler<3>                     &dofHandler,
     dealii::parallel::distributed::Triangulation<3> &parallelTriangulation,
-    const std::vector<distributedCPUVec<double>> &   eigenVectorsArrayIn,
-    const unsigned int                               FEOrder)
+    const std::vector<distributedCPUVec<double>>    &eigenVectorsArrayIn,
+    const dftfe::uInt                                FEOrder)
   {
     double topfrac    = d_dftParams.topfrac;
     double bottomfrac = 0.0;
@@ -839,10 +834,10 @@ namespace dftfe
     //
     // create an array of pointers holding the eigenVectors on starting mesh
     //
-    unsigned int numberWaveFunctionsEstimate = eigenVectorsArrayIn.size();
+    dftfe::uInt numberWaveFunctionsEstimate = eigenVectorsArrayIn.size();
     std::vector<const distributedCPUVec<double> *> eigenVectorsArrayOfPtrsIn(
       numberWaveFunctionsEstimate);
-    for (int iWave = 0; iWave < numberWaveFunctionsEstimate; ++iWave)
+    for (dftfe::Int iWave = 0; iWave < numberWaveFunctionsEstimate; ++iWave)
       {
         eigenVectorsArrayOfPtrsIn[iWave] = &eigenVectorsArrayIn[iWave];
       }
@@ -863,7 +858,7 @@ namespace dftfe
                                              errorInEachCell,
                                              FEOrder);
 
-    for (unsigned int i = 0; i < errorInEachCell.size(); ++i)
+    for (dftfe::uInt i = 0; i < errorInEachCell.size(); ++i)
       estimated_error_per_cell(i) = errorInEachCell[i];
 
     //
@@ -921,7 +916,8 @@ namespace dftfe
   }
 
 
-  void triangulationManager::generateMesh(
+  void
+  triangulationManager::generateMesh(
     dealii::parallel::distributed::Triangulation<3> &parallelTriangulation,
     dealii::parallel::distributed::Triangulation<3> &serialTriangulation,
     std::vector<std::vector<bool>> &parallelTriaCurrentRefinement,
@@ -956,20 +952,20 @@ namespace dftfe
     // performed until refinementAlgorithmA does not set refinement flags on any
     // cell.
     //
-    unsigned int numLevels  = 0;
-    bool         refineFlag = true;
+    dftfe::uInt numLevels  = 0;
+    bool        refineFlag = true;
     while (refineFlag)
       {
         refineFlag = false;
-        std::vector<unsigned int>              locallyOwnedCellsRefineFlags;
-        std::map<dealii::CellId, unsigned int> cellIdToCellRefineFlagMapLocal;
+        std::vector<dftfe::uInt>              locallyOwnedCellsRefineFlags;
+        std::map<dealii::CellId, dftfe::uInt> cellIdToCellRefineFlagMapLocal;
 
         refineFlag = refinementAlgorithmA(parallelTriangulation,
                                           locallyOwnedCellsRefineFlags,
                                           cellIdToCellRefineFlagMapLocal);
 
         // This sets the global refinement sweep flag
-        refineFlag = dealii::Utilities::MPI::max((unsigned int)refineFlag,
+        refineFlag = dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                  mpi_communicator);
 
         // Refine
@@ -1028,8 +1024,8 @@ namespace dftfe
             while (refineFlag)
               {
                 refineFlag = false;
-                std::vector<unsigned int> locallyOwnedCellsRefineFlags;
-                std::map<dealii::CellId, unsigned int>
+                std::vector<dftfe::uInt> locallyOwnedCellsRefineFlags;
+                std::map<dealii::CellId, dftfe::uInt>
                   cellIdToCellRefineFlagMapLocal;
                 if (numLevels % 2 == 0)
                   {
@@ -1040,7 +1036,7 @@ namespace dftfe
 
                     // This sets the global refinement sweep flag
                     refineFlag =
-                      dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                      dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                   mpi_communicator);
 
                     // try the other type of refinement to prevent while loop
@@ -1057,7 +1053,7 @@ namespace dftfe
 
                         // This sets the global refinement sweep flag
                         refineFlag =
-                          dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                          dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                       mpi_communicator);
                       }
                   }
@@ -1073,7 +1069,7 @@ namespace dftfe
 
                     // This sets the global refinement sweep flag
                     refineFlag =
-                      dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                      dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                   mpi_communicator);
 
                     // try the other type of refinement to prevent while loop
@@ -1087,7 +1083,7 @@ namespace dftfe
 
                         // This sets the global refinement sweep flag
                         refineFlag =
-                          dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                          dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                       mpi_communicator);
                       }
                   }
@@ -1154,8 +1150,8 @@ namespace dftfe
             while (refineFlag)
               {
                 refineFlag = false;
-                std::vector<unsigned int> locallyOwnedCellsRefineFlags;
-                std::map<dealii::CellId, unsigned int>
+                std::vector<dftfe::uInt> locallyOwnedCellsRefineFlags;
+                std::map<dealii::CellId, dftfe::uInt>
                   cellIdToCellRefineFlagMapLocal;
                 if (numLevels % 2 == 0)
                   {
@@ -1168,7 +1164,7 @@ namespace dftfe
 
                     // This sets the global refinement sweep flag
                     refineFlag =
-                      dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                      dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                   mpi_communicator);
 
                     // try the other type of refinement to prevent while loop
@@ -1185,7 +1181,7 @@ namespace dftfe
 
                         // This sets the global refinement sweep flag
                         refineFlag =
-                          dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                          dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                       mpi_communicator);
                       }
                   }
@@ -1201,7 +1197,7 @@ namespace dftfe
 
                     // This sets the global refinement sweep flag
                     refineFlag =
-                      dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                      dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                   mpi_communicator);
 
                     // try the other type of refinement to prevent while loop
@@ -1217,7 +1213,7 @@ namespace dftfe
 
                         // This sets the global refinement sweep flag
                         refineFlag =
-                          dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                          dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                       mpi_communicator);
                       }
                   }
@@ -1286,8 +1282,8 @@ namespace dftfe
             while (refineFlag)
               {
                 refineFlag = false;
-                std::vector<unsigned int> locallyOwnedCellsRefineFlags;
-                std::map<dealii::CellId, unsigned int>
+                std::vector<dftfe::uInt> locallyOwnedCellsRefineFlags;
+                std::map<dealii::CellId, dftfe::uInt>
                   cellIdToCellRefineFlagMapLocal;
                 if (numLevels % 2 == 0)
                   {
@@ -1300,7 +1296,7 @@ namespace dftfe
 
                     // This sets the global refinement sweep flag
                     refineFlag =
-                      dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                      dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                   mpi_communicator);
 
                     // try the other type of refinement to prevent while loop
@@ -1317,7 +1313,7 @@ namespace dftfe
 
                         // This sets the global refinement sweep flag
                         refineFlag =
-                          dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                          dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                       mpi_communicator);
                       }
                   }
@@ -1333,7 +1329,7 @@ namespace dftfe
 
                     // This sets the global refinement sweep flag
                     refineFlag =
-                      dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                      dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                   mpi_communicator);
 
                     // try the other type of refinement to prevent while loop
@@ -1349,7 +1345,7 @@ namespace dftfe
 
                         // This sets the global refinement sweep flag
                         refineFlag =
-                          dealii::Utilities::MPI::max((unsigned int)refineFlag,
+                          dealii::Utilities::MPI::max((dftfe::uInt)refineFlag,
                                                       mpi_communicator);
                       }
                   }
@@ -1429,9 +1425,9 @@ namespace dftfe
     typename dealii::parallel::distributed::Triangulation<
       3>::active_cell_iterator cell,
       endc, cellDisp, cellForce;
-    cell                              = parallelTriangulation.begin_active();
-    endc                              = parallelTriangulation.end();
-    unsigned int numLocallyOwnedCells = 0;
+    cell                             = parallelTriangulation.begin_active();
+    endc                             = parallelTriangulation.end();
+    dftfe::uInt numLocallyOwnedCells = 0;
     for (; cell != endc; ++cell)
       {
         if (cell->is_locally_owned())
@@ -1471,9 +1467,9 @@ namespace dftfe
 
     if (generateSerialTria)
       {
-        const unsigned int numberGlobalCellsParallel =
+        const dftfe::uInt numberGlobalCellsParallel =
           parallelTriangulation.n_global_active_cells();
-        const unsigned int numberGlobalCellsSerial =
+        const dftfe::uInt numberGlobalCellsSerial =
           serialTriangulation.n_global_active_cells();
 
         if (d_dftParams.verbosity >= 4)
@@ -1487,7 +1483,7 @@ namespace dftfe
       }
     else
       {
-        const unsigned int numberGlobalCellsParallel =
+        const dftfe::uInt numberGlobalCellsParallel =
           parallelTriangulation.n_global_active_cells();
 
         if (d_dftParams.verbosity >= 4)
@@ -1500,30 +1496,28 @@ namespace dftfe
   //
   void
   triangulationManager::refineSerialMesh(
-    const std::map<dealii::CellId, unsigned int>
-      &             cellIdToCellRefineFlagMapLocal,
-    const MPI_Comm &mpi_comm,
+    const std::map<dealii::CellId, dftfe::uInt> &cellIdToCellRefineFlagMapLocal,
+    const MPI_Comm                              &mpi_comm,
     dealii::parallel::distributed::Triangulation<3> &serialTriangulation,
     const dealii::parallel::distributed::Triangulation<3>
-      &                parallelTriangulation,
+                      &parallelTriangulation,
     std::vector<bool> &serialTriaCurrentRefinement)
 
   {
-    const unsigned int numberGlobalCellsSerial =
+    const dftfe::uInt numberGlobalCellsSerial =
       serialTriangulation.n_global_active_cells();
-    std::vector<unsigned int> refineFlagsSerialCells(numberGlobalCellsSerial,
-                                                     0);
+    std::vector<dftfe::uInt> refineFlagsSerialCells(numberGlobalCellsSerial, 0);
 
     dealii::BoundingBox<3> boundingBoxParallelTria =
       dealii::GridTools::compute_bounding_box(parallelTriangulation);
 
-    unsigned int count = 0;
+    dftfe::uInt count = 0;
     for (auto cell : serialTriangulation.active_cell_iterators())
       if (cell->is_locally_owned())
         {
           if (boundingBoxParallelTria.point_inside(cell->center()))
             {
-              std::map<dealii::CellId, unsigned int>::const_iterator iter =
+              std::map<dealii::CellId, dftfe::uInt>::const_iterator iter =
                 cellIdToCellRefineFlagMapLocal.find(cell->id());
               if (iter != cellIdToCellRefineFlagMapLocal.end())
                 refineFlagsSerialCells[count] = iter->second;
@@ -1534,7 +1528,7 @@ namespace dftfe
     MPI_Allreduce(MPI_IN_PLACE,
                   &refineFlagsSerialCells[0],
                   numberGlobalCellsSerial,
-                  MPI_UNSIGNED,
+                  dftfe::dataTypes::mpi_type_id(refineFlagsSerialCells.data()),
                   MPI_SUM,
                   mpi_comm);
 
