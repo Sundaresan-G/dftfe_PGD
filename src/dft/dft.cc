@@ -3259,11 +3259,17 @@ namespace dftfe
 
         computing_timer.enter_subsection("phiTot solve");
 
+        const bool usePoissonChebyshev =
+          (d_dftParamsPtr->poissonPreconditionerType == "CHEBYSHEV-JACOBI");
+
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
           {
 #ifdef DFTFE_WITH_DEVICE
+            d_phiTotalSolverProblemDevice.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
             CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
                                  d_dftParamsPtr->absLinearSolverTolerance,
                                  d_dftParamsPtr->maxLinearSolverIterations,
@@ -3272,6 +3278,9 @@ namespace dftfe
           }
         else
           {
+            d_phiTotalSolverProblem.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
             CGSolver.solve(d_phiTotalSolverProblem,
                            d_dftParamsPtr->absLinearSolverTolerance,
                            d_dftParamsPtr->maxLinearSolverIterations,
@@ -3553,6 +3562,9 @@ namespace dftfe
                   tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
               }
 
+            const bool usePoissonChebyshev =
+              (d_dftParamsPtr->poissonPreconditionerType == "CHEBYSHEV-JACOBI");
+
             if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
                 d_dftParamsPtr->floatingNuclearCharges and
                 not d_dftParamsPtr->pinnedNodeForPBC)
@@ -3579,6 +3591,10 @@ namespace dftfe
                   false,
                   true,
                   d_dftParamsPtr->multipoleBoundaryConditions);
+
+                d_phiTotalSolverProblemDevice.setPreconditionerOptions(
+                  usePoissonChebyshev,
+                  d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
                 CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
                                      d_dftParamsPtr->absLinearSolverTolerance,
@@ -3608,6 +3624,10 @@ namespace dftfe
                   false,
                   true,
                   d_dftParamsPtr->multipoleBoundaryConditions);
+
+                d_phiTotalSolverProblem.setPreconditionerOptions(
+                  usePoissonChebyshev,
+                  d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
                 CGSolver.solve(d_phiTotalSolverProblem,
                                d_dftParamsPtr->absLinearSolverTolerance,
@@ -4021,6 +4041,9 @@ namespace dftfe
               tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
           }
 
+        const bool usePoissonChebyshev =
+          (d_dftParamsPtr->poissonPreconditionerType == "CHEBYSHEV-JACOBI");
+
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
@@ -4047,6 +4070,10 @@ namespace dftfe
               false,
               true,
               d_dftParamsPtr->multipoleBoundaryConditions);
+
+            d_phiTotalSolverProblemDevice.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
             CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
                                  d_dftParamsPtr->absLinearSolverTolerance,
@@ -4076,6 +4103,10 @@ namespace dftfe
               false,
               true,
               d_dftParamsPtr->multipoleBoundaryConditions);
+
+            d_phiTotalSolverProblem.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
             CGSolver.solve(d_phiTotalSolverProblem,
                            d_dftParamsPtr->absLinearSolverTolerance,

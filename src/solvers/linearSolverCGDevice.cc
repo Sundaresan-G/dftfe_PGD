@@ -83,6 +83,9 @@ namespace dftfe
 
     distributedDeviceVec<double> &d_Jacobi = problem.getPreconditioner();
 
+    const bool useCustomPrecond = problem.usesCustomPreconditioner();
+    problem.resetMatVecCount();
+
     d_devSum.resize(1);
     d_devSumPtr = d_devSum.data();
     d_xLocalDof = x.locallyOwnedSize() * x.numVectors();
@@ -133,7 +136,45 @@ namespace dftfe
               {
                 it++;
 
-                if (it > 1)
+                if (useCustomPrecond)
+                  {
+                    // d = M^{-1} r  via custom (Chebyshev) preconditioner
+                    problem.applyPreconditioner(d_dvec, d_rvec);
+
+                    // delta = d . r
+                    double newDelta = 0.0;
+                    d_BLASWrapperPtr->xdot(d_xLocalDof,
+                                           d_dvec.begin(),
+                                           1,
+                                           d_rvec.begin(),
+                                           1,
+                                           mpi_communicator,
+                                           &newDelta);
+
+                    if (it > 1)
+                      {
+                        beta = delta;
+                        AssertThrow(std::abs(beta) != 0.,
+                                    dealii::ExcMessage("Division by zero\n"));
+                        beta  = newDelta / beta;
+                        delta = newDelta;
+
+                        // q = beta * q - d
+                        sadd(d_qvec.begin(), d_dvec.begin(), beta, d_xLocalDof);
+                      }
+                    else
+                      {
+                        delta = newDelta;
+
+                        // q = -d
+                        d_BLASWrapperPtr->axpby(d_xLocalDof,
+                                                -1.0,
+                                                d_dvec.begin(),
+                                                0.0,
+                                                d_qvec.begin());
+                      }
+                  }
+                else if (it > 1)
                   {
                     beta = delta;
                     AssertThrow(std::abs(beta) != 0.,
@@ -222,6 +263,8 @@ namespace dftfe
               << " , nsteps: " << it
               << " , abs. tolerance criterion in Device:  " << absTolerance
               << "\n\n";
+        pcout << "total Device Poisson/Helmholtz operator matvecs: "
+              << problem.getMatVecCount() << std::endl;
       }
 
     MPI_Barrier(mpi_communicator);

@@ -144,6 +144,37 @@ namespace dftfe
     void
     setX();
 
+    /**
+     * @brief Apply Chebyshev-Jacobi preconditioner: dst ≈ A^{-1} src.
+     * Overrides the base class default Jacobi with a Chebyshev polynomial
+     * accelerated iteration. Spectral bounds and work vectors are cached.
+     */
+    void
+    applyPreconditioner(distributedDeviceVec<double> &dst,
+                        distributedDeviceVec<double> &src) override;
+
+    /**
+     * @brief Returns true since this class uses Chebyshev-Jacobi.
+     */
+    bool
+    usesCustomPreconditioner() const override;
+
+    /**
+     * @brief Configure Poisson preconditioner style and Chebyshev degree.
+     *
+     * @param useChebyshev If true, use Chebyshev-Jacobi path where applicable.
+     * @param chebyDegree Polynomial degree for Chebyshev-Jacobi preconditioner.
+     */
+    void
+    setPreconditionerOptions(const bool        useChebyshev,
+                             const dftfe::uInt chebyDegree);
+
+    void
+    resetMatVecCount() override;
+
+    dftfe::uInt
+    getMatVecCount() const override;
+
 
   private:
     /**
@@ -161,38 +192,35 @@ namespace dftfe
     computeDiagonalA();
 
     /**
+     * @brief Estimate spectral bounds of D^{-1}A using Lanczos iteration.
+     * Results are cached in d_chebyLambdaMin and d_chebyLambdaMax.
+     */
+    void
+    computeSpectralBounds();
+
+    /**
+     * @brief Project out constant mode in D-inner product (fully periodic).
+     */
+    void
+    projectOutConstantMode(distributedDeviceVec<double> &vec);
+
+    /**
+     * @brief Tune active Chebyshev degree from estimated condition number.
+     *
+     * Uses Lanczos-estimated spectral bounds of D^{-1}A to choose an effective
+     * polynomial degree for the current solve while keeping the configured
+     * degree as the baseline.
+     */
+    void
+    tuneChebyshevDegreeFromSpectrum();
+
+    /**
      * @brief Compute mean value constraint which is required in case of fully periodic
      * boundary conditions.
      *
      */
     void
     computeMeanValueConstraint();
-
-    /**
-     * @brief Mean value constraint distibute
-     *
-     */
-    void
-    meanValueConstraintDistribute(distributedDeviceVec<double> &vec) const;
-
-    /**
-     * @brief Mean value constraint distibute slave to master
-     *
-     */
-    void
-    meanValueConstraintDistributeSlaveToMaster(
-      distributedDeviceVec<double> &vec) const;
-
-    void
-    meanValueConstraintDistributeSlaveToMaster(
-      distributedCPUVec<double> &vec) const;
-
-    /**
-     * @brief Mean value constraint set zero
-     *
-     */
-    void
-    meanValueConstraintSetZero(distributedCPUVec<double> &vec) const;
 
     /// storage for diagonal of the A matrix
     distributedCPUVec<double>    d_diagonalA;
@@ -253,14 +281,8 @@ namespace dftfe
     /// atomic charge on that dof
     const std::map<dealii::types::global_dof_index, double> *d_atomsPtr;
 
-    /// shape function gradient integral storage
-    std::vector<double> d_cellShapeFunctionGradientIntegralFlattened;
-
     /// storage for mean value constraint vector
     distributedCPUVec<double> d_meanValueConstraintVec;
-
-    /// storage for mean value constraint device vector
-    distributedDeviceVec<double> d_meanValueConstraintDeviceVec;
 
     /// boolean flag to query if mean value constraint datastructures are
     /// precomputed
@@ -281,9 +303,6 @@ namespace dftfe
     /// mean value constraints: mean value constrained node
     dealii::types::global_dof_index d_meanValueConstraintNodeId;
 
-    /// mean value constrained node local id
-    dealii::types::global_dof_index d_meanValueConstraintNodeIdLocal;
-
     /// mean value constraints: constrained proc id containing the mean value
     /// constrained node
     dftfe::uInt d_meanValueConstraintProcId;
@@ -301,6 +320,37 @@ namespace dftfe
          d_BLASWrapperPtr;
     bool d_isFastConstraintsInitialized;
     bool d_isHomogenousConstraintsInitialized;
+
+    /// Chebyshev-Jacobi preconditioner: spectral bounds of D^{-1}A
+    double      d_chebyLambdaMax;
+    double      d_chebyLambdaMin;
+    bool        d_isSpectrumComputed;
+    bool        d_useChebyshevPreconditioner;
+    dftfe::uInt d_chebyDegree;
+    dftfe::uInt d_chebyDegreeConfigured;
+    dftfe::uInt d_matVecCount;
+
+    /// Chebyshev preconditioner work vectors (allocated once, reused)
+    distributedDeviceVec<double> d_chebyWorkVec1;
+    distributedDeviceVec<double> d_chebyWorkVec2;
+    distributedDeviceVec<double> d_chebyWorkVec3; // stores z_next in recurrence
+    bool                         d_areChebyWorkVecsInitialized;
+
+    /// Un-inverted diagonal of A (needed for Lanczos D-inner product)
+    distributedDeviceVec<double> d_diagonalARawDevice;
+
+    /// Host copy of un-inverted diagonal (needed for RHS projection)
+    distributedCPUVec<double> d_diagonalARawHost;
+
+    /// Projection weight for constant-mode deflation: 1/(1^T D 1)
+    double d_projWeight;
+
+    /// Ones vector on device for constant-mode projection
+    distributedDeviceVec<double> d_onesDevice;
+
+    /// FE mass-lumped weights a_i = int N_i dx (for integral-mean gauge)
+    distributedDeviceVec<double> d_meanValueWeightsDevice;
+    double                       d_domainVolume;
 
     const MPI_Comm             mpi_communicator;
     const dftfe::uInt          n_mpi_processes;

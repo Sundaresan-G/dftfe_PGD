@@ -26,4 +26,32 @@ namespace dftfe
     return;
   }
 
+  // Default: no custom preconditioner
+  bool
+  dealiiLinearSolverProblem::usesCustomPreconditioner() const
+  {
+    return false;
+  }
+
+  void
+  dealiiLinearSolverProblem::resetMatVecCount()
+  {
+    return;
+  }
+
+  dftfe::uInt
+  dealiiLinearSolverProblem::getMatVecCount() const
+  {
+    return 0;
+  }
+
+  // Default preconditioner: Jacobi with omega=0.3
+  void
+  dealiiLinearSolverProblem::applyPreconditioner(
+    distributedCPUVec<double>       &dst,
+    const distributedCPUVec<double> &src)
+  {
+    precondition_Jacobi(dst, src, 0.3);
+  }
+
 } // namespace dftfe

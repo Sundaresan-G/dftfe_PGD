@@ -26,4 +26,35 @@ namespace dftfe
     return;
   }
 
+  // Default: no custom preconditioner
+  bool
+  linearSolverProblemDevice::usesCustomPreconditioner() const
+  {
+    return false;
+  }
+
+  void
+  linearSolverProblemDevice::resetMatVecCount()
+  {
+    return;
+  }
+
+  dftfe::uInt
+  linearSolverProblemDevice::getMatVecCount() const
+  {
+    return 0;
+  }
+
+  // Default preconditioner: assert (should not be called unless overridden)
+  void
+  linearSolverProblemDevice::applyPreconditioner(
+    distributedDeviceVec<double> &dst,
+    distributedDeviceVec<double> &src)
+  {
+    AssertThrow(
+      false,
+      dealii::ExcMessage(
+        "DFT-FE Error: applyPreconditioner not implemented for this problem class."));
+  }
+
 } // namespace dftfe

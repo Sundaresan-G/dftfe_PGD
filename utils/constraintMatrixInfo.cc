@@ -524,6 +524,13 @@ namespace dftfe
       distributedCPUVec<dataTypes::number> &fieldVector,
       const dftfe::uInt                     blockSize) const;
 
+#if defined(USE_COMPLEX)
+    template void
+    constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::set_zero(
+      distributedCPUVec<double> &fieldVector,
+      const dftfe::uInt          blockSize) const;
+#endif
+
     template void
     constraintMatrixInfo<dftfe::utils::MemorySpace::HOST>::distribute(
       dftfe::linearAlgebra::MultiVector<double, dftfe::utils::MemorySpace::HOST>

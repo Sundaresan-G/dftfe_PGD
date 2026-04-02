@@ -144,6 +144,21 @@ namespace dftfe
                  d_kerkerSolverProblemObject);
     }
 
+    void
+    resetMatVecCount() override
+    {
+      std::visit([](auto &t) { t->resetMatVecCount(); },
+                 d_kerkerSolverProblemObject);
+    }
+
+    dftfe::uInt
+    getMatVecCount() const override
+    {
+      return std::visit(
+        [](auto const &t) -> dftfe::uInt { return t->getMatVecCount(); },
+        d_kerkerSolverProblemObject);
+    }
+
   private:
     kerkerSolverProblemObject d_kerkerSolverProblemObject;
   };
@@ -267,6 +282,21 @@ namespace dftfe
     {
       std::visit([&](auto &t) { t->init(std::forward<Args>(args)...); },
                  d_kerkerSolverProblemObject);
+    }
+
+    void
+    resetMatVecCount() override
+    {
+      std::visit([](auto &t) { t->resetMatVecCount(); },
+                 d_kerkerSolverProblemObject);
+    }
+
+    dftfe::uInt
+    getMatVecCount() const override
+    {
+      return std::visit(
+        [](auto const &t) -> dftfe::uInt { return t->getMatVecCount(); },
+        d_kerkerSolverProblemObject);
     }
 
   private:

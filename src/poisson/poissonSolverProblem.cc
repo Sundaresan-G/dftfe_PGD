@@ -21,6 +21,7 @@
 #include <poissonSolverProblem.h>
 #include <vectorUtilities.h>
 #include <feevaluationWrapper.h>
+#include <linearAlgebraOperations.h>
 namespace dftfe
 {
   //
@@ -43,6 +44,13 @@ namespace dftfe
     d_rhoValuesPtr                  = NULL;
     d_atomsPtr                      = NULL;
     d_smearedChargeValuesPtr        = NULL;
+    d_isSpectrumComputed            = false;
+    d_useChebyshevPreconditioner    = true;
+    d_chebyDegree                   = 5;
+    d_chebyDegreeConfigured         = 5;
+    d_matVecCount                   = 0;
+    d_chebyLambdaMax                = 0.0;
+    d_chebyLambdaMin                = 0.0;
   }
 
   template <dftfe::uInt FEOrderElectro>
@@ -52,7 +60,6 @@ namespace dftfe
     d_diagonalA.reinit(0);
     d_rhsSmearedCharge.reinit(0);
     d_meanValueConstraintVec.reinit(0);
-    d_cellShapeFunctionGradientIntegralFlattened.clear();
     d_isMeanValueConstraintComputed = false;
     d_isGradSmearedChargeRhs        = false;
     d_isStoreSmearedChargeRhs       = false;
@@ -61,6 +68,9 @@ namespace dftfe
     d_rhoValuesPtr                  = NULL;
     d_atomsPtr                      = NULL;
     d_smearedChargeValuesPtr        = NULL;
+    d_isSpectrumComputed            = false;
+    d_chebyDegree                   = d_chebyDegreeConfigured;
+    d_matVecCount                   = 0;
   }
 
   template <dftfe::uInt FEOrderElectro>
@@ -143,15 +153,40 @@ namespace dftfe
   void
   poissonSolverProblem<FEOrderElectro>::distributeX()
   {
-    d_constraintsInfo.distribute(*d_xPtr);
-
     if (d_isMeanValueConstraintComputed)
-      meanValueConstraintDistribute(*d_xPtr);
+      {
+        // The raw-K CG solution is determined up to an additive constant.
+        // Subtract the integral mean to enforce zero-integral-mean gauge:
+        // mu = (sum_i a_i x_i) / Omega, where a_i = int N_i dx.
+        // No distribute needed first: a_i = 0 on slave DOFs (assembled via
+        // distribute_local_to_global), so slaves don't affect the dot product.
+        const dftfe::uInt localSize = d_xPtr->locally_owned_size();
+        double            localDot  = 0.0;
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          localDot += d_meanValueWeights.local_element(i) *
+                      d_xPtr->local_element(i);
+        double integralPhiH = 0.0;
+        MPI_Allreduce(
+          &localDot, &integralPhiH, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+        const double mu = integralPhiH / d_domainVolume;
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          d_xPtr->local_element(i) -= mu;
+      }
+
+    // Distribute to fill slave DOFs from masters
+    d_constraintsInfo.distribute(*d_xPtr);
   }
 
   template <dftfe::uInt FEOrderElectro>
   distributedCPUVec<double> &
   poissonSolverProblem<FEOrderElectro>::getX()
+  {
+    return *d_xPtr;
+  }
+
+  template <dftfe::uInt FEOrderElectro>
+  const distributedCPUVec<double> &
+  poissonSolverProblem<FEOrderElectro>::getX() const
   {
     return *d_xPtr;
   }
@@ -174,15 +209,6 @@ namespace dftfe
     const dealii::DoFHandler<3> &dofHandler =
       d_matrixFreeDataPtr->get_dof_handler(d_matrixFreeVectorComponent);
 
-    const dftfe::uInt      dofs_per_cell = dofHandler.get_fe().dofs_per_cell;
-    dealii::Vector<double> elementalRhs(dofs_per_cell);
-    std::vector<dealii::types::global_dof_index> local_dof_indices(
-      dofs_per_cell);
-    typename dealii::DoFHandler<3>::active_cell_iterator
-      cell = dofHandler.begin_active(),
-      endc = dofHandler.end();
-
-
     distributedCPUVec<double> tempvec;
     tempvec.reinit(rhs);
     tempvec = 0.0;
@@ -193,9 +219,6 @@ namespace dftfe
       *d_matrixFreeDataPtr,
       d_matrixFreeVectorComponent,
       d_matrixFreeQuadratureComponentAX);
-
-    const dealii::Quadrature<3> &quadratureRuleAxTemp =
-      d_matrixFreeDataPtr->get_quadrature(d_matrixFreeQuadratureComponentAX);
 
     dftfe::Int isPerformStaticCondensation =
       (tempvec.linfty_norm() > 1e-10) ? 1 : 0;
@@ -416,11 +439,28 @@ namespace dftfe
     if (d_isStoreSmearedChargeRhs)
       d_rhsSmearedCharge.compress(dealii::VectorOperation::add);
 
-    if (d_isMeanValueConstraintComputed)
-      meanValueConstraintDistributeSlaveToMaster(rhs);
-
     // FIXME: check if this is really required
     d_constraintMatrixPtr->set_zero(rhs);
+
+    // For fully periodic systems, enforce solvability: 1^T b = 0.
+    // K is singular (K1=0), so Kx=b requires b perpendicular to null(K)=span(1).
+    // Subtract the nodal mean (L2 projection) after set_zero so that
+    // constrained rows (which are zero) do not pollute the sum.
+    if (d_isMeanValueConstraintComputed)
+      {
+        const dftfe::uInt localSize = rhs.locally_owned_size();
+        double            localSum  = 0.0;
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          localSum += rhs.local_element(i);
+        double globalData[2] = {localSum,
+                                static_cast<double>(localSize)};
+        MPI_Allreduce(
+          MPI_IN_PLACE, globalData, 2, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+        const double mu = globalData[0] / globalData[1];
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          rhs.local_element(i) -= mu;
+        d_constraintMatrixPtr->set_zero(rhs);
+      }
   }
 
   // Matrix-Free Jacobi preconditioner application
@@ -437,59 +477,6 @@ namespace dftfe
     for (dftfe::uInt i = 0; i < dst.locally_owned_size(); i++)
       dst.local_element(i) =
         d_diagonalA.local_element(i) * src.local_element(i);
-  }
-
-  // Compute and fill value at mean value constrained dof
-  // u_o= -\sum_{i \neq o} a_i * u_i where i runs over all dofs
-  // except the mean value constrained dof (o^{th})
-  template <dftfe::uInt FEOrderElectro>
-  void
-  poissonSolverProblem<FEOrderElectro>::meanValueConstraintDistribute(
-    distributedCPUVec<double> &vec) const
-  {
-    // -\sum_{i \neq o} a_i * u_i computation which involves summation across
-    // MPI tasks
-    const double constrainedNodeValue = d_meanValueConstraintVec * vec;
-
-    if (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) ==
-        d_meanValueConstraintProcId)
-      vec[d_meanValueConstraintNodeId] = constrainedNodeValue;
-  }
-
-  // Distribute value at mean value constrained dof (u_o) to all other dofs
-  // u_i+= -a_i * u_o, and subsequently set u_o to 0
-  template <dftfe::uInt FEOrderElectro>
-  void
-  poissonSolverProblem<FEOrderElectro>::
-    meanValueConstraintDistributeSlaveToMaster(
-      distributedCPUVec<double> &vec) const
-  {
-    double constrainedNodeValue = 0;
-    if (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) ==
-        d_meanValueConstraintProcId)
-      constrainedNodeValue = vec[d_meanValueConstraintNodeId];
-
-    // broadcast value at mean value constraint to all other tasks ids
-    MPI_Bcast(&constrainedNodeValue,
-              1,
-              MPI_DOUBLE,
-              d_meanValueConstraintProcId,
-              mpi_communicator);
-
-    vec.add(constrainedNodeValue, d_meanValueConstraintVec);
-
-    meanValueConstraintSetZero(vec);
-  }
-
-  template <dftfe::uInt FEOrderElectro>
-  void
-  poissonSolverProblem<FEOrderElectro>::meanValueConstraintSetZero(
-    distributedCPUVec<double> &vec) const
-  {
-    if (d_isMeanValueConstraintComputed)
-      if (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) ==
-          d_meanValueConstraintProcId)
-        vec[d_meanValueConstraintNodeId] = 0;
   }
 
   //
@@ -541,6 +528,19 @@ namespace dftfe
 
     // MPI operation to sync data
     d_meanValueConstraintVec.compress(dealii::VectorOperation::add);
+
+    // Save un-normalized mass-lumped weights a_i = int N_i dx
+    // and compute domain volume before the vector is normalized.
+    d_meanValueWeights.reinit(d_meanValueConstraintVec);
+    {
+      const dftfe::uInt localSize =
+        d_meanValueConstraintVec.locally_owned_size();
+      double localVol = 0.0;
+      for (dftfe::uInt i = 0; i < localSize; ++i)
+        localVol += d_meanValueConstraintVec.local_element(i);
+      MPI_Allreduce(
+        &localVol, &d_domainVolume, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+    }
 
     dealii::IndexSet locallyOwnedElements =
       d_meanValueConstraintVec.locally_owned_elements();
@@ -681,13 +681,98 @@ namespace dftfe
     // MPI operation to sync data
     d_diagonalA.compress(dealii::VectorOperation::add);
 
+    // Guard against pathologically small unconstrained diagonal entries that
+    // can over-amplify D^{-1}A and destabilize Lanczos spectral bounds.
+    double localMaxDiag = 0.0;
+    for (dealii::types::global_dof_index i = 0; i < d_diagonalA.size(); ++i)
+      if (d_diagonalA.in_local_range(i) &&
+          !d_constraintMatrixPtr->is_constrained(i))
+        localMaxDiag = std::max(localMaxDiag, std::abs(d_diagonalA(i)));
+
+    double globalMaxDiag = 0.0;
+    MPI_Allreduce(
+      &localMaxDiag, &globalMaxDiag, 1, MPI_DOUBLE, MPI_MAX, mpi_communicator);
+    const double diagFloor = std::max(globalMaxDiag * 1.0e-12, 1.0e-20);
+
+    // Store un-inverted diagonal for Lanczos D-inner product.
+    // Zero both diagonals at constrained DOFs and at the mean-value
+    // constrained DOF so that they are invisible to D^{-1} scaling
+    // and to the Lanczos D-inner product.
+    d_diagonalARaw = d_diagonalA;
+    for (dealii::types::global_dof_index i = 0; i < d_diagonalARaw.size(); ++i)
+      if (d_diagonalARaw.in_local_range(i) &&
+          d_constraintMatrixPtr->is_constrained(i))
+        d_diagonalARaw(i) = 0.0;
+
+    // Also zero the mean-value constrained DOF
+    if (d_isMeanValueConstraintComputed)
+      if (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) ==
+          d_meanValueConstraintProcId)
+        d_diagonalARaw(d_meanValueConstraintNodeId) = 0.0;
+
     for (dealii::types::global_dof_index i = 0; i < d_diagonalA.size(); ++i)
       if (d_diagonalA.in_local_range(i))
-        if (!d_constraintMatrixPtr->is_constrained(i))
-          d_diagonalA(i) = 1.0 / d_diagonalA(i);
+        if (!d_constraintMatrixPtr->is_constrained(i) &&
+            !(d_isMeanValueConstraintComputed &&
+              i == d_meanValueConstraintNodeId &&
+              dealii::Utilities::MPI::this_mpi_process(mpi_communicator) ==
+                d_meanValueConstraintProcId))
+          {
+            d_diagonalARaw(i) =
+              std::max(std::abs(d_diagonalARaw(i)), diagFloor);
+            d_diagonalA(i) = 1.0 / d_diagonalARaw(i);
+          }
+        else
+          d_diagonalA(i) = 0.0;
 
     d_diagonalA.compress(dealii::VectorOperation::insert);
+
+    // Compute projection weight for constant-mode deflation (fully periodic).
+    // d_projWeight = 1 / (1^T D 1), where D = d_diagonalARaw.
+    d_projWeight = 0.0;
+    if (d_isMeanValueConstraintComputed)
+      {
+        double localDsum = 0.0;
+        for (dftfe::uInt i = 0; i < d_diagonalARaw.locally_owned_size(); ++i)
+          localDsum += d_diagonalARaw.local_element(i);
+        double globalDsum = 0.0;
+        MPI_Allreduce(
+          &localDsum, &globalDsum, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+        d_projWeight = (globalDsum > 1e-30) ? (1.0 / globalDsum) : 0.0;
+      }
+
+    // Diagonal changed, invalidate cached spectral bounds.
+    d_isSpectrumComputed = false;
   }
+
+
+  //
+  // Project out the constant mode in the D-inner product (fully periodic).
+  // P_D v = v - (v^T D 1)/(1^T D 1) * 1
+  //
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrderElectro>::projectOutConstantMode(
+    distributedCPUVec<double> &vec) const
+  {
+    if (!d_isMeanValueConstraintComputed || d_projWeight == 0.0)
+      return;
+
+    const dftfe::uInt localSize = vec.locally_owned_size();
+    double            localDotVD = 0.0;
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      localDotVD +=
+        vec.local_element(i) * d_diagonalARaw.local_element(i);
+
+    double mu = 0.0;
+    MPI_Allreduce(
+      &localDotVD, &mu, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+    mu *= d_projWeight;
+
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      vec.local_element(i) -= mu;
+  }
+
 
   // Ax
   template <dftfe::uInt FEOrderElectro>
@@ -723,37 +808,357 @@ namespace dftfe
   }
 
 
+  // Raw Laplacian (with periodic constraint handling, without mean-value
+  // Schur complement).  K is symmetric and maps the zero-mean subspace to
+  // itself (1^T K v = 0), so CG stays in the correct subspace without any
+  // projection here.  Constant-mode removal is handled in the RHS and the
+  // preconditioner output instead.
   template <dftfe::uInt FEOrderElectro>
   void
   poissonSolverProblem<FEOrderElectro>::vmult(distributedCPUVec<double> &Ax,
                                               distributedCPUVec<double> &x)
   {
+    ++d_matVecCount;
+
     Ax = 0.0;
+    x.update_ghost_values();
+    AX(*d_matrixFreeDataPtr,
+       Ax,
+       x,
+       std::make_pair(0, d_matrixFreeDataPtr->n_cell_batches()));
+    Ax.compress(dealii::VectorOperation::add);
+    x.zero_out_ghost_values();
+    d_constraintsInfo.set_zero(x, 1);
+  }
 
-    if (d_isMeanValueConstraintComputed)
+
+  //
+  // usesCustomPreconditioner
+  //
+  template <dftfe::uInt FEOrderElectro>
+  bool
+  poissonSolverProblem<FEOrderElectro>::usesCustomPreconditioner() const
+  {
+    return d_useChebyshevPreconditioner;
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrderElectro>::setPreconditionerOptions(
+    const bool        useChebyshev,
+    const dftfe::uInt chebyDegree)
+  {
+    d_useChebyshevPreconditioner = useChebyshev;
+    d_chebyDegreeConfigured      = std::max<dftfe::uInt>(1, chebyDegree);
+    d_chebyDegree                = d_chebyDegreeConfigured;
+
+    // Re-tune immediately if spectral bounds are already available.
+    if (d_isSpectrumComputed)
+      tuneChebyshevDegreeFromSpectrum();
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrderElectro>::resetMatVecCount()
+  {
+    d_matVecCount = 0;
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  dftfe::uInt
+  poissonSolverProblem<FEOrderElectro>::getMatVecCount() const
+  {
+    return d_matVecCount;
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrderElectro>::tuneChebyshevDegreeFromSpectrum()
+  {
+    d_chebyDegree = d_chebyDegreeConfigured;
+
+    if (d_chebyLambdaMin <= 0.0 || d_chebyLambdaMax <= d_chebyLambdaMin)
+      return;
+
+    const double kappa = d_chebyLambdaMax / d_chebyLambdaMin;
+    if (kappa <= 1.0 + 1e-12)
       {
-        meanValueConstraintDistribute(x);
-
-        x.update_ghost_values();
-        AX(*d_matrixFreeDataPtr,
-           Ax,
-           x,
-           std::make_pair(0, d_matrixFreeDataPtr->n_cell_batches()));
-        Ax.compress(dealii::VectorOperation::add);
-
-
-        meanValueConstraintDistributeSlaveToMaster(Ax);
+        d_chebyDegree = 1;
+        return;
       }
-    else
+
+    const double sqrtKappa = std::sqrt(kappa);
+    const double rho       = (sqrtKappa - 1.0) / (sqrtKappa + 1.0);
+    if (rho <= 1e-12)
       {
-        x.update_ghost_values();
-        AX(*d_matrixFreeDataPtr,
-           Ax,
-           x,
-           std::make_pair(0, d_matrixFreeDataPtr->n_cell_batches()));
-        Ax.compress(dealii::VectorOperation::add);
+        d_chebyDegree = 1;
+        return;
+      }
+
+    // Select d in [1, d_chebyDegreeConfigured] that minimises estimated total
+    // matvec count: d * ceil(T/d), where T is the estimated Jacobi-CG
+    // iteration count for a representative tolerance of 1e-7.
+    // On ties prefer the larger d (fewer global synchronisations).
+    const double logRhoInv = -std::log(rho); // > 0
+    const double T_nominal =
+      std::log(2.0 / 1e-7) / (2.0 * logRhoInv);
+
+    dftfe::uInt bestD     = 1;
+    double      bestTotal = static_cast<double>(d_chebyDegreeConfigured) *
+                       std::ceil(T_nominal /
+                                 static_cast<double>(d_chebyDegreeConfigured));
+    for (dftfe::uInt d = 1; d <= d_chebyDegreeConfigured; ++d)
+      {
+        const double kEst  = std::ceil(T_nominal / static_cast<double>(d));
+        const double total = static_cast<double>(d) * kEst;
+        if (total <= bestTotal) // <= so ties go to larger d
+          {
+            bestTotal = total;
+            bestD     = d;
+          }
+      }
+    d_chebyDegree = bestD;
+  }
+
+
+  //
+  // Lanczos-based spectral bound estimation for D^{-1}A on CPU.
+  //
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrderElectro>::computeSpectralBounds()
+  {
+    if (d_isSpectrumComputed)
+      return;
+
+    const unsigned int lanczosIterations = 20;
+    const dftfe::uInt  localSize         = d_xPtr->locally_owned_size();
+
+    distributedCPUVec<double> vVec, wVec, zVec, tempAx;
+    vVec.reinit(*d_xPtr);
+    wVec.reinit(*d_xPtr);
+    zVec.reinit(*d_xPtr);
+    tempAx.reinit(*d_xPtr);
+
+    std::vector<double> Tlanczos(lanczosIterations * lanczosIterations, 0.0);
+
+    // Random initial vector
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      vVec.local_element(i) =
+        static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+
+    // Project out constant mode for fully periodic systems
+    projectOutConstantMode(vVec);
+
+    // Normalize in D-inner product: <v,v>_D = v^T D v
+    double vDv = 0.0;
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      vDv += vVec.local_element(i) * d_diagonalARaw.local_element(i) *
+             vVec.local_element(i);
+    MPI_Allreduce(MPI_IN_PLACE, &vDv, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+    double invNorm = 1.0 / std::sqrt(vDv);
+    vVec *= invNorm;
+
+    // w = D^{-1} A v
+    vmult(tempAx, vVec);
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      wVec.local_element(i) =
+        d_diagonalA.local_element(i) * tempAx.local_element(i);
+    projectOutConstantMode(wVec);
+
+    // alpha = <v, w>_D = v^T A v = v^T tempAx
+    double alpha = 0.0;
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      alpha += vVec.local_element(i) * tempAx.local_element(i);
+    MPI_Allreduce(
+      MPI_IN_PLACE, &alpha, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+
+    // w -= alpha * v
+    wVec.add(-alpha, vVec);
+
+    // T[0,0] = alpha
+    Tlanczos[0] = alpha;
+
+    double beta  = 0.0;
+    int    index = 0;
+
+    for (unsigned int j = 1; j < lanczosIterations; ++j)
+      {
+        // beta = D-norm of w = sqrt(w^T D w)
+        double betaSq = 0.0;
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          betaSq += wVec.local_element(i) * d_diagonalARaw.local_element(i) *
+                    wVec.local_element(i);
+        MPI_Allreduce(
+          MPI_IN_PLACE, &betaSq, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+        beta = std::sqrt(std::abs(betaSq));
+
+        if (beta < 1e-30)
+          {
+            break;
+          }
+
+        // z = v
+        zVec = vVec;
+
+        // v = w / beta
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          vVec.local_element(i) = wVec.local_element(i) / beta;
+
+        // w = D^{-1} A v
+        vmult(tempAx, vVec);
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          wVec.local_element(i) =
+            d_diagonalA.local_element(i) * tempAx.local_element(i);
+        projectOutConstantMode(wVec);
+
+        // w -= beta * z
+        wVec.add(-beta, zVec);
+
+        // alpha = v^T tempAx
+        alpha = 0.0;
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          alpha += vVec.local_element(i) * tempAx.local_element(i);
+        MPI_Allreduce(
+          MPI_IN_PLACE, &alpha, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+
+        // w -= alpha * v
+        wVec.add(-alpha, vVec);
+
+        // Fill tridiagonal matrix
+        index += 1;
+        Tlanczos[index] = beta;
+        index += lanczosIterations;
+        Tlanczos[index] = alpha;
+      }
+
+    // Final beta for error bound
+    double betaSqFinal = 0.0;
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      betaSqFinal += wVec.local_element(i) * d_diagonalARaw.local_element(i) *
+                     wVec.local_element(i);
+    MPI_Allreduce(
+      MPI_IN_PLACE, &betaSqFinal, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+    beta = std::sqrt(std::abs(betaSqFinal));
+
+    // Eigendecomposition of tridiagonal T
+    std::vector<double> eigenValuesT(lanczosIterations);
+    char                jobz = 'N', uplo = 'L';
+    const unsigned int  n = lanczosIterations, lda = lanczosIterations;
+    int                 info;
+    const unsigned int  lwork = 1 + 6 * n + 2 * n * n, liwork = 3 + 5 * n;
+    std::vector<int>    iwork(liwork, 0);
+    std::vector<double> work(lwork, 0.0);
+    dsyevd_(&jobz,
+            &uplo,
+            &n,
+            &Tlanczos[0],
+            &lda,
+            &eigenValuesT[0],
+            &work[0],
+            &lwork,
+            &iwork[0],
+            &liwork,
+            &info);
+
+    std::sort(eigenValuesT.begin(), eigenValuesT.end());
+
+    d_chebyLambdaMin = eigenValuesT[0];
+    d_chebyLambdaMax = eigenValuesT[lanczosIterations - 1] + beta / 10.0;
+
+    if (d_chebyLambdaMin < 1e-10)
+      d_chebyLambdaMin = d_chebyLambdaMax / 30.0;
+
+    tuneChebyshevDegreeFromSpectrum();
+
+    pcout << "Poisson Chebyshev preconditioner spectrum: lambdaMin = "
+          << d_chebyLambdaMin << ", lambdaMax = " << d_chebyLambdaMax
+          << ", kappa = " << d_chebyLambdaMax / d_chebyLambdaMin
+          << ", degree = " << d_chebyDegree << std::endl;
+
+    d_isSpectrumComputed = true;
+  }
+
+
+  //
+  // Chebyshev-Jacobi preconditioner on CPU: 3-vector recurrence
+  //
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrderElectro>::applyPreconditioner(
+    distributedCPUVec<double>       &dst,
+    const distributedCPUVec<double> &src)
+  {
+    if (!d_useChebyshevPreconditioner)
+      {
+        precondition_Jacobi(dst, src, 0.3);
+        return;
+      }
+
+    if (!d_isSpectrumComputed)
+      computeSpectralBounds();
+
+    const double theta    = (d_chebyLambdaMax + d_chebyLambdaMin) / 2.0;
+    const double delta    = (d_chebyLambdaMax - d_chebyLambdaMin) / 2.0;
+    const double betaSq   = (delta / theta) * (delta / theta);
+    const double invTheta = 1.0 / theta;
+
+    const dftfe::uInt localSize = d_xPtr->locally_owned_size();
+
+    if (d_chebyWorkVec1.size() == 0)
+      {
+        d_chebyWorkVec1.reinit(*d_xPtr);
+        d_chebyWorkVec2.reinit(*d_xPtr);
+      }
+
+    // z_0 = (1/θ) D^{-1} r
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      dst.local_element(i) =
+        invTheta * d_diagonalA.local_element(i) * src.local_element(i);
+    projectOutConstantMode(dst);
+
+    if (d_chebyDegree <= 1)
+      return;
+
+    // z_prev = 0
+    d_chebyWorkVec1 = 0.0;
+
+    double rho = 0.0;
+    for (dftfe::uInt k = 1; k < d_chebyDegree; ++k)
+      {
+        if (k == 1)
+          rho = 1.0 / (1.0 - betaSq / 2.0);
+        else
+          rho = 1.0 / (1.0 - betaSq * rho / 4.0);
+
+        const double coeffCurr = rho;
+        const double coeffPrev = 1.0 - rho;
+        const double coeffW    = rho * invTheta;
+
+        // temp = A * z_curr
+        vmult(d_chebyWorkVec2, dst);
+
+        // z_next = ρ z_curr + (ρ/θ) D^{-1}(src-A·z_curr) + (1-ρ) z_prev
+        // Computed into z_prev, then swap
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          {
+            const double w_i =
+              d_diagonalA.local_element(i) *
+              (src.local_element(i) - d_chebyWorkVec2.local_element(i));
+            d_chebyWorkVec1.local_element(i) =
+              coeffPrev * d_chebyWorkVec1.local_element(i) +
+              coeffCurr * dst.local_element(i) + coeffW * w_i;
+          }
+
+        dst.swap(d_chebyWorkVec1);
+        projectOutConstantMode(dst);
       }
   }
+
 
 #include "poissonSolverProblem.inst.cc"
 } // namespace dftfe

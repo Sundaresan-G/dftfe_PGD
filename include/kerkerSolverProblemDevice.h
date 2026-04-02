@@ -140,6 +140,12 @@ namespace dftfe
     void
     copyXfromDeviceToHost();
 
+    void
+    resetMatVecCount() override;
+
+    dftfe::uInt
+    getMatVecCount() const override;
+
   private:
     /**
      * @brief Sets up the matrixfree shapefunction, gradient, jacobian and map for matrixfree computeAX
@@ -210,6 +216,8 @@ namespace dftfe
       dftfe::basis::
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtr;
+
+    dftfe::uInt d_matVecCount;
 
     const MPI_Comm             d_mpiCommParent;
     const MPI_Comm             mpi_communicator;

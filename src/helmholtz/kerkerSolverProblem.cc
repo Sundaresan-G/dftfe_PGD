@@ -36,7 +36,9 @@ namespace dftfe
         dealii::Utilities::MPI::this_mpi_process(mpi_comm_domain))
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
-  {}
+  {
+    d_matVecCount = 0;
+  }
 
 
   template <dftfe::uInt FEOrderElectro>
@@ -89,6 +91,20 @@ namespace dftfe
   kerkerSolverProblem<FEOrderElectro>::getX()
   {
     return *d_xPtr;
+  }
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblem<FEOrderElectro>::resetMatVecCount()
+  {
+    d_matVecCount = 0;
+  }
+
+  template <dftfe::uInt FEOrderElectro>
+  dftfe::uInt
+  kerkerSolverProblem<FEOrderElectro>::getMatVecCount() const
+  {
+    return d_matVecCount;
   }
 
   template <dftfe::uInt FEOrderElectro>
@@ -260,6 +276,8 @@ namespace dftfe
   kerkerSolverProblem<FEOrderElectro>::vmult(distributedCPUVec<double> &Ax,
                                              distributedCPUVec<double> &x)
   {
+    ++d_matVecCount;
+
     Ax = 0.0;
     x.update_ghost_values();
     AX(*d_matrixFreeDataPRefinedPtr,

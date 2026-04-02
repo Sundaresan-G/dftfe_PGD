@@ -1217,6 +1217,18 @@ namespace dftfe
                           "true",
                           dealii::Patterns::Bool(),
                           "[Advanced] Toggle GPU MODE in vself Poisson solve.");
+
+        prm.declare_entry(
+          "PRECONDITIONER TYPE",
+          "CHEBYSHEV-JACOBI",
+          dealii::Patterns::Selection("JACOBI|CHEBYSHEV-JACOBI"),
+          "[Advanced] Preconditioner style for Poisson CG solve. Options are JACOBI and CHEBYSHEV-JACOBI.");
+
+        prm.declare_entry(
+          "CHEBYSHEV POLYNOMIAL DEGREE",
+          "5",
+          dealii::Patterns::Integer(1),
+          "[Advanced] Polynomial degree used by the Chebyshev-Jacobi Poisson preconditioner.");
       }
       prm.leave_subsection();
 
@@ -1329,6 +1341,8 @@ namespace dftfe
     maxLinearSolverIterations                  = 1;
     poissonGPU                                 = true;
     vselfGPU                                   = true;
+    poissonPreconditionerType                  = "CHEBYSHEV-JACOBI";
+    poissonChebyshevPolynomialDegree           = 5;
     mixingHistory                              = 1;
     npool                                      = 1;
     maxLinearSolverIterationsHelmholtz         = 1;
@@ -1863,6 +1877,9 @@ namespace dftfe
       absLinearSolverTolerance  = prm.get_double("TOLERANCE");
       poissonGPU                = prm.get_bool("GPU MODE");
       vselfGPU                  = prm.get_bool("VSELF GPU MODE");
+      poissonPreconditionerType = prm.get("PRECONDITIONER TYPE");
+      poissonChebyshevPolynomialDegree =
+        prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
     }
     prm.leave_subsection();
 

@@ -116,6 +116,12 @@ namespace dftfe
     void
     distributeX();
 
+    void
+    resetMatVecCount() override;
+
+    dftfe::uInt
+    getMatVecCount() const override;
+
 
     /// function needed by dealii to mimic SparseMatrix for Jacobi
     /// preconditioning
@@ -185,6 +191,7 @@ namespace dftfe
         FEBasisOperations<double, double, dftfe::utils::MemorySpace::HOST>>
       d_basisOperationsPtr;
 
+    dftfe::uInt d_matVecCount;
 
     const MPI_Comm             d_mpiCommParent;
     const MPI_Comm             mpi_communicator;
