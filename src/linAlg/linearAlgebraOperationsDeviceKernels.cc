@@ -9,39 +9,38 @@ namespace dftfe
     {
 
       template <typename ValueType1, typename ValueType2>
-      __global__ void
-      convertLayoutDeviceKernel(
+      DFTFE_CREATE_KERNEL(
+        void,
+        convertLayoutDeviceKernel,
+        {
+          const dftfe::uInt globalThreadId =
+            blockIdx.x * blockDim.x + threadIdx.x;
+          const dftfe::uInt numberEntries = initBlockRows * initBlockCols * blockSize; 
+          const dftfe::uInt finalBlockRows = initBlockCols;
+          const dftfe::uInt finalBlockCols = initBlockRows;
+
+          for (dftfe::uInt index = globalThreadId; index < numberEntries;
+              index += blockDim.x * gridDim.x)
+            {
+              dftfe::uInt blockIndex = index / blockSize;
+              dftfe::uInt blockCol = blockIndex % initBlockCols;
+              dftfe::uInt blockRow = blockIndex / initBlockCols;
+              dftfe::uInt intraBlockIndex = index - blockIndex * blockSize;
+
+              dftfe::uInt new_blockRow = blockCol;
+              dftfe::uInt new_blockCol = blockRow;
+              dftfe::uInt new_blockIndex = new_blockRow * finalBlockCols + new_blockCol;
+
+              dftfe::uInt new_index = new_blockIndex * blockSize + intraBlockIndex;
+
+              dftfe::utils::copyValue(copyTo + new_index, copyFrom[index]);
+            }
+        },
         ValueType2 *                   copyTo,
         const ValueType1 *             copyFrom,
         const dftfe::uInt              blockSize,
         const dftfe::uInt              initBlockRows,
-        const dftfe::uInt              initBlockCols)
-      {
-        const dftfe::uInt globalThreadId =
-          blockIdx.x * blockDim.x + threadIdx.x;
-        const dftfe::uInt numberEntries = initBlockRows * initBlockCols * blockSize; 
-        const dftfe::uInt finalBlockRows = initBlockCols;
-        const dftfe::uInt finalBlockCols = initBlockRows;
-
-        for (dftfe::uInt index = globalThreadId; index < numberEntries;
-            index += blockDim.x * gridDim.x)
-          {
-            dftfe::uInt blockIndex = index / blockSize;
-            dftfe::uInt blockCol = blockIndex % initBlockCols;
-            dftfe::uInt blockRow = blockIndex / initBlockCols;
-            dftfe::uInt intraBlockIndex = index - blockIndex * blockSize;
-
-            dftfe::uInt new_blockRow = blockCol;
-            dftfe::uInt new_blockCol = blockRow;
-            dftfe::uInt new_blockIndex = new_blockRow * finalBlockCols + new_blockCol;
-
-            dftfe::uInt new_index = new_blockIndex * blockSize + intraBlockIndex;
-
-            dftfe::utils::copyValue(copyTo + new_index, copyFrom[index]);
-          }
-
-      }
-
+        const dftfe::uInt              initBlockCols);
 
       DFTFE_CREATE_KERNEL(
         void,
@@ -525,32 +524,18 @@ namespace dftfe
       const dftfe::uInt  initBlockCols,
       const dftfe::utils::deviceStream_t   streamId)
     {
-#ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-      convertLayoutDeviceKernel<<<(initBlockRows *
-                                  initBlockCols * blockSize + dftfe::utils::DEVICE_BLOCK_SIZE - 1) /
-                                      dftfe::utils::DEVICE_BLOCK_SIZE,
-                                  dftfe::utils::DEVICE_BLOCK_SIZE,
-                                  0,
-                                  streamId>>>(
-                                dftfe::utils::makeDataTypeDeviceCompatible(copyTo),
-                                dftfe::utils::makeDataTypeDeviceCompatible(copyFrom),
-                                blockSize,
-                                initBlockRows,
-                                initBlockCols);
-#elif DFTFE_WITH_DEVICE_LANG_HIP
-      hipLaunchKernelGGL(convertLayoutDeviceKernel,
-                          (initBlockRows *
-                                  initBlockCols * blockSize + dftfe::utils::DEVICE_BLOCK_SIZE - 1) /
-                              dftfe::utils::DEVICE_BLOCK_SIZE,
-                          dftfe::utils::DEVICE_BLOCK_SIZE,
-                          0,
-                          streamId,
-                        dftfe::utils::makeDataTypeDeviceCompatible(copyTo),
-                        dftfe::utils::makeDataTypeDeviceCompatible(copyFrom),
-                        blockSize,
-                        initBlockRows,
-                        initBlockCols);
-#endif
+      DFTFE_LAUNCH_KERNEL(
+        convertLayoutDeviceKernel,
+        (initBlockRows * initBlockCols * blockSize +
+         dftfe::utils::DEVICE_BLOCK_SIZE - 1) /
+          dftfe::utils::DEVICE_BLOCK_SIZE,
+        dftfe::utils::DEVICE_BLOCK_SIZE,
+        streamId,
+        dftfe::utils::makeDataTypeDeviceCompatible(copyTo),
+        dftfe::utils::makeDataTypeDeviceCompatible(copyFrom),
+        blockSize,
+        initBlockRows,
+        initBlockCols);
 
     }
 

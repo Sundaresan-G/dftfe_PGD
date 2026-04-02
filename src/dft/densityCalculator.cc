@@ -241,9 +241,9 @@ namespace dftfe
                     BLASWrapperPtr->stridedCopyToBlockConstantStride(
                       currentBlockSize,
                       totalNumWaveFunctions/numberBandGroups,
-                      numLocalDofs,
+                      numLocalDofs * numWfnSpinors,
                       jvec  - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
-                      X->data() + numLocalDofs * (totalNumWaveFunctions/numberBandGroups) *
+                      X->data() + numLocalDofs * numWfnSpinors * (totalNumWaveFunctions/numberBandGroups) *
                                     (numSpinComponents * kPoint + spinIndex),
                       flattenedArrayBlock->data());
 #endif
