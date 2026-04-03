@@ -175,6 +175,10 @@ namespace dftfe
     dftfe::uInt
     getMatVecCount() const override;
 
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                   const double absTolerance) override;
+
 
   private:
     /**
@@ -330,10 +334,14 @@ namespace dftfe
     dftfe::uInt d_chebyDegreeConfigured;
     dftfe::uInt d_matVecCount;
 
+    /// Cached primitive timings for degree selection model.
+    bool   d_arePrimitiveTimesCached;
+    double d_cachedMatvecTime;
+    double d_cachedAllreduceTime;
+
     /// Chebyshev preconditioner work vectors (allocated once, reused)
     distributedDeviceVec<double> d_chebyWorkVec1;
     distributedDeviceVec<double> d_chebyWorkVec2;
-    distributedDeviceVec<double> d_chebyWorkVec3; // stores z_next in recurrence
     bool                         d_areChebyWorkVecsInitialized;
 
     /// Un-inverted diagonal of A (needed for Lanczos D-inner product)

@@ -177,6 +177,10 @@ namespace dftfe
     dftfe::uInt
     getMatVecCount() const override;
 
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                   const double absTolerance) override;
+
   private:
     /**
      * @brief required for the cell_loop operation in dealii's MatrixFree class
@@ -311,6 +315,11 @@ namespace dftfe
     dftfe::uInt d_chebyDegree;
     dftfe::uInt d_chebyDegreeConfigured;
     dftfe::uInt d_matVecCount;
+
+    /// Cached primitive timings for degree selection model.
+    bool   d_arePrimitiveTimesCached;
+    double d_cachedMatvecTime;
+    double d_cachedAllreduceTime;
 
     /// Chebyshev preconditioner work vectors (allocated once, reused)
     distributedCPUVec<double> d_chebyWorkVec1;

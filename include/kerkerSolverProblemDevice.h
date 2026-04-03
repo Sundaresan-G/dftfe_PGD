@@ -31,6 +31,7 @@
 #    include "BLASWrapper.h"
 #    include "MatrixFreeWrapper.h"
 #    include <DeviceAPICalls.h>
+#    include <MemoryTransfer.h>
 
 namespace dftfe
 {
@@ -146,6 +147,27 @@ namespace dftfe
     dftfe::uInt
     getMatVecCount() const override;
 
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                   const double absTolerance) override;
+
+    /**
+     * @brief Apply Chebyshev-Jacobi preconditioner: dst \approx A^{-1} src.
+     */
+    void
+    applyPreconditioner(distributedDeviceVec<double> &dst,
+                        distributedDeviceVec<double> &src) override;
+
+    /**
+     * @brief Whether this problem uses Chebyshev preconditioner.
+     */
+    bool
+    usesCustomPreconditioner() const override;
+
+    void
+    setPreconditionerOptions(const bool        useChebyshev,
+                             const dftfe::uInt chebyDegree);
+
   private:
     /**
      * @brief Sets up the matrixfree shapefunction, gradient, jacobian and map for matrixfree computeAX
@@ -167,6 +189,18 @@ namespace dftfe
      */
     void
     computeDiagonalA();
+
+    /**
+     * @brief Lanczos-based spectral bound estimation for D^{-1}A.
+     */
+    void
+    computeSpectralBounds();
+
+    /**
+     * @brief Tune Chebyshev degree from spectral bounds.
+     */
+    void
+    tuneChebyshevDegreeFromSpectrum();
 
 
     /// storage for diagonal of the A matrix
@@ -218,6 +252,32 @@ namespace dftfe
       d_basisOperationsPtr;
 
     dftfe::uInt d_matVecCount;
+
+    /// BLASWrapper for device operations
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
+      d_BLASWrapperPtr;
+
+    /// Chebyshev-Jacobi preconditioner: spectral bounds of D^{-1}A
+    double      d_chebyLambdaMax;
+    double      d_chebyLambdaMin;
+    bool        d_isSpectrumComputed;
+    bool        d_useChebyshevPreconditioner;
+    dftfe::uInt d_chebyDegree;
+    dftfe::uInt d_chebyDegreeConfigured;
+
+    /// Cached primitive timings for degree selection model.
+    bool   d_arePrimitiveTimesCached;
+    double d_cachedMatvecTime;
+    double d_cachedAllreduceTime;
+
+    /// Chebyshev preconditioner work vectors
+    distributedDeviceVec<double> d_chebyWorkVec1;
+    distributedDeviceVec<double> d_chebyWorkVec2;
+    bool                         d_areChebyWorkVecsInitialized;
+
+    /// Un-inverted diagonal of A (needed for Lanczos D-inner product)
+    distributedDeviceVec<double> d_diagonalARawDevice;
 
     const MPI_Comm             d_mpiCommParent;
     const MPI_Comm             mpi_communicator;

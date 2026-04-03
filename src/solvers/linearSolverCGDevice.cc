@@ -19,7 +19,9 @@
 
 #include <linearSolverCGDevice.h>
 #include <MemoryTransfer.h>
+#include <MemoryStorage.h>
 #include "linearSolverCGDeviceKernels.h"
+#include <cmath>
 
 namespace dftfe
 {
@@ -81,14 +83,13 @@ namespace dftfe
             << time - start_time << std::endl;
 
 
-    distributedDeviceVec<double> &d_Jacobi = problem.getPreconditioner();
-
-    const bool useCustomPrecond = problem.usesCustomPreconditioner();
     problem.resetMatVecCount();
 
-    d_devSum.resize(1);
-    d_devSumPtr = d_devSum.data();
     d_xLocalDof = x.locallyOwnedSize() * x.numVectors();
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
+      d_localDotSums(2);
+    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
+      d_localRR(1);
 
     double     res = 0.0, initial_res = 0.0;
     bool       conv = false;
@@ -100,127 +101,148 @@ namespace dftfe
 
         if (d_type == CG)
           {
-            // resize the vectors, but do not set the values since they'd be
-            // overwritten soon anyway.
-            d_qvec.reinit(x);
+            // -------------------------------------------------
+            // Standard preconditioned CG (2 allreduces/iter)
+            // Convention: r = Ax - b  (positive residual)
+            //   z = M^{-1} r, p = -z
+            //   w = Ap, alpha = delta/(p·w)
+            //   x += alpha*p, r += alpha*w
+            //   z = M^{-1} r, delta_new = r·z, beta = delta_new/delta_old
+            // Convergence check uses ||r||_2 from r·r.
+            // r·z and r·r are reduced together in one MPI_Allreduce.
+            //   p = -z + beta*p
+            // -------------------------------------------------
+
             d_rvec.reinit(x);
-            d_dvec.reinit(x);
+            d_uvec.reinit(x);
+            d_pvec.reinit(x);
+            d_wvec.reinit(x);
 
-            d_qvec.zeroOutGhosts();
             d_rvec.zeroOutGhosts();
-            d_dvec.zeroOutGhosts();
-
-            double alpha = 0.0;
-            double beta  = 0.0;
-            double delta = 0.0;
-
-            // r = Ax
-            problem.computeAX(d_rvec, x);
+            d_uvec.zeroOutGhosts();
+            d_pvec.zeroOutGhosts();
+            d_wvec.zeroOutGhosts();
 
             // r = Ax - rhs
+            problem.computeAX(d_rvec, x);
             double mOne = -1.0;
             d_BLASWrapperPtr->xaxpy(
               d_xLocalDof, &mOne, rhsDevice.begin(), 1, d_rvec.begin(), 1);
 
-            // res = r.r
             d_BLASWrapperPtr->xnrm2(
               d_xLocalDof, d_rvec.begin(), 1, mpi_communicator, &res);
             initial_res = res;
 
             if (res < absTolerance)
               conv = true;
-            if (conv)
-              return;
 
-            while ((!conv) && (it < maxNumberIterations))
+            if (!conv)
+              problem.tunePreconditionerForSolve(initial_res, absTolerance);
+
+            if (!conv)
               {
-                it++;
+                // z = M^{-1} r  (using d_uvec as z)
+                problem.applyPreconditioner(d_uvec, d_rvec);
 
-                if (useCustomPrecond)
+                // Batch local r·z and r·r in one device pass
+                double localDotData[2] = {0.0, 0.0};
+                dftfe::utils::deviceMemset(
+                  d_localDotSums.data(), 0, 2 * sizeof(double));
+                computeLocalDotRZAndRRDevice(d_rvec.begin(),
+                                             d_uvec.begin(),
+                                             d_localDotSums.data(),
+                                             d_xLocalDof);
+                dftfe::utils::MemoryTransfer<
+                  dftfe::utils::MemorySpace::HOST,
+                  dftfe::utils::MemorySpace::DEVICE>::copy(
+                  2, localDotData, d_localDotSums.data());
+                MPI_Allreduce(MPI_IN_PLACE,
+                              localDotData,
+                              2,
+                              MPI_DOUBLE,
+                              MPI_SUM,
+                              mpi_communicator);
+                double delta = localDotData[0];
+                res          = std::sqrt(std::abs(localDotData[1]));
+
+                // p = -z
+                d_BLASWrapperPtr->axpby(d_xLocalDof,
+                                        -1.0,
+                                        d_uvec.begin(),
+                                        0.0,
+                                        d_pvec.begin());
+
+                while ((!conv) && (it < maxNumberIterations))
                   {
-                    // d = M^{-1} r  via custom (Chebyshev) preconditioner
-                    problem.applyPreconditioner(d_dvec, d_rvec);
+                    it++;
 
-                    // delta = d . r
-                    double newDelta = 0.0;
+                    // w = A p
+                    problem.computeAX(d_wvec, d_pvec);
+
+                    // pAp = p · w
+                    double pAp = 0.0;
                     d_BLASWrapperPtr->xdot(d_xLocalDof,
-                                           d_dvec.begin(),
+                                           d_pvec.begin(),
                                            1,
-                                           d_rvec.begin(),
+                                           d_wvec.begin(),
                                            1,
                                            mpi_communicator,
-                                           &newDelta);
+                                           &pAp);
 
-                    if (it > 1)
+                    double alpha = delta / pAp;
+
+                    // Fused: x += alpha*p, r += alpha*w, local r·r
+                    dftfe::utils::deviceMemset(d_localRR.data(),
+                                               0,
+                                               sizeof(double));
+                    updateXRandComputeLocalRRDevice(x.begin(),
+                                                    d_rvec.begin(),
+                                                    d_pvec.begin(),
+                                                    d_wvec.begin(),
+                                                    alpha,
+                                                    d_localRR.data(),
+                                                    d_xLocalDof);
+
+                    // z = M^{-1} r
+                    problem.applyPreconditioner(d_uvec, d_rvec);
+
+                    // Batch delta_new = r·z and ||r||_2^2 = r·r into one allreduce
+                    localDotData[0] = 0.0;
+                    localDotData[1] = 0.0;
+                    d_BLASWrapperPtr->xdot(d_xLocalDof,
+                                           d_rvec.begin(),
+                                           1,
+                                           d_uvec.begin(),
+                                           1,
+                                           &localDotData[0]);
+                    dftfe::utils::MemoryTransfer<
+                      dftfe::utils::MemorySpace::HOST,
+                      dftfe::utils::MemorySpace::DEVICE>::copy(
+                      1, &localDotData[1], d_localRR.data());
+                    MPI_Allreduce(MPI_IN_PLACE,
+                                  localDotData,
+                                  2,
+                                  MPI_DOUBLE,
+                                  MPI_SUM,
+                                  mpi_communicator);
+                    double deltaNew = localDotData[0];
+                    res             = std::sqrt(std::abs(localDotData[1]));
+                    if (res < absTolerance)
                       {
-                        beta = delta;
-                        AssertThrow(std::abs(beta) != 0.,
-                                    dealii::ExcMessage("Division by zero\n"));
-                        beta  = newDelta / beta;
-                        delta = newDelta;
-
-                        // q = beta * q - d
-                        sadd(d_qvec.begin(), d_dvec.begin(), beta, d_xLocalDof);
+                        conv = true;
+                        break;
                       }
-                    else
-                      {
-                        delta = newDelta;
 
-                        // q = -d
-                        d_BLASWrapperPtr->axpby(d_xLocalDof,
-                                                -1.0,
-                                                d_dvec.begin(),
-                                                0.0,
-                                                d_qvec.begin());
-                      }
+                    double beta = deltaNew / delta;
+                    delta       = deltaNew;
+
+                    // p = -z + beta * p
+                    d_BLASWrapperPtr->axpby(d_xLocalDof,
+                                            -1.0,
+                                            d_uvec.begin(),
+                                            beta,
+                                            d_pvec.begin());
                   }
-                else if (it > 1)
-                  {
-                    beta = delta;
-                    AssertThrow(std::abs(beta) != 0.,
-                                dealii::ExcMessage("Division by zero\n"));
-
-                    // d = M^(-1) * r
-                    // delta = d.r
-                    delta =
-                      applyPreconditionAndComputeDotProduct(d_Jacobi.begin());
-
-                    beta = delta / beta;
-
-                    // q = beta * q - d
-                    sadd(d_qvec.begin(), d_dvec.begin(), beta, d_xLocalDof);
-                  }
-                else
-                  {
-                    // delta = r.(M^(-1) * r)
-                    // q = -M^(-1) * r
-                    delta = applyPreconditionComputeDotProductAndSadd(
-                      d_Jacobi.begin());
-                  }
-
-                // d = Aq
-                problem.computeAX(d_dvec, d_qvec);
-
-                // alpha = q.d
-                d_BLASWrapperPtr->xdot(d_xLocalDof,
-                                       d_qvec.begin(),
-                                       1,
-                                       d_dvec.begin(),
-                                       1,
-                                       mpi_communicator,
-                                       &alpha);
-
-                AssertThrow(std::abs(alpha) != 0.,
-                            dealii::ExcMessage("Division by zero\n"));
-                alpha = delta / alpha;
-
-                // res = r.r
-                // r += alpha * d
-                // x += alpha * q
-                res = scaleXRandComputeNorm(x.begin(), alpha);
-
-                if (res < absTolerance)
-                  conv = true;
               }
 
             if (!conv)
@@ -275,68 +297,5 @@ namespace dftfe
             << time << std::endl;
   }
 
-
-  double
-  linearSolverCGDevice::applyPreconditionAndComputeDotProduct(
-    const double *d_jacobi)
-  {
-    double local_sum = 0.0, sum = 0.0;
-    dftfe::utils::deviceMemset(d_devSumPtr, 0, sizeof(double));
-
-    applyPreconditionAndComputeDotProductDevice(
-      d_dvec.begin(), d_devSumPtr, d_rvec.begin(), d_jacobi, d_xLocalDof);
-
-    dftfe::utils::MemoryTransfer<
-      dftfe::utils::MemorySpace::HOST,
-      dftfe::utils::MemorySpace::DEVICE>::copy(1, &local_sum, d_devSum.begin());
-
-    MPI_Allreduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
-
-    return sum;
-  }
-
-
-  double
-  linearSolverCGDevice::applyPreconditionComputeDotProductAndSadd(
-    const double *d_jacobi)
-  {
-    double local_sum = 0.0, sum = 0.0;
-    dftfe::utils::deviceMemset(d_devSumPtr, 0, sizeof(double));
-
-    applyPreconditionComputeDotProductAndSaddDevice(
-      d_qvec.begin(), d_devSumPtr, d_rvec.begin(), d_jacobi, d_xLocalDof);
-
-    dftfe::utils::MemoryTransfer<
-      dftfe::utils::MemorySpace::HOST,
-      dftfe::utils::MemorySpace::DEVICE>::copy(1, &local_sum, d_devSum.begin());
-
-    MPI_Allreduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
-
-    return sum;
-  }
-
-
-  double
-  linearSolverCGDevice::scaleXRandComputeNorm(double *x, const double &alpha)
-  {
-    double local_sum = 0.0, sum = 0.0;
-    dftfe::utils::deviceMemset(d_devSumPtr, 0, sizeof(double));
-
-    scaleXRandComputeNormDevice(x,
-                                d_rvec.begin(),
-                                d_devSumPtr,
-                                d_qvec.begin(),
-                                d_dvec.begin(),
-                                alpha,
-                                d_xLocalDof);
-
-    dftfe::utils::MemoryTransfer<
-      dftfe::utils::MemorySpace::HOST,
-      dftfe::utils::MemorySpace::DEVICE>::copy(1, &local_sum, d_devSum.begin());
-
-    MPI_Allreduce(&local_sum, &sum, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
-
-    return std::sqrt(sum);
-  }
 
 } // namespace dftfe

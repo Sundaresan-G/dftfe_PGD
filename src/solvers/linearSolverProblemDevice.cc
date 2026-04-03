@@ -45,6 +45,15 @@ namespace dftfe
     return 0;
   }
 
+  void
+  linearSolverProblemDevice::tunePreconditionerForSolve(
+    const double initialResidual,
+    const double absTolerance)
+  {
+    (void)initialResidual;
+    (void)absTolerance;
+  }
+
   // Default preconditioner: assert (should not be called unless overridden)
   void
   linearSolverProblemDevice::applyPreconditioner(

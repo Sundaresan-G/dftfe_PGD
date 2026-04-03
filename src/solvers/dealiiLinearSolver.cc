@@ -87,9 +87,7 @@ namespace dftfe
             double beta      = 0.0;
             double alpha     = 0.0;
             double old_alpha = 0.0;
-            double omega     = 0.3;
 
-            const bool useCustomPrecond = problem.usesCustomPreconditioner();
             problem.resetMatVecCount();
 
             // compute residual. if vector is zero, then short-circuit the full
@@ -113,6 +111,8 @@ namespace dftfe
             if (conv)
               return;
 
+            problem.tunePreconditionerForSolve(initial_res, absTolerance);
+
             while ((!conv) && (it < maxNumberIterations))
               {
                 it++;
@@ -120,10 +120,7 @@ namespace dftfe
 
                 if (it > 1)
                   {
-                    if (useCustomPrecond)
-                      problem.applyPreconditioner(hvec, gvec);
-                    else
-                      problem.precondition_Jacobi(hvec, gvec, omega);
+                    problem.applyPreconditioner(hvec, gvec);
                     beta = gh;
                     AssertThrow(std::abs(beta) != 0.,
                                 dealii::ExcMessage("Division by zero\n"));
@@ -133,10 +130,7 @@ namespace dftfe
                   }
                 else
                   {
-                    if (useCustomPrecond)
-                      problem.applyPreconditioner(hvec, gvec);
-                    else
-                      problem.precondition_Jacobi(hvec, gvec, omega);
+                    problem.applyPreconditioner(hvec, gvec);
                     dvec.equ(-1., hvec);
                     gh = gvec * hvec;
                   }

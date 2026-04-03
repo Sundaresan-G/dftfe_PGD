@@ -115,6 +115,16 @@ namespace dftfe
     virtual dftfe::uInt
     getMatVecCount() const;
 
+    /**
+     * @brief Hook called once before CG iterations begin.
+     *
+     * Derived classes may use the actual starting residual and tolerance
+     * to tune preconditioner parameters for the upcoming solve.
+     */
+    virtual void
+    tunePreconditionerForSolve(const double initialResidual,
+                   const double absTolerance);
+
     // protected:
   };
 

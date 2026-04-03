@@ -45,6 +45,15 @@ namespace dftfe
     return 0;
   }
 
+  void
+  dealiiLinearSolverProblem::tunePreconditionerForSolve(
+    const double initialResidual,
+    const double absTolerance)
+  {
+    (void)initialResidual;
+    (void)absTolerance;
+  }
+
   // Default preconditioner: Jacobi with omega=0.3
   void
   dealiiLinearSolverProblem::applyPreconditioner(

@@ -230,6 +230,7 @@ SET(DEVICE_SRC
   ./utils/BLASWrapperDevice.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
   ./src/solvers/linearSolverCGDeviceKernels.cc
+  ./src/solvers/chebyshevPreconditionerDeviceKernels.cc
   ./src/matrixFree/MatrixFreeDevice.cc
   ./utils/FEBasisOperationsKernelsInternalDevice.cc
   ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
@@ -252,6 +253,7 @@ SET(DEVICE_SRC
   ./utils/BLASWrapperDevice.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
   ./src/solvers/linearSolverCGDeviceKernels.cc
+  ./src/solvers/chebyshevPreconditionerDeviceKernels.cc
   ./src/matrixFree/MatrixFreeDevice.cc
   ./utils/FEBasisOperationsKernelsInternalDevice.cc
   ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc
@@ -274,6 +276,7 @@ SET(DEVICE_SRC
   ./utils/BLASWrapperDevice.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
   ./src/solvers/linearSolverCGDeviceKernels.cc
+  ./src/solvers/chebyshevPreconditionerDeviceKernels.cc
   ./src/matrixFree/MatrixFreeDevice.cc
   ./utils/FEBasisOperationsKernelsInternalDevice.cc
   ./src/atom/AtomicCenteredNonLocalOperatorKernelsDevice.cc

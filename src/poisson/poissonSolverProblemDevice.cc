@@ -23,6 +23,7 @@
 #include <poissonSolverProblemDevice.h>
 #include <MemoryTransfer.h>
 #include <feevaluationWrapper.h>
+#include <chebyshevPreconditionerDeviceKernels.h>
 #include <random>
 namespace dftfe
 {
@@ -51,6 +52,9 @@ namespace dftfe
     d_matVecCount                        = 0;
     d_chebyLambdaMax                     = 0.0;
     d_chebyLambdaMin                     = 0.0;
+    d_arePrimitiveTimesCached            = false;
+    d_cachedMatvecTime                   = 0.0;
+    d_cachedAllreduceTime                = 0.0;
     d_areChebyWorkVecsInitialized        = false;
     d_rhoValuesPtr                       = NULL;
     d_atomsPtr                           = NULL;
@@ -75,6 +79,9 @@ namespace dftfe
     d_matVecCount                        = 0;
     d_chebyLambdaMax                     = 0.0;
     d_chebyLambdaMin                     = 0.0;
+    d_arePrimitiveTimesCached            = false;
+    d_cachedMatvecTime                   = 0.0;
+    d_cachedAllreduceTime                = 0.0;
     d_areChebyWorkVecsInitialized        = false;
     d_rhoValuesPtr                       = NULL;
     d_atomsPtr                           = NULL;
@@ -493,17 +500,16 @@ namespace dftfe
     d_constraintMatrixPtr->set_zero(rhs);
 
     // For fully periodic systems, enforce solvability: 1^T b = 0.
-    // K is singular (K1=0), so Kx=b requires b perpendicular to null(K)=span(1).
-    // Subtract the nodal mean (L2 projection) after set_zero so that
-    // constrained rows (which are zero) do not pollute the sum.
+    // K is singular (K1=0), so Kx=b requires b perpendicular to
+    // null(K)=span(1). Subtract the nodal mean (L2 projection) after set_zero
+    // so that constrained rows (which are zero) do not pollute the sum.
     if (d_isMeanValueConstraintComputed)
       {
         const dftfe::uInt localSize = rhs.locally_owned_size();
         double            localSum  = 0.0;
         for (dftfe::uInt i = 0; i < localSize; ++i)
           localSum += rhs.local_element(i);
-        double globalData[2] = {localSum,
-                                static_cast<double>(localSize)};
+        double globalData[2] = {localSum, static_cast<double>(localSize)};
         MPI_Allreduce(
           MPI_IN_PLACE, globalData, 2, MPI_DOUBLE, MPI_SUM, mpi_communicator);
         const double mu = globalData[0] / globalData[1];
@@ -567,9 +573,7 @@ namespace dftfe
     // Save un-normalized mass-lumped weights a_i = int N_i dx
     // and compute domain volume before the vector is normalized.
     dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
-      d_meanValueConstraintVec.get_partitioner(),
-      1,
-      d_meanValueWeightsDevice);
+      d_meanValueConstraintVec.get_partitioner(), 1, d_meanValueWeightsDevice);
     {
       const dftfe::uInt localSize =
         d_meanValueConstraintVec.locally_owned_size();
@@ -788,6 +792,7 @@ namespace dftfe
 
     // Reset spectrum cache since diagonal changed
     d_isSpectrumComputed = false;
+    d_arePrimitiveTimesCached = false;
 
     // Compute projection weight for constant-mode deflation (fully periodic).
     // d_projWeight = 1 / (1^T D 1), where D = d_diagonalARaw (host copy).
@@ -955,7 +960,20 @@ namespace dftfe
   void
   poissonSolverProblemDevice<FEOrderElectro>::tuneChebyshevDegreeFromSpectrum()
   {
+    tunePreconditionerForSolve(1.0, 1e-7);
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblemDevice<FEOrderElectro>::tunePreconditionerForSolve(
+    const double initialResidual,
+    const double absTolerance)
+  {
     d_chebyDegree = d_chebyDegreeConfigured;
+
+    if (!d_useChebyshevPreconditioner || d_xLocalDof <= 0)
+      return;
 
     if (d_chebyLambdaMin <= 0.0 || d_chebyLambdaMax <= d_chebyLambdaMin)
       return;
@@ -975,29 +993,94 @@ namespace dftfe
         return;
       }
 
-    // Select d in [1, d_chebyDegreeConfigured] that minimises estimated total
-    // matvec count: d * ceil(T/d), where T is the estimated Jacobi-CG
-    // iteration count for a representative tolerance of 1e-7.
-    // On ties prefer the larger d (fewer global synchronisations).
     const double logRhoInv = -std::log(rho); // > 0
-    const double T_nominal =
-      std::log(2.0 / 1e-7) / (2.0 * logRhoInv);
 
-    dftfe::uInt bestD     = 1;
-    double      bestTotal = static_cast<double>(d_chebyDegreeConfigured) *
-                       std::ceil(T_nominal /
-                                 static_cast<double>(d_chebyDegreeConfigured));
+    if (!d_arePrimitiveTimesCached)
+      {
+        distributedDeviceVec<double> sampleSrc, sampleAx;
+        sampleSrc.reinit(d_xDevice);
+        sampleAx.reinit(d_xDevice);
+        dftfe::utils::MemoryTransfer<
+          dftfe::utils::MemorySpace::DEVICE,
+          dftfe::utils::MemorySpace::DEVICE>::copy(d_xLocalDof,
+                                                   sampleSrc.begin(),
+                                                   d_xDevice.begin());
+
+        const dftfe::Int repeats = 12;
+
+        MPI_Barrier(mpi_communicator);
+        double tMatvecStart = MPI_Wtime();
+        for (dftfe::Int r = 0; r < repeats; ++r)
+          computeAX(sampleAx, sampleSrc);
+        dftfe::utils::deviceSynchronize();
+        double tMatvecLocal = (MPI_Wtime() - tMatvecStart) / repeats;
+        MPI_Allreduce(&tMatvecLocal,
+                      &d_cachedMatvecTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        double tReduceLocal = 0.0;
+        {
+          double reduceBuf2[2] = {1.0, 2.0};
+          double reduceBuf1[1] = {1.0};
+          MPI_Barrier(mpi_communicator);
+          double tReduceStart = MPI_Wtime();
+          for (dftfe::Int r = 0; r < repeats; ++r)
+            {
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf2,
+                            2,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf1,
+                            1,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+            }
+          tReduceLocal = (MPI_Wtime() - tReduceStart) / repeats;
+        }
+        MPI_Allreduce(&tReduceLocal,
+                      &d_cachedAllreduceTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        d_arePrimitiveTimesCached = true;
+      }
+
+    const double safeInitial = std::max(initialResidual, 1.0e-30);
+    const double safeAbsTol  = std::max(absTolerance, 1.0e-30);
+    const double relNeed     = std::max(safeInitial / safeAbsTol, 1.0 + 1e-12);
+    const double T_nominal   = std::log(2.0 * relNeed) / (2.0 * logRhoInv);
+
+    dftfe::uInt bestD        = 1;
+    double      bestPredTime = 1.0e300;
+
     for (dftfe::uInt d = 1; d <= d_chebyDegreeConfigured; ++d)
       {
-        const double kEst  = std::ceil(T_nominal / static_cast<double>(d));
-        const double total = static_cast<double>(d) * kEst;
-        if (total <= bestTotal) // <= so ties go to larger d
+        const double kEst = std::ceil(T_nominal / static_cast<double>(d));
+        const double tPrec = static_cast<double>(d) * d_cachedMatvecTime;
+        const double pred =
+          kEst * (d_cachedMatvecTime + tPrec + d_cachedAllreduceTime);
+
+        if (pred <= bestPredTime)
           {
-            bestTotal = total;
-            bestD     = d;
+            bestPredTime = pred;
+            bestD        = d;
           }
       }
     d_chebyDegree = bestD;
+
+        pcout << "Device Poisson Chebyshev tune: r0=" << initialResidual
+          << ", tMatvec=" << d_cachedMatvecTime
+          << ", tAllreduce=" << d_cachedAllreduceTime
+          << ", degree=" << d_chebyDegree << std::endl;
   }
 
 
@@ -1199,6 +1282,7 @@ namespace dftfe
     if (d_chebyLambdaMin < 1e-10)
       d_chebyLambdaMin = d_chebyLambdaMax / 30.0;
 
+    d_isSpectrumComputed = true;
     tuneChebyshevDegreeFromSpectrum();
 
     pcout << "Device Poisson Chebyshev preconditioner spectrum: lambdaMin = "
@@ -1206,20 +1290,20 @@ namespace dftfe
           << ", kappa = " << d_chebyLambdaMax / d_chebyLambdaMin
           << ", degree = " << d_chebyDegree << std::endl;
 
-    d_isSpectrumComputed = true;
   }
 
 
   //
   // Chebyshev-Jacobi preconditioner: dst ≈ A^{-1} src
   //
-  // 3-vector recurrence for D^{-1}A (Varga, "Matrix Iterative Analysis"):
-  //   z_0 = (1/θ) D^{-1} r
-  //   z_{k+1} = ρ_k z_k + (ρ_k/θ) w_k + (1-ρ_k) z_{k-1}
-  // where w_k = D^{-1}(r - A z_k), θ = (λ_max+λ_min)/2, δ = (λ_max-λ_min)/2,
-  //       β = δ/θ, ρ_1 = 1/(1-β²/2), ρ_k = 1/(1-β²ρ_{k-1}/4).
+  // Incremental form (deal.II convention):
+  //   x_0 = (1/θ) D^{-1} r,  d_0 = x_0
+  //   d_{k+1} = ρ_new·ρ_old · d_k + (2ρ_new/δ) D^{-1}(r - A x_k)
+  //   x_{k+1} = x_k + d_{k+1}
+  // where θ = (λ_max+λ_min)/2, δ = (λ_max-λ_min)/2, σ = θ/δ,
+  //       ρ_0 = 1/σ, ρ_k = 1/(2σ - ρ_{k-1}).
   //
-  // Vectors: dst = z_curr, d_chebyWorkVec1 = z_prev, d_chebyWorkVec2 = temp.
+  // Vectors: dst = x, d_chebyWorkVec1 = update (d), d_chebyWorkVec2 = temp.
   //
   template <dftfe::uInt FEOrderElectro>
   void
@@ -1233,109 +1317,61 @@ namespace dftfe
                                           d_diagonalAdevice.begin(),
                                           src.begin(),
                                           dst.begin());
+        projectOutConstantMode(dst);
         return;
       }
 
     if (!d_isSpectrumComputed)
       computeSpectralBounds();
 
-    const double theta = (d_chebyLambdaMax + d_chebyLambdaMin) / 2.0;
-    const double delta = (d_chebyLambdaMax - d_chebyLambdaMin) / 2.0;
-
-    // Fallback: if spectral bounds are unreasonable, use plain Jacobi
-    if (theta > 1e6 || d_chebyLambdaMax <= 0.0)
-      {
-        d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
-                                          d_diagonalAdevice.begin(),
-                                          src.begin(),
-                                          dst.begin());
-        return;
-      }
-
-    const double betaSq   = (delta / theta) * (delta / theta);
+    const double theta    = (d_chebyLambdaMax + d_chebyLambdaMin) / 2.0;
+    const double delta    = (d_chebyLambdaMax - d_chebyLambdaMin) / 2.0;
+    const double sigma    = theta / delta;
     const double invTheta = 1.0 / theta;
 
     if (!d_areChebyWorkVecsInitialized)
       {
         d_chebyWorkVec1.reinit(d_xDevice);
         d_chebyWorkVec2.reinit(d_xDevice);
-        d_chebyWorkVec3.reinit(d_xDevice);
         d_areChebyWorkVecsInitialized = true;
       }
 
-    // z_0 = (1/θ) D^{-1} r
-    d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
-                                      d_diagonalAdevice.begin(),
-                                      src.begin(),
-                                      dst.begin());
-    d_BLASWrapperPtr->xscal(dst.begin(), invTheta, d_xLocalDof);
+    // Step 0: dst = (1/θ) D^{-1} src  [fused kernel]
+    chebyshevPrecondStep0Device(
+      dst.begin(), src.begin(), d_diagonalAdevice.begin(), invTheta, d_xLocalDof);
     projectOutConstantMode(dst);
 
     if (d_chebyDegree <= 1)
       return;
 
-    // z_prev = 0
-    dftfe::utils::deviceMemset(d_chebyWorkVec1.begin(),
-                               0,
-                               d_xLocalDof * sizeof(double));
+    // update = dst (first approximation is the first "update")
+    dftfe::utils::MemoryTransfer<
+      dftfe::utils::MemorySpace::DEVICE,
+      dftfe::utils::MemorySpace::DEVICE>::copy(d_xLocalDof,
+                                               d_chebyWorkVec1.begin(),
+                                               dst.begin());
 
-    double rho = 0.0;
+    double rhoOld = 1.0 / sigma;
     for (dftfe::uInt k = 1; k < d_chebyDegree; ++k)
       {
-        if (k == 1)
-          rho = 1.0 / (1.0 - betaSq / 2.0);
-        else
-          rho = 1.0 / (1.0 - betaSq * rho / 4.0);
+        const double rhoNew  = 1.0 / (2.0 * sigma - rhoOld);
+        const double factor1 = rhoNew * rhoOld;
+        const double factor2 = 2.0 * rhoNew / delta;
 
-        const double coeffCurr = rho;
-        const double coeffPrev = 1.0 - rho;
-        const double coeffW    = rho * invTheta;
-
-        // temp = A * z_curr
+        // temp = A * dst
         computeAX(d_chebyWorkVec2, dst);
 
-        // temp = src - temp  (residual)
-        d_BLASWrapperPtr->xscal(d_chebyWorkVec2.begin(), -1.0, d_xLocalDof);
-        double one = 1.0;
-        d_BLASWrapperPtr->xaxpy(
-          d_xLocalDof, &one, src.begin(), 1, d_chebyWorkVec2.begin(), 1);
-
-        // temp = D^{-1} * residual  (w_k, in-place hadamard is safe)
-        d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
-                                          d_diagonalAdevice.begin(),
-                                          d_chebyWorkVec2.begin(),
-                                          d_chebyWorkVec2.begin());
-
-        // z_next = ρ z_curr + (ρ/θ) w + (1-ρ) z_prev
-        // Write into d_chebyWorkVec3 (AX copy no longer needed here).
-        d_BLASWrapperPtr->axpby(
-          d_xLocalDof, coeffCurr, dst.begin(), 0.0, d_chebyWorkVec3.begin());
-        d_BLASWrapperPtr->xaxpy(d_xLocalDof,
-                                &coeffPrev,
-                                d_chebyWorkVec1.begin(),
-                                1,
-                                d_chebyWorkVec3.begin(),
-                                1);
-        d_BLASWrapperPtr->xaxpy(d_xLocalDof,
-                                &coeffW,
-                                d_chebyWorkVec2.begin(),
-                                1,
-                                d_chebyWorkVec3.begin(),
-                                1);
-
-        // Advance: z_prev <- old z_curr, z_curr <- z_next.
-        // Explicit copies keep dst's buffer stable (no swap).
-        dftfe::utils::MemoryTransfer<
-          dftfe::utils::MemorySpace::DEVICE,
-          dftfe::utils::MemorySpace::DEVICE>::copy(d_xLocalDof,
-                                                   d_chebyWorkVec1.begin(),
-                                                   dst.begin());
-        dftfe::utils::MemoryTransfer<
-          dftfe::utils::MemorySpace::DEVICE,
-          dftfe::utils::MemorySpace::DEVICE>::copy(d_xLocalDof,
-                                                   dst.begin(),
-                                                   d_chebyWorkVec3.begin());
+        // Fused: w = D^{-1}(src - Ax), update = f1*update + f2*w, dst += update
+        chebyshevPrecondStepDevice(dst.begin(),
+                                   d_chebyWorkVec1.begin(),
+                                   src.begin(),
+                                   d_chebyWorkVec2.begin(),
+                                   d_diagonalAdevice.begin(),
+                                   factor1,
+                                   factor2,
+                                   d_xLocalDof);
         projectOutConstantMode(dst);
+        rhoOld = rhoNew;
       }
   }
 

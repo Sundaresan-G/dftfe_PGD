@@ -73,10 +73,17 @@ namespace dftfe
         preCondTotalDensityResidualVector, d_densityResidualQuadValues[0]);
 
     // solve the Helmholtz system to compute preconditioned residual
+    const bool useKerkerChebyshev =
+      (d_dftParamsPtr->poissonPreconditionerType == "CHEBYSHEV-JACOBI");
+
     if (d_dftParamsPtr->useDevice and d_dftParamsPtr->floatingNuclearCharges and
         d_dftParamsPtr->poissonGPU)
       {
 #ifdef DFTFE_WITH_DEVICE
+        kerkerPreconditionedResidualSolverProblemDevice
+          .setPreconditionerOptions(
+            useKerkerChebyshev,
+            d_dftParamsPtr->poissonChebyshevPolynomialDegree);
         CGSolverDevice.solve(kerkerPreconditionedResidualSolverProblemDevice,
                              d_dftParamsPtr->absLinearSolverToleranceHelmholtz,
                              d_dftParamsPtr->maxLinearSolverIterationsHelmholtz,
@@ -85,11 +92,16 @@ namespace dftfe
 #endif
       }
     else
-      CGSolver.solve(kerkerPreconditionedResidualSolverProblem,
-                     d_dftParamsPtr->absLinearSolverToleranceHelmholtz,
-                     d_dftParamsPtr->maxLinearSolverIterationsHelmholtz,
-                     d_dftParamsPtr->verbosity,
-                     false);
+      {
+        kerkerPreconditionedResidualSolverProblem.setPreconditionerOptions(
+          useKerkerChebyshev,
+          d_dftParamsPtr->poissonChebyshevPolynomialDegree);
+        CGSolver.solve(kerkerPreconditionedResidualSolverProblem,
+                       d_dftParamsPtr->absLinearSolverToleranceHelmholtz,
+                       d_dftParamsPtr->maxLinearSolverIterationsHelmholtz,
+                       d_dftParamsPtr->verbosity,
+                       false);
+      }
     if (d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER")
       preCondTotalDensityResidualVector.sadd(
         4 * M_PI * d_dftParamsPtr->kerkerParameter, 1.0, residualRho);

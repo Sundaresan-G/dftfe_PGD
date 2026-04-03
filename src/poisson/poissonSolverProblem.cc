@@ -51,6 +51,9 @@ namespace dftfe
     d_matVecCount                   = 0;
     d_chebyLambdaMax                = 0.0;
     d_chebyLambdaMin                = 0.0;
+    d_arePrimitiveTimesCached       = false;
+    d_cachedMatvecTime              = 0.0;
+    d_cachedAllreduceTime           = 0.0;
   }
 
   template <dftfe::uInt FEOrderElectro>
@@ -71,6 +74,9 @@ namespace dftfe
     d_isSpectrumComputed            = false;
     d_chebyDegree                   = d_chebyDegreeConfigured;
     d_matVecCount                   = 0;
+    d_arePrimitiveTimesCached       = false;
+    d_cachedMatvecTime              = 0.0;
+    d_cachedAllreduceTime           = 0.0;
   }
 
   template <dftfe::uInt FEOrderElectro>
@@ -163,8 +169,8 @@ namespace dftfe
         const dftfe::uInt localSize = d_xPtr->locally_owned_size();
         double            localDot  = 0.0;
         for (dftfe::uInt i = 0; i < localSize; ++i)
-          localDot += d_meanValueWeights.local_element(i) *
-                      d_xPtr->local_element(i);
+          localDot +=
+            d_meanValueWeights.local_element(i) * d_xPtr->local_element(i);
         double integralPhiH = 0.0;
         MPI_Allreduce(
           &localDot, &integralPhiH, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
@@ -443,17 +449,16 @@ namespace dftfe
     d_constraintMatrixPtr->set_zero(rhs);
 
     // For fully periodic systems, enforce solvability: 1^T b = 0.
-    // K is singular (K1=0), so Kx=b requires b perpendicular to null(K)=span(1).
-    // Subtract the nodal mean (L2 projection) after set_zero so that
-    // constrained rows (which are zero) do not pollute the sum.
+    // K is singular (K1=0), so Kx=b requires b perpendicular to
+    // null(K)=span(1). Subtract the nodal mean (L2 projection) after set_zero
+    // so that constrained rows (which are zero) do not pollute the sum.
     if (d_isMeanValueConstraintComputed)
       {
         const dftfe::uInt localSize = rhs.locally_owned_size();
         double            localSum  = 0.0;
         for (dftfe::uInt i = 0; i < localSize; ++i)
           localSum += rhs.local_element(i);
-        double globalData[2] = {localSum,
-                                static_cast<double>(localSize)};
+        double globalData[2] = {localSum, static_cast<double>(localSize)};
         MPI_Allreduce(
           MPI_IN_PLACE, globalData, 2, MPI_DOUBLE, MPI_SUM, mpi_communicator);
         const double mu = globalData[0] / globalData[1];
@@ -743,6 +748,7 @@ namespace dftfe
 
     // Diagonal changed, invalidate cached spectral bounds.
     d_isSpectrumComputed = false;
+    d_arePrimitiveTimesCached = false;
   }
 
 
@@ -758,15 +764,13 @@ namespace dftfe
     if (!d_isMeanValueConstraintComputed || d_projWeight == 0.0)
       return;
 
-    const dftfe::uInt localSize = vec.locally_owned_size();
+    const dftfe::uInt localSize  = vec.locally_owned_size();
     double            localDotVD = 0.0;
     for (dftfe::uInt i = 0; i < localSize; ++i)
-      localDotVD +=
-        vec.local_element(i) * d_diagonalARaw.local_element(i);
+      localDotVD += vec.local_element(i) * d_diagonalARaw.local_element(i);
 
     double mu = 0.0;
-    MPI_Allreduce(
-      &localDotVD, &mu, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+    MPI_Allreduce(&localDotVD, &mu, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
     mu *= d_projWeight;
 
     for (dftfe::uInt i = 0; i < localSize; ++i)
@@ -879,7 +883,20 @@ namespace dftfe
   void
   poissonSolverProblem<FEOrderElectro>::tuneChebyshevDegreeFromSpectrum()
   {
+    tunePreconditionerForSolve(1.0, 1e-7);
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  poissonSolverProblem<FEOrderElectro>::tunePreconditionerForSolve(
+    const double initialResidual,
+    const double absTolerance)
+  {
     d_chebyDegree = d_chebyDegreeConfigured;
+
+    if (!d_useChebyshevPreconditioner || d_xPtr == NULL)
+      return;
 
     if (d_chebyLambdaMin <= 0.0 || d_chebyLambdaMax <= d_chebyLambdaMin)
       return;
@@ -899,29 +916,89 @@ namespace dftfe
         return;
       }
 
-    // Select d in [1, d_chebyDegreeConfigured] that minimises estimated total
-    // matvec count: d * ceil(T/d), where T is the estimated Jacobi-CG
-    // iteration count for a representative tolerance of 1e-7.
-    // On ties prefer the larger d (fewer global synchronisations).
     const double logRhoInv = -std::log(rho); // > 0
-    const double T_nominal =
-      std::log(2.0 / 1e-7) / (2.0 * logRhoInv);
 
-    dftfe::uInt bestD     = 1;
-    double      bestTotal = static_cast<double>(d_chebyDegreeConfigured) *
-                       std::ceil(T_nominal /
-                                 static_cast<double>(d_chebyDegreeConfigured));
+    if (!d_arePrimitiveTimesCached)
+      {
+        distributedCPUVec<double> sampleSrc, sampleAx;
+        sampleSrc.reinit(*d_xPtr);
+        sampleAx.reinit(*d_xPtr);
+        sampleSrc = 1.0;
+
+        const dftfe::Int repeats = 12;
+
+        MPI_Barrier(mpi_communicator);
+        double tMatvecStart = MPI_Wtime();
+        for (dftfe::Int r = 0; r < repeats; ++r)
+          vmult(sampleAx, sampleSrc);
+        double tMatvecLocal = (MPI_Wtime() - tMatvecStart) / repeats;
+        MPI_Allreduce(&tMatvecLocal,
+                      &d_cachedMatvecTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        double tReduceLocal = 0.0;
+        {
+          double reduceBuf2[2] = {1.0, 2.0};
+          double reduceBuf1[1] = {1.0};
+          MPI_Barrier(mpi_communicator);
+          double tReduceStart = MPI_Wtime();
+          for (dftfe::Int r = 0; r < repeats; ++r)
+            {
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf2,
+                            2,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf1,
+                            1,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+            }
+          tReduceLocal = (MPI_Wtime() - tReduceStart) / repeats;
+        }
+        MPI_Allreduce(&tReduceLocal,
+                      &d_cachedAllreduceTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        d_arePrimitiveTimesCached = true;
+      }
+
+    const double safeInitial = std::max(initialResidual, 1.0e-30);
+    const double safeAbsTol  = std::max(absTolerance, 1.0e-30);
+    const double relNeed     = std::max(safeInitial / safeAbsTol, 1.0 + 1e-12);
+    const double T_nominal   = std::log(2.0 * relNeed) / (2.0 * logRhoInv);
+
+    dftfe::uInt bestD        = 1;
+    double      bestPredTime = 1.0e300;
+
     for (dftfe::uInt d = 1; d <= d_chebyDegreeConfigured; ++d)
       {
-        const double kEst  = std::ceil(T_nominal / static_cast<double>(d));
-        const double total = static_cast<double>(d) * kEst;
-        if (total <= bestTotal) // <= so ties go to larger d
+        const double kEst = std::ceil(T_nominal / static_cast<double>(d));
+        const double tPrec = static_cast<double>(d) * d_cachedMatvecTime;
+        const double pred =
+          kEst * (d_cachedMatvecTime + tPrec + d_cachedAllreduceTime);
+
+        if (pred <= bestPredTime)
           {
-            bestTotal = total;
-            bestD     = d;
+            bestPredTime = pred;
+            bestD        = d;
           }
       }
     d_chebyDegree = bestD;
+
+        pcout << "Poisson Chebyshev tune: r0=" << initialResidual
+          << ", tMatvec=" << d_cachedMatvecTime
+          << ", tAllreduce=" << d_cachedAllreduceTime
+          << ", degree=" << d_chebyDegree << std::endl;
   }
 
 
@@ -1073,6 +1150,7 @@ namespace dftfe
     if (d_chebyLambdaMin < 1e-10)
       d_chebyLambdaMin = d_chebyLambdaMax / 30.0;
 
+    d_isSpectrumComputed = true;
     tuneChebyshevDegreeFromSpectrum();
 
     pcout << "Poisson Chebyshev preconditioner spectrum: lambdaMin = "
@@ -1080,12 +1158,15 @@ namespace dftfe
           << ", kappa = " << d_chebyLambdaMax / d_chebyLambdaMin
           << ", degree = " << d_chebyDegree << std::endl;
 
-    d_isSpectrumComputed = true;
   }
 
 
   //
-  // Chebyshev-Jacobi preconditioner on CPU: 3-vector recurrence
+  // Chebyshev-Jacobi preconditioner on CPU: incremental form (deal.II
+  // convention)
+  //   x_0 = (1/θ) D^{-1} r,  d_0 = x_0
+  //   d_{k+1} = ρ_new·ρ_old · d_k + (2ρ_new/δ) D^{-1}(r - A x_k)
+  //   x_{k+1} = x_k + d_{k+1}
   //
   template <dftfe::uInt FEOrderElectro>
   void
@@ -1096,6 +1177,7 @@ namespace dftfe
     if (!d_useChebyshevPreconditioner)
       {
         precondition_Jacobi(dst, src, 0.3);
+        projectOutConstantMode(dst);
         return;
       }
 
@@ -1104,7 +1186,7 @@ namespace dftfe
 
     const double theta    = (d_chebyLambdaMax + d_chebyLambdaMin) / 2.0;
     const double delta    = (d_chebyLambdaMax - d_chebyLambdaMin) / 2.0;
-    const double betaSq   = (delta / theta) * (delta / theta);
+    const double sigma    = theta / delta;
     const double invTheta = 1.0 / theta;
 
     const dftfe::uInt localSize = d_xPtr->locally_owned_size();
@@ -1115,7 +1197,7 @@ namespace dftfe
         d_chebyWorkVec2.reinit(*d_xPtr);
       }
 
-    // z_0 = (1/θ) D^{-1} r
+    // Step 0: dst = (1/θ) D^{-1} src
     for (dftfe::uInt i = 0; i < localSize; ++i)
       dst.local_element(i) =
         invTheta * d_diagonalA.local_element(i) * src.local_element(i);
@@ -1124,38 +1206,34 @@ namespace dftfe
     if (d_chebyDegree <= 1)
       return;
 
-    // z_prev = 0
-    d_chebyWorkVec1 = 0.0;
+    // update = dst (first approximation is the first "update")
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      d_chebyWorkVec1.local_element(i) = dst.local_element(i);
 
-    double rho = 0.0;
+    double rhoOld = 1.0 / sigma;
     for (dftfe::uInt k = 1; k < d_chebyDegree; ++k)
       {
-        if (k == 1)
-          rho = 1.0 / (1.0 - betaSq / 2.0);
-        else
-          rho = 1.0 / (1.0 - betaSq * rho / 4.0);
+        const double rhoNew  = 1.0 / (2.0 * sigma - rhoOld);
+        const double factor1 = rhoNew * rhoOld;
+        const double factor2 = 2.0 * rhoNew / delta;
 
-        const double coeffCurr = rho;
-        const double coeffPrev = 1.0 - rho;
-        const double coeffW    = rho * invTheta;
-
-        // temp = A * z_curr
+        // temp = A * dst
         vmult(d_chebyWorkVec2, dst);
 
-        // z_next = ρ z_curr + (ρ/θ) D^{-1}(src-A·z_curr) + (1-ρ) z_prev
-        // Computed into z_prev, then swap
+        // update = factor1*update + factor2*D^{-1}(src - A·dst)
+        // dst += update
         for (dftfe::uInt i = 0; i < localSize; ++i)
           {
             const double w_i =
               d_diagonalA.local_element(i) *
               (src.local_element(i) - d_chebyWorkVec2.local_element(i));
             d_chebyWorkVec1.local_element(i) =
-              coeffPrev * d_chebyWorkVec1.local_element(i) +
-              coeffCurr * dst.local_element(i) + coeffW * w_i;
+              factor1 * d_chebyWorkVec1.local_element(i) + factor2 * w_i;
+            dst.local_element(i) += d_chebyWorkVec1.local_element(i);
           }
 
-        dst.swap(d_chebyWorkVec1);
         projectOutConstantMode(dst);
+        rhoOld = rhoNew;
       }
   }
 

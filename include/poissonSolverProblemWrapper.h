@@ -165,6 +165,17 @@ namespace dftfe
     }
 
     void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance) override
+    {
+      std::visit(
+        [&](auto &t) {
+          t->tunePreconditionerForSolve(initialResidual, absTolerance);
+        },
+        d_poissonSolverProblemObject);
+    }
+
+    void
     setPreconditionerOptions(const bool        useChebyshev,
                              const dftfe::uInt chebyDegree)
     {
@@ -325,6 +336,17 @@ namespace dftfe
     {
       return std::visit(
         [](auto const &t) -> dftfe::uInt { return t->getMatVecCount(); },
+        d_poissonSolverProblemObject);
+    }
+
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance) override
+    {
+      std::visit(
+        [&](auto &t) {
+          t->tunePreconditionerForSolve(initialResidual, absTolerance);
+        },
         d_poissonSolverProblemObject);
     }
 

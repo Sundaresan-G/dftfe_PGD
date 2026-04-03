@@ -20,6 +20,7 @@
 #include <constants.h>
 #include <kerkerSolverProblem.h>
 #include <feevaluationWrapper.h>
+#include <linearAlgebraOperations.h>
 namespace dftfe
 {
   //
@@ -37,7 +38,16 @@ namespace dftfe
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
   {
-    d_matVecCount = 0;
+    d_matVecCount                = 0;
+    d_isSpectrumComputed         = false;
+    d_useChebyshevPreconditioner = true;
+    d_chebyDegree                = 5;
+    d_chebyDegreeConfigured      = 5;
+    d_chebyLambdaMax             = 0.0;
+    d_chebyLambdaMin             = 0.0;
+    d_arePrimitiveTimesCached    = false;
+    d_cachedMatvecTime           = 0.0;
+    d_cachedAllreduceTime        = 0.0;
   }
 
 
@@ -226,12 +236,27 @@ namespace dftfe
     // MPI operation to sync data
     d_diagonalA.compress(dealii::VectorOperation::add);
 
+    // Store un-inverted diagonal for Lanczos D-inner product
+    d_diagonalARaw.reinit(d_diagonalA);
+    for (dealii::types::global_dof_index i = 0; i < d_diagonalA.size(); ++i)
+      if (d_diagonalA.in_local_range(i))
+        {
+          if (!d_constraintMatrixPRefinedPtr->is_constrained(i))
+            d_diagonalARaw(i) = std::abs(d_diagonalA(i));
+          else
+            d_diagonalARaw(i) = 0.0;
+        }
+    d_diagonalARaw.compress(dealii::VectorOperation::insert);
+
     for (dealii::types::global_dof_index i = 0; i < d_diagonalA.size(); ++i)
       if (d_diagonalA.in_local_range(i))
         if (!d_constraintMatrixPRefinedPtr->is_constrained(i))
           d_diagonalA(i) = 1.0 / d_diagonalA(i);
 
     d_diagonalA.compress(dealii::VectorOperation::insert);
+
+    d_isSpectrumComputed      = false;
+    d_arePrimitiveTimesCached = false;
   }
 
   // Ax
@@ -287,6 +312,375 @@ namespace dftfe
     Ax.compress(dealii::VectorOperation::add);
     // d_matrixFreeDataPRefinedPtr->cell_loop(
     //  &kerkerSolverProblem<FEOrderElectro>::AX, this, Ax, x);
+  }
+
+
+  //
+  // usesCustomPreconditioner
+  //
+  template <dftfe::uInt FEOrderElectro>
+  bool
+  kerkerSolverProblem<FEOrderElectro>::usesCustomPreconditioner() const
+  {
+    return d_useChebyshevPreconditioner;
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblem<FEOrderElectro>::setPreconditionerOptions(
+    const bool        useChebyshev,
+    const dftfe::uInt chebyDegree)
+  {
+    d_useChebyshevPreconditioner = useChebyshev;
+    d_chebyDegreeConfigured      = std::max<dftfe::uInt>(1, chebyDegree);
+    d_chebyDegree                = d_chebyDegreeConfigured;
+
+    if (d_isSpectrumComputed)
+      tuneChebyshevDegreeFromSpectrum();
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblem<FEOrderElectro>::tuneChebyshevDegreeFromSpectrum()
+  {
+    tunePreconditionerForSolve(1.0, 1e-7);
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblem<FEOrderElectro>::tunePreconditionerForSolve(
+    const double initialResidual,
+    const double absTolerance)
+  {
+    d_chebyDegree = d_chebyDegreeConfigured;
+
+    if (!d_useChebyshevPreconditioner || d_xPtr == NULL)
+      return;
+
+    if (d_chebyLambdaMin <= 0.0 || d_chebyLambdaMax <= d_chebyLambdaMin)
+      return;
+
+    const double kappa = d_chebyLambdaMax / d_chebyLambdaMin;
+    if (kappa <= 1.0 + 1e-12)
+      {
+        d_chebyDegree = 1;
+        return;
+      }
+
+    const double sqrtKappa = std::sqrt(kappa);
+    const double rho       = (sqrtKappa - 1.0) / (sqrtKappa + 1.0);
+    if (rho <= 1e-12)
+      {
+        d_chebyDegree = 1;
+        return;
+      }
+
+    const double logRhoInv = -std::log(rho);
+
+    if (!d_arePrimitiveTimesCached)
+      {
+        distributedCPUVec<double> sampleSrc, sampleAx;
+        sampleSrc.reinit(*d_xPtr);
+        sampleAx.reinit(*d_xPtr);
+        sampleSrc = 1.0;
+
+        const dftfe::Int repeats = 12;
+
+        MPI_Barrier(mpi_communicator);
+        double tMatvecStart = MPI_Wtime();
+        for (dftfe::Int r = 0; r < repeats; ++r)
+          vmult(sampleAx, sampleSrc);
+        double tMatvecLocal = (MPI_Wtime() - tMatvecStart) / repeats;
+        MPI_Allreduce(&tMatvecLocal,
+                      &d_cachedMatvecTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        double tReduceLocal = 0.0;
+        {
+          double reduceBuf2[2] = {1.0, 2.0};
+          double reduceBuf1[1] = {1.0};
+          MPI_Barrier(mpi_communicator);
+          double tReduceStart = MPI_Wtime();
+          for (dftfe::Int r = 0; r < repeats; ++r)
+            {
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf2,
+                            2,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf1,
+                            1,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+            }
+          tReduceLocal = (MPI_Wtime() - tReduceStart) / repeats;
+        }
+        MPI_Allreduce(&tReduceLocal,
+                      &d_cachedAllreduceTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        d_arePrimitiveTimesCached = true;
+      }
+
+    const double safeInitial = std::max(initialResidual, 1.0e-30);
+    const double safeAbsTol  = std::max(absTolerance, 1.0e-30);
+    const double relNeed     = std::max(safeInitial / safeAbsTol, 1.0 + 1e-12);
+    const double T_nominal   = std::log(2.0 * relNeed) / (2.0 * logRhoInv);
+
+    dftfe::uInt bestD        = 1;
+    double      bestPredTime = 1.0e300;
+
+    for (dftfe::uInt d = 1; d <= d_chebyDegreeConfigured; ++d)
+      {
+        const double kEst = std::ceil(T_nominal / static_cast<double>(d));
+        const double tPrec = static_cast<double>(d) * d_cachedMatvecTime;
+        const double pred =
+          kEst * (d_cachedMatvecTime + tPrec + d_cachedAllreduceTime);
+
+        if (pred <= bestPredTime)
+          {
+            bestPredTime = pred;
+            bestD        = d;
+          }
+      }
+    d_chebyDegree = bestD;
+
+        pcout << "Kerker Chebyshev tune: r0=" << initialResidual
+          << ", tMatvec=" << d_cachedMatvecTime
+          << ", tAllreduce=" << d_cachedAllreduceTime
+          << ", degree=" << d_chebyDegree << std::endl;
+  }
+
+
+  //
+  // Lanczos-based spectral bound estimation for D^{-1}A on CPU.
+  // Helmholtz operator is positive definite — no null-space projection needed.
+  //
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblem<FEOrderElectro>::computeSpectralBounds()
+  {
+    if (d_isSpectrumComputed)
+      return;
+
+    const unsigned int lanczosIterations = 20;
+    const dftfe::uInt  localSize         = d_xPtr->locally_owned_size();
+
+    distributedCPUVec<double> vVec, wVec, zVec, tempAx;
+    vVec.reinit(*d_xPtr);
+    wVec.reinit(*d_xPtr);
+    zVec.reinit(*d_xPtr);
+    tempAx.reinit(*d_xPtr);
+
+    std::vector<double> Tlanczos(lanczosIterations * lanczosIterations, 0.0);
+
+    // Random initial vector
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      vVec.local_element(i) =
+        static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX);
+    d_constraintMatrixPRefinedPtr->set_zero(vVec);
+
+    // Normalize in D-inner product: <v,v>_D = v^T D v
+    double vDv = 0.0;
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      vDv += vVec.local_element(i) * d_diagonalARaw.local_element(i) *
+             vVec.local_element(i);
+    MPI_Allreduce(MPI_IN_PLACE, &vDv, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+    double invNorm = 1.0 / std::sqrt(vDv);
+    vVec *= invNorm;
+
+    // w = D^{-1} A v
+    vmult(tempAx, vVec);
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      wVec.local_element(i) =
+        d_diagonalA.local_element(i) * tempAx.local_element(i);
+
+    // alpha = <v, w>_D = v^T A v = v^T tempAx
+    double alpha = 0.0;
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      alpha += vVec.local_element(i) * tempAx.local_element(i);
+    MPI_Allreduce(
+      MPI_IN_PLACE, &alpha, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+
+    // w -= alpha * v
+    wVec.add(-alpha, vVec);
+
+    Tlanczos[0] = alpha;
+
+    double beta  = 0.0;
+    int    index = 0;
+
+    for (unsigned int j = 1; j < lanczosIterations; ++j)
+      {
+        // beta = D-norm of w
+        double betaSq = 0.0;
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          betaSq += wVec.local_element(i) * d_diagonalARaw.local_element(i) *
+                    wVec.local_element(i);
+        MPI_Allreduce(
+          MPI_IN_PLACE, &betaSq, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+        beta = std::sqrt(std::abs(betaSq));
+
+        if (beta < 1e-30)
+          break;
+
+        zVec = vVec;
+
+        // v = w / beta
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          vVec.local_element(i) = wVec.local_element(i) / beta;
+
+        // w = D^{-1} A v
+        vmult(tempAx, vVec);
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          wVec.local_element(i) =
+            d_diagonalA.local_element(i) * tempAx.local_element(i);
+
+        wVec.add(-beta, zVec);
+
+        alpha = 0.0;
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          alpha += vVec.local_element(i) * tempAx.local_element(i);
+        MPI_Allreduce(
+          MPI_IN_PLACE, &alpha, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+
+        wVec.add(-alpha, vVec);
+
+        index += 1;
+        Tlanczos[index] = beta;
+        index += lanczosIterations;
+        Tlanczos[index] = alpha;
+      }
+
+    // Final beta for error bound
+    double betaSqFinal = 0.0;
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      betaSqFinal += wVec.local_element(i) * d_diagonalARaw.local_element(i) *
+                     wVec.local_element(i);
+    MPI_Allreduce(
+      MPI_IN_PLACE, &betaSqFinal, 1, MPI_DOUBLE, MPI_SUM, mpi_communicator);
+    beta = std::sqrt(std::abs(betaSqFinal));
+
+    // Eigendecomposition of tridiagonal T
+    std::vector<double> eigenValuesT(lanczosIterations);
+    char                jobz = 'N', uplo = 'L';
+    const unsigned int  n = lanczosIterations, lda = lanczosIterations;
+    int                 info;
+    const unsigned int  lwork = 1 + 6 * n + 2 * n * n, liwork = 3 + 5 * n;
+    std::vector<int>    iwork(liwork, 0);
+    std::vector<double> work(lwork, 0.0);
+    dsyevd_(&jobz,
+            &uplo,
+            &n,
+            &Tlanczos[0],
+            &lda,
+            &eigenValuesT[0],
+            &work[0],
+            &lwork,
+            &iwork[0],
+            &liwork,
+            &info);
+
+    std::sort(eigenValuesT.begin(), eigenValuesT.end());
+
+    d_chebyLambdaMin = eigenValuesT[0];
+    d_chebyLambdaMax = eigenValuesT[lanczosIterations - 1] + beta / 10.0;
+
+    if (d_chebyLambdaMin < 1e-10)
+      d_chebyLambdaMin = d_chebyLambdaMax / 30.0;
+
+    d_isSpectrumComputed = true;
+    tuneChebyshevDegreeFromSpectrum();
+
+    pcout << "Kerker Chebyshev preconditioner spectrum: lambdaMin = "
+          << d_chebyLambdaMin << ", lambdaMax = " << d_chebyLambdaMax
+          << ", kappa = " << d_chebyLambdaMax / d_chebyLambdaMin
+          << ", degree = " << d_chebyDegree << std::endl;
+
+  }
+
+
+  //
+  // Chebyshev-Jacobi preconditioner on CPU: incremental form (deal.II
+  // convention).
+  // Helmholtz operator is positive definite — no null-space projection needed.
+  //
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblem<FEOrderElectro>::applyPreconditioner(
+    distributedCPUVec<double>       &dst,
+    const distributedCPUVec<double> &src)
+  {
+    if (!d_useChebyshevPreconditioner)
+      {
+        precondition_Jacobi(dst, src, 0.3);
+        return;
+      }
+
+    if (!d_isSpectrumComputed)
+      computeSpectralBounds();
+
+    const double theta    = (d_chebyLambdaMax + d_chebyLambdaMin) / 2.0;
+    const double delta    = (d_chebyLambdaMax - d_chebyLambdaMin) / 2.0;
+    const double sigma    = theta / delta;
+    const double invTheta = 1.0 / theta;
+
+    const dftfe::uInt localSize = d_xPtr->locally_owned_size();
+
+    if (d_chebyWorkVec1.size() == 0)
+      {
+        d_chebyWorkVec1.reinit(*d_xPtr);
+        d_chebyWorkVec2.reinit(*d_xPtr);
+      }
+
+    // Step 0: dst = (1/θ) D^{-1} src
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      dst.local_element(i) =
+        invTheta * d_diagonalA.local_element(i) * src.local_element(i);
+
+    if (d_chebyDegree <= 1)
+      return;
+
+    // update = dst
+    for (dftfe::uInt i = 0; i < localSize; ++i)
+      d_chebyWorkVec1.local_element(i) = dst.local_element(i);
+
+    double rhoOld = 1.0 / sigma;
+    for (dftfe::uInt k = 1; k < d_chebyDegree; ++k)
+      {
+        const double rhoNew  = 1.0 / (2.0 * sigma - rhoOld);
+        const double factor1 = rhoNew * rhoOld;
+        const double factor2 = 2.0 * rhoNew / delta;
+
+        // temp = A * dst
+        vmult(d_chebyWorkVec2, dst);
+
+        // update = factor1*update + factor2*D^{-1}(src - A·dst)
+        // dst += update
+        for (dftfe::uInt i = 0; i < localSize; ++i)
+          {
+            const double w_i =
+              d_diagonalA.local_element(i) *
+              (src.local_element(i) - d_chebyWorkVec2.local_element(i));
+            d_chebyWorkVec1.local_element(i) =
+              factor1 * d_chebyWorkVec1.local_element(i) + factor2 * w_i;
+            dst.local_element(i) += d_chebyWorkVec1.local_element(i);
+          }
+
+        rhoOld = rhoNew;
+      }
   }
 
 

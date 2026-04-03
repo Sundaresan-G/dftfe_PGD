@@ -22,7 +22,6 @@
 
 #    include <linearSolverDevice.h>
 #    include <linearSolverProblemDevice.h>
-#    include <MemoryStorage.h>
 #    include <BLASWrapper.h>
 namespace dftfe
 {
@@ -77,13 +76,11 @@ namespace dftfe
     /// enum denoting the choice of the linear solver
     const solverType d_type;
 
-    /// define some temporary vectors
-    distributedDeviceVec<double> d_qvec, d_rvec, d_dvec;
+    /// CG vectors: r (residual), u (preconditioned residual),
+    /// p (search direction), w (A*p)
+    distributedDeviceVec<double> d_rvec, d_uvec, d_pvec, d_wvec;
 
     dftfe::Int d_xLocalDof;
-    double    *d_devSumPtr;
-    dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::DEVICE>
-      d_devSum;
 
     const MPI_Comm             d_mpiCommParent;
     const MPI_Comm             mpi_communicator;
@@ -93,27 +90,6 @@ namespace dftfe
     std::shared_ptr<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
       d_BLASWrapperPtr;
-
-    /**
-     * @brief Combines precondition and dot product
-     *
-     */
-    double
-    applyPreconditionAndComputeDotProduct(const double *jacobi);
-
-    /**
-     * @brief Combines precondition, sadd and dot product
-     *
-     */
-    double
-    applyPreconditionComputeDotProductAndSadd(const double *jacobi);
-
-    /**
-     * @brief Combines scaling and norm
-     *
-     */
-    double
-    scaleXRandComputeNorm(double *x, const double &alpha);
   };
 
 } // namespace dftfe

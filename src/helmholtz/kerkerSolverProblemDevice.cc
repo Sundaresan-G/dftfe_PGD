@@ -21,7 +21,9 @@
 #include <kerkerSolverProblemDevice.h>
 #include <MemoryTransfer.h>
 #include <feevaluationWrapper.h>
-
+#include <linearAlgebraOperations.h>
+#include <chebyshevPreconditionerDeviceKernels.h>
+#include <random>
 namespace dftfe
 {
   //
@@ -39,7 +41,17 @@ namespace dftfe
     , pcout(std::cout,
             (dealii::Utilities::MPI::this_mpi_process(mpi_comm_parent) == 0))
   {
-    d_matVecCount = 0;
+    d_matVecCount                 = 0;
+    d_isSpectrumComputed          = false;
+    d_useChebyshevPreconditioner  = true;
+    d_chebyDegree                 = 5;
+    d_chebyDegreeConfigured       = 5;
+    d_chebyLambdaMax              = 0.0;
+    d_chebyLambdaMin              = 0.0;
+    d_arePrimitiveTimesCached     = false;
+    d_cachedMatvecTime            = 0.0;
+    d_cachedAllreduceTime         = 0.0;
+    d_areChebyWorkVecsInitialized = false;
   }
 
 
@@ -78,13 +90,12 @@ namespace dftfe
     computeDiagonalA();
     setupConstraints();
 
+    // Create BLASWrapper
+    d_BLASWrapperPtr = std::make_shared<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>();
+
     // Setup MatrixFree
     unsigned int nVectors = 1;
-
-    // Create BLASWrapper object pointer
-    std::shared_ptr<
-      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-      BLASWrapperPtr;
 
     // Create matrixFreeWrapperDevice
     d_matrixFreeWrapperDevice = std::make_unique<
@@ -95,7 +106,7 @@ namespace dftfe
                                             mpi_communicator,
                                             d_matrixFreeDataPRefinedPtr,
                                             constraintMatrixPRefined,
-                                            BLASWrapperPtr,
+                                            d_BLASWrapperPtr,
                                             d_matrixFreeVectorComponent,
                                             d_matrixFreeAxQuadratureComponent,
                                             nVectors);
@@ -299,6 +310,28 @@ namespace dftfe
     // MPI operation to sync data
     d_diagonalA.compress(dealii::VectorOperation::add);
 
+    // Store un-inverted diagonal for Lanczos D-inner product
+    {
+      distributedCPUVec<double> diagonalARawHost;
+      diagonalARawHost.reinit(d_diagonalA);
+      for (dealii::types::global_dof_index i = 0; i < d_diagonalA.size(); ++i)
+        if (d_diagonalA.in_local_range(i))
+          {
+            if (!d_constraintMatrixPRefinedPtr->is_constrained(i))
+              diagonalARawHost(i) = std::abs(d_diagonalA(i));
+            else
+              diagonalARawHost(i) = 0.0;
+          }
+      diagonalARawHost.compress(dealii::VectorOperation::insert);
+      dftfe::linearAlgebra::createMultiVectorFromDealiiPartitioner(
+        diagonalARawHost.get_partitioner(), 1, d_diagonalARawDevice);
+      dftfe::utils::MemoryTransfer<
+        dftfe::utils::MemorySpace::DEVICE,
+        dftfe::utils::MemorySpace::HOST>::copy(d_xLocalDof,
+                                               d_diagonalARawDevice.begin(),
+                                               diagonalARawHost.begin());
+    }
+
     for (dealii::types::global_dof_index i = 0; i < d_diagonalA.size(); ++i)
       if (d_diagonalA.in_local_range(i))
         if (!d_constraintMatrixPRefinedPtr->is_constrained(i))
@@ -314,6 +347,9 @@ namespace dftfe
       dftfe::utils::MemorySpace::HOST>::copy(d_xLocalDof,
                                              d_diagonalAdevice.begin(),
                                              d_diagonalA.begin());
+
+    d_isSpectrumComputed      = false;
+    d_arePrimitiveTimesCached = false;
   }
 
 
@@ -346,6 +382,415 @@ namespace dftfe
 
     Ax.accumulateAddLocallyOwned();
   }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  bool
+  kerkerSolverProblemDevice<FEOrderElectro>::usesCustomPreconditioner() const
+  {
+    return d_useChebyshevPreconditioner;
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblemDevice<FEOrderElectro>::setPreconditionerOptions(
+    const bool        useChebyshev,
+    const dftfe::uInt chebyDegree)
+  {
+    d_useChebyshevPreconditioner = useChebyshev;
+    d_chebyDegreeConfigured      = std::max<dftfe::uInt>(1, chebyDegree);
+    d_chebyDegree                = d_chebyDegreeConfigured;
+
+    if (d_isSpectrumComputed)
+      tuneChebyshevDegreeFromSpectrum();
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblemDevice<FEOrderElectro>::tuneChebyshevDegreeFromSpectrum()
+  {
+    tunePreconditionerForSolve(1.0, 1e-7);
+  }
+
+
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblemDevice<FEOrderElectro>::tunePreconditionerForSolve(
+    const double initialResidual,
+    const double absTolerance)
+  {
+    d_chebyDegree = d_chebyDegreeConfigured;
+
+    if (!d_useChebyshevPreconditioner || d_xLocalDof <= 0)
+      return;
+
+    if (d_chebyLambdaMin <= 0.0 || d_chebyLambdaMax <= d_chebyLambdaMin)
+      return;
+
+    const double kappa = d_chebyLambdaMax / d_chebyLambdaMin;
+    if (kappa <= 1.0 + 1e-12)
+      {
+        d_chebyDegree = 1;
+        return;
+      }
+
+    const double sqrtKappa = std::sqrt(kappa);
+    const double rho       = (sqrtKappa - 1.0) / (sqrtKappa + 1.0);
+    if (rho <= 1e-12)
+      {
+        d_chebyDegree = 1;
+        return;
+      }
+
+    const double logRhoInv = -std::log(rho);
+
+    if (!d_arePrimitiveTimesCached)
+      {
+        distributedDeviceVec<double> sampleSrc, sampleAx;
+        sampleSrc.reinit(d_xDevice);
+        sampleAx.reinit(d_xDevice);
+        dftfe::utils::MemoryTransfer<
+          dftfe::utils::MemorySpace::DEVICE,
+          dftfe::utils::MemorySpace::DEVICE>::copy(d_xLocalDof,
+                                                   sampleSrc.begin(),
+                                                   d_xDevice.begin());
+
+        const dftfe::Int repeats = 12;
+
+        MPI_Barrier(mpi_communicator);
+        double tMatvecStart = MPI_Wtime();
+        for (dftfe::Int r = 0; r < repeats; ++r)
+          computeAX(sampleAx, sampleSrc);
+        dftfe::utils::deviceSynchronize();
+        double tMatvecLocal = (MPI_Wtime() - tMatvecStart) / repeats;
+        MPI_Allreduce(&tMatvecLocal,
+                      &d_cachedMatvecTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        double tReduceLocal = 0.0;
+        {
+          double reduceBuf2[2] = {1.0, 2.0};
+          double reduceBuf1[1] = {1.0};
+          MPI_Barrier(mpi_communicator);
+          double tReduceStart = MPI_Wtime();
+          for (dftfe::Int r = 0; r < repeats; ++r)
+            {
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf2,
+                            2,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+              MPI_Allreduce(MPI_IN_PLACE,
+                            reduceBuf1,
+                            1,
+                            MPI_DOUBLE,
+                            MPI_SUM,
+                            mpi_communicator);
+            }
+          tReduceLocal = (MPI_Wtime() - tReduceStart) / repeats;
+        }
+        MPI_Allreduce(&tReduceLocal,
+                      &d_cachedAllreduceTime,
+                      1,
+                      MPI_DOUBLE,
+                      MPI_MAX,
+                      mpi_communicator);
+
+        d_arePrimitiveTimesCached = true;
+      }
+
+    const double safeInitial = std::max(initialResidual, 1.0e-30);
+    const double safeAbsTol  = std::max(absTolerance, 1.0e-30);
+    const double relNeed     = std::max(safeInitial / safeAbsTol, 1.0 + 1e-12);
+    const double T_nominal   = std::log(2.0 * relNeed) / (2.0 * logRhoInv);
+
+    dftfe::uInt bestD        = 1;
+    double      bestPredTime = 1.0e300;
+
+    for (dftfe::uInt d = 1; d <= d_chebyDegreeConfigured; ++d)
+      {
+        const double kEst = std::ceil(T_nominal / static_cast<double>(d));
+        const double tPrec = static_cast<double>(d) * d_cachedMatvecTime;
+        const double pred =
+          kEst * (d_cachedMatvecTime + tPrec + d_cachedAllreduceTime);
+
+        if (pred <= bestPredTime)
+          {
+            bestPredTime = pred;
+            bestD        = d;
+          }
+      }
+    d_chebyDegree = bestD;
+
+        pcout << "Device Kerker Chebyshev tune: r0=" << initialResidual
+          << ", tMatvec=" << d_cachedMatvecTime
+          << ", tAllreduce=" << d_cachedAllreduceTime
+          << ", degree=" << d_chebyDegree << std::endl;
+  }
+
+
+  //
+  // Lanczos-based spectral bound estimation for D^{-1}A (Helmholtz operator).
+  // Uses D-inner product: <u,v>_D = u^T D v.
+  //
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblemDevice<FEOrderElectro>::computeSpectralBounds()
+  {
+    if (d_isSpectrumComputed)
+      return;
+
+    const dftfe::uInt lanczosIterations = 20;
+
+    distributedDeviceVec<double> vVec, wVec, zVec, tempAx;
+    vVec.reinit(d_xDevice);
+    wVec.reinit(d_xDevice);
+    zVec.reinit(d_xDevice);
+    tempAx.reinit(d_xDevice);
+
+    // Generate random vector on host, copy to device
+    {
+      distributedCPUVec<double> vHost;
+      vHost.reinit(*d_xPtr);
+      vHost = 0.0;
+      std::mt19937                           rng(this_mpi_process);
+      std::uniform_real_distribution<double> dist(0.0, 1.0);
+      for (dftfe::uInt i = 0; i < vHost.locally_owned_size(); ++i)
+        vHost.local_element(i) = dist(rng);
+      d_constraintMatrixPRefinedPtr->set_zero(vHost);
+
+      dftfe::utils::MemoryTransfer<
+        dftfe::utils::MemorySpace::DEVICE,
+        dftfe::utils::MemorySpace::HOST>::copy(d_xLocalDof,
+                                               vVec.begin(),
+                                               vHost.begin());
+    }
+    vVec.zeroOutGhosts();
+
+    // Normalize in D-inner product
+    d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
+                                      d_diagonalARawDevice.begin(),
+                                      vVec.begin(),
+                                      tempAx.begin());
+    double Dnormsq = 0.0;
+    d_BLASWrapperPtr->xdot(d_xLocalDof,
+                           vVec.begin(),
+                           1,
+                           tempAx.begin(),
+                           1,
+                           mpi_communicator,
+                           &Dnormsq);
+    double invDnorm = 1.0 / std::sqrt(std::abs(Dnormsq));
+    d_BLASWrapperPtr->xscal(vVec.begin(), invDnorm, d_xLocalDof);
+
+    // First Lanczos step: w = D^{-1} A v
+    computeAX(tempAx, vVec);
+    d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
+                                      d_diagonalAdevice.begin(),
+                                      tempAx.begin(),
+                                      wVec.begin());
+
+    // alpha = v^T tempAx  (= <v, Av> = <v, w>_D)
+    double alpha = 0.0;
+    d_BLASWrapperPtr->xdot(d_xLocalDof,
+                           vVec.begin(),
+                           1,
+                           tempAx.begin(),
+                           1,
+                           mpi_communicator,
+                           &alpha);
+    double negAlpha = -alpha;
+    d_BLASWrapperPtr->xaxpy(
+      d_xLocalDof, &negAlpha, vVec.begin(), 1, wVec.begin(), 1);
+
+    std::vector<double> Tlanczos(lanczosIterations * lanczosIterations, 0.0);
+    Tlanczos[0] = alpha;
+
+    dftfe::uInt index = 0;
+    double      beta  = 0.0;
+
+    for (dftfe::uInt j = 1; j < lanczosIterations; ++j)
+      {
+        d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
+                                          d_diagonalARawDevice.begin(),
+                                          wVec.begin(),
+                                          tempAx.begin());
+        double betaSq = 0.0;
+        d_BLASWrapperPtr->xdot(d_xLocalDof,
+                               wVec.begin(),
+                               1,
+                               tempAx.begin(),
+                               1,
+                               mpi_communicator,
+                               &betaSq);
+        beta = std::sqrt(std::abs(betaSq));
+
+        dftfe::utils::MemoryTransfer<
+          dftfe::utils::MemorySpace::DEVICE,
+          dftfe::utils::MemorySpace::DEVICE>::copy(d_xLocalDof,
+                                                   zVec.begin(),
+                                                   vVec.begin());
+
+        double invBeta = 1.0 / beta;
+        d_BLASWrapperPtr->axpby(
+          d_xLocalDof, invBeta, wVec.begin(), 0.0, vVec.begin());
+
+        computeAX(tempAx, vVec);
+        d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
+                                          d_diagonalAdevice.begin(),
+                                          tempAx.begin(),
+                                          wVec.begin());
+
+        double negBeta = -beta;
+        d_BLASWrapperPtr->xaxpy(
+          d_xLocalDof, &negBeta, zVec.begin(), 1, wVec.begin(), 1);
+
+        d_BLASWrapperPtr->xdot(d_xLocalDof,
+                               vVec.begin(),
+                               1,
+                               tempAx.begin(),
+                               1,
+                               mpi_communicator,
+                               &alpha);
+
+        negAlpha = -alpha;
+        d_BLASWrapperPtr->xaxpy(
+          d_xLocalDof, &negAlpha, vVec.begin(), 1, wVec.begin(), 1);
+
+        index += 1;
+        Tlanczos[index] = beta;
+        index += lanczosIterations;
+        Tlanczos[index] = alpha;
+      }
+
+    d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
+                                      d_diagonalARawDevice.begin(),
+                                      wVec.begin(),
+                                      tempAx.begin());
+    double betaSqFinal = 0.0;
+    d_BLASWrapperPtr->xdot(d_xLocalDof,
+                           wVec.begin(),
+                           1,
+                           tempAx.begin(),
+                           1,
+                           mpi_communicator,
+                           &betaSqFinal);
+    beta = std::sqrt(std::abs(betaSqFinal));
+
+    std::vector<double> eigenValuesT(lanczosIterations);
+    char                jobz = 'N', uplo = 'L';
+    const unsigned int  n = lanczosIterations, lda = lanczosIterations;
+    int                 info;
+    const unsigned int  lwork = 1 + 6 * n + 2 * n * n, liwork = 3 + 5 * n;
+    std::vector<int>    iwork(liwork, 0);
+    std::vector<double> work(lwork, 0.0);
+    dsyevd_(&jobz,
+            &uplo,
+            &n,
+            &Tlanczos[0],
+            &lda,
+            &eigenValuesT[0],
+            &work[0],
+            &lwork,
+            &iwork[0],
+            &liwork,
+            &info);
+
+    std::sort(eigenValuesT.begin(), eigenValuesT.end());
+
+    d_chebyLambdaMin = eigenValuesT[0];
+    d_chebyLambdaMax = eigenValuesT[lanczosIterations - 1] + beta / 10.0;
+
+    if (d_chebyLambdaMin < 1e-10)
+      d_chebyLambdaMin = d_chebyLambdaMax / 30.0;
+
+    d_isSpectrumComputed = true;
+    tuneChebyshevDegreeFromSpectrum();
+
+    pcout << "Device Kerker Chebyshev preconditioner spectrum: lambdaMin = "
+          << d_chebyLambdaMin << ", lambdaMax = " << d_chebyLambdaMax
+          << ", kappa = " << d_chebyLambdaMax / d_chebyLambdaMin
+          << ", degree = " << d_chebyDegree << std::endl;
+
+  }
+
+
+  //
+  // Chebyshev-Jacobi preconditioner: dst ≈ A^{-1} src
+  // Incremental form (deal.II convention).
+  //
+  template <dftfe::uInt FEOrderElectro>
+  void
+  kerkerSolverProblemDevice<FEOrderElectro>::applyPreconditioner(
+    distributedDeviceVec<double> &dst,
+    distributedDeviceVec<double> &src)
+  {
+    if (!d_useChebyshevPreconditioner)
+      {
+        d_BLASWrapperPtr->hadamardProduct(d_xLocalDof,
+                                          d_diagonalAdevice.begin(),
+                                          src.begin(),
+                                          dst.begin());
+        return;
+      }
+
+    if (!d_isSpectrumComputed)
+      computeSpectralBounds();
+
+    const double theta    = (d_chebyLambdaMax + d_chebyLambdaMin) / 2.0;
+    const double delta    = (d_chebyLambdaMax - d_chebyLambdaMin) / 2.0;
+    const double sigma    = theta / delta;
+    const double invTheta = 1.0 / theta;
+
+    if (!d_areChebyWorkVecsInitialized)
+      {
+        d_chebyWorkVec1.reinit(d_xDevice);
+        d_chebyWorkVec2.reinit(d_xDevice);
+        d_areChebyWorkVecsInitialized = true;
+      }
+
+    // Step 0: dst = (1/θ) D^{-1} src  [fused kernel]
+    chebyshevPrecondStep0Device(
+      dst.begin(), src.begin(), d_diagonalAdevice.begin(), invTheta, d_xLocalDof);
+
+    if (d_chebyDegree <= 1)
+      return;
+
+    // update = dst
+    dftfe::utils::MemoryTransfer<
+      dftfe::utils::MemorySpace::DEVICE,
+      dftfe::utils::MemorySpace::DEVICE>::copy(d_xLocalDof,
+                                               d_chebyWorkVec1.begin(),
+                                               dst.begin());
+
+    double rhoOld = 1.0 / sigma;
+    for (dftfe::uInt k = 1; k < d_chebyDegree; ++k)
+      {
+        const double rhoNew  = 1.0 / (2.0 * sigma - rhoOld);
+        const double factor1 = rhoNew * rhoOld;
+        const double factor2 = 2.0 * rhoNew / delta;
+
+        computeAX(d_chebyWorkVec2, dst);
+
+        // Fused: w = D^{-1}(src - Ax), update = f1*update + f2*w, dst += update
+        chebyshevPrecondStepDevice(dst.begin(),
+                                   d_chebyWorkVec1.begin(),
+                                   src.begin(),
+                                   d_chebyWorkVec2.begin(),
+                                   d_diagonalAdevice.begin(),
+                                   factor1,
+                                   factor2,
+                                   d_xLocalDof);
+        rhoOld = rhoNew;
+      }
+  }
+
 
 #include "kerkerSolverProblemDevice.inst.cc"
 } // namespace dftfe
