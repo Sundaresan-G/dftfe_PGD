@@ -521,7 +521,7 @@ namespace dftfe
       d_dftParamsPtr->solverMode == "BANDS" ?
         0 :
         ((1 + d_dftParamsPtr->spinPolarized) * kPointIndex + spinType) *
-          spinorFactor * d_numEigenValues *
+          spinorFactor * d_numEigenValuesPerBandGroup *
           matrix_free_data.get_vector_partitioner()->locally_owned_size();
 
     d_upperBoundUnwantedSpectrumValues[(1 + d_dftParamsPtr->spinPolarized) *
@@ -532,7 +532,7 @@ namespace dftfe
         d_BLASWrapperPtr,
         elpaScala,
         d_eigenVectorsFlattenedDevice.begin() + wfcStartIndex,
-        d_numEigenValuesPerBandGroup *
+        d_numEigenValues *
           matrix_free_data.get_vector_partitioner()->locally_owned_size() *
           spinorFactor,
         d_numEigenValues,
