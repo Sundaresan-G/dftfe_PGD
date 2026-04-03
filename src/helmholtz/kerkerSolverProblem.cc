@@ -444,7 +444,7 @@ namespace dftfe
 
     for (dftfe::uInt d = 1; d <= d_chebyDegreeConfigured; ++d)
       {
-        const double kEst = std::ceil(T_nominal / static_cast<double>(d));
+        const double kEst  = std::ceil(T_nominal / static_cast<double>(d));
         const double tPrec = static_cast<double>(d) * d_cachedMatvecTime;
         const double pred =
           kEst * (d_cachedMatvecTime + tPrec + d_cachedAllreduceTime);
@@ -457,7 +457,7 @@ namespace dftfe
       }
     d_chebyDegree = bestD;
 
-        pcout << "Kerker Chebyshev tune: r0=" << initialResidual
+    pcout << "Kerker Chebyshev tune: r0=" << initialResidual
           << ", tMatvec=" << d_cachedMatvecTime
           << ", tAllreduce=" << d_cachedAllreduceTime
           << ", degree=" << d_chebyDegree << std::endl;
@@ -608,7 +608,6 @@ namespace dftfe
           << d_chebyLambdaMin << ", lambdaMax = " << d_chebyLambdaMax
           << ", kappa = " << d_chebyLambdaMax / d_chebyLambdaMin
           << ", degree = " << d_chebyDegree << std::endl;
-
   }
 
 

@@ -146,16 +146,19 @@ namespace dftfe
 
                 // Batch local r·z and r·r in one device pass
                 double localDotData[2] = {0.0, 0.0};
-                dftfe::utils::deviceMemset(
-                  d_localDotSums.data(), 0, 2 * sizeof(double));
+                dftfe::utils::deviceMemset(d_localDotSums.data(),
+                                           0,
+                                           2 * sizeof(double));
                 computeLocalDotRZAndRRDevice(d_rvec.begin(),
                                              d_uvec.begin(),
                                              d_localDotSums.data(),
                                              d_xLocalDof);
                 dftfe::utils::MemoryTransfer<
                   dftfe::utils::MemorySpace::HOST,
-                  dftfe::utils::MemorySpace::DEVICE>::copy(
-                  2, localDotData, d_localDotSums.data());
+                  dftfe::utils::MemorySpace::DEVICE>::copy(2,
+                                                           localDotData,
+                                                           d_localDotSums
+                                                             .data());
                 MPI_Allreduce(MPI_IN_PLACE,
                               localDotData,
                               2,
@@ -166,11 +169,8 @@ namespace dftfe
                 res          = std::sqrt(std::abs(localDotData[1]));
 
                 // p = -z
-                d_BLASWrapperPtr->axpby(d_xLocalDof,
-                                        -1.0,
-                                        d_uvec.begin(),
-                                        0.0,
-                                        d_pvec.begin());
+                d_BLASWrapperPtr->axpby(
+                  d_xLocalDof, -1.0, d_uvec.begin(), 0.0, d_pvec.begin());
 
                 while ((!conv) && (it < maxNumberIterations))
                   {
@@ -206,7 +206,8 @@ namespace dftfe
                     // z = M^{-1} r
                     problem.applyPreconditioner(d_uvec, d_rvec);
 
-                    // Batch delta_new = r·z and ||r||_2^2 = r·r into one allreduce
+                    // Batch delta_new = r·z and ||r||_2^2 = r·r into one
+                    // allreduce
                     localDotData[0] = 0.0;
                     localDotData[1] = 0.0;
                     d_BLASWrapperPtr->xdot(d_xLocalDof,
@@ -217,8 +218,10 @@ namespace dftfe
                                            &localDotData[0]);
                     dftfe::utils::MemoryTransfer<
                       dftfe::utils::MemorySpace::HOST,
-                      dftfe::utils::MemorySpace::DEVICE>::copy(
-                      1, &localDotData[1], d_localRR.data());
+                      dftfe::utils::MemorySpace::DEVICE>::copy(1,
+                                                               &localDotData[1],
+                                                               d_localRR
+                                                                 .data());
                     MPI_Allreduce(MPI_IN_PLACE,
                                   localDotData,
                                   2,
@@ -237,11 +240,8 @@ namespace dftfe
                     delta       = deltaNew;
 
                     // p = -z + beta * p
-                    d_BLASWrapperPtr->axpby(d_xLocalDof,
-                                            -1.0,
-                                            d_uvec.begin(),
-                                            beta,
-                                            d_pvec.begin());
+                    d_BLASWrapperPtr->axpby(
+                      d_xLocalDof, -1.0, d_uvec.begin(), beta, d_pvec.begin());
                   }
               }
 

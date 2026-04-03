@@ -149,7 +149,7 @@ namespace dftfe
 
     void
     tunePreconditionerForSolve(const double initialResidual,
-                   const double absTolerance) override;
+                               const double absTolerance) override;
 
     /**
      * @brief Apply Chebyshev-Jacobi preconditioner: dst \approx A^{-1} src.

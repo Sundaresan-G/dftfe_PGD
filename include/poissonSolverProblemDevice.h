@@ -177,7 +177,7 @@ namespace dftfe
 
     void
     tunePreconditionerForSolve(const double initialResidual,
-                   const double absTolerance) override;
+                               const double absTolerance) override;
 
 
   private:

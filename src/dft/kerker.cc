@@ -94,8 +94,7 @@ namespace dftfe
     else
       {
         kerkerPreconditionedResidualSolverProblem.setPreconditionerOptions(
-          useKerkerChebyshev,
-          d_dftParamsPtr->poissonChebyshevPolynomialDegree);
+          useKerkerChebyshev, d_dftParamsPtr->poissonChebyshevPolynomialDegree);
         CGSolver.solve(kerkerPreconditionedResidualSolverProblem,
                        d_dftParamsPtr->absLinearSolverToleranceHelmholtz,
                        d_dftParamsPtr->maxLinearSolverIterationsHelmholtz,

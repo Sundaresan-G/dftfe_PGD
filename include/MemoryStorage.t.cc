@@ -178,8 +178,8 @@ namespace dftfe
     {
       if (&rhs != this)
         {
-            dftfe::utils::MemoryManager<ValueType, memorySpace>::deallocate(
-              d_data);
+          dftfe::utils::MemoryManager<ValueType, memorySpace>::deallocate(
+            d_data);
           d_data     = rhs.d_data;
           d_size     = rhs.d_size;
           rhs.d_size = 0;

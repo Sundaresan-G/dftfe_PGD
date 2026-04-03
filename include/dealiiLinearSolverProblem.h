@@ -111,7 +111,7 @@ namespace dftfe
      */
     virtual void
     tunePreconditionerForSolve(const double initialResidual,
-                   const double absTolerance);
+                               const double absTolerance);
 
     /// function needed by dealii to mimic SparseMatrix for Jacobi
     /// preconditioning

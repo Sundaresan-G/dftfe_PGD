@@ -45,11 +45,11 @@ namespace dftfe
 
 
   void
-  chebyshevPrecondStep0Device(double            *dst,
-                              const double      *src,
-                              const double      *diag,
-                              const double       scaleFactor,
-                              const dftfe::uInt  N)
+  chebyshevPrecondStep0Device(double           *dst,
+                              const double     *src,
+                              const double     *diag,
+                              const double      scaleFactor,
+                              const dftfe::uInt N)
   {
     const dftfe::uInt gridSize =
       (N / dftfe::utils::DEVICE_BLOCK_SIZE) +
@@ -67,14 +67,14 @@ namespace dftfe
 
 
   void
-  chebyshevPrecondStepDevice(double            *dst,
-                             double            *update,
-                             const double      *src,
-                             const double      *Ax,
-                             const double      *diag,
-                             const double       factor1,
-                             const double       factor2,
-                             const dftfe::uInt  N)
+  chebyshevPrecondStepDevice(double           *dst,
+                             double           *update,
+                             const double     *src,
+                             const double     *Ax,
+                             const double     *diag,
+                             const double      factor1,
+                             const double      factor2,
+                             const dftfe::uInt N)
   {
     const dftfe::uInt gridSize =
       (N / dftfe::utils::DEVICE_BLOCK_SIZE) +

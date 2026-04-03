@@ -29,8 +29,8 @@ namespace dftfe
 
       // Store paired partial sums in shared memory so both reductions
       // proceed in a single reduction loop.
-      Type *smemRZ = smem;
-      Type *smemRR = smem + blockSize;
+      Type *smemRZ     = smem;
+      Type *smemRR     = smem + blockSize;
       smemRZ[threadId] = localRZ;
       smemRR[threadId] = localRR;
       SYNCTHREADS;
@@ -95,10 +95,10 @@ namespace dftfe
           dftfe::utils::atomicAddWrapper(&d_localSums[1], localRR);
         }
     }),
-    const Type       *d_rvec,
-    const Type       *d_zvec,
-    Type             *d_localSums,
-    const dftfe::Int  N);
+    const Type      *d_rvec,
+    const Type      *d_zvec,
+    Type            *d_localSums,
+    const dftfe::Int N);
 
   template <typename Type, dftfe::Int blockSize>
   DFTFE_CREATE_KERNEL_SMEM_S(
@@ -170,13 +170,13 @@ namespace dftfe
       if (threadId == 0)
         dftfe::utils::atomicAddWrapper(d_localRR, localRR);
     }),
-    Type             *d_xvec,
-    Type             *d_rvec,
-    const Type       *d_pvec,
-    const Type       *d_wvec,
-    const Type        alpha,
-    Type             *d_localRR,
-    const dftfe::Int  N);
+    Type            *d_xvec,
+    Type            *d_rvec,
+    const Type      *d_pvec,
+    const Type      *d_wvec,
+    const Type       alpha,
+    Type            *d_localRR,
+    const dftfe::Int N);
 
   void
   computeLocalDotRZAndRRDevice(const double    *d_rvec,
@@ -214,9 +214,9 @@ namespace dftfe
                               (dftfe::utils::DEVICE_BLOCK_SIZE * 2);
 
     DFTFE_LAUNCH_KERNEL_SMEM_S(
-      DFTFE_KERNEL_ARGUMENT(updateXRandComputeLocalRRKernel<
-                            double,
-                            dftfe::utils::DEVICE_BLOCK_SIZE>),
+      DFTFE_KERNEL_ARGUMENT(
+        updateXRandComputeLocalRRKernel<double,
+                                        dftfe::utils::DEVICE_BLOCK_SIZE>),
       blocks,
       dftfe::utils::DEVICE_BLOCK_SIZE,
       double,

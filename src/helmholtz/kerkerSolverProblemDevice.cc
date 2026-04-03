@@ -515,7 +515,7 @@ namespace dftfe
 
     for (dftfe::uInt d = 1; d <= d_chebyDegreeConfigured; ++d)
       {
-        const double kEst = std::ceil(T_nominal / static_cast<double>(d));
+        const double kEst  = std::ceil(T_nominal / static_cast<double>(d));
         const double tPrec = static_cast<double>(d) * d_cachedMatvecTime;
         const double pred =
           kEst * (d_cachedMatvecTime + tPrec + d_cachedAllreduceTime);
@@ -528,7 +528,7 @@ namespace dftfe
       }
     d_chebyDegree = bestD;
 
-        pcout << "Device Kerker Chebyshev tune: r0=" << initialResidual
+    pcout << "Device Kerker Chebyshev tune: r0=" << initialResidual
           << ", tMatvec=" << d_cachedMatvecTime
           << ", tAllreduce=" << d_cachedAllreduceTime
           << ", degree=" << d_chebyDegree << std::endl;
@@ -717,7 +717,6 @@ namespace dftfe
           << d_chebyLambdaMin << ", lambdaMax = " << d_chebyLambdaMax
           << ", kappa = " << d_chebyLambdaMax / d_chebyLambdaMin
           << ", degree = " << d_chebyDegree << std::endl;
-
   }
 
 
@@ -756,8 +755,11 @@ namespace dftfe
       }
 
     // Step 0: dst = (1/θ) D^{-1} src  [fused kernel]
-    chebyshevPrecondStep0Device(
-      dst.begin(), src.begin(), d_diagonalAdevice.begin(), invTheta, d_xLocalDof);
+    chebyshevPrecondStep0Device(dst.begin(),
+                                src.begin(),
+                                d_diagonalAdevice.begin(),
+                                invTheta,
+                                d_xLocalDof);
 
     if (d_chebyDegree <= 1)
       return;

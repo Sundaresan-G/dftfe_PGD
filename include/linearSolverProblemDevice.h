@@ -123,7 +123,7 @@ namespace dftfe
      */
     virtual void
     tunePreconditionerForSolve(const double initialResidual,
-                   const double absTolerance);
+                               const double absTolerance);
 
     // protected:
   };
