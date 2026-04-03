@@ -33,7 +33,7 @@ namespace dftfe
   void
   dftClass<memorySpace>::clearRhoData()
   {
-    d_mixingScheme.clearHistory();
+    d_mixingScheme->clearHistory();
 
     // related to low rank jacobian inverse scf preconditioning
     d_vcontainerVals.clear();

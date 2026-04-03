@@ -18,6 +18,8 @@
 #define DFTFE_MIXINGCLASS_H
 
 #include <deque>
+#include <memory>
+#include <BLASWrapper.h>
 #include <headers.h>
 #include <dftParameters.h>
 
@@ -56,9 +58,11 @@ namespace dftfe
   class MixingScheme
   {
   public:
-    MixingScheme(const MPI_Comm   &mpi_comm_parent,
-                 const MPI_Comm   &mpi_comm_domain,
-                 const dftfe::uInt verbosity);
+    MixingScheme(const MPI_Comm                      &mpi_comm_parent,
+                 const MPI_Comm                      &mpi_comm_domain,
+                 const dftfe::uInt                    verbosity,
+                 const std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<
+                   dftfe::utils::MemorySpace::HOST>> &blasWrapperHost);
 
     dftfe::uInt
     lengthOfHistory();
@@ -165,7 +169,9 @@ namespace dftfe
         dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
         &outHist,
       const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
-                          &weightDotProducts,
+        &weightDotProducts,
+      const dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
+                          &sqrtWeightDotProducts,
       const bool           isPerformMixing,
       const bool           isMPIAllReduce,
       std::vector<double> &A,
@@ -185,7 +191,12 @@ namespace dftfe
     std::map<
       mixingVariable,
       dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
-                                   d_vectorDotProductWeights;
+      d_vectorDotProductWeights;
+    /// sqrt(weightDotProducts), filled in addMixingVariable for BLAS Anderson.
+    std::map<
+      mixingVariable,
+      dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>>
+                                   d_sqrtVectorDotProductWeights;
     std::map<mixingVariable, bool> d_performMPIReduce;
 
     const MPI_Comm d_mpi_comm_domain, d_mpi_comm_parent;
@@ -200,6 +211,14 @@ namespace dftfe
     std::map<mixingVariable, bool>   d_performMixing;
     const dftfe::Int                 d_verbosity;
 
+    /// Workspace for BLAS-based Anderson Gram matrix (X^T X, X^T y).
+    std::vector<double> d_mixingBlasMatrixX;
+    std::vector<double> d_mixingBlasWeightedFn;
+    std::vector<double> d_mixingBlasTemp;
+
+    std::shared_ptr<
+      dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>
+      d_blasWrapperHostPtr;
 
     /// conditional stream object
     dealii::ConditionalOStream pcout;
