@@ -411,22 +411,24 @@ namespace dftfe
             // copy from vector containg all wavefunction vectors to current
             // wavefunction vectors block
             BLASWrapperPtr->stridedCopyToBlockConstantStride(
-                BVec,
-                totalNumberWaveFunctions/numberBandGroups,
-                localVectorSize,
-                jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
-                eigenVectorsFlattenedDevice,
-                (*XBlock).begin());
+              BVec,
+              totalNumberWaveFunctions/numberBandGroups,
+              localVectorSize,
+              jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+              eigenVectorsFlattenedDevice,
+              (*XBlock).begin());
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
-              BLASWrapperPtr->stridedCopyToBlockConstantStride(
+              {
+                BLASWrapperPtr->stridedCopyToBlockConstantStride(
                   BVec,
                   totalNumberWaveFunctions/numberBandGroups,
                   localVectorSize,
                   jvec + BVec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
                   eigenVectorsFlattenedDevice,
                   (*XBlock2).begin());
+              }
 
             //
             // call Chebyshev filtering function only for the current block
@@ -477,26 +479,6 @@ namespace dftfe
                         d_upperBoundUnWantedSpectrum,
                         d_lowerBoundWantedSpectrum,
                         d_dftParams.approxOverlapMatrix);
-                    if (useMixedPrecOverall &&
-                        d_dftParams.communPrecCheby == "BF16")
-                      {
-                        (*XBlockFP32)
-                          .setCommunicationPrecision(
-                            dftfe::utils::mpi::communicationPrecision::
-                              standard);
-                        (*HXBlockFP32)
-                          .setCommunicationPrecision(
-                            dftfe::utils::mpi::communicationPrecision::
-                              standard);
-                        (*XBlock2FP32)
-                          .setCommunicationPrecision(
-                            dftfe::utils::mpi::communicationPrecision::
-                              standard);
-                        (*HXBlock2FP32)
-                          .setCommunicationPrecision(
-                            dftfe::utils::mpi::communicationPrecision::
-                              standard);
-                      }
                   }
                 else
                   {
@@ -527,19 +509,6 @@ namespace dftfe
                       d_upperBoundUnWantedSpectrum,
                       d_lowerBoundWantedSpectrum,
                       d_dftParams.approxOverlapMatrix);
-
-                    if (useMixedPrecOverall &&
-                        d_dftParams.communPrecCheby == "BF16")
-                      {
-                        (*XBlockFP32)
-                          .setCommunicationPrecision(
-                            dftfe::utils::mpi::communicationPrecision::
-                              standard);
-                        (*HXBlockFP32)
-                          .setCommunicationPrecision(
-                            dftfe::utils::mpi::communicationPrecision::
-                              standard);
-                      }
                   }
               }
             else if (d_dftParams.useReformulatedChFSI && !isFirstFilteringCall)
@@ -625,22 +594,22 @@ namespace dftfe
             // copy current wavefunction vectors block to vector containing
             // all wavefunction vectors
             BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                totalNumberWaveFunctions/numberBandGroups,
-                BVec,
-                localVectorSize,
-                jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
-                (*XBlock).begin(),
-                eigenVectorsFlattenedDevice);
+              totalNumberWaveFunctions/numberBandGroups,
+              BVec,
+              localVectorSize,
+              jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+              (*XBlock).begin(),
+              eigenVectorsFlattenedDevice);
 
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
               BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                  totalNumberWaveFunctions/numberBandGroups,
-                  BVec,
-                  localVectorSize,
-                  jvec + BVec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
-                  (*XBlock2).begin(),
-                  eigenVectorsFlattenedDevice);
+                totalNumberWaveFunctions/numberBandGroups,
+                BVec,
+                localVectorSize,
+                jvec + BVec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                (*XBlock2).begin(),
+                eigenVectorsFlattenedDevice);
           }
 //         else
 //           {
@@ -725,9 +694,6 @@ namespace dftfe
 
     // if (d_dftParams.measureOnlyChebyTime)
     //  exit(0);
-
-
-
     if (d_dftParams.orthogType.compare("GS") == 0)
       {
         AssertThrow(

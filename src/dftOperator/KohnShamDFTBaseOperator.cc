@@ -1742,7 +1742,6 @@ namespace dftfe
             ->initialiseFlattenedDataStructure(
               numWaveFunctions,
               d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec);
-
         if (d_dftParamsPtr->communPrecCheby == "BF16")
           d_pseudopotentialNonLocalProjectorTimesVectorBlockSinglePrec
             .setCommunicationPrecision(
@@ -2068,17 +2067,19 @@ namespace dftfe
     const dftfe::uInt numberWavefunctions = src.numVectors() / spinorFactor;
     if (d_numVectorsInternal != numberWavefunctions * spinorFactor)
       reinitNumberWavefunctions(numberWavefunctions * spinorFactor);
-#if defined(DFTFE_WITH_DEVICE)
-    if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-      {
-        if (d_dftParamsPtr->tensorOpType == "TF32")
-          d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::tf32);
-        if (d_dftParamsPtr->tensorOpType == "BF16")
-          d_BLASWrapperPtr->setTensorOpDataType(
-            dftfe::linearAlgebra::tensorOpDataType::bf16);
-      }
-#endif
+    /*
+    #if defined(DFTFE_WITH_DEVICE)
+        if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
+          {
+            if (d_dftParamsPtr->tensorOpType == "TF32")
+              d_BLASWrapperPtr->setTensorOpDataType(
+                dftfe::linearAlgebra::tensorOpDataType::tf32);
+            if (d_dftParamsPtr->tensorOpType == "BF16")
+              d_BLASWrapperPtr->setTensorOpDataType(
+                dftfe::linearAlgebra::tensorOpDataType::bf16);
+          }
+    #endif
+    */
     if (d_basisOperationsPtr->d_nVectors != numberWavefunctions * spinorFactor)
       d_basisOperationsPtr->reinit(numberWavefunctions * spinorFactor,
                                    d_cellsBlockSizeHX,
@@ -2259,11 +2260,13 @@ namespace dftfe
     inverseSqrtMassVectorScaledConstraintsNoneDataInfoPtr->set_zero(src);
     dst.accumulateAddLocallyOwned();
     dst.zeroOutGhosts();
-#if defined(DFTFE_WITH_DEVICE)
-    if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-      d_BLASWrapperPtr->setTensorOpDataType(
-        dftfe::linearAlgebra::tensorOpDataType::fp32);
-#endif
+    /*
+    #if defined(DFTFE_WITH_DEVICE)
+        if constexpr (memorySpace == dftfe::utils::MemorySpace::DEVICE)
+          d_BLASWrapperPtr->setTensorOpDataType(
+            dftfe::linearAlgebra::tensorOpDataType::fp32);
+    #endif
+    */
   }
   template <dftfe::utils::MemorySpace memorySpace>
   void
@@ -2668,7 +2671,6 @@ namespace dftfe
     dst.accumulateAddLocallyOwned();
     dst.zeroOutGhosts();
   }
-
   template class KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::HOST>;
 #if defined(DFTFE_WITH_DEVICE)
   template class KohnShamDFTBaseOperator<dftfe::utils::MemorySpace::DEVICE>;

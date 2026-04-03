@@ -496,21 +496,39 @@ namespace dftfe
               interBandGroupComm,
               dftParams);
           else
-            XtHXMixedPrecOverlapComputeCommun(
-              operatorMatrix,
-              X,
-              Xb,
-              HXb,
-              M,
-              N,
-              dftParams.numCoreWfcForMixedPrecRR,
-              BLASWrapperPtr,
-              processGrid,
-              projHamPar,
-              devicecclMpiCommDomain,
-              mpiCommDomain,
-              interBandGroupComm,
-              dftParams);
+            {
+              if (dftParams.overlapComputeCommunOrthoRR)
+                XtHXMixedPrecOverlapComputeCommun(
+                  operatorMatrix,
+                  X,
+                  Xb,
+                  HXb,
+                  M,
+                  N,
+                  dftParams.numCoreWfcForMixedPrecRR,
+                  BLASWrapperPtr,
+                  processGrid,
+                  projHamPar,
+                  devicecclMpiCommDomain,
+                  mpiCommDomain,
+                  interBandGroupComm,
+                  dftParams);
+              else
+                XtHXMixedPrec(operatorMatrix,
+                              X,
+                              Xb,
+                              HXb,
+                              M,
+                              N,
+                              dftParams.numCoreWfcForMixedPrecRR,
+                              BLASWrapperPtr,
+                              processGrid,
+                              projHamPar,
+                              devicecclMpiCommDomain,
+                              mpiCommDomain,
+                              interBandGroupComm,
+                              dftParams);
+            }
         }
       else
         {
@@ -742,17 +760,19 @@ namespace dftfe
         }
 
       if (useMixedPrecOverall && dftParams.useMixedPrecSubspaceRotRR)
-        subspaceRotationRRMixedPrecScalapack(X,
-                                             M,
-                                             N,
-                                             BLASWrapperPtr,
-                                             processGrid,
-                                             mpiCommDomain,
-                                             devicecclMpiCommDomain,
-                                             interBandGroupComm,
-                                             projHamPar,
-                                             dftParams,
-                                             false);
+        subspaceRotationRRMixedPrecScalapack(
+          X,
+          M,
+          N,
+          BLASWrapperPtr,
+          processGrid,
+          mpiCommDomain,
+          devicecclMpiCommDomain,
+          interBandGroupComm,
+          projHamPar,
+          dftParams,
+          false,
+          dftParams.overlapComputeCommunOrthoRR);
       else
         subspaceRotationScalapack(X,
                                   M,
@@ -764,7 +784,9 @@ namespace dftfe
                                   interBandGroupComm,
                                   projHamPar,
                                   dftParams,
-                                  false);
+                                  false,
+                                  false,
+                                  dftParams.overlapComputeCommunOrthoRR);
 
       if (dftParams.deviceFineGrainedTimings)
         {
@@ -825,15 +847,15 @@ namespace dftfe
 
 
 
-      const unsigned int rowsBlockSize = elpaScala.getScalapackBlockSize();
+      const dftfe::uInt rowsBlockSize = elpaScala.getScalapackBlockSize();
       std::shared_ptr<const dftfe::ProcessGrid> processGrid =
         elpaScala.getProcessGridDftfeScalaWrapper();
 
       // band group parallelization data structures
-      const unsigned int numberBandGroups =
+      const dftfe::uInt numberBandGroups =
         dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
-      const unsigned int chebyBlockSize =
+      const dftfe::uInt chebyBlockSize =
                 std::min((std::size_t)dftParams.chebyWfcBlockSize, N/numberBandGroups);
 
       // dftfe::utils::deviceStream_t streamHX, streamMX;
@@ -926,7 +948,7 @@ namespace dftfe
       BLASWrapperPtr->setStream(streamCompute);
 
       // Compute HX and MX and store it in HXDevice and MXDevice
-      for (unsigned int k = 0; k < N/numberBandGroups; k += chebyBlockSize)
+      for (dftfe::uInt k = 0; k < N/numberBandGroups; k += chebyBlockSize)
       {
         BLASWrapperPtr->stridedCopyToBlockConstantStride(
             chebyBlockSize, N/numberBandGroups, M, k, X, Xb.begin());
@@ -1156,12 +1178,12 @@ namespace dftfe
                      dataTypes::number(1.0));
 
       if (processGrid->is_process_active())
-        for (unsigned int i = 0; i < projHamPar.local_n(); ++i)
+        for (dftfe::uInt i = 0; i < projHamPar.local_n(); ++i)
           {
-            const unsigned int glob_i = projHamPar.global_column(i);
-            for (unsigned int j = 0; j < projHamPar.local_m(); ++j)
+            const dftfe::uInt glob_i = projHamPar.global_column(i);
+            for (dftfe::uInt j = 0; j < projHamPar.local_m(); ++j)
               {
-                const unsigned int glob_j = projHamPar.global_row(j);
+                const dftfe::uInt glob_j = projHamPar.global_row(j);
                 if (glob_i == glob_j)
                   projHamPar.local_el(j, i) *= dataTypes::number(0.5);
               }
@@ -1179,7 +1201,7 @@ namespace dftfe
       //
       // compute standard eigendecomposition HSConjProj: {QConjPrime,D}
       // HSConjProj=QConjPrime*D*QConjPrime^{C} QConj={Lc^{-1}}^{C}*QConjPrime
-      const unsigned int numberEigenValues = N;
+      const dftfe::uInt numberEigenValues = N;
       eigenValues.resize(numberEigenValues);
       if (dftParams.useELPA)
         {
@@ -1260,12 +1282,12 @@ namespace dftfe
             dftfe::LAPACKSupport::Property::lower_triangular);
 
           if (processGrid->is_process_active())
-            for (unsigned int i = 0; i < LMatPar.local_n(); ++i)
+            for (dftfe::uInt i = 0; i < LMatPar.local_n(); ++i)
               {
-                const unsigned int glob_i = LMatPar.global_column(i);
-                for (unsigned int j = 0; j < LMatPar.local_m(); ++j)
+                const dftfe::uInt glob_i = LMatPar.global_column(i);
+                for (dftfe::uInt j = 0; j < LMatPar.local_m(); ++j)
                   {
-                    const unsigned int glob_j = LMatPar.global_row(j);
+                    const dftfe::uInt glob_j = LMatPar.global_row(j);
                     if (glob_j < glob_i)
                       LMatPar.local_el(j, i) = dataTypes::number(0);
                     else
@@ -1316,7 +1338,7 @@ namespace dftfe
       // if (dftParams.verbosity > 3)
       //   {
       //     pcout << "Eigenvalues: ";
-      //     for (unsigned int i = 0; i < numberEigenValues; ++i)
+      //     for (dftfe::uInt i = 0; i < numberEigenValues; ++i)
       //       pcout << eigenValues[i] << " ";
       //     pcout << std::endl;
       //   }

@@ -237,15 +237,15 @@ namespace dftfe
                                       iNode * totalNumWaveFunctions + jvec,
                                     currentBlockSize * sizeof(NumberType));
 #if defined(DFTFE_WITH_DEVICE)
-                  else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
-                    BLASWrapperPtr->stridedCopyToBlockConstantStride(
-                      currentBlockSize,
-                      totalNumWaveFunctions/numberBandGroups,
-                      numLocalDofs * numWfnSpinors,
-                      jvec  - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
-                      X->data() + numLocalDofs * numWfnSpinors * (totalNumWaveFunctions/numberBandGroups) *
-                                    (numSpinComponents * kPoint + spinIndex),
-                      flattenedArrayBlock->data());
+                    else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
+                      BLASWrapperPtr->stridedCopyToBlockConstantStride(
+                        currentBlockSize,
+                        totalNumWaveFunctions/numberBandGroups,
+                        numLocalDofs * numWfnSpinors,
+                        jvec  - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                        X->data() + numLocalDofs * numWfnSpinors * (totalNumWaveFunctions/numberBandGroups) *
+                                      (numSpinComponents * kPoint + spinIndex),
+                        flattenedArrayBlock->data());
 #endif
 
                     basisOperationsPtr->reinit(currentBlockSize * numWfnSpinors,

@@ -82,13 +82,13 @@ namespace dftfe
           "USE GPUDIRECT MPI ALL REDUCE",
           "false",
           dealii::Patterns::Bool(),
-          R"([Adavanced] Use GPUDIRECT MPI\_Allreduce. This route will only work if DFT-FE is either compiled with NVIDIA NCCL library or withGPUAwareMPI=ON. Both these routes require GPU Aware MPI library to be available as well relevant hardware. If both NVIDIA NCCL library and withGPUAwareMPI modes are toggled on, the NCCL mode takes precedence. Also note that one MPI rank per GPU can be used when using this option. Default: false.)");
+          R"([Advanced] Use GPUDIRECT MPI\_Allreduce. This route will only work if DFT-FE is compiled with a device collective communications library (NVIDIA NCCL, AMD RCCL, or Intel oneCCL) or withGPUAwareMPI=ON. If a DCCL library and withGPUAwareMPI modes are both enabled, the DCCL mode takes precedence. Also note that one MPI rank per GPU can be used when using this option. Default: false.)");
 
         prm.declare_entry(
           "USE DCCL",
           "false",
           dealii::Patterns::Bool(),
-          R"([Adavanced] Use NCCL/RCCL for GPUDIRECT communications. Default: false.)");
+          R"([Advanced] Use device collective communications library (NVIDIA NCCL, AMD RCCL, or Intel oneCCL) for GPU-direct allreduce. Default: false.)");
 
         prm.declare_entry(
           "USE ALLTOAll DCCL",
@@ -1145,11 +1145,19 @@ namespace dftfe
             "false",
             dealii::Patterns::Bool(),
             "[Advanced] Use a modified single precision algorithm for Chebyshev filtering. This cannot be used in conjunction with spectrum splitting. Default setting is false.");
+
           prm.declare_entry(
             "TENSOR OP TYPE SINGLE PREC CHEBY",
             "FP32",
             dealii::Patterns::Selection("FP32|TF32|BF16"),
             "[Advanced] Tensor operation datatype for the modified single precision algorithm for Chebyshev filtering, this only used on Nvidia GPUs with compute capability greater than 80. Default setting is FP32.");
+
+          prm.declare_entry(
+            "ADAPTIVE USAGE BF16 COMMUN",
+            "false",
+            dealii::Patterns::Bool(),
+            "[Advanced] Use BF16 communication only when the SCF error in L2 norm of the electron density difference below 0.1. This provides robust convergence of the SCF and the linear eignsolve in each SCF step.");
+
 
           prm.declare_entry(
             "OVERLAP COMPUTE COMMUN CHEBY",
@@ -1441,6 +1449,7 @@ namespace dftfe
     deviceFineGrainedTimings                       = false;
     allowFullCPUMemSubspaceRot                     = true;
     communPrecCheby                                = "STANDARD";
+    adaptiveUsageBF16Commun                        = false;
     overlapComputeCommunCheby                      = false;
     overlapComputeCommunOrthoRR                    = false;
     autoDeviceBlockSizes                           = true;
@@ -1836,9 +1845,10 @@ namespace dftfe
         useMixedPrecSubspaceRotRR = prm.get_bool("USE MIXED PREC RR_SR");
         useMixedPrecCommunOnlyXtHXXtOX =
           prm.get_bool("USE MIXED PREC COMMUN ONLY XTOX XTHX");
-        communPrecCheby    = prm.get("COMMUN PREC CHEBY");
-        useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
-        tensorOpType       = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
+        communPrecCheby         = prm.get("COMMUN PREC CHEBY");
+        useSinglePrecCheby      = prm.get_bool("USE SINGLE PREC CHEBY");
+        tensorOpType            = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
+        adaptiveUsageBF16Commun = prm.get_bool("ADAPTIVE USAGE BF16 COMMUN");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
         overlapComputeCommunOrthoRR =
@@ -2273,7 +2283,6 @@ namespace dftfe
     useELPADeviceKernel = false;
 #endif
 #if defined(DFTFE_WITH_DEVICE_LANG_SYCL)
-    useDCCL             = false;
     useELPADeviceKernel = false;
 #endif
 
@@ -2286,10 +2295,11 @@ namespace dftfe
       }
 
 #if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL) && \
-  !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
+  !defined(DFTFE_WITH_SYCL_ONECCL) && !defined(DFTFE_WITH_DEVICE_AWARE_MPI)
     useDeviceDirectAllReduce = false;
 #endif
-#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL)
+#if !defined(DFTFE_WITH_CUDA_NCCL) && !defined(DFTFE_WITH_HIP_RCCL) && \
+  !defined(DFTFE_WITH_SYCL_ONECCL)
     useDCCL = false;
 #endif
 #if !defined(DFTFE_WITH_DEVICE_AWARE_MPI)

@@ -40,7 +40,7 @@ namespace dftfe
      */
     template <typename ValueType>
     void
-    deviceSetValue(ValueType *devPtr, ValueType value, std::size_t size, deviceStream_t stream = 0);
+    deviceSetValue(ValueType *devPtr, ValueType value, std::size_t size, deviceStream_t stream = dftfe::utils::defaultStream);
 
     deviceError_t
     deviceFree(void *devPtr);

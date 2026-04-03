@@ -78,14 +78,13 @@ namespace dftfe
                  dftfe::dftParameters &dftParams,
                  dftBase             **dftfeBaseDoublePtr)
     {
-      *dftfeBaseDoublePtr =
-        new dftfe::dftClass<memory>(mpi_comm_parent,
-                                            mpi_comm_domain,
-                                            interpoolcomm,
-                                            interBandGroupComm,
-                                            intrapoolcomm,
-                                            scratchFolderName,
-                                            dftParams);
+      *dftfeBaseDoublePtr = new dftfe::dftClass<memory>(mpi_comm_parent,
+                                                        mpi_comm_domain,
+                                                        interpoolcomm,
+                                                        interBandGroupComm,
+                                                        intrapoolcomm,
+                                                        scratchFolderName,
+                                                        dftParams);
     }
   } // namespace internalWrapper
 
@@ -768,28 +767,28 @@ namespace dftfe
           {
             dftfe::internalWrapper::create_dftfe<
               dftfe::utils::MemorySpace::HOST>(
-                  d_mpi_comm_parent,
-                  bandGroupsPool.get_intrapool_comm(),
-                  kPointPool.get_interpool_comm(),
-                  bandGroupsPool.get_interpool_comm(),
-                  kPointPool.get_intrapool_comm(),
-                  d_scratchFolderName,
-                  *d_dftfeParamsPtr,
-                  &d_dftfeBasePtr);
+              d_mpi_comm_parent,
+              bandGroupsPool.get_intrapool_comm(),
+              kPointPool.get_interpool_comm(),
+              bandGroupsPool.get_interpool_comm(),
+              kPointPool.get_intrapool_comm(),
+              d_scratchFolderName,
+              *d_dftfeParamsPtr,
+              &d_dftfeBasePtr);
           }
 #ifdef DFTFE_WITH_DEVICE
         else if (useDevice)
           {
             dftfe::internalWrapper::create_dftfe<
               dftfe::utils::MemorySpace::DEVICE>(
-                  d_mpi_comm_parent,
-                  bandGroupsPool.get_intrapool_comm(),
-                  kPointPool.get_interpool_comm(),
-                  bandGroupsPool.get_interpool_comm(),
-                  kPointPool.get_intrapool_comm(),
-                  d_scratchFolderName,
-                  *d_dftfeParamsPtr,
-                  &d_dftfeBasePtr);
+              d_mpi_comm_parent,
+              bandGroupsPool.get_intrapool_comm(),
+              kPointPool.get_interpool_comm(),
+              bandGroupsPool.get_interpool_comm(),
+              kPointPool.get_intrapool_comm(),
+              d_scratchFolderName,
+              *d_dftfeParamsPtr,
+              &d_dftfeBasePtr);
           }
 #endif
         d_dftfeBasePtr->set();

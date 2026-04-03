@@ -42,6 +42,54 @@ namespace dftfe
         const dftfe::uInt              initBlockRows,
         const dftfe::uInt              initBlockCols);
 
+      template <typename ValueType>
+      DFTFE_CREATE_KERNEL(
+        void,
+        copyToWfcsBlockKernel,
+        {
+          const dftfe::uInt numEntries = BVec * M;
+          for (dftfe::Int i = globalThreadId; i < numEntries;
+               i += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt idof = i / BVec;
+              const dftfe::uInt ivec = i % BVec;
+
+              XBlock[idof * BVec + ivec] = X[N * idof + startingVecId + ivec];
+            }
+        },
+        const dftfe::uInt BVec,
+        const dftfe::uInt M,
+        const ValueType  *X,
+        const dftfe::uInt startingVecId,
+        const dftfe::uInt N,
+        ValueType        *XBlock);
+
+      template <typename ValueType>
+      DFTFE_CREATE_KERNEL(
+        void,
+        copyScaleToWfcsBlockKernel,
+        {
+          const dftfe::uInt numEntries = BVec * M;
+          for (dftfe::Int i = globalThreadId; i < numEntries;
+               i += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt idof = i / BVec;
+              const dftfe::uInt ivec = i % BVec;
+
+              XBlock[idof * BVec + ivec] =
+                dftfe::utils::mult(scalVec[idof],
+                                   X[N * idof + startingVecId + ivec]);
+            }
+        },
+        const dftfe::uInt BVec,
+        const dftfe::uInt M,
+        const ValueType  *X,
+        const double     *scalVec,
+        const dftfe::uInt startingVecId,
+        const dftfe::uInt N,
+        ValueType        *XBlock);
+
+
       DFTFE_CREATE_KERNEL(
         void,
         addSubspaceRotatedBlockToXKernel,
@@ -91,6 +139,58 @@ namespace dftfe
         const dftfe::uInt                       startingDofId,
         const dftfe::uInt                       startingVecId,
         const dftfe::uInt                       N);
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        addSubspaceRotatedBlockToXBlockDiagonalKernel,
+        {
+          const dftfe::uInt numEntries = BVec * BDof;
+          for (dftfe::Int i = globalThreadId; i < numEntries;
+               i += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt ibdof = i / BVec;
+              const dftfe::uInt ivec  = i % BVec;
+
+              *(X + N * (startingDofId + ibdof) + startingVecId + ivec) =
+                rotatedXBlockSP[ibdof * BVec + ivec] +
+                rotatedXBlockDP[ibdof * BVec + ivec];
+            }
+        },
+        const dftfe::uInt BDof,
+        const dftfe::uInt BVec,
+        const float      *rotatedXBlockSP,
+        const double     *rotatedXBlockDP,
+        double           *X,
+        const dftfe::uInt startingDofId,
+        const dftfe::uInt startingVecId,
+        const dftfe::uInt N);
+
+
+      DFTFE_CREATE_KERNEL(
+        void,
+        addSubspaceRotatedBlockToXBlockDiagonalKernel,
+        {
+          const dftfe::uInt numEntries = BVec * BDof;
+          for (dftfe::Int i = globalThreadId; i < numEntries;
+               i += nThreadsPerBlock * nThreadBlock)
+            {
+              const dftfe::uInt ibdof = i / BVec;
+              const dftfe::uInt ivec  = i % BVec;
+
+              *(X + N * (startingDofId + ibdof) + startingVecId + ivec) =
+                dftfe::utils::add(rotatedXBlockSP[ibdof * BVec + ivec],
+                                  rotatedXBlockDP[ibdof * BVec + ivec]);
+            }
+        },
+        const dftfe::uInt                        BDof,
+        const dftfe::uInt                        BVec,
+        const dftfe::utils::deviceFloatComplex  *rotatedXBlockSP,
+        const dftfe::utils::deviceDoubleComplex *rotatedXBlockDP,
+        dftfe::utils::deviceDoubleComplex       *X,
+        const dftfe::uInt                        startingDofId,
+        const dftfe::uInt                        startingVecId,
+        const dftfe::uInt                        N);
 
 
 
@@ -378,6 +478,55 @@ namespace dftfe
 
     } // namespace
 
+    template <typename ValueType>
+    void
+    copyToWfcsBlock(const dftfe::uInt             BVec,
+                    const dftfe::uInt             M,
+                    const ValueType              *X,
+                    const dftfe::uInt             startingVecId,
+                    const dftfe::uInt             N,
+                    ValueType                    *XBlock,
+                    dftfe::utils::deviceStream_t &streamCompute)
+    {
+      DFTFE_LAUNCH_KERNEL(copyToWfcsBlockKernel,
+                          (BVec * M + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                            dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          streamCompute,
+                          BVec,
+                          M,
+                          dftfe::utils::makeDataTypeDeviceCompatible(X),
+                          startingVecId,
+                          N,
+                          dftfe::utils::makeDataTypeDeviceCompatible(XBlock));
+    }
+
+
+    template <typename ValueType>
+    void
+    copyScaleToWfcsBlock(const dftfe::uInt             BVec,
+                         const dftfe::uInt             M,
+                         const ValueType              *X,
+                         const double                 *scalVec,
+                         const dftfe::uInt             startingVecId,
+                         const dftfe::uInt             N,
+                         ValueType                    *XBlock,
+                         dftfe::utils::deviceStream_t &streamCompute)
+    {
+      DFTFE_LAUNCH_KERNEL(copyScaleToWfcsBlockKernel,
+                          (BVec * M + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                            dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          streamCompute,
+                          BVec,
+                          M,
+                          dftfe::utils::makeDataTypeDeviceCompatible(X),
+                          scalVec,
+                          startingVecId,
+                          N,
+                          dftfe::utils::makeDataTypeDeviceCompatible(XBlock));
+    }
+
     template <typename ValueType1, typename ValueType2>
     void
     addSubspaceRotatedBlockToX(const dftfe::uInt             BDof,
@@ -403,6 +552,37 @@ namespace dftfe
         startingVecId,
         N);
     }
+
+    template <typename ValueType1, typename ValueType2>
+    void
+    addSubspaceRotatedBlockToXBlockDiagonal(
+      const dftfe::uInt             BDof,
+      const dftfe::uInt             BVec,
+      const ValueType1             *rotatedXBlockSP,
+      const ValueType2             *rotatedXBlockDP,
+      ValueType2                   *X,
+      const dftfe::uInt             startingDofId,
+      const dftfe::uInt             startingVecId,
+      const dftfe::uInt             N,
+      dftfe::utils::deviceStream_t &streamCompute)
+    {
+      DFTFE_LAUNCH_KERNEL(
+        addSubspaceRotatedBlockToXBlockDiagonalKernel,
+        (BVec * BDof + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+          dftfe::utils::DEVICE_BLOCK_SIZE,
+        dftfe::utils::DEVICE_BLOCK_SIZE,
+        streamCompute,
+        BDof,
+        BVec,
+        dftfe::utils::makeDataTypeDeviceCompatible(rotatedXBlockSP),
+        dftfe::utils::makeDataTypeDeviceCompatible(rotatedXBlockDP),
+        dftfe::utils::makeDataTypeDeviceCompatible(X),
+        startingDofId,
+        startingVecId,
+        N);
+    }
+
+
     template <typename ValueType1, typename ValueType2>
     void
     copyFromOverlapMatBlockToDPSPBlocks(
@@ -503,15 +683,15 @@ namespace dftfe
             const dftfe::uInt startingXVecId)
     {
       DFTFE_LAUNCH_KERNEL(setZeroKernel,
-                         (BVec + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-                           dftfe::utils::DEVICE_BLOCK_SIZE * M,
-                         dftfe::utils::DEVICE_BLOCK_SIZE,
-                         dftfe::utils::defaultStream,
-                         BVec,
-                         M,
-                         N,
-                         dftfe::utils::makeDataTypeDeviceCompatible(yVec),
-                         startingXVecId);
+                          (BVec + (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+                            dftfe::utils::DEVICE_BLOCK_SIZE * M,
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::utils::defaultStream,
+                          BVec,
+                          M,
+                          N,
+                          dftfe::utils::makeDataTypeDeviceCompatible(yVec),
+                          startingXVecId);
     }
 
     template <typename ValueType1, typename ValueType2>
@@ -591,6 +771,29 @@ namespace dftfe
                                const dftfe::uInt             startingVecId,
                                const dftfe::uInt             N,
                                dftfe::utils::deviceStream_t &streamCompute);
+    template void
+    addSubspaceRotatedBlockToXBlockDiagonal(
+      const dftfe::uInt             BDof,
+      const dftfe::uInt             BVec,
+      const float                  *rotatedXBlockSP,
+      const double                 *rotatedXBlockDP,
+      double                       *X,
+      const dftfe::uInt             startingDofId,
+      const dftfe::uInt             startingVecId,
+      const dftfe::uInt             N,
+      dftfe::utils::deviceStream_t &streamCompute);
+    template void
+    addSubspaceRotatedBlockToXBlockDiagonal(
+      const dftfe::uInt             BDof,
+      const dftfe::uInt             BVec,
+      const std::complex<float>    *rotatedXBlockSP,
+      const std::complex<double>   *rotatedXBlockDP,
+      std::complex<double>         *X,
+      const dftfe::uInt             startingDofId,
+      const dftfe::uInt             startingVecId,
+      const dftfe::uInt             N,
+      dftfe::utils::deviceStream_t &streamCompute);
+
     template void
     copyFromOverlapMatBlockToDPSPBlocks(
       const dftfe::uInt             B,
@@ -673,5 +876,42 @@ namespace dftfe
             std::complex<double> *yVec,
             const dftfe::uInt     startingXVecId);
 
+    template void
+    copyToWfcsBlock(const dftfe::uInt             BVec,
+                    const dftfe::uInt             M,
+                    const double                 *X,
+                    const dftfe::uInt             startingVecId,
+                    const dftfe::uInt             N,
+                    double                       *XBlock,
+                    dftfe::utils::deviceStream_t &streamCompute);
+
+    template void
+    copyToWfcsBlock(const dftfe::uInt             BVec,
+                    const dftfe::uInt             M,
+                    const std::complex<double>   *X,
+                    const dftfe::uInt             startingVecId,
+                    const dftfe::uInt             N,
+                    std::complex<double>         *XBlock,
+                    dftfe::utils::deviceStream_t &streamCompute);
+
+    template void
+    copyScaleToWfcsBlock(const dftfe::uInt             BVec,
+                         const dftfe::uInt             M,
+                         const double                 *X,
+                         const double                 *scalVec,
+                         const dftfe::uInt             startingVecId,
+                         const dftfe::uInt             N,
+                         double                       *XBlock,
+                         dftfe::utils::deviceStream_t &streamCompute);
+
+    template void
+    copyScaleToWfcsBlock(const dftfe::uInt             BVec,
+                         const dftfe::uInt             M,
+                         const std::complex<double>   *X,
+                         const double                 *scalVec,
+                         const dftfe::uInt             startingVecId,
+                         const dftfe::uInt             N,
+                         std::complex<double>         *XBlock,
+                         dftfe::utils::deviceStream_t &streamCompute);
   } // namespace linearAlgebraOperationsDevice
 } // namespace dftfe
