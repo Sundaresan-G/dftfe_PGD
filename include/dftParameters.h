@@ -145,6 +145,7 @@ namespace dftfe
     bool        useMixedPrecSubspaceRotRR;
     bool        useMixedPrecCommunOnlyXtHXXtOX;
     bool        useELPA;
+    bool        elpaAutoTune;
     bool        constraintsParallelCheck;
     bool        createConstraintsFromSerialDofhandler;
     bool        bandParalOpt;
@@ -185,6 +186,9 @@ namespace dftfe
     bool        allowMultipleFilteringPassesAfterFirstScf;
     dftfe::uInt highestStateOfInterestForChebFiltering;
     bool        useELPADeviceKernel;
+    std::string elpaAutoTuneLevel;
+    std::string elpaAutoTuneConfigSavePath;
+    std::string elpaAutoTuneConfigLoadPath;
     bool        memOptMode;
     bool        approxOverlapMatrix;
     bool        useReformulatedChFSI;

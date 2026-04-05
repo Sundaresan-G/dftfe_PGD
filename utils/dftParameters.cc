@@ -1072,6 +1072,30 @@ namespace dftfe
             "[Standard] Use ELPA instead of ScaLAPACK for diagonalization of subspace projected Hamiltonian and Cholesky-Gram-Schmidt orthogonalization.  Default setting is true.");
 
           prm.declare_entry(
+            "ELPA AUTOTUNE",
+            "false",
+            dealii::Patterns::Bool(),
+            "[Developer] Run ELPA autotuning during ELPA setup. This is intended for one-time tuning runs before production calculations. Default setting is false.");
+
+          prm.declare_entry(
+            "ELPA AUTOTUNE LEVEL",
+            "MEDIUM",
+            dealii::Patterns::Selection("FAST|MEDIUM|EXTENSIVE"),
+            "[Developer] ELPA autotuning level. FAST tests solver and kernel choices, MEDIUM additionally explores GPU-related settings, and EXTENSIVE also searches blocking-related settings. Default setting is MEDIUM.");
+
+          prm.declare_entry(
+            "ELPA AUTOTUNE SAVE PATH",
+            "",
+            dealii::Patterns::Anything(),
+            "[Developer] Optional file path used to save ELPA settings after autotuning. If empty, tuned settings are not written to disk.");
+
+          prm.declare_entry(
+            "ELPA AUTOTUNE LOAD PATH",
+            "",
+            dealii::Patterns::Anything(),
+            "[Developer] Optional file path used to load ELPA settings before DFT-FE applies tunable ELPA parameters manually. If non-empty, loaded settings take precedence over manual ELPA tuning choices.");
+
+          prm.declare_entry(
             "USE APPROXIMATE OVERLAP MATRIX",
             "true",
             dealii::Patterns::Bool(),
@@ -1442,6 +1466,7 @@ namespace dftfe
     useMixedPrecSubspaceRotRR                      = false;
     useMixedPrecCommunOnlyXtHXXtOX                 = false;
     useELPA                                        = false;
+    elpaAutoTune                                   = false;
     constraintsParallelCheck                       = true;
     createConstraintsFromSerialDofhandler          = true;
     bandParalOpt                                   = true;
@@ -1478,6 +1503,9 @@ namespace dftfe
     reuseLanczosUpperBoundFromFirstCall            = false;
     allowMultipleFilteringPassesAfterFirstScf      = true;
     useELPADeviceKernel                            = false;
+    elpaAutoTuneLevel                              = "MEDIUM";
+    elpaAutoTuneConfigSavePath                     = "";
+    elpaAutoTuneConfigLoadPath                     = "";
     // New Paramters for moleculardyynamics class
     startingTempBOMD           = 300;
     thermostatTimeConstantBOMD = 100;
@@ -1829,6 +1857,10 @@ namespace dftfe
           prm.get_integer("NUMBER OF CORE EIGEN STATES FOR MIXED PREC RR");
         chebyshevOrder       = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
         useELPA              = prm.get_bool("USE ELPA");
+        elpaAutoTune         = prm.get_bool("ELPA AUTOTUNE");
+        elpaAutoTuneLevel    = prm.get("ELPA AUTOTUNE LEVEL");
+        elpaAutoTuneConfigSavePath = prm.get("ELPA AUTOTUNE SAVE PATH");
+        elpaAutoTuneConfigLoadPath = prm.get("ELPA AUTOTUNE LOAD PATH");
         approxOverlapMatrix  = prm.get_bool("USE APPROXIMATE OVERLAP MATRIX");
         useReformulatedChFSI = prm.get_bool("USE RESIDUAL CHFSI");
         orthogType           = prm.get("ORTHOGONALIZATION TYPE");

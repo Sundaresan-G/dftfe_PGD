@@ -22,6 +22,7 @@
 #include <linearAlgebraOperations.h>
 #include <linearAlgebraOperationsInternal.h>
 #include <BLASWrapper.h>
+#include <random>
 #ifdef DFTFE_WITH_DEVICE
 #  include <DeviceAPICalls.h>
 #endif
@@ -35,6 +36,172 @@ namespace dftfe
   {
     namespace internal
     {
+      namespace
+      {
+        int
+        getELPAAutotuneLevel(const std::string &autotuneLevel)
+        {
+          if (autotuneLevel == "FAST")
+            return ELPA_AUTOTUNE_FAST;
+
+          if (autotuneLevel == "MEDIUM")
+            return ELPA_AUTOTUNE_MEDIUM;
+
+          if (autotuneLevel == "EXTENSIVE")
+            return ELPA_AUTOTUNE_EXTENSIVE;
+
+          AssertThrow(false,
+                      dealii::ExcMessage(
+                        "DFT-FE Error: Invalid ELPA autotune level."));
+          return ELPA_AUTOTUNE_MEDIUM;
+        }
+
+#ifdef USE_COMPLEX
+        constexpr int elpaAutotuneDomain = ELPA_AUTOTUNE_DOMAIN_COMPLEX;
+#else
+        constexpr int elpaAutotuneDomain = ELPA_AUTOTUNE_DOMAIN_REAL;
+#endif
+
+        template <typename NumberType>
+        NumberType
+        createELPAAutotuneHermitianEntry(const dftfe::uInt globalRow,
+                                         const dftfe::uInt globalColumn,
+                                         const dftfe::uInt matrixSize)
+        {
+          const dftfe::uInt lowerIndex = std::min(globalRow, globalColumn);
+          const dftfe::uInt upperIndex = std::max(globalRow, globalColumn);
+          const unsigned long long seed =
+            static_cast<unsigned long long>(lowerIndex + 1) *
+              11400714819323198485ull +
+            static_cast<unsigned long long>(upperIndex + 1) *
+              14029467366897019727ull;
+
+          std::mt19937_64                     generator(seed);
+          std::uniform_real_distribution<double> distribution(-1.0, 1.0);
+
+          if (globalRow == globalColumn)
+            return NumberType(distribution(generator) +
+                              static_cast<double>(matrixSize));
+
+#ifdef USE_COMPLEX
+          const NumberType entry(distribution(generator),
+                                 distribution(generator));
+          return (globalRow < globalColumn) ? entry : std::conj(entry);
+#else
+          return NumberType(distribution(generator));
+#endif
+        }
+
+        template <typename NumberType>
+        void
+        fillELPAAutotuneProblemMatrix(
+          dftfe::ScaLAPACKMatrix<NumberType> &matrix,
+          const dftfe::uInt                   matrixSize)
+        {
+          for (dftfe::uInt localRow = 0; localRow < matrix.local_m(); ++localRow)
+            for (dftfe::uInt localColumn = 0; localColumn < matrix.local_n();
+                 ++localColumn)
+              matrix.local_el(localRow, localColumn) =
+                createELPAAutotuneHermitianEntry<NumberType>(
+                  matrix.global_row(localRow),
+                  matrix.global_column(localColumn),
+                  matrixSize);
+        }
+
+        template <typename NumberType>
+        void
+        fillELPAAutotuneOverlapMatrix(
+          dftfe::ScaLAPACKMatrix<NumberType> &matrix)
+        {
+          for (dftfe::uInt localRow = 0; localRow < matrix.local_m(); ++localRow)
+            for (dftfe::uInt localColumn = 0; localColumn < matrix.local_n();
+                 ++localColumn)
+              matrix.local_el(localRow, localColumn) =
+                NumberType(matrix.global_row(localRow) ==
+                             matrix.global_column(localColumn) ?
+                             1.0 :
+                             0.0);
+        }
+
+        bool
+        tryGetELPAInteger(elpa_t &elpaHandle, const char *parameterName, int &value)
+        {
+          int error = ELPA_OK;
+          value     = 0;
+          elpa_get_integer(elpaHandle, parameterName, &value, &error);
+
+          if (error == ELPA_ERROR_ENTRY_NOT_FOUND)
+            return false;
+
+          AssertThrow(error == ELPA_OK,
+                      dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+          return true;
+        }
+
+        bool
+        elpaHandleUsesGPU(elpa_t &elpaHandle)
+        {
+          const std::array<const char *, 4> gpuParameterNames = {
+            "gpu", "nvidia-gpu", "amd-gpu", "intel-gpu"};
+
+          for (const char *parameterName : gpuParameterNames)
+            {
+              int useGPU = 0;
+              if (tryGetELPAInteger(elpaHandle, parameterName, useGPU) &&
+                  useGPU != 0)
+                return true;
+            }
+
+          return false;
+        }
+
+#ifdef DFTFE_WITH_DEVICE
+        const char *
+        getELPAGpuParameterName()
+        {
+#  ifdef DFTFE_WITH_DEVICE_NVIDIA
+          return "nvidia-gpu";
+#  elif DFTFE_WITH_DEVICE_AMD
+          return "amd-gpu";
+#  else
+          return "";
+#  endif
+        }
+
+        void
+        setupELPAGPUResources(elpa_t &elpaHandle)
+        {
+          int gpuID = 0;
+          int error = ELPA_OK;
+          dftfe::utils::getDevice(&gpuID);
+
+          elpa_set_integer(elpaHandle, "use_gpu_id", gpuID, &error);
+          AssertThrow(error == ELPA_OK,
+                      dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+
+          error = elpa_setup_gpu(elpaHandle);
+          AssertThrow(error == ELPA_OK,
+                      dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+        }
+
+        void
+        enableELPAGPU(elpa_t &elpaHandle)
+        {
+          const char *gpuParameterName = getELPAGpuParameterName();
+          int         error            = ELPA_OK;
+
+          if (gpuParameterName[0] != '\0')
+            {
+              elpa_set_integer(elpaHandle, gpuParameterName, 1, &error);
+              AssertThrow(error == ELPA_OK,
+                          dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+            }
+
+          setupELPAGPUResources(elpaHandle);
+        }
+#endif
+      } // namespace
+
       void
       setupELPAHandleParameters(
         const MPI_Comm &mpi_communicator,
@@ -47,6 +214,14 @@ namespace dftfe
         const dftParameters                             &dftParams)
       {
         int error;
+        const bool useLoadedSettings =
+          !dftParams.elpaAutoTuneConfigLoadPath.empty();
+        const bool runAutotune = !useLoadedSettings && dftParams.elpaAutoTune;
+        const bool useManualELPASettings =
+          !useLoadedSettings && !runAutotune;
+        dealii::ConditionalOStream pcout(
+          std::cout,
+          (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) == 0));
 
         if (processGrid->is_process_active())
           {
@@ -166,18 +341,122 @@ namespace dftfe
                         dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
 #ifdef DFTFE_WITH_DEVICE
-
-            if (dftParams.useELPADeviceKernel)
+            if (useLoadedSettings)
               {
-#  ifdef DFTFE_WITH_DEVICE_NVIDIA
-                elpa_set_integer(elpaHandle, "nvidia-gpu", 1, &error);
+                if (dftParams.verbosity >= 2)
+                  pcout << "Loading ELPA settings from "
+                        << dftParams.elpaAutoTuneConfigLoadPath << std::endl;
+
+                elpa_load_settings(elpaHandle,
+                                   dftParams.elpaAutoTuneConfigLoadPath.c_str(),
+                                   &error);
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
-#  elif DFTFE_WITH_DEVICE_AMD
-                elpa_set_integer(elpaHandle, "amd-gpu", 1, &error);
+
+                if (elpaHandleUsesGPU(elpaHandle))
+                  {
+                    AssertThrow(
+                      dftParams.useDevice,
+                      dealii::ExcMessage(
+                        "DFT-FE Error: Loaded ELPA settings require GPU execution, but DFT-FE device mode is disabled."));
+                    setupELPAGPUResources(elpaHandle);
+                  }
+              }
+            else if (runAutotune)
+              {
+                if (dftParams.verbosity >= 2)
+                  {
+                    pcout << "Running ELPA autotune ("
+                          << dftParams.elpaAutoTuneLevel << ")";
+                    if (dftParams.useSubspaceProjectedSHEPGPU)
+                      pcout << " for the standard eigenproblem.";
+                    else
+                      pcout << " for the generalized eigenproblem.";
+                    pcout << std::endl;
+                  }
+
+                if (dftParams.useELPADeviceKernel)
+                  enableELPAGPU(elpaHandle);
+
+                using NumberType = dftfe::dataTypes::number;
+                using RealType   = dftfe::dataTypes::numberValueType;
+
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixA(
+                  na, processGrid, blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixB(
+                  na, processGrid, blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneEigenvectors(
+                  na, processGrid, blockSize);
+                std::vector<RealType> autotuneEigenvalues(nev, RealType(0.0));
+
+                elpa_autotune_t autotuneHandle = elpa_autotune_setup(
+                  elpaHandle,
+                  getELPAAutotuneLevel(dftParams.elpaAutoTuneLevel),
+                  elpaAutotuneDomain,
+                  &error);
+                AssertThrow(error == ELPA_OK && autotuneHandle != nullptr,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+
+                int unfinished = 1;
+                do
+                  {
+                    unfinished =
+                      elpa_autotune_step(elpaHandle, autotuneHandle, &error);
+                    AssertThrow(error == ELPA_OK,
+                                dealii::ExcMessage(
+                                  "DFT-FE Error: ELPA Error."));
+
+                    fillELPAAutotuneProblemMatrix(autotuneMatrixA, na);
+                    if (dftParams.useSubspaceProjectedSHEPGPU)
+                      elpa_eigenvectors(elpaHandle,
+                                        &autotuneMatrixA.local_el(0, 0),
+                                        autotuneEigenvalues.data(),
+                                        &autotuneEigenvectors.local_el(0, 0),
+                                        &error);
+                    else
+                      {
+                        fillELPAAutotuneOverlapMatrix(autotuneMatrixB);
+                        elpa_generalized_eigenvectors(
+                          elpaHandle,
+                          &autotuneMatrixA.local_el(0, 0),
+                          &autotuneMatrixB.local_el(0, 0),
+                          autotuneEigenvalues.data(),
+                          &autotuneEigenvectors.local_el(0, 0),
+                          0,
+                          &error);
+                      }
+                    AssertThrow(error == ELPA_OK,
+                                dealii::ExcMessage(
+                                  "DFT-FE Error: ELPA Error."));
+                  }
+                while (unfinished != 0);
+
+                elpa_autotune_set_best(elpaHandle, autotuneHandle, &error);
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
-#  endif
+
+                if (dftParams.elpaAutoTuneConfigSavePath.size() != 0)
+                  {
+                    if (dftParams.verbosity >= 2)
+                      pcout << "Saving ELPA settings to "
+                            << dftParams.elpaAutoTuneConfigSavePath
+                            << std::endl;
+
+                    elpa_store_settings(
+                      elpaHandle,
+                      dftParams.elpaAutoTuneConfigSavePath.c_str(),
+                      &error);
+                    AssertThrow(error == ELPA_OK,
+                                dealii::ExcMessage(
+                                  "DFT-FE Error: ELPA Error."));
+                  }
+
+                elpa_autotune_deallocate(autotuneHandle, &error);
+                AssertThrow(error == ELPA_OK,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+              }
+            else if (dftParams.useELPADeviceKernel)
+              {
                 elpa_set_integer(elpaHandle,
                                  "solver",
                                  ELPA_SOLVER_1STAGE,
@@ -185,14 +464,122 @@ namespace dftfe
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-                int gpuID = 0;
-                dftfe::utils::getDevice(&gpuID);
+                enableELPAGPU(elpaHandle);
+              }
+            else
+              {
+                elpa_set_integer(elpaHandle,
+                                 "solver",
+                                 ELPA_SOLVER_2STAGE,
+                                 &error);
+                AssertThrow(error == ELPA_OK,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+              }
+#else
+            if (useLoadedSettings)
+              {
+                if (dftParams.verbosity >= 2)
+                  pcout << "Loading ELPA settings from "
+                        << dftParams.elpaAutoTuneConfigLoadPath << std::endl;
 
-                elpa_set_integer(elpaHandle, "use_gpu_id", gpuID, &error);
+                elpa_load_settings(elpaHandle,
+                                   dftParams.elpaAutoTuneConfigLoadPath.c_str(),
+                                   &error);
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
-                error = elpa_setup_gpu(elpaHandle);
+                AssertThrow(
+                  !elpaHandleUsesGPU(elpaHandle),
+                  dealii::ExcMessage(
+                    "DFT-FE Error: Loaded ELPA settings require GPU execution, but this DFT-FE build does not include device support."));
+              }
+            else if (runAutotune)
+              {
+                if (dftParams.verbosity >= 2)
+                  {
+                    pcout << "Running ELPA autotune ("
+                          << dftParams.elpaAutoTuneLevel << ")";
+                    if (dftParams.useSubspaceProjectedSHEPGPU)
+                      pcout << " for the standard eigenproblem.";
+                    else
+                      pcout << " for the generalized eigenproblem.";
+                    pcout << std::endl;
+                  }
+
+                using NumberType = dftfe::dataTypes::number;
+                using RealType   = dftfe::dataTypes::numberValueType;
+
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixA(
+                  na, processGrid, blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixB(
+                  na, processGrid, blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneEigenvectors(
+                  na, processGrid, blockSize);
+                std::vector<RealType> autotuneEigenvalues(nev, RealType(0.0));
+
+                elpa_autotune_t autotuneHandle = elpa_autotune_setup(
+                  elpaHandle,
+                  getELPAAutotuneLevel(dftParams.elpaAutoTuneLevel),
+                  elpaAutotuneDomain,
+                  &error);
+                AssertThrow(error == ELPA_OK && autotuneHandle != nullptr,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+
+                int unfinished = 1;
+                do
+                  {
+                    unfinished =
+                      elpa_autotune_step(elpaHandle, autotuneHandle, &error);
+                    AssertThrow(error == ELPA_OK,
+                                dealii::ExcMessage(
+                                  "DFT-FE Error: ELPA Error."));
+
+                    fillELPAAutotuneProblemMatrix(autotuneMatrixA, na);
+                    if (dftParams.useSubspaceProjectedSHEPGPU)
+                      elpa_eigenvectors(elpaHandle,
+                                        &autotuneMatrixA.local_el(0, 0),
+                                        autotuneEigenvalues.data(),
+                                        &autotuneEigenvectors.local_el(0, 0),
+                                        &error);
+                    else
+                      {
+                        fillELPAAutotuneOverlapMatrix(autotuneMatrixB);
+                        elpa_generalized_eigenvectors(
+                          elpaHandle,
+                          &autotuneMatrixA.local_el(0, 0),
+                          &autotuneMatrixB.local_el(0, 0),
+                          autotuneEigenvalues.data(),
+                          &autotuneEigenvectors.local_el(0, 0),
+                          0,
+                          &error);
+                      }
+                    AssertThrow(error == ELPA_OK,
+                                dealii::ExcMessage(
+                                  "DFT-FE Error: ELPA Error."));
+                  }
+                while (unfinished != 0);
+
+                elpa_autotune_set_best(elpaHandle, autotuneHandle, &error);
+                AssertThrow(error == ELPA_OK,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+
+                if (dftParams.elpaAutoTuneConfigSavePath.size() != 0)
+                  {
+                    if (dftParams.verbosity >= 2)
+                      pcout << "Saving ELPA settings to "
+                            << dftParams.elpaAutoTuneConfigSavePath
+                            << std::endl;
+
+                    elpa_store_settings(
+                      elpaHandle,
+                      dftParams.elpaAutoTuneConfigSavePath.c_str(),
+                      &error);
+                    AssertThrow(error == ELPA_OK,
+                                dealii::ExcMessage(
+                                  "DFT-FE Error: ELPA Error."));
+                  }
+
+                elpa_autotune_deallocate(autotuneHandle, &error);
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
               }
@@ -205,10 +592,6 @@ namespace dftfe
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
               }
-#else
-            elpa_set_integer(elpaHandle, "solver", ELPA_SOLVER_2STAGE, &error);
-            AssertThrow(error == ELPA_OK,
-                        dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 #endif
 
               // elpa_set_integer(elpaHandle,
@@ -217,9 +600,12 @@ namespace dftfe
               //   dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
 #ifdef DEBUG
-            elpa_set_integer(elpaHandle, "debug", 1, &error);
-            AssertThrow(error == ELPA_OK,
-                        dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+            if (!useLoadedSettings)
+              {
+                elpa_set_integer(elpaHandle, "debug", 1, &error);
+                AssertThrow(error == ELPA_OK,
+                            dealii::ExcMessage("DFT-FE Error: ELPA Error."));
+              }
 #endif
           }
 
