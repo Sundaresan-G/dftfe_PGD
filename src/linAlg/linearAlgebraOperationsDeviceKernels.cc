@@ -13,14 +13,12 @@ namespace dftfe
         void,
         convertLayoutDeviceKernel,
         {
-          const dftfe::uInt globalThreadId =
-            blockIdx.x * blockDim.x + threadIdx.x;
           const dftfe::uInt numberEntries = initBlockRows * initBlockCols * blockSize; 
           const dftfe::uInt finalBlockRows = initBlockCols;
           const dftfe::uInt finalBlockCols = initBlockRows;
 
           for (dftfe::uInt index = globalThreadId; index < numberEntries;
-              index += blockDim.x * gridDim.x)
+              index += nThreadsPerBlock * nThreadBlock)
             {
               dftfe::uInt blockIndex = index / blockSize;
               dftfe::uInt blockCol = blockIndex % initBlockCols;
