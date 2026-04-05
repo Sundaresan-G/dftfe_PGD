@@ -141,14 +141,14 @@ namespace dftfe
                                   deviceStream_t stream = dftfe::utils::defaultStream,
                                   bool            useDCCL = true);
 
-#    if defined(DFTFE_WITH_SYCL_ONECCL)
-      using ncclUniqueId = std::shared_ptr<ccl::kvs>;
-      using ncclComm_t = std::shared_ptr<ccl::communicator>;
-#    endif
-
-#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || defined(DFTFE_WITH_SYCL_ONECCL)
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       inline static ncclUniqueId *ncclIdPtr;
       inline static ncclComm_t   *ncclCommPtr;
+#    endif
+
+#    if defined(DFTFE_WITH_SYCL_ONECCL)
+      inline static std::shared_ptr<ccl::kvs>          onecclIdPtr;
+      inline static std::shared_ptr<ccl::communicator> onecclCommPtr;
 #    endif
 
       inline static bool                         dcclCommInit;
@@ -157,11 +157,16 @@ namespace dftfe
       inline static dftfe::Int d_deviceDirectDCCLInstanceCounter;
 
     private:
-#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || defined(DFTFE_WITH_SYCL_ONECCL)
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       // 0 - default is handled by ncclCommPtr
       int      dcclCommSelector = 0; // 0 - intraBandComm, non-zero for interBandCommm or intrapoolComm
       ncclUniqueId *ncclIdPvtPtr;
       ncclComm_t *  ncclCommPvtPtr;
+#    elif defined(DFTFE_WITH_SYCL_ONECCL)
+      // 0 - default is handled by ncclCommPtr
+      int      dcclCommSelector = 0; // 0 - intraBandComm, non-zero for interBandCommm or intrapoolComm
+      std::shared_ptr<ccl::kvs> onecclIdPvtPtr;
+      std::shared_ptr<ccl::communicator>  onecclCommPvtPtr;
 #    endif
       int      myRank;
       int      totalRanks;

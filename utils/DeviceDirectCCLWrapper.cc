@@ -79,8 +79,8 @@ namespace dftfe
           ccl::kvs::address_type onecclIdAddr;
           if (myRank == 0)
             {
-              ncclIdPtr  = ccl::create_main_kvs();
-              onecclIdAddr = ncclIdPtr->get_address();
+              onecclIdPtr  = ccl::create_main_kvs();
+              onecclIdAddr = onecclIdPtr->get_address();
               MPICHECK(MPI_Bcast(onecclIdAddr.data(),
                                  onecclIdAddr.size(),
                                  MPI_BYTE,
@@ -94,7 +94,7 @@ namespace dftfe
                                  MPI_BYTE,
                                  0,
                                  d_mpiComm));
-              ncclIdPtr = ccl::create_kvs(onecclIdAddr);
+              onecclIdPtr = ccl::create_kvs(onecclIdAddr);
             }
 
           ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
@@ -104,8 +104,8 @@ namespace dftfe
           auto comms         = ccl::create_communicators(totalRanks,
                                                  rankDeviceMap,
                                                  onecclContext,
-                                                 ncclIdPtr);
-          ncclCommPtr =
+                                                 onecclIdPtr);
+          onecclCommPtr =
             std::make_shared<ccl::communicator>(std::move(comms[0]));
           dcclCommInit = true;
         }
@@ -115,8 +115,8 @@ namespace dftfe
           ccl::kvs::address_type onecclIdAddr;
           if (myRank == 0)
             {
-              ncclPvtIdPtr  = ccl::create_main_kvs();
-              onecclIdAddr = ncclPvtIdPtr->get_address();
+              onecclIdPvtPtr  = ccl::create_main_kvs();
+              onecclIdAddr = onecclIdPvtPtr->get_address();
               MPICHECK(MPI_Bcast(onecclIdAddr.data(),
                                  onecclIdAddr.size(),
                                  MPI_BYTE,
@@ -130,7 +130,7 @@ namespace dftfe
                                  MPI_BYTE,
                                  0,
                                  d_mpiComm));
-              ncclPvtIdPtr = ccl::create_kvs(onecclIdAddr);
+              onecclIdPvtPtr = ccl::create_kvs(onecclIdAddr);
             }
 
           ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
@@ -140,8 +140,8 @@ namespace dftfe
           auto comms         = ccl::create_communicators(totalRanks,
                                                  rankDeviceMap,
                                                  onecclContext,
-                                                 ncclPvtIdPtr);
-          ncclCommPvtPtr =
+                                                 onecclIdPvtPtr);
+          onecclCommPvtPtr =
             std::make_shared<ccl::communicator>(std::move(comms[0]));
 
         }
@@ -178,12 +178,12 @@ namespace dftfe
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-          ncclCommPtr.reset();
-          ncclIdPtr.reset();
+          onecclCommPtr.reset();
+          onecclIdPtr.reset();
         }
       if (dcclCommSelector != 0){
-        ncclCommPvtPtr.reset();
-        ncclPvtIdPtr.reset();
+        onecclCommPvtPtr.reset();
+        onecclIdPvtPtr.reset();
       }
 #  endif
 
@@ -223,9 +223,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = *ncclCommPtr;
+          auto comm = onecclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = onecclCommPvtPtr;            
           }
 
           auto devStream =
@@ -236,7 +236,7 @@ namespace dftfe
                                          size,
                                          ccl::datatype::float32,
                                          ccl::reduction::sum,
-                                         comm,
+                                         *comm,
                                          devStream));
           deviceEvent_t commEvent = e.get_native();
           dftfe::utils::deviceStreamWaitEvent(stream, commEvent, 0);
@@ -295,9 +295,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = *ncclCommPtr;
+          auto comm = onecclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = onecclCommPvtPtr;            
           }
 
           auto devStream =
@@ -308,7 +308,7 @@ namespace dftfe
                                          size,
                                          ccl::datatype::float64,
                                          ccl::reduction::sum,
-                                         comm,
+                                         *comm,
                                          devStream));
           deviceEvent_t commEvent = e.get_native();
           dftfe::utils::deviceStreamWaitEvent(stream, commEvent, 0);
@@ -369,9 +369,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = *ncclCommPtr;
+          auto comm = onecclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = onecclCommPvtPtr;            
           }
 
           auto devStream =
@@ -382,7 +382,7 @@ namespace dftfe
                                          size * 2,
                                          ccl::datatype::float64,
                                          ccl::reduction::sum,
-                                         comm,
+                                         *comm,
                                          devStream));
           deviceEvent_t commEvent = e.get_native();
           dftfe::utils::deviceStreamWaitEvent(stream, commEvent, 0);
@@ -442,9 +442,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = *ncclCommPtr;
+          auto comm = onecclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = onecclCommPvtPtr;            
           }
 
           auto devStream =
@@ -455,7 +455,7 @@ namespace dftfe
                                          size * 2,
                                          ccl::datatype::float32,
                                          ccl::reduction::sum,
-                                         comm,
+                                         *comm,
                                          devStream));
           deviceEvent_t commEvent = e.get_native();
           dftfe::utils::deviceStreamWaitEvent(stream, commEvent, 0);
@@ -528,9 +528,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = *ncclCommPtr;
+          auto comm = onecclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = onecclCommPvtPtr;            
           }
 
           auto devStream =
@@ -544,7 +544,7 @@ namespace dftfe
                                           size1,
                                           ccl::datatype::float64,
                                           ccl::reduction::sum,
-                                          comm,
+                                          *comm,
                                           devStream));
 
           ONECCLCHECK(e2 = ccl::allreduce((const void *)send2,
@@ -552,7 +552,7 @@ namespace dftfe
                                           size2,
                                           ccl::datatype::float32,
                                           ccl::reduction::sum,
-                                          comm,
+                                          *comm,
                                           devStream));
 
           ONECCLCHECK(ccl::group_end());
@@ -646,9 +646,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = *ncclCommPtr;
+          auto comm = onecclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = onecclCommPvtPtr;            
           }
 
           auto devStream =
@@ -662,7 +662,7 @@ namespace dftfe
                                           size1 * 2,
                                           ccl::datatype::float64,
                                           ccl::reduction::sum,
-                                          comm,
+                                          *comm,
                                           devStream));
 
           ONECCLCHECK(e2 = ccl::allreduce((const void *)send2,
@@ -670,7 +670,7 @@ namespace dftfe
                                           size2 * 2,
                                           ccl::datatype::float32,
                                           ccl::reduction::sum,
-                                          comm,
+                                          *comm,
                                           devStream));
 
           ONECCLCHECK(ccl::group_end());
@@ -737,9 +737,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = *ncclCommPtr;
+          auto comm = onecclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = onecclCommPvtPtr;            
           }
 
           auto devStream =
@@ -749,7 +749,7 @@ namespace dftfe
                                          (void *)recv,
                                          sendCount * sizeof(NumberType),
                                          ccl::datatype::uint8,
-                                         comm,
+                                         *comm,
                                          devStream));
           deviceEvent_t commEvent = e.get_native();
           dftfe::utils::deviceStreamWaitEvent(stream, commEvent, 0);
