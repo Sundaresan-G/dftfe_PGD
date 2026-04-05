@@ -87,7 +87,8 @@ namespace dftfe
             double beta      = 0.0;
             double alpha     = 0.0;
             double old_alpha = 0.0;
-            double omega     = 0.3;
+
+            problem.resetMatVecCount();
 
             // compute residual. if vector is zero, then short-circuit the full
             // computation
@@ -110,6 +111,8 @@ namespace dftfe
             if (conv)
               return;
 
+            problem.tunePreconditionerForSolve(initial_res, absTolerance);
+
             while ((!conv) && (it < maxNumberIterations))
               {
                 it++;
@@ -117,7 +120,7 @@ namespace dftfe
 
                 if (it > 1)
                   {
-                    problem.precondition_Jacobi(hvec, gvec, omega);
+                    problem.applyPreconditioner(hvec, gvec);
                     beta = gh;
                     AssertThrow(std::abs(beta) != 0.,
                                 dealii::ExcMessage("Division by zero\n"));
@@ -127,7 +130,7 @@ namespace dftfe
                   }
                 else
                   {
-                    problem.precondition_Jacobi(hvec, gvec, omega);
+                    problem.applyPreconditioner(hvec, gvec);
                     dvec.equ(-1., hvec);
                     gh = gvec * hvec;
                   }
@@ -182,6 +185,8 @@ namespace dftfe
         pcout << "initial abs. residual: " << initial_res
               << " , current abs. residual: " << res << " , nsteps: " << it
               << " , abs. tolerance criterion:  " << absTolerance << "\n\n";
+        pcout << "total Poisson/Helmholtz operator matvecs: "
+              << problem.getMatVecCount() << std::endl;
       }
 
     MPI_Barrier(mpi_communicator);

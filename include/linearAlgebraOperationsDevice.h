@@ -25,6 +25,7 @@
 #    include "elpaScalaManager.h"
 #    include "deviceDirectCCLWrapper.h"
 #    include "dftParameters.h"
+#    include <ScratchMemoryStorage.h>
 #    include <BLASWrapper.h>
 
 namespace dftfe
@@ -68,6 +69,10 @@ namespace dftfe
    */
   namespace linearAlgebraOperationsDevice
   {
+    using DeviceNumberScratchMemoryStorage =
+      dftfe::utils::ScratchMemoryStorage<dataTypes::number,
+                                         dftfe::utils::MemorySpace::DEVICE>;
+
     /** @brief Apply Chebyshev filter to a given subspace
      *
      *  @param[in] operatorMatrix An object which has access to the given matrix
@@ -146,7 +151,8 @@ namespace dftfe
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number> &      overlapMatPar,
       dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      const dftParameters &                            dftParams);
+      const dftParameters &                            dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
     
     void
     XtMXAndXtHXMixedPrec(
@@ -165,7 +171,8 @@ namespace dftfe
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number> &      overlapMatPar,
       dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      const dftParameters &                            dftParams);
+      const dftParameters &                            dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
       
     void
     fillParallelOverlapMatScalapack(
@@ -183,7 +190,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-      const dftParameters                             &dftParams);
+      const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
 
 
@@ -207,7 +215,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-      const dftParameters                             &dftParams);
+        const dftParameters                             &dftParams,
+        DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
 
 
@@ -232,7 +241,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-      const dftParameters                             &dftParams);
+      const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
     /** @brief Computes Sc=X^{T}*Xc.
      *
@@ -255,7 +265,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-      const dftParameters                             &dftParams);
+        const dftParameters                             &dftParams,
+        DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
     /** @brief Computes Sc=X^{T}*Xc.
      *
@@ -278,7 +289,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-      const dftParameters                             &dftParams);
+        const dftParameters                             &dftParams,
+        DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
 
 
@@ -300,8 +312,9 @@ namespace dftfe
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
                           &BLASWrapperPtr,
-      const dftParameters &dftParams,
-      const bool           useMixedPrecOverall = false);
+      const dftParameters                 &dftParams,
+      DeviceNumberScratchMemoryStorage    &scratchMemoryStorage,
+      const bool                           useMixedPrecOverall = false);
 
     void
     subspaceRotationScalapack(
@@ -317,6 +330,7 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const dftfe::ScaLAPACKMatrix<dataTypes::number> &rotationMatPar,
       const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage,
       const bool rotationMatTranspose   = false,
       const bool isRotationMatLowerTria = false,
       const bool overlapComputeCommun   = true);
@@ -337,6 +351,7 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const dftfe::ScaLAPACKMatrix<dataTypes::number> &rotationMatPar,
       const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage,
       const bool rotationMatTranspose = false);
 
 
@@ -354,6 +369,7 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const dftfe::ScaLAPACKMatrix<dataTypes::number> &rotationMatPar,
       const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage,
       const bool rotationMatTranspose = false,
       const bool overlapComputeCommun = true);
 
@@ -375,8 +391,9 @@ namespace dftfe
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
                           &BLASWrapperPtr,
-      const dftParameters &dftParams,
-      const bool           useMixedPrecOverall = false);
+      const dftParameters              &dftParams,
+      DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
+      const bool                        useMixedPrecOverall = false);
 
     void
     rayleighRitzGEP(
@@ -395,8 +412,9 @@ namespace dftfe
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
                           &BLASWrapperPtr,
-      const dftParameters &dftParams,
-      const bool           useMixedPrecOverall = false);
+      const dftParameters              &dftParams,
+      DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
+      const bool                        useMixedPrecOverall = false);
 
     void
     rayleighRitzGEP(
@@ -423,6 +441,7 @@ namespace dftfe
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
         &                  BLASWrapperPtr,
       const dftParameters &             dftParams,
+      DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
       const bool                        useMixedPrecOverall = false);
 
 
@@ -445,7 +464,8 @@ namespace dftfe
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
                           &BLASWrapperPtr,
-      const dftParameters &dftParams);
+      const dftParameters              &dftParams,
+      DeviceNumberScratchMemoryStorage &scratchMemoryStorage);
 
     void
     computeEigenResidualNorm(
@@ -482,6 +502,7 @@ namespace dftfe
          const MPI_Comm          &mpiCommDomain,
          const MPI_Comm          &interBandGroupComm,
          const dftParameters     &dftParams,
+         DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
          const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
@@ -502,6 +523,7 @@ namespace dftfe
       const MPI_Comm                                  &mpiCommDomain,
       const MPI_Comm                                  &interBandGroupComm,
       const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
@@ -522,6 +544,7 @@ namespace dftfe
       const MPI_Comm                                  &mpiCommDomain,
       const MPI_Comm                                  &interBandGroupComm,
       const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
 
@@ -542,6 +565,7 @@ namespace dftfe
       const MPI_Comm                                  &mpiCommDomain,
       const MPI_Comm                                  &interBandGroupComm,
       const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
     void
@@ -562,6 +586,7 @@ namespace dftfe
       const MPI_Comm                                  &mpiCommDomain,
       const MPI_Comm                                  &interBandGroupComm,
       const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage,
       const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 
   } // namespace linearAlgebraOperationsDevice

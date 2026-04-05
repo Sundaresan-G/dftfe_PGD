@@ -74,6 +74,45 @@ namespace dftfe
     virtual void
     distributeX() = 0;
 
+    /**
+     * @brief Apply preconditioner: dst = M^{-1} src.
+     * Default implementation applies Jacobi. Derived classes may override
+     * with Chebyshev-Jacobi.
+     *
+     */
+    virtual void
+    applyPreconditioner(distributedCPUVec<double>       &dst,
+                        const distributedCPUVec<double> &src);
+
+    /**
+     * @brief Whether this problem uses a custom (e.g. Chebyshev)
+     * preconditioner. If false, the CG solver uses the built-in Jacobi.
+     */
+    virtual bool
+    usesCustomPreconditioner() const;
+
+    /**
+     * @brief Reset total number of operator matvecs for the current solve.
+     */
+    virtual void
+    resetMatVecCount();
+
+    /**
+     * @brief Return total number of operator matvecs since last reset.
+     */
+    virtual dftfe::uInt
+    getMatVecCount() const;
+
+    /**
+     * @brief Hook called once before CG iterations begin.
+     *
+     * Derived classes may use the actual starting residual and tolerance
+     * to tune preconditioner parameters for the upcoming solve.
+     */
+    virtual void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance);
+
     /// function needed by dealii to mimic SparseMatrix for Jacobi
     /// preconditioning
     virtual void

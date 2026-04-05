@@ -25,6 +25,7 @@
 #    include "operator.h"
 #    include "elpaScalaManager.h"
 #    include "dftParameters.h"
+#    include <ScratchMemoryStorage.h>
 #    include <BLASWrapper.h>
 
 namespace dftfe
@@ -135,12 +136,12 @@ namespace dftfe
     // dftfe::utils::deviceStream_t ncclInterBandCommStream;
     utils::DeviceCCLWrapper  devicecclMpiInterBand;
 
-    // dftfe::utils::MemoryStorage<dataTypes::number,
-    //                             dftfe::utils::MemorySpace::HOST_PINNED> XHost, HXHost;
-                                
-    dftfe::utils::MemoryStorage<dataTypes::number,
-                                dftfe::utils::MemorySpace::DEVICE> XDevice, HXDevice, MXDevice, extraBufferDevice;
-    std::size_t reShapedNumRows, reShapedNumCols;
+    dftfe::utils::ScratchMemoryStorage<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>::Handle XDevice, HXDevice, MXDevice, extraBufferDevice;
+
+    dftfe::uInt reShapedNumRows, reShapedNumCols;
+    dftfe::utils::ScratchMemoryStorage<dataTypes::number,
+                                       dftfe::utils::MemorySpace::DEVICE>
+      d_deviceScratchMemoryStorage;
   };
 } // namespace dftfe
 #  endif

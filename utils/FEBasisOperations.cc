@@ -18,6 +18,7 @@
 #include <FEBasisOperationsKernelsInternal.h>
 #include <dftUtils.h>
 #include <feevaluationWrapper.h>
+#include <cstdlib>
 namespace dftfe
 {
   namespace basis
@@ -2569,8 +2570,19 @@ namespace dftfe
                     (ValueTypeBasisCoeff **)deviceTempCellGradientDataPointers,
                     nDofsPerCell,
                     numberOfElements * nQuadsPerCell);
+
+                  dftfe::utils::deviceFree(
+                    (void *)deviceInverseJacobianEntriesPointers);
+                  dftfe::utils::deviceFree(
+                    (void *)deviceTempCellGradientsBlockPointers);
+                  dftfe::utils::deviceFree(
+                    (void *)deviceTempCellGradientDataPointers);
                 }
 #endif
+
+              free((void *)inverseJacobianEntriesPointers);
+              free((void *)tempCellGradientsBlockPointers);
+              free((void *)tempCellGradientDataPointers);
             }
           else
             {
@@ -2799,8 +2811,19 @@ namespace dftfe
                     (ValueTypeBasisCoeff **)deviceTempCellGradientDataPointers,
                     nDofsPerCell,
                     numberOfElements * nQuadsPerCell);
+
+                  dftfe::utils::deviceFree(
+                    (void *)deviceInverseJacobianEntriesPointers);
+                  dftfe::utils::deviceFree(
+                    (void *)deviceTempCellGradientsBlockPointers);
+                  dftfe::utils::deviceFree(
+                    (void *)deviceTempCellGradientDataPointers);
                 }
 #endif
+
+              free((void *)inverseJacobianEntriesPointers);
+              free((void *)tempCellGradientsBlockPointers);
+              free((void *)tempCellGradientDataPointers);
             }
           else
             {

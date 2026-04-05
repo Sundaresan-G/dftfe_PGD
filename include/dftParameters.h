@@ -47,6 +47,8 @@ namespace dftfe
 
     bool        poissonGPU;
     bool        vselfGPU;
+    std::string poissonPreconditionerType;
+    dftfe::uInt poissonChebyshevPolynomialDegree;
     std::string XCType;
     std::string modelXCInputFile;
     std::string auxBasisTypeXC;

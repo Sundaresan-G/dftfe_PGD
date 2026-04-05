@@ -1726,7 +1726,7 @@ namespace dftfe
       d_phiInQuadValues, d_phiOutQuadValues;
     dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
       d_gradPhiInQuadValues, d_gradPhiOutQuadValues, d_gradPhiResQuadValues;
-    MixingScheme d_mixingScheme;
+    std::unique_ptr<MixingScheme> d_mixingScheme;
 
     distributedCPUVec<double> d_rhoInNodalValuesRead, d_rhoOutNodalValuesSplit,
       d_preCondTotalDensityResidualVector, d_rhoNodalFieldRefined,

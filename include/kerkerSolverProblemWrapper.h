@@ -144,6 +144,59 @@ namespace dftfe
                  d_kerkerSolverProblemObject);
     }
 
+    void
+    resetMatVecCount() override
+    {
+      std::visit([](auto &t) { t->resetMatVecCount(); },
+                 d_kerkerSolverProblemObject);
+    }
+
+    dftfe::uInt
+    getMatVecCount() const override
+    {
+      return std::visit(
+        [](auto const &t) -> dftfe::uInt { return t->getMatVecCount(); },
+        d_kerkerSolverProblemObject);
+    }
+
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance) override
+    {
+      std::visit(
+        [&](auto &t) {
+          t->tunePreconditionerForSolve(initialResidual, absTolerance);
+        },
+        d_kerkerSolverProblemObject);
+    }
+
+    bool
+    usesCustomPreconditioner() const override
+    {
+      return std::visit(
+        [](auto const &t) -> bool { return t->usesCustomPreconditioner(); },
+        d_kerkerSolverProblemObject);
+    }
+
+    void
+    applyPreconditioner(distributedCPUVec<double>       &dst,
+                        const distributedCPUVec<double> &src) override
+    {
+      std::visit([&](auto &t) { t->applyPreconditioner(dst, src); },
+                 d_kerkerSolverProblemObject);
+    }
+
+    void
+    setPreconditionerOptions(const bool        useChebyshev,
+                             const dftfe::uInt chebyDegree)
+    {
+      std::visit(
+        [&](auto &t) {
+          t->setPreconditionerOptions(useChebyshev, chebyDegree);
+        },
+        d_kerkerSolverProblemObject);
+    }
+
   private:
     kerkerSolverProblemObject d_kerkerSolverProblemObject;
   };
@@ -267,6 +320,59 @@ namespace dftfe
     {
       std::visit([&](auto &t) { t->init(std::forward<Args>(args)...); },
                  d_kerkerSolverProblemObject);
+    }
+
+    void
+    resetMatVecCount() override
+    {
+      std::visit([](auto &t) { t->resetMatVecCount(); },
+                 d_kerkerSolverProblemObject);
+    }
+
+    dftfe::uInt
+    getMatVecCount() const override
+    {
+      return std::visit(
+        [](auto const &t) -> dftfe::uInt { return t->getMatVecCount(); },
+        d_kerkerSolverProblemObject);
+    }
+
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance) override
+    {
+      std::visit(
+        [&](auto &t) {
+          t->tunePreconditionerForSolve(initialResidual, absTolerance);
+        },
+        d_kerkerSolverProblemObject);
+    }
+
+    bool
+    usesCustomPreconditioner() const override
+    {
+      return std::visit(
+        [](auto const &t) -> bool { return t->usesCustomPreconditioner(); },
+        d_kerkerSolverProblemObject);
+    }
+
+    void
+    applyPreconditioner(distributedDeviceVec<double> &dst,
+                        distributedDeviceVec<double> &src) override
+    {
+      std::visit([&](auto &t) { t->applyPreconditioner(dst, src); },
+                 d_kerkerSolverProblemObject);
+    }
+
+    void
+    setPreconditionerOptions(const bool        useChebyshev,
+                             const dftfe::uInt chebyDegree)
+    {
+      std::visit(
+        [&](auto &t) {
+          t->setPreconditionerOptions(useChebyshev, chebyDegree);
+        },
+        d_kerkerSolverProblemObject);
     }
 
   private:

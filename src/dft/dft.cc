@@ -169,7 +169,6 @@ namespace dftfe
     , d_phiPrimeSolverProblem(
         dftParams.finiteElementPolynomialOrderElectrostatics,
         mpi_comm_domain)
-    , d_mixingScheme(mpi_comm_parent, mpi_comm_domain, dftParams.verbosity)
   {
     d_nOMPThreads = 1;
     d_useHubbard  = false;
@@ -374,6 +373,10 @@ namespace dftfe
     double startTimeLocal = MPI_Wtime();
     d_BLASWrapperPtrHost  = std::make_shared<
       dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::HOST>>();
+    d_mixingScheme           = std::make_unique<MixingScheme>(d_mpiCommParent,
+                                                    mpi_communicator,
+                                                    d_dftParamsPtr->verbosity,
+                                                    d_BLASWrapperPtrHost);
     d_basisOperationsPtrHost = std::make_shared<
       dftfe::basis::FEBasisOperations<dataTypes::number,
                                       double,
@@ -2535,7 +2538,7 @@ namespace dftfe
           rhoNodalMassVec;
         computeRhoNodalMassVector(rhoNodalMassVec);
         for (dftfe::uInt iMix = 0; iMix < mixingVariables.size(); ++iMix)
-          d_mixingScheme.addMixingVariable(
+          d_mixingScheme->addMixingVariable(
             mixingVariables[iMix],
             rhoNodalMassVec,
             true, // call MPI REDUCE while computing dot products
@@ -2548,7 +2551,7 @@ namespace dftfe
             d_basisOperationsPtrElectroHost->reinit(
               0, 0, d_densityQuadratureIdElectro, false);
             for (dftfe::uInt iMix = 0; iMix < tauMixingVariables.size(); ++iMix)
-              d_mixingScheme.addMixingVariable(
+              d_mixingScheme->addMixingVariable(
                 tauMixingVariables[iMix],
                 d_basisOperationsPtrElectroHost->JxWBasisData(),
                 true, // call MPI REDUCE while computing dot products
@@ -2569,7 +2572,7 @@ namespace dftfe
               gradRhoJxW[i] =
                 d_basisOperationsPtrElectroHost->JxWBasisData()[i / 3] *
                 d_dftParamsPtr->inverseKerkerMixingParameter;
-            d_mixingScheme.addMixingVariable(
+            d_mixingScheme->addMixingVariable(
               mixingVariable::gradPhi,
               gradRhoJxW,
               true,
@@ -2584,7 +2587,7 @@ namespace dftfe
                                                 d_densityQuadratureIdElectro,
                                                 false);
         for (dftfe::uInt iMix = 0; iMix < mixingVariables.size(); ++iMix)
-          d_mixingScheme.addMixingVariable(
+          d_mixingScheme->addMixingVariable(
             mixingVariables[iMix],
             d_basisOperationsPtrElectroHost->JxWBasisData(),
             true, // call MPI REDUCE while computing dot products
@@ -2598,7 +2601,7 @@ namespace dftfe
             gradRhoJxW.resize(0);
             for (dftfe::uInt iMix = 0; iMix < gradMixingVariables.size();
                  ++iMix)
-              d_mixingScheme.addMixingVariable(
+              d_mixingScheme->addMixingVariable(
                 gradMixingVariables[iMix],
                 gradRhoJxW,
                 false, // call MPI REDUCE while computing dot products
@@ -2617,7 +2620,7 @@ namespace dftfe
               gradRhoJxW[i] =
                 d_basisOperationsPtrElectroHost->JxWBasisData()[i / 3] *
                 d_dftParamsPtr->inverseKerkerMixingParameter;
-            d_mixingScheme.addMixingVariable(
+            d_mixingScheme->addMixingVariable(
               mixingVariable::gradPhi,
               gradRhoJxW,
               true,
@@ -2626,7 +2629,7 @@ namespace dftfe
           }
         if (isTauMGGA)
           for (dftfe::uInt iMix = 0; iMix < tauMixingVariables.size(); ++iMix)
-            d_mixingScheme.addMixingVariable(
+            d_mixingScheme->addMixingVariable(
               tauMixingVariables[iMix],
               d_basisOperationsPtrElectroHost->JxWBasisData(),
               true, // call MPI REDUCE while computing dot products
@@ -2638,7 +2641,7 @@ namespace dftfe
             dftfe::utils::MemoryStorage<double, dftfe::utils::MemorySpace::HOST>
               hubbOccJxW;
             hubbOccJxW.resize(0);
-            d_mixingScheme.addMixingVariable(
+            d_mixingScheme->addMixingVariable(
               mixingVariable::hubbardOccupation,
               hubbOccJxW,
               false,
@@ -2737,11 +2740,11 @@ namespace dftfe
                      iComp < d_densityOutNodalValues.size();
                      ++iComp)
                   {
-                    d_mixingScheme.addVariableToInHist(
+                    d_mixingScheme->addVariableToInHist(
                       mixingVariables[iComp],
                       d_densityInNodalValues[iComp].begin(),
                       d_densityInNodalValues[iComp].locally_owned_size());
-                    d_mixingScheme.addVariableToResidualHist(
+                    d_mixingScheme->addVariableToResidualHist(
                       mixingVariables[iComp],
                       d_densityResidualNodalValues[iComp].begin(),
                       d_densityResidualNodalValues[iComp].locally_owned_size());
@@ -2759,11 +2762,11 @@ namespace dftfe
                       d_gradPhiResQuadValues,
                       d_basisOperationsPtrElectroHost->JxWBasisData(),
                       false);
-                    d_mixingScheme.addVariableToInHist(
+                    d_mixingScheme->addVariableToInHist(
                       mixingVariable::gradPhi,
                       d_gradPhiInQuadValues.data(),
                       d_gradPhiInQuadValues.size());
-                    d_mixingScheme.addVariableToResidualHist(
+                    d_mixingScheme->addVariableToResidualHist(
                       mixingVariable::gradPhi,
                       d_gradPhiResQuadValues.data(),
                       d_gradPhiResQuadValues.size());
@@ -2789,11 +2792,11 @@ namespace dftfe
                           d_tauResidualQuadValues[iComp],
                           d_basisOperationsPtrElectroHost->JxWBasisData(),
                           true);
-                        d_mixingScheme.addVariableToInHist(
+                        d_mixingScheme->addVariableToInHist(
                           tauMixingVariables[iComp],
                           d_tauInQuadValues[iComp].data(),
                           d_tauInQuadValues[iComp].size());
-                        d_mixingScheme.addVariableToResidualHist(
+                        d_mixingScheme->addVariableToResidualHist(
                           tauMixingVariables[iComp],
                           d_tauResidualQuadValues[iComp].data(),
                           d_tauResidualQuadValues[iComp].size());
@@ -2802,7 +2805,7 @@ namespace dftfe
 
                 // Delete old history if it exceeds a pre-described
                 // length
-                d_mixingScheme.popOldHistory(d_dftParamsPtr->mixingHistory);
+                d_mixingScheme->popOldHistory(d_dftParamsPtr->mixingHistory);
                 std::vector<mixingVariable> andersonMixingVariables =
                   mixingVariables;
                 andersonMixingVariables.insert(andersonMixingVariables.end(),
@@ -2812,9 +2815,9 @@ namespace dftfe
                   andersonMixingVariables[0] = mixingVariable::gradPhi;
 
                 // Compute the mixing coefficients
-                d_mixingScheme.computeAndersonMixingCoeff(
+                d_mixingScheme->computeAndersonMixingCoeff(
                   andersonMixingVariables);
-                d_mixingScheme.getOptimizedResidual(
+                d_mixingScheme->getOptimizedResidual(
                   mixingVariables[0],
                   d_densityResidualNodalValues[0].begin(),
                   d_densityResidualNodalValues[0].locally_owned_size());
@@ -2832,7 +2835,7 @@ namespace dftfe
                       d_densityResidualNodalValues[0],
                       d_preCondTotalDensityResidualVector);
 
-                    d_mixingScheme.mixPreconditionedResidual(
+                    d_mixingScheme->mixPreconditionedResidual(
                       mixingVariables[0],
                       d_preCondTotalDensityResidualVector.begin(),
                       d_densityInNodalValues[0].begin(),
@@ -2840,7 +2843,7 @@ namespace dftfe
                   }
                 else
                   {
-                    d_mixingScheme.mixVariable(
+                    d_mixingScheme->mixVariable(
                       mixingVariables[0],
                       d_densityInNodalValues[0].begin(),
                       d_densityInNodalValues[0].locally_owned_size());
@@ -2848,7 +2851,7 @@ namespace dftfe
 
                 for (dftfe::uInt iComp = 1; iComp < norms.size(); ++iComp)
                   {
-                    d_mixingScheme.mixVariable(
+                    d_mixingScheme->mixVariable(
                       mixingVariables[iComp],
                       d_densityInNodalValues[iComp].begin(),
                       d_densityInNodalValues[iComp].locally_owned_size());
@@ -2857,7 +2860,7 @@ namespace dftfe
                   {
                     for (dftfe::uInt iComp = 0; iComp < norms.size(); ++iComp)
                       {
-                        d_mixingScheme.mixVariable(
+                        d_mixingScheme->mixVariable(
                           tauMixingVariables[iComp],
                           d_tauInQuadValues[iComp].data(),
                           d_tauInQuadValues[iComp].size());
@@ -2935,11 +2938,11 @@ namespace dftfe
                       d_densityResidualQuadValues[iComp],
                       d_basisOperationsPtrElectroHost->JxWBasisData(),
                       true);
-                    d_mixingScheme.addVariableToInHist(
+                    d_mixingScheme->addVariableToInHist(
                       mixingVariables[iComp],
                       d_densityInQuadValues[iComp].data(),
                       d_densityInQuadValues[iComp].size());
-                    d_mixingScheme.addVariableToResidualHist(
+                    d_mixingScheme->addVariableToResidualHist(
                       mixingVariables[iComp],
                       d_densityResidualQuadValues[iComp].data(),
                       d_densityResidualQuadValues[iComp].size());
@@ -2962,11 +2965,11 @@ namespace dftfe
                           d_gradDensityResidualQuadValues[iComp],
                           d_basisOperationsPtrElectroHost->JxWBasisData(),
                           false);
-                        d_mixingScheme.addVariableToInHist(
+                        d_mixingScheme->addVariableToInHist(
                           gradMixingVariables[iComp],
                           d_gradDensityInQuadValues[iComp].data(),
                           d_gradDensityInQuadValues[iComp].size());
-                        d_mixingScheme.addVariableToResidualHist(
+                        d_mixingScheme->addVariableToResidualHist(
                           gradMixingVariables[iComp],
                           d_gradDensityResidualQuadValues[iComp].data(),
                           d_gradDensityResidualQuadValues[iComp].size());
@@ -2985,11 +2988,11 @@ namespace dftfe
                       d_gradPhiResQuadValues,
                       d_basisOperationsPtrElectroHost->JxWBasisData(),
                       false);
-                    d_mixingScheme.addVariableToInHist(
+                    d_mixingScheme->addVariableToInHist(
                       mixingVariable::gradPhi,
                       d_gradPhiInQuadValues.data(),
                       d_gradPhiInQuadValues.size());
-                    d_mixingScheme.addVariableToResidualHist(
+                    d_mixingScheme->addVariableToResidualHist(
                       mixingVariable::gradPhi,
                       d_gradPhiResQuadValues.data(),
                       d_gradPhiResQuadValues.size());
@@ -3016,11 +3019,11 @@ namespace dftfe
                           d_tauResidualQuadValues[iComp],
                           d_basisOperationsPtrElectroHost->JxWBasisData(),
                           true);
-                        d_mixingScheme.addVariableToInHist(
+                        d_mixingScheme->addVariableToInHist(
                           tauMixingVariables[iComp],
                           d_tauInQuadValues[iComp].data(),
                           d_tauInQuadValues[iComp].size());
-                        d_mixingScheme.addVariableToResidualHist(
+                        d_mixingScheme->addVariableToResidualHist(
                           tauMixingVariables[iComp],
                           d_tauResidualQuadValues[iComp].data(),
                           d_tauResidualQuadValues[iComp].size());
@@ -3035,12 +3038,12 @@ namespace dftfe
                     dftfe::utils::MemoryStorage<double,
                                                 dftfe::utils::MemorySpace::HOST>
                       &hubbOccRes = d_hubbardClassPtr->getOccMatRes();
-                    d_mixingScheme.addVariableToInHist(
+                    d_mixingScheme->addVariableToInHist(
                       mixingVariable::hubbardOccupation,
                       hubbOccIn.data(),
                       hubbOccIn.size());
 
-                    d_mixingScheme.addVariableToResidualHist(
+                    d_mixingScheme->addVariableToResidualHist(
                       mixingVariable::hubbardOccupation,
                       hubbOccRes.data(),
                       hubbOccRes.size());
@@ -3050,7 +3053,7 @@ namespace dftfe
 
                 // Delete old history if it exceeds a pre-described
                 // length
-                d_mixingScheme.popOldHistory(d_dftParamsPtr->mixingHistory);
+                d_mixingScheme->popOldHistory(d_dftParamsPtr->mixingHistory);
 
                 // Compute the mixing coefficients
                 std::vector<mixingVariable> andersonMixingVariables =
@@ -3060,12 +3063,12 @@ namespace dftfe
                                                tauMixingVariables.end());
                 if (d_dftParamsPtr->inverseKerkerMixingParameter > 0.0)
                   andersonMixingVariables[0] = mixingVariable::gradPhi;
-                d_mixingScheme.computeAndersonMixingCoeff(
+                d_mixingScheme->computeAndersonMixingCoeff(
                   andersonMixingVariables);
 
                 // update the mixing variables
                 for (dftfe::uInt iComp = 0; iComp < norms.size(); ++iComp)
-                  d_mixingScheme.mixVariable(
+                  d_mixingScheme->mixVariable(
                     mixingVariables[iComp],
                     d_densityInQuadValues[iComp].data(),
                     d_densityInQuadValues[iComp].size());
@@ -3081,7 +3084,7 @@ namespace dftfe
                 if (isGradDensityDataDependent)
                   {
                     for (dftfe::uInt iComp = 0; iComp < norms.size(); ++iComp)
-                      d_mixingScheme.mixVariable(
+                      d_mixingScheme->mixVariable(
                         gradMixingVariables[iComp],
                         d_gradDensityInQuadValues[iComp].data(),
                         d_gradDensityInQuadValues[iComp].size());
@@ -3091,7 +3094,7 @@ namespace dftfe
                   {
                     for (dftfe::uInt iComp = 0; iComp < norms.size(); ++iComp)
                       {
-                        d_mixingScheme.mixVariable(
+                        d_mixingScheme->mixVariable(
                           tauMixingVariables[iComp],
                           d_tauInQuadValues[iComp].data(),
                           d_tauInQuadValues[iComp].size());
@@ -3110,7 +3113,7 @@ namespace dftfe
                               hubbOccMatAfterMixing.end(),
                               0.0);
 
-                    d_mixingScheme.mixVariable(
+                    d_mixingScheme->mixVariable(
                       mixingVariable::hubbardOccupation,
                       hubbOccMatAfterMixing.data(),
                       hubbOccMatAfterMixing.size());
@@ -3294,11 +3297,17 @@ namespace dftfe
 
         computing_timer.enter_subsection("phiTot solve");
 
+        const bool usePoissonChebyshev =
+          (d_dftParamsPtr->poissonPreconditionerType == "CHEBYSHEV-JACOBI");
+
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
           {
 #ifdef DFTFE_WITH_DEVICE
+            d_phiTotalSolverProblemDevice.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
             CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
                                  d_dftParamsPtr->absLinearSolverTolerance,
                                  d_dftParamsPtr->maxLinearSolverIterations,
@@ -3307,6 +3316,9 @@ namespace dftfe
           }
         else
           {
+            d_phiTotalSolverProblem.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
             CGSolver.solve(d_phiTotalSolverProblem,
                            d_dftParamsPtr->absLinearSolverTolerance,
                            d_dftParamsPtr->maxLinearSolverIterations,
@@ -3588,6 +3600,9 @@ namespace dftfe
                   tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
               }
 
+            const bool usePoissonChebyshev =
+              (d_dftParamsPtr->poissonPreconditionerType == "CHEBYSHEV-JACOBI");
+
             if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
                 d_dftParamsPtr->floatingNuclearCharges and
                 not d_dftParamsPtr->pinnedNodeForPBC)
@@ -3614,6 +3629,10 @@ namespace dftfe
                   false,
                   true,
                   d_dftParamsPtr->multipoleBoundaryConditions);
+
+                d_phiTotalSolverProblemDevice.setPreconditionerOptions(
+                  usePoissonChebyshev,
+                  d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
                 CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
                                      d_dftParamsPtr->absLinearSolverTolerance,
@@ -3643,6 +3662,10 @@ namespace dftfe
                   false,
                   true,
                   d_dftParamsPtr->multipoleBoundaryConditions);
+
+                d_phiTotalSolverProblem.setPreconditionerOptions(
+                  usePoissonChebyshev,
+                  d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
                 CGSolver.solve(d_phiTotalSolverProblem,
                                d_dftParamsPtr->absLinearSolverTolerance,
@@ -4056,6 +4079,9 @@ namespace dftfe
               tempvec[iquad] += -d_dftParamsPtr->netCharge / d_domainVolume;
           }
 
+        const bool usePoissonChebyshev =
+          (d_dftParamsPtr->poissonPreconditionerType == "CHEBYSHEV-JACOBI");
+
         if (d_dftParamsPtr->useDevice and d_dftParamsPtr->poissonGPU and
             d_dftParamsPtr->floatingNuclearCharges and
             not d_dftParamsPtr->pinnedNodeForPBC)
@@ -4082,6 +4108,10 @@ namespace dftfe
               false,
               true,
               d_dftParamsPtr->multipoleBoundaryConditions);
+
+            d_phiTotalSolverProblemDevice.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
             CGSolverDevice.solve(d_phiTotalSolverProblemDevice,
                                  d_dftParamsPtr->absLinearSolverTolerance,
@@ -4111,6 +4141,10 @@ namespace dftfe
               false,
               true,
               d_dftParamsPtr->multipoleBoundaryConditions);
+
+            d_phiTotalSolverProblem.setPreconditionerOptions(
+              usePoissonChebyshev,
+              d_dftParamsPtr->poissonChebyshevPolynomialDegree);
 
             CGSolver.solve(d_phiTotalSolverProblem,
                            d_dftParamsPtr->absLinearSolverTolerance,

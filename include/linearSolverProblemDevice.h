@@ -85,6 +85,46 @@ namespace dftfe
     virtual void
     copyXfromDeviceToHost() = 0;
 
+    /**
+     * @brief Apply preconditioner: dst = M^{-1} src.
+     * Default is a no-op assert. Derived classes override with
+     * Chebyshev-Jacobi or other preconditioners.
+     *
+     */
+    virtual void
+    applyPreconditioner(distributedDeviceVec<double> &dst,
+                        distributedDeviceVec<double> &src);
+
+    /**
+     * @brief Whether this problem uses a custom (e.g. Chebyshev)
+     * preconditioner. If false, the CG solver uses the built-in
+     * fused Jacobi kernels.
+     */
+    virtual bool
+    usesCustomPreconditioner() const;
+
+    /**
+     * @brief Reset total number of operator matvecs for the current solve.
+     */
+    virtual void
+    resetMatVecCount();
+
+    /**
+     * @brief Return total number of operator matvecs since last reset.
+     */
+    virtual dftfe::uInt
+    getMatVecCount() const;
+
+    /**
+     * @brief Hook called once before CG iterations begin.
+     *
+     * Derived classes may use the actual starting residual and tolerance
+     * to tune preconditioner parameters for the upcoming solve.
+     */
+    virtual void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance);
+
     // protected:
   };
 

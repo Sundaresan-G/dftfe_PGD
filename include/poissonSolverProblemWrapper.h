@@ -133,6 +133,59 @@ namespace dftfe
       std::visit([](auto &t) { t->clear(); }, d_poissonSolverProblemObject);
     }
 
+    bool
+    usesCustomPreconditioner() const override
+    {
+      return std::visit(
+        [](auto const &t) -> bool { return t->usesCustomPreconditioner(); },
+        d_poissonSolverProblemObject);
+    }
+
+    void
+    applyPreconditioner(distributedCPUVec<double>       &dst,
+                        const distributedCPUVec<double> &src) override
+    {
+      std::visit([&](auto &t) { t->applyPreconditioner(dst, src); },
+                 d_poissonSolverProblemObject);
+    }
+
+    void
+    resetMatVecCount() override
+    {
+      std::visit([](auto &t) { t->resetMatVecCount(); },
+                 d_poissonSolverProblemObject);
+    }
+
+    dftfe::uInt
+    getMatVecCount() const override
+    {
+      return std::visit(
+        [](auto const &t) -> dftfe::uInt { return t->getMatVecCount(); },
+        d_poissonSolverProblemObject);
+    }
+
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance) override
+    {
+      std::visit(
+        [&](auto &t) {
+          t->tunePreconditionerForSolve(initialResidual, absTolerance);
+        },
+        d_poissonSolverProblemObject);
+    }
+
+    void
+    setPreconditionerOptions(const bool        useChebyshev,
+                             const dftfe::uInt chebyDegree)
+    {
+      std::visit(
+        [&](auto &t) {
+          t->setPreconditionerOptions(useChebyshev, chebyDegree);
+        },
+        d_poissonSolverProblemObject);
+    }
+
     template <typename... Args>
     void
     reinit(Args &&...args)
@@ -253,6 +306,59 @@ namespace dftfe
     clear()
     {
       std::visit([](auto &t) { t->clear(); }, d_poissonSolverProblemObject);
+    }
+
+    bool
+    usesCustomPreconditioner() const override
+    {
+      return std::visit(
+        [](auto const &t) -> bool { return t->usesCustomPreconditioner(); },
+        d_poissonSolverProblemObject);
+    }
+
+    void
+    applyPreconditioner(distributedDeviceVec<double> &dst,
+                        distributedDeviceVec<double> &src) override
+    {
+      std::visit([&](auto &t) { t->applyPreconditioner(dst, src); },
+                 d_poissonSolverProblemObject);
+    }
+
+    void
+    resetMatVecCount() override
+    {
+      std::visit([](auto &t) { t->resetMatVecCount(); },
+                 d_poissonSolverProblemObject);
+    }
+
+    dftfe::uInt
+    getMatVecCount() const override
+    {
+      return std::visit(
+        [](auto const &t) -> dftfe::uInt { return t->getMatVecCount(); },
+        d_poissonSolverProblemObject);
+    }
+
+    void
+    tunePreconditionerForSolve(const double initialResidual,
+                               const double absTolerance) override
+    {
+      std::visit(
+        [&](auto &t) {
+          t->tunePreconditionerForSolve(initialResidual, absTolerance);
+        },
+        d_poissonSolverProblemObject);
+    }
+
+    void
+    setPreconditionerOptions(const bool        useChebyshev,
+                             const dftfe::uInt chebyDegree)
+    {
+      std::visit(
+        [&](auto &t) {
+          t->setPreconditionerOptions(useChebyshev, chebyDegree);
+        },
+        d_poissonSolverProblemObject);
     }
 
     template <typename... Args>

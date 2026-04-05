@@ -177,14 +177,17 @@ namespace dftfe
 
     if (isFirstScf && isFirstFilteringCall && numberBandGroups > 1)
     {
-      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL, 1);
-      XDevice.resize(reShapedNumRows * reShapedNumCols, 0);
-      HXDevice.resize(reShapedNumRows * reShapedNumCols, 0);
-      MXDevice.resize(reShapedNumRows * reShapedNumCols, 0);
-      extraBufferDevice.resize(reShapedNumRows * reShapedNumCols, 0);
 
-      // XHost.resize(reShapedNumRows * reShapedNumCols, 0);
-      // HXHost.resize(reShapedNumRows * reShapedNumCols, 0);
+      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL, 1);
+      XDevice = d_deviceScratchMemoryStorage.acquire(
+        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
+      HXDevice = d_deviceScratchMemoryStorage.acquire(
+        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
+      MXDevice = d_deviceScratchMemoryStorage.acquire(
+        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
+      extraBufferDevice = d_deviceScratchMemoryStorage.acquire(
+        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
+
     }
 
     distributedDeviceVec<dataTypes::number> *XBlock =
@@ -733,6 +736,7 @@ namespace dftfe
               interBandGroupComm,
               BLASWrapperPtr,
               d_dftParams,
+              d_deviceScratchMemoryStorage,
               useMixedPrecOverall);
 
 
@@ -751,6 +755,7 @@ namespace dftfe
               eigenValues,
               BLASWrapperPtr,
               d_dftParams,
+              d_deviceScratchMemoryStorage,
               useMixedPrecOverall);
           }
         else
@@ -771,16 +776,17 @@ namespace dftfe
               eigenValues,
               BLASWrapperPtr,
               d_dftParams,
+              d_deviceScratchMemoryStorage,
               useMixedPrecOverall);
             else
               linearAlgebraOperationsDevice::rayleighRitzGEP(
                 operatorMatrix,
                 elpaScala,
                 eigenVectorsFlattenedDevice,
-                XDevice.begin(),
-                HXDevice.begin(),
-                MXDevice.begin(),
-                extraBufferDevice.begin(),
+                (*XDevice).begin(),
+                (*HXDevice).begin(),
+                (*MXDevice).begin(),
+                (*extraBufferDevice).begin(),
                 (*XBlock),
                 (*HXBlock),
                 localVectorSize,
@@ -795,6 +801,7 @@ namespace dftfe
                 eigenValues,
                 BLASWrapperPtr,
                 d_dftParams,
+                d_deviceScratchMemoryStorage,
                 useMixedPrecOverall);
           }
       }
@@ -922,7 +929,8 @@ namespace dftfe
       densityMatDerFermiEnergy,
       elpaScala,
       BLASWrapperPtr,
-      d_dftParams);
+      d_dftParams,
+      d_deviceScratchMemoryStorage);
 
 
     dftfe::utils::deviceSynchronize();
