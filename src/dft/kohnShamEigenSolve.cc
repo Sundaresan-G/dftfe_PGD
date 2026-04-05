@@ -532,8 +532,7 @@ namespace dftfe
         d_BLASWrapperPtr,
         elpaScala,
         d_eigenVectorsFlattenedDevice.begin() + wfcStartIndex,
-        d_numEigenValues *
-          matrix_free_data.get_vector_partitioner()->locally_owned_size() *
+        matrix_free_data.get_vector_partitioner()->locally_owned_size() *
           spinorFactor,
         d_numEigenValues,
         eigenValuesTemp,

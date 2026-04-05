@@ -114,7 +114,7 @@ namespace dftfe
                             &BLASWrapperPtr,
     elpaScalaManager        &elpaScala,
     dataTypes::number       *eigenVectorsFlattenedDevice,
-    const dftfe::uInt        flattenedSize,
+    const dftfe::uInt        localVectorSize,
     const dftfe::uInt        totalNumberWaveFunctions,
     std::vector<double>     &eigenValues,
     std::vector<double>     &residualNorms,
@@ -145,8 +145,8 @@ namespace dftfe
     //
     // allocate memory for full flattened array on device and fill it up
     //
-    const dftfe::uInt localVectorSize =
-      flattenedSize / totalNumberWaveFunctions;
+    // const dftfe::uInt localVectorSize =
+    //   flattenedSize / totalNumberWaveFunctions;
 
     // band group parallelization data structures
     const dftfe::uInt numberBandGroups =
