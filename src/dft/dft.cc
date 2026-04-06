@@ -2651,6 +2651,7 @@ namespace dftfe
     while (!scfConverged && (scfIter < d_dftParamsPtr->numSCFIterations))
       {
         dealii::Timer local_timer(d_mpiCommParent, true);
+        d_dftParamsPtr->scfIterCount = scfIter;
         if (d_dftParamsPtr->verbosity > 0 && d_dftParamsPtr->noncolin)
           localNonCollinearMagnetizationDensity(d_densityInQuadValues);
         if (d_dftParamsPtr->verbosity >= 1)

@@ -229,6 +229,7 @@ SET(DEVICE_SRC
   ./utils/DeviceAPICalls.cu.cc
   ./utils/BLASWrapperDevice.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
+  ./utils/compressionWrapperDevice.cc
   ./src/solvers/linearSolverCGDeviceKernels.cc
   ./src/solvers/chebyshevPreconditionerDeviceKernels.cc
   ./src/matrixFree/MatrixFreeDevice.cc
@@ -252,6 +253,7 @@ SET(DEVICE_SRC
   ./utils/DeviceAPICalls.hip.cc
   ./utils/BLASWrapperDevice.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
+  ./utils/compressionWrapperDevice.cc
   ./src/solvers/linearSolverCGDeviceKernels.cc
   ./src/solvers/chebyshevPreconditionerDeviceKernels.cc
   ./src/matrixFree/MatrixFreeDevice.cc
@@ -275,6 +277,7 @@ SET(DEVICE_SRC
   ./utils/DeviceAPICalls.sycl.cc
   ./utils/BLASWrapperDevice.cc
   ./utils/MPICommunicatorP2PKernelsDevice.cc
+  ./utils/compressionWrapperDevice.cc
   ./src/solvers/linearSolverCGDeviceKernels.cc
   ./src/solvers/chebyshevPreconditionerDeviceKernels.cc
   ./src/matrixFree/MatrixFreeDevice.cc
@@ -528,6 +531,7 @@ IF (DEFINED ALGLIB_DIR)
 ELSE()
   MESSAGE(FATAL_ERROR "-- Provide path to AlgLIB: -DALGLIB_DIR=/path/to/prefix")
 ENDIF (DEFINED ALGLIB_DIR)
+
 
 #
 # LIBXC. Set with -DLIBXC_DIR=/path/to/prefix

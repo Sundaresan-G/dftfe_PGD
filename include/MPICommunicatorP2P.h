@@ -28,6 +28,7 @@
 #include <MemoryStorage.h>
 #include <DataTypeOverloads.h>
 #include <dftfeDataTypes.h>
+#include <compressionWrapper.h>
 #ifdef DFTFE_WITH_DEVICE
 #  include <DeviceTypeConfig.h>
 #  if defined(DFTFE_WITH_CUDA_NCCL)
@@ -53,9 +54,10 @@ namespace dftfe
 
       enum class communicationPrecision
       {
-        half,    // explicitly BF16
-        single,  // explicitly FP32
-        standard // same as valueType
+        compress, // compressed
+        half,     // explicitly BF16
+        single,   // explicitly FP32
+        standard  // same as valueType
       };
 
       template <typename ValueType, MemorySpace memorySpace>
@@ -118,6 +120,12 @@ namespace dftfe
         void
         setCommunicationPrecision(communicationPrecision precision);
 
+        void
+        setCompressBitsPerValue(dftfe::uInt bpv);
+
+        void
+        setCompressUseZfp(bool useZfp);
+
       private:
         std::shared_ptr<const MPIPatternP2P<memorySpace>> d_mpiPatternP2P;
 
@@ -147,6 +155,14 @@ namespace dftfe
                       memorySpace>
           d_ghostDataCopyHalfPrec;
 
+        MemoryStorage<typename dftfe::dataTypes::compressType<ValueType>::type,
+                      memorySpace>
+          d_sendRecvBufferCompress;
+
+        MemoryStorage<typename dftfe::dataTypes::compressType<ValueType>::type,
+                      memorySpace>
+          d_ghostDataCopyCompress;
+
 #ifdef DFTFE_WITH_DEVICE
         std::shared_ptr<MemoryStorage<ValueType, MemorySpace::HOST_PINNED>>
           d_ghostDataCopyHostPinnedPtr;
@@ -173,6 +189,24 @@ namespace dftfe
           typename dftfe::dataTypes::halfPrecType<ValueType>::type,
           MemorySpace::HOST_PINNED>>
           d_sendRecvBufferHalfPrecHostPinnedPtr;
+
+        std::shared_ptr<MemoryStorage<
+          typename dftfe::dataTypes::compressType<ValueType>::type,
+          MemorySpace::HOST_PINNED>>
+          d_ghostDataCopyCompressHostPinnedPtr;
+
+        std::shared_ptr<MemoryStorage<
+          typename dftfe::dataTypes::compressType<ValueType>::type,
+          MemorySpace::HOST_PINNED>>
+          d_sendRecvBufferCompressHostPinnedPtr;
+
+        dftfe::uInt d_compressBitsPerValue = 16;
+        bool        d_useZfpCompression = false;
+
+        dftfe::uInt d_maxCompressedTargetBytes    = 0;
+        dftfe::uInt d_maxCompressedGhostBytes     = 0;
+        dftfe::uInt d_activeCompressedTargetBytes = 0;
+        dftfe::uInt d_activeCompressedGhostBytes  = 0;
 
 #endif // DFTFE_WITH_DEVICE
 

@@ -23,6 +23,7 @@
 #  include <DeviceDataTypeOverloads.h>
 #  include <DeviceKernelLauncherHelpers.h>
 #  include <DeviceTypeConfigHalfPrec.sycl.h>
+#  include <DeviceTypeConfigCompress.sycl.h>
 #  include <Exceptions.h>
 
 namespace dftfe
@@ -187,6 +188,14 @@ namespace dftfe
     deviceSetValue(std::complex<double> *devPtr,
                    std::complex<double>  value,
                    std::size_t           size);
+
+    template void
+    deviceSetValue(uint8_t *devPtr, uint8_t value, std::size_t size);
+
+    template void
+    deviceSetValue(std::complex<uint8_t> *devPtr,
+                   std::complex<uint8_t>  value,
+                   std::size_t            size);
 
     template void
     deviceSetValue(uint16_t *devPtr, uint16_t value, std::size_t size);
@@ -446,6 +455,22 @@ namespace dftfe
     deviceEventSynchronize(deviceEvent_t &event)
     {
       event.wait_and_throw();
+      return dftfe::utils::deviceSuccess;
+    }
+
+    deviceError_t
+    deviceEventElapsedTime(float         &milliseconds,
+                           deviceEvent_t &startEvent,
+                           deviceEvent_t &stopEvent)
+    {
+      stopEvent.wait_and_throw();
+      auto start_time =
+        startEvent
+          .get_profiling_info<sycl::info::event_profiling::command_end>();
+      auto end_time =
+        stopEvent
+          .get_profiling_info<sycl::info::event_profiling::command_end>();
+      milliseconds = (end_time - start_time) / 1e6f;
       return dftfe::utils::deviceSuccess;
     }
 
