@@ -914,18 +914,18 @@ namespace dftfe
 
               // NCCLCHECK(ncclGroupStart());
               
-                NCCLCHECK(ncclSend(static_cast<const void *>(send) + sendOffset,
+                NCCLCHECK(ncclSend(reinterpret_cast<const void *>(reinterpret_cast<dftfe::uInt>(send) + sendOffset),
                                   sendCount,
                                   ncclChar,
                                   sendTo,
                                   comm,
                                   stream));
-                NCCLCHECK(ncclRecv(static_cast<void *>(recv) + recvOffset,
-                                    recvCount,
-                                    ncclChar,
-                                    recvFrom,
-                                    comm,
-                                    stream));
+                NCCLCHECK(ncclRecv(reinterpret_cast<void *>(reinterpret_cast<dftfe::uInt>(recv) + recvOffset),
+                                  recvCount,
+                                  ncclChar,
+                                  recvFrom,
+                                  comm,
+                                  stream));
 
               // NCCLCHECK(ncclGroupEnd());
 
