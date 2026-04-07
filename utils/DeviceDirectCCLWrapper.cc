@@ -842,7 +842,7 @@ namespace dftfe
             comm = *ncclCommPvtPtr;            
           }
           
-          // NCCLCHECK(ncclGroupStart());
+          NCCLCHECK(ncclGroupStart());
           for (unsigned int i = 1; i < totalRanks; i++)
             {
               // Printing line and file to show no error
@@ -912,7 +912,7 @@ namespace dftfe
               // if (recvOffset + recvCount > totalNumRows * totalNumCols)
               //   recvCount = totalNumRows * totalNumCols - recvOffset;
 
-              NCCLCHECK(ncclGroupStart());
+              // NCCLCHECK(ncclGroupStart());
               
                 NCCLCHECK(ncclSend(static_cast<const void *>(send) + sendOffset,
                                   sendCount,
@@ -927,7 +927,7 @@ namespace dftfe
                                     comm,
                                     stream));
 
-              NCCLCHECK(ncclGroupEnd());
+              // NCCLCHECK(ncclGroupEnd());
 
               // {
               //   int size = totalRanks, this_process = myRank;
@@ -937,7 +937,7 @@ namespace dftfe
                 
               // }
             }
-          // NCCLCHECK(ncclGroupEnd());
+          NCCLCHECK(ncclGroupEnd());
         } else
 #endif
         {
