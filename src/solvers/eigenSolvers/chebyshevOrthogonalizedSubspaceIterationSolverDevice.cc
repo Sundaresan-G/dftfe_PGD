@@ -464,6 +464,43 @@ namespace dftfe
                           .setCommunicationPrecision(
                             dftfe::utils::mpi::communicationPrecision::half);
                       }
+
+                    else if (useMixedPrecOverall &&
+                             d_dftParams.communPrecCheby == "COMPRESSED")
+                      {
+                        const bool isLate = d_dftParams.scfIterCount + 1 >=
+                                            d_dftParams.compressLateStartSCF;
+                        const dftfe::uInt bpv =
+                          isLate ? d_dftParams.compressBitsPerValueLate :
+                                   d_dftParams.compressBitsPerValueEarly;
+                        const bool useZfp =
+                          (isLate ? d_dftParams.compressAlgoLate :
+                                    d_dftParams.compressAlgoEarly) == "ZFP";
+                        (*XBlockFP32).setCompressBitsPerValue(bpv);
+                        (*HXBlockFP32).setCompressBitsPerValue(bpv);
+                        (*XBlock2FP32).setCompressBitsPerValue(bpv);
+                        (*HXBlock2FP32).setCompressBitsPerValue(bpv);
+                        (*XBlockFP32).setCompressUseZfp(useZfp);
+                        (*HXBlockFP32).setCompressUseZfp(useZfp);
+                        (*XBlock2FP32).setCompressUseZfp(useZfp);
+                        (*HXBlock2FP32).setCompressUseZfp(useZfp);
+                        (*XBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              compress);
+                        (*HXBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              compress);
+                        (*XBlock2FP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              compress);
+                        (*HXBlock2FP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              compress);
+                      }
                     linearAlgebraOperationsDevice::
                       reformulatedChebyshevFilterOverlapComputeCommunication(
                         BLASWrapperPtr,
@@ -482,6 +519,47 @@ namespace dftfe
                         d_upperBoundUnWantedSpectrum,
                         d_lowerBoundWantedSpectrum,
                         d_dftParams.approxOverlapMatrix);
+                    if (useMixedPrecOverall &&
+                        d_dftParams.communPrecCheby == "BF16")
+                      {
+                        (*XBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*HXBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*XBlock2FP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*HXBlock2FP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                      }
+
+                    else if (useMixedPrecOverall &&
+                             d_dftParams.communPrecCheby == "COMPRESSED")
+                      {
+                        (*XBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*HXBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*XBlock2FP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*HXBlock2FP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                      }
                   }
                 else
                   {
@@ -499,6 +577,31 @@ namespace dftfe
                           .setCommunicationPrecision(
                             dftfe::utils::mpi::communicationPrecision::half);
                       }
+
+                    else if (useMixedPrecOverall &&
+                             d_dftParams.communPrecCheby == "COMPRESSED")
+                      {
+                        const bool isLate = d_dftParams.scfIterCount + 1 >=
+                                            d_dftParams.compressLateStartSCF;
+                        const dftfe::uInt bpv =
+                          isLate ? d_dftParams.compressBitsPerValueLate :
+                                   d_dftParams.compressBitsPerValueEarly;
+                        const bool useZfp =
+                          (isLate ? d_dftParams.compressAlgoLate :
+                                    d_dftParams.compressAlgoEarly) == "ZFP";
+                        (*XBlockFP32).setCompressBitsPerValue(bpv);
+                        (*HXBlockFP32).setCompressBitsPerValue(bpv);
+                        (*XBlockFP32).setCompressUseZfp(useZfp);
+                        (*HXBlockFP32).setCompressUseZfp(useZfp);
+                        (*XBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              compress);
+                        (*HXBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              compress);
+                      }
                     linearAlgebraOperations::reformulatedChebyshevFilter(
                       BLASWrapperPtr,
                       operatorMatrix,
@@ -512,6 +615,31 @@ namespace dftfe
                       d_upperBoundUnWantedSpectrum,
                       d_lowerBoundWantedSpectrum,
                       d_dftParams.approxOverlapMatrix);
+
+                    if (useMixedPrecOverall &&
+                        d_dftParams.communPrecCheby == "BF16")
+                      {
+                        (*XBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*HXBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                      }
+                    else if (useMixedPrecOverall &&
+                             d_dftParams.communPrecCheby == "COMPRESSED")
+                      {
+                        (*XBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                        (*HXBlockFP32)
+                          .setCommunicationPrecision(
+                            dftfe::utils::mpi::communicationPrecision::
+                              standard);
+                      }
                   }
               }
             else if (d_dftParams.useReformulatedChFSI && !isFirstFilteringCall)

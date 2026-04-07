@@ -1155,8 +1155,38 @@ namespace dftfe
           prm.declare_entry(
             "COMMUN PREC CHEBY",
             "STANDARD",
-            dealii::Patterns::Selection("STANDARD|FP32|BF16"),
-            "[Advanced] Sets communication precision for residual based Chebyshev filtering. Default setting is STANDARD. FP32 and BF16 are ignored if USE SINGLE PREC CHEBY and USE GPU are false.");
+            dealii::Patterns::Selection("STANDARD|FP32|BF16|COMPRESSED"),
+            "[Advanced] Sets communication precision for residual based Chebyshev filtering. Default setting is STANDARD. FP32, BF16 and COMPRESSED are ignored if USE SINGLE PREC CHEBY and USE GPU are false.");
+
+          prm.declare_entry(
+            "COMPRESS ALGO EARLY",
+            "BFP",
+            dealii::Patterns::Selection("BFP|ZFP"),
+            "[Advanced] Compression algorithm for early SCF iterations (before COMPRESS START SCF). BFP = block floating point, ZFP = zfp fixed-rate. Default BFP.");
+
+          prm.declare_entry(
+            "COMPRESS ALGO LATE",
+            "BFP",
+            dealii::Patterns::Selection("BFP|ZFP"),
+            "[Advanced] Compression algorithm for late SCF iterations (at or after COMPRESS START SCF). BFP = block floating point, ZFP = zfp fixed-rate. Default BFP.");
+
+          prm.declare_entry(
+            "COMPRESS BITS EARLY",
+            "16",
+            dealii::Patterns::Integer(8, 16),
+            "[Advanced] Bits per value for early SCF compression (iterations 0 to COMPRESS LATE START SCF - 1). Default 16.");
+
+          prm.declare_entry(
+            "COMPRESS BITS LATE",
+            "16",
+            dealii::Patterns::Integer(8, 16),
+            "[Advanced] Bits per value for late SCF compression (from COMPRESS LATE START SCF onward). Default 16.");
+
+          prm.declare_entry(
+            "COMPRESS LATE START SCF",
+            "1000",
+            dealii::Patterns::Integer(0, 1000),
+            "[Advanced] SCF iteration at which late compression settings take effect (iterations before this use early settings). Default 200.");
 
           prm.declare_entry(
             "USE MIXED PREC COMMUN ONLY XTOX XTHX",
@@ -1891,10 +1921,15 @@ namespace dftfe
         useMixedPrecSubspaceRotRR = prm.get_bool("USE MIXED PREC RR_SR");
         useMixedPrecCommunOnlyXtHXXtOX =
           prm.get_bool("USE MIXED PREC COMMUN ONLY XTOX XTHX");
-        communPrecCheby         = prm.get("COMMUN PREC CHEBY");
-        useSinglePrecCheby      = prm.get_bool("USE SINGLE PREC CHEBY");
-        tensorOpType            = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
+        communPrecCheby    = prm.get("COMMUN PREC CHEBY");
         adaptiveUsageBF16Commun = prm.get_bool("ADAPTIVE USAGE BF16 COMMUN");
+        useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
+        compressAlgoEarly         = prm.get("COMPRESS ALGO EARLY");
+        compressAlgoLate          = prm.get("COMPRESS ALGO LATE");
+        compressBitsPerValueEarly = prm.get_integer("COMPRESS BITS EARLY");
+        compressBitsPerValueLate  = prm.get_integer("COMPRESS BITS LATE");
+        compressLateStartSCF      = prm.get_integer("COMPRESS LATE START SCF");
+        tensorOpType       = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
         overlapComputeCommunOrthoRR =

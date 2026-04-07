@@ -48,27 +48,27 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (!dcclCommInit && useDCCL)
         {
-          ncclIdPtr   = new ncclUniqueId;
-          ncclCommPtr = new ncclComm_t;
+          dcclIdPtr   = new ncclUniqueId;
+          dcclCommPtr = new ncclComm_t;
           if (myRank == 0)
-            ncclGetUniqueId(ncclIdPtr);
+            ncclGetUniqueId(dcclIdPtr);
           MPICHECK(
-            MPI_Bcast(ncclIdPtr, sizeof(*ncclIdPtr), MPI_BYTE, 0, d_mpiComm));
+            MPI_Bcast(dcclIdPtr, sizeof(*dcclIdPtr), MPI_BYTE, 0, d_mpiComm));
           NCCLCHECK(
-            ncclCommInitRank(ncclCommPtr, totalRanks, *ncclIdPtr, myRank));
+            ncclCommInitRank(dcclCommPtr, totalRanks, *dcclIdPtr, myRank));
           dcclCommInit = true;
         }
 
         if (selector != 0 && useDCCL){
           dcclCommSelector = selector;
-          ncclIdPvtPtr = new ncclUniqueId;
-          ncclCommPvtPtr = new ncclComm_t;
+          dcclIdPvtPtr = new ncclUniqueId;
+          dcclCommPvtPtr = new ncclComm_t;
           if (myRank == 0)
-            ncclGetUniqueId(ncclIdPvtPtr);
+            ncclGetUniqueId(dcclIdPvtPtr);
           MPICHECK(
-            MPI_Bcast(ncclIdPvtPtr, sizeof(*ncclIdPvtPtr), MPI_BYTE, 0, d_mpiComm));
+            MPI_Bcast(dcclIdPvtPtr, sizeof(*dcclIdPvtPtr), MPI_BYTE, 0, d_mpiComm));
           NCCLCHECK(
-            ncclCommInitRank(ncclCommPvtPtr, totalRanks, *ncclIdPvtPtr, myRank));
+            ncclCommInitRank(dcclCommPvtPtr, totalRanks, *dcclIdPvtPtr, myRank));
 
         }
 #  endif
@@ -79,8 +79,8 @@ namespace dftfe
           ccl::kvs::address_type onecclIdAddr;
           if (myRank == 0)
             {
-              onecclIdPtr  = ccl::create_main_kvs();
-              onecclIdAddr = onecclIdPtr->get_address();
+              dcclIdPtr    = ccl::create_main_kvs();
+              onecclIdAddr = dcclIdPtr->get_address();
               MPICHECK(MPI_Bcast(onecclIdAddr.data(),
                                  onecclIdAddr.size(),
                                  MPI_BYTE,
@@ -94,7 +94,7 @@ namespace dftfe
                                  MPI_BYTE,
                                  0,
                                  d_mpiComm));
-              onecclIdPtr = ccl::create_kvs(onecclIdAddr);
+              dcclIdPtr = ccl::create_kvs(onecclIdAddr);
             }
 
           ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
@@ -104,8 +104,8 @@ namespace dftfe
           auto comms         = ccl::create_communicators(totalRanks,
                                                  rankDeviceMap,
                                                  onecclContext,
-                                                 onecclIdPtr);
-          onecclCommPtr =
+                                                 dcclIdPtr);
+          dcclCommPtr =
             std::make_shared<ccl::communicator>(std::move(comms[0]));
           dcclCommInit = true;
         }
@@ -115,8 +115,8 @@ namespace dftfe
           ccl::kvs::address_type onecclIdAddr;
           if (myRank == 0)
             {
-              onecclIdPvtPtr  = ccl::create_main_kvs();
-              onecclIdAddr = onecclIdPvtPtr->get_address();
+              dcclIdPvtPtr  = ccl::create_main_kvs();
+              onecclIdAddr = dcclIdPvtPtr->get_address();
               MPICHECK(MPI_Bcast(onecclIdAddr.data(),
                                  onecclIdAddr.size(),
                                  MPI_BYTE,
@@ -130,7 +130,7 @@ namespace dftfe
                                  MPI_BYTE,
                                  0,
                                  d_mpiComm));
-              onecclIdPvtPtr = ccl::create_kvs(onecclIdAddr);
+              dcclIdPvtPtr = ccl::create_kvs(onecclIdAddr);
             }
 
           ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
@@ -140,8 +140,8 @@ namespace dftfe
           auto comms         = ccl::create_communicators(totalRanks,
                                                  rankDeviceMap,
                                                  onecclContext,
-                                                 onecclIdPvtPtr);
-          onecclCommPvtPtr =
+                                                 dcclIdPvtPtr);
+          dcclCommPvtPtr =
             std::make_shared<ccl::communicator>(std::move(comms[0]));
 
         }
@@ -161,29 +161,29 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (dcclCommInit)
         {
-          ncclCommFinalize(*ncclCommPtr);
-          ncclCommDestroy(*ncclCommPtr);
-          delete ncclCommPtr;
-          delete ncclIdPtr;
+          ncclCommFinalize(*dcclCommPtr);
+          ncclCommDestroy(*dcclCommPtr);
+          delete dcclCommPtr;
+          delete dcclIdPtr;
           dcclCommInit = false;
         }
 
       if (dcclCommSelector != 0){
-        ncclCommFinalize(*ncclCommPvtPtr);
-        ncclCommDestroy(*ncclCommPvtPtr);
-        delete ncclCommPvtPtr;
+        ncclCommFinalize(*dcclCommPvtPtr);
+        ncclCommDestroy(*dcclCommPvtPtr);
+        delete dcclCommPvtPtr;
       }
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-          onecclCommPtr.reset();
-          onecclIdPtr.reset();
+          dcclCommPtr.reset();
+          dcclIdPtr.reset();
         }
       if (dcclCommSelector != 0){
-        onecclCommPvtPtr.reset();
-        onecclIdPvtPtr.reset();
+        dcclCommPvtPtr.reset();
+        dcclIdPvtPtr.reset();
       }
 #  endif
 
@@ -204,9 +204,9 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (dcclCommInit)
         {
-          ncclComm_t comm = *ncclCommPtr;
+          ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = *dcclCommPvtPtr;            
           }
             
           NCCLCHECK(ncclAllReduce((const void *)send,
@@ -223,9 +223,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = onecclCommPtr;
+          auto comm = dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = onecclCommPvtPtr;            
+            comm = dcclCommPvtPtr;            
           }
 
           auto devStream =
@@ -276,9 +276,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          ncclComm_t comm = *ncclCommPtr;
+          ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = *dcclCommPvtPtr;            
           }
 
           NCCLCHECK(ncclAllReduce((const void *)send,
@@ -295,9 +295,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = onecclCommPtr;
+          auto comm = dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = onecclCommPvtPtr;            
+            comm = dcclCommPvtPtr;            
           }
 
           auto devStream =
@@ -350,9 +350,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          ncclComm_t comm = *ncclCommPtr;
+          ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = *dcclCommPvtPtr;            
           }
 
           NCCLCHECK(ncclAllReduce((const void *)send,
@@ -369,9 +369,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = onecclCommPtr;
+          auto comm = dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = onecclCommPvtPtr;            
+            comm = dcclCommPvtPtr;            
           }
 
           auto devStream =
@@ -423,9 +423,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          ncclComm_t comm = *ncclCommPtr;
+          ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = *dcclCommPvtPtr;            
           }
           
           NCCLCHECK(ncclAllReduce((const void *)send,
@@ -442,9 +442,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = onecclCommPtr;
+          auto comm = dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = onecclCommPvtPtr;            
+            comm = dcclCommPvtPtr;            
           }
 
           auto devStream =
@@ -501,9 +501,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          ncclComm_t comm = *ncclCommPtr;
+          ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = *dcclCommPvtPtr;            
           }
 
           NCCLCHECK(ncclGroupStart());
@@ -528,9 +528,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = onecclCommPtr;
+          auto comm = dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = onecclCommPvtPtr;            
+            comm = dcclCommPvtPtr;            
           }
 
           auto devStream =
@@ -618,9 +618,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          ncclComm_t comm = *ncclCommPtr;
+          ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = *dcclCommPvtPtr;            
           }
 
           NCCLCHECK(ncclGroupStart());
@@ -646,9 +646,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = onecclCommPtr;
+          auto comm = dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = onecclCommPvtPtr;            
+            comm = dcclCommPvtPtr;            
           }
 
           auto devStream =
@@ -737,9 +737,9 @@ namespace dftfe
       if (dcclCommInit)
         {
 
-          auto comm = onecclCommPtr;
+          auto comm = dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = onecclCommPvtPtr;            
+            comm = dcclCommPvtPtr;            
           }
 
           auto devStream =
@@ -791,7 +791,7 @@ namespace dftfe
       // fflush(stdout);
       // // Get nccl rank
       // int ncclRank, mpiRank;
-      // ncclCommUserRank(*ncclCommPtr, &ncclRank);
+      // ncclCommUserRank(*dcclCommPtr, &ncclRank);
       // MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
       // std::cout << "ncclRank: " << ncclRank << " mpiRank: " << mpiRank 
       //           << " myRank: " << myRank << " totalRanks: " << totalRanks
@@ -837,9 +837,9 @@ namespace dftfe
             
           // }
 
-          ncclComm_t comm = *ncclCommPtr;
+          ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
-            comm = *ncclCommPvtPtr;            
+            comm = *dcclCommPvtPtr;            
           }
           
           NCCLCHECK(ncclGroupStart());
@@ -849,7 +849,7 @@ namespace dftfe
               // dftfe::utils::deviceSynchronize();
               // MPI_Barrier(MPI_COMM_WORLD);
               // fflush(stdout);
-              // ncclCommUserRank(*ncclCommPtr, &ncclRank);
+              // ncclCommUserRank(*dcclCommPtr, &ncclRank);
               // MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
               // std::cout << "ncclRank: " << ncclRank << " mpiRank: " << mpiRank << std::endl;
               // if (dealii::Utilities::MPI::this_mpi_process(MPI_COMM_WORLD) == 0)
@@ -886,7 +886,7 @@ namespace dftfe
               //   dftfe::utils::deviceSynchronize();
               //   MPI_Barrier(MPI_COMM_WORLD);
               //   fflush(stdout);
-              //   ncclCommUserRank(*ncclCommPtr, &ncclRank);
+              //   ncclCommUserRank(*dcclCommPtr, &ncclRank);
               //   MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
               //   std::cout << "ncclRank: " << ncclRank << " mpiRank: " << mpiRank 
               //             << " sendOffset: " << sendOffset
