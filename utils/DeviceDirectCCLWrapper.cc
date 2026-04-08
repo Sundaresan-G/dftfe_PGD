@@ -26,6 +26,7 @@
 #  include <DeviceKernelLauncherHelpers.h>
 #  include <DeviceAPICalls.h>
 #  include <Exceptions.h>
+#  include <vector>
 
 namespace dftfe
 {
@@ -759,25 +760,23 @@ namespace dftfe
         }
 #  endif
 
-
-
-      unsigned int sendTo = myRank;
-      unsigned int recvFrom = myRank;
-
-      dftfe::uInt sendOffset = (dftfe::uInt)sendTo * sendCount;
-      dftfe::uInt recvOffset = (dftfe::uInt)recvFrom * recvCount;
-
-      // use D2D copy for the first one
-      dftfe::utils::deviceMemcpyAsyncD2D(
-        makeDataTypeDeviceCompatible(recv + recvOffset),
-        makeDataTypeDeviceCompatible(send + sendOffset),
-        sendCount * sizeof(NumberType),
-        stream);
-
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
 
       if (dcclCommInit && useDCCL)
         {
+
+          unsigned int sendTo = myRank;
+          unsigned int recvFrom = myRank;
+
+          dftfe::uInt sendOffset = (dftfe::uInt)sendTo * sendCount;
+          dftfe::uInt recvOffset = (dftfe::uInt)recvFrom * recvCount;
+
+          // use D2D copy for the first one
+          dftfe::utils::deviceMemcpyAsyncD2D(
+            makeDataTypeDeviceCompatible(recv + recvOffset),
+            makeDataTypeDeviceCompatible(send + sendOffset),
+            sendCount * sizeof(NumberType),
+            stream);
 
           ncclComm_t comm = *dcclCommPtr;
           if (dcclCommSelector != 0){
@@ -811,36 +810,62 @@ namespace dftfe
         } else
 #endif
         {
-#  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
 
           dftfe::utils::deviceStreamSynchronize(stream);
-          for (unsigned int i = 1; i < totalRanks; i++)
-            {
-              sendTo = (myRank + i) % totalRanks;
-              recvFrom = (myRank + totalRanks - i) % totalRanks;
+          const std::size_t totalSendBytes = (std::size_t)totalRanks * sendCount * sizeof(NumberType);
+          const std::size_t totalRecvBytes = (std::size_t)totalRanks * recvCount * sizeof(NumberType);
+          std::vector<NumberType> hostSend(totalRanks * sendCount);
+          std::vector<NumberType> hostRecv(totalRanks * recvCount);
+          dftfe::utils::deviceMemcpyD2H(hostSend.data(), send, totalSendBytes);
+          MPICHECK(MPI_Alltoall(hostSend.data(),
+                                sendCount,
+                                dataTypes::mpi_type_id(hostSend.data()),
+                                hostRecv.data(),
+                                recvCount,
+                                dataTypes::mpi_type_id(hostRecv.data()),
+                                d_mpiComm));
+          dftfe::utils::deviceMemcpyH2D(recv, hostRecv.data(), totalRecvBytes);
 
-              sendOffset = (dftfe::uInt)sendTo * sendCount;
-              recvOffset = (dftfe::uInt)recvFrom * recvCount;
+          // unsigned int sendTo = myRank;
+          // unsigned int recvFrom = myRank;
 
-              // if (sendOffset + sendCount > totalNumRows * totalNumCols)
-              //   sendCount = totalNumRows * totalNumCols - sendOffset;
-              // if (recvOffset + recvCount > totalNumRows * totalNumCols)
-              //   recvCount = totalNumRows * totalNumCols - recvOffset;
+          // dftfe::uInt sendOffset = (dftfe::uInt)sendTo * sendCount;
+          // dftfe::uInt recvOffset = (dftfe::uInt)recvFrom * recvCount;
 
-              MPICHECK(MPI_Sendrecv(send + sendOffset,
-                                    sendCount,
-                                    dataTypes::mpi_type_id(send),
-                                    sendTo,
-                                    0,
-                                    recv + recvOffset,
-                                    recvCount,
-                                    dataTypes::mpi_type_id(recv),
-                                    recvFrom,
-                                    0,
-                                    d_mpiComm,
-                                    MPI_STATUS_IGNORE));
-            }
-#  endif
+          // // use D2D copy for the first one
+          // dftfe::utils::deviceMemcpyAsyncD2D(
+          //   makeDataTypeDeviceCompatible(recv + recvOffset),
+          //   makeDataTypeDeviceCompatible(send + sendOffset),
+          //   sendCount * sizeof(NumberType),
+          //   stream);
+
+          // dftfe::utils::deviceStreamSynchronize(stream);
+          // for (unsigned int i = 1; i < totalRanks; i++)
+          //   {
+          //     sendTo = (myRank + i) % totalRanks;
+          //     recvFrom = (myRank + totalRanks - i) % totalRanks;
+
+          //     sendOffset = (dftfe::uInt)sendTo * sendCount;
+          //     recvOffset = (dftfe::uInt)recvFrom * recvCount;
+
+          //     // if (sendOffset + sendCount > totalNumRows * totalNumCols)
+          //     //   sendCount = totalNumRows * totalNumCols - sendOffset;
+          //     // if (recvOffset + recvCount > totalNumRows * totalNumCols)
+          //     //   recvCount = totalNumRows * totalNumCols - recvOffset;
+
+          //     MPICHECK(MPI_Sendrecv(send + sendOffset,
+          //                           sendCount,
+          //                           dataTypes::mpi_type_id(send),
+          //                           sendTo,
+          //                           0,
+          //                           recv + recvOffset,
+          //                           recvCount,
+          //                           dataTypes::mpi_type_id(recv),
+          //                           recvFrom,
+          //                           0,
+          //                           d_mpiComm,
+          //                           MPI_STATUS_IGNORE));
+          //   }
         }
 
       return 0;
