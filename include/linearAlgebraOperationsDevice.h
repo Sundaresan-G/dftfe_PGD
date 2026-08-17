@@ -135,45 +135,43 @@ namespace dftfe
      */
 
     void
-    XtMXAndXtHX(
-      const dataTypes::number *                        X,
-      const dataTypes::number *                        HX,
-      const dataTypes::number *                        MX,
-      const dftfe::uInt                                M,
-      const dftfe::uInt                                N,
-      std::shared_ptr<
-        dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
-      const MPI_Comm &                                 mpiCommDomain,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommIntraPool,
-      const MPI_Comm &                                 interBandGroupComm,
-      const MPI_Comm &                                 intrapoolcomm,
-      const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      overlapMatPar,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      const dftParameters &                            dftParams,
-      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
-    
+    XtMXAndXtHX(const dataTypes::number               *X,
+                const dataTypes::number               *HX,
+                const dataTypes::number               *MX,
+                const dftfe::uInt                      M,
+                const dftfe::uInt                      N,
+                std::shared_ptr<dftfe::linearAlgebra::BLASWrapper<
+                  dftfe::utils::MemorySpace::DEVICE>> &BLASWrapperPtr,
+                const MPI_Comm                        &mpiCommDomain,
+                utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
+                const MPI_Comm          &interBandGroupComm,
+                const MPI_Comm          &intrapoolcomm,
+                const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
+                dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
+                dftfe::ScaLAPACKMatrix<dataTypes::number>       &projHamPar,
+                const dftParameters                             &dftParams,
+                DeviceNumberScratchMemoryStorage &scratchMemoryStorage);
+
     void
     XtMXAndXtHXMixedPrec(
-      const dataTypes::number *                        X,
-      const dataTypes::number *                        HX,
-      const dataTypes::number *                        MX,
-      const dftfe::uInt                                M,
-      const dftfe::uInt                                N,
+      const dataTypes::number *X,
+      const dataTypes::number *HX,
+      const dataTypes::number *MX,
+      const dftfe::uInt        M,
+      const dftfe::uInt        N,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
-      const MPI_Comm &                                 mpiCommDomain,
-      utils::DeviceCCLWrapper &                        devicecclMpiCommIntraPool,
-      const MPI_Comm &                                 interBandGroupComm,
-      const MPI_Comm &                                 intrapoolcomm,
+                              &BLASWrapperPtr,
+      const MPI_Comm          &mpiCommDomain,
+      utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
+      const MPI_Comm          &interBandGroupComm,
+      const MPI_Comm          &intrapoolcomm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      overlapMatPar,
-      dftfe::ScaLAPACKMatrix<dataTypes::number> &      projHamPar,
-      const dftParameters &                            dftParams,
+      dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
+      dftfe::ScaLAPACKMatrix<dataTypes::number>       &projHamPar,
+      const dftParameters                             &dftParams,
       DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
-      
+
     void
     fillParallelOverlapMatScalapack(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
@@ -215,8 +213,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-        const dftParameters                             &dftParams,
-        DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
+      const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
 
 
@@ -265,8 +263,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-        const dftParameters                             &dftParams,
-        DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
+      const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
     /** @brief Computes Sc=X^{T}*Xc.
      *
@@ -289,8 +287,8 @@ namespace dftfe
       const MPI_Comm                                  &interBandGroupComm,
       const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
       dftfe::ScaLAPACKMatrix<dataTypes::number>       &overlapMatPar,
-        const dftParameters                             &dftParams,
-        DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
+      const dftParameters                             &dftParams,
+      DeviceNumberScratchMemoryStorage                &scratchMemoryStorage);
 
 
 
@@ -311,10 +309,10 @@ namespace dftfe
       const MPI_Comm          &interBandGroupComm,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                          &BLASWrapperPtr,
-      const dftParameters                 &dftParams,
-      DeviceNumberScratchMemoryStorage    &scratchMemoryStorage,
-      const bool                           useMixedPrecOverall = false);
+                                       &BLASWrapperPtr,
+      const dftParameters              &dftParams,
+      DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
+      const bool                        useMixedPrecOverall = false);
 
     void
     subspaceRotationScalapack(
@@ -390,7 +388,7 @@ namespace dftfe
       std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                          &BLASWrapperPtr,
+                                       &BLASWrapperPtr,
       const dftParameters              &dftParams,
       DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
       const bool                        useMixedPrecOverall = false);
@@ -411,7 +409,7 @@ namespace dftfe
       std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                          &BLASWrapperPtr,
+                                       &BLASWrapperPtr,
       const dftParameters              &dftParams,
       DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
       const bool                        useMixedPrecOverall = false);
@@ -419,28 +417,28 @@ namespace dftfe
     void
     rayleighRitzGEP(
       operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
-      elpaScalaManager &                                   elpaScala,
-      dataTypes::number *                                  X,
-      dataTypes::number *                                  XDevice,
-      dataTypes::number *                                  HXDevice,
-      dataTypes::number *                                  MXDevice,
-      dataTypes::number *                                  extraBufferDevice,
-      distributedDeviceVec<dataTypes::number> &            Xb,
-      distributedDeviceVec<dataTypes::number> &            HXb,
+      elpaScalaManager                                    &elpaScala,
+      dataTypes::number                                   *X,
+      dataTypes::number                                   *XDevice,
+      dataTypes::number                                   *HXDevice,
+      dataTypes::number                                   *MXDevice,
+      dataTypes::number                                   *extraBufferDevice,
+      distributedDeviceVec<dataTypes::number>             &Xb,
+      distributedDeviceVec<dataTypes::number>             &HXb,
       const dftfe::uInt                                    M,
       const dftfe::uInt                                    N,
-      const MPI_Comm &                                     mpiCommParent,
-      const MPI_Comm &                                     mpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiCommDomain,
-      utils::DeviceCCLWrapper &         devicecclMpiInterBand,
-      utils::DeviceCCLWrapper &         devicecclMpiCommIntraPool,
-      const MPI_Comm &                  interBandGroupComm,
-      const MPI_Comm &                  intrapoolcomm,
-      std::vector<double> &             eigenValues,
+      const MPI_Comm                                      &mpiCommParent,
+      const MPI_Comm                                      &mpiCommDomain,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      utils::DeviceCCLWrapper &devicecclMpiInterBand,
+      utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
+      const MPI_Comm          &interBandGroupComm,
+      const MPI_Comm          &intrapoolcomm,
+      std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
-      const dftParameters &             dftParams,
+                                       &BLASWrapperPtr,
+      const dftParameters              &dftParams,
       DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
       const bool                        useMixedPrecOverall = false);
 
@@ -463,7 +461,7 @@ namespace dftfe
       dftfe::elpaScalaManager   &elpaScala,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                          &BLASWrapperPtr,
+                                       &BLASWrapperPtr,
       const dftParameters              &dftParams,
       DeviceNumberScratchMemoryStorage &scratchMemoryStorage);
 
@@ -498,10 +496,10 @@ namespace dftfe
                                                          &BLASWrapperPtr,
          const std::shared_ptr<const dftfe::ProcessGrid> &processGrid,
          dftfe::ScaLAPACKMatrix<dataTypes::number>       &projHamPar,
-         utils::DeviceCCLWrapper &devicecclMpiCommDomain,
-         const MPI_Comm          &mpiCommDomain,
-         const MPI_Comm          &interBandGroupComm,
-         const dftParameters     &dftParams,
+         utils::DeviceCCLWrapper          &devicecclMpiCommDomain,
+         const MPI_Comm                   &mpiCommDomain,
+         const MPI_Comm                   &interBandGroupComm,
+         const dftParameters              &dftParams,
          DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
          const bool onlyHPrimePartForFirstOrderDensityMatResponse = false);
 

@@ -60,9 +60,13 @@ namespace dftfe
                     int                          bits_per_value,
                     dftfe::utils::deviceStream_t stream)
     {
-      ::compression::compress_gather<double>(
-        dataArray, indices, num_indices, gather_block_size,
-        d_compressed, bits_per_value, stream);
+      ::compression::compress_gather<double>(dataArray,
+                                             indices,
+                                             num_indices,
+                                             gather_block_size,
+                                             d_compressed,
+                                             bits_per_value,
+                                             stream);
     }
 
     void
@@ -74,9 +78,13 @@ namespace dftfe
                     int                          bits_per_value,
                     dftfe::utils::deviceStream_t stream)
     {
-      ::compression::compress_gather<float>(
-        dataArray, indices, num_indices, gather_block_size,
-        d_compressed, bits_per_value, stream);
+      ::compression::compress_gather<float>(dataArray,
+                                            indices,
+                                            num_indices,
+                                            gather_block_size,
+                                            d_compressed,
+                                            bits_per_value,
+                                            stream);
     }
 
     // Fused decompress+scatter_add
@@ -89,9 +97,13 @@ namespace dftfe
                            int                          bits_per_value,
                            dftfe::utils::deviceStream_t stream)
     {
-      ::compression::decompress_scatter_add<double>(
-        d_compressed, indices, num_indices, gather_block_size,
-        dataArray, bits_per_value, stream);
+      ::compression::decompress_scatter_add<double>(d_compressed,
+                                                    indices,
+                                                    num_indices,
+                                                    gather_block_size,
+                                                    dataArray,
+                                                    bits_per_value,
+                                                    stream);
     }
 
     void
@@ -103,9 +115,13 @@ namespace dftfe
                            int                          bits_per_value,
                            dftfe::utils::deviceStream_t stream)
     {
-      ::compression::decompress_scatter_add<float>(
-        d_compressed, indices, num_indices, gather_block_size,
-        dataArray, bits_per_value, stream);
+      ::compression::decompress_scatter_add<float>(d_compressed,
+                                                   indices,
+                                                   num_indices,
+                                                   gather_block_size,
+                                                   dataArray,
+                                                   bits_per_value,
+                                                   stream);
     }
 
     // BFP variants
@@ -162,9 +178,13 @@ namespace dftfe
                         int                          bits_per_value,
                         dftfe::utils::deviceStream_t stream)
     {
-      ::compression::compress_gather_bfp<double>(
-        dataArray, indices, num_indices, gather_block_size,
-        d_compressed, bits_per_value, stream);
+      ::compression::compress_gather_bfp<double>(dataArray,
+                                                 indices,
+                                                 num_indices,
+                                                 gather_block_size,
+                                                 d_compressed,
+                                                 bits_per_value,
+                                                 stream);
     }
 
     void
@@ -176,9 +196,13 @@ namespace dftfe
                         int                          bits_per_value,
                         dftfe::utils::deviceStream_t stream)
     {
-      ::compression::compress_gather_bfp<float>(
-        dataArray, indices, num_indices, gather_block_size,
-        d_compressed, bits_per_value, stream);
+      ::compression::compress_gather_bfp<float>(dataArray,
+                                                indices,
+                                                num_indices,
+                                                gather_block_size,
+                                                d_compressed,
+                                                bits_per_value,
+                                                stream);
     }
 
     // Fused BFP decompress+scatter_add
@@ -191,9 +215,13 @@ namespace dftfe
                                int                          bits_per_value,
                                dftfe::utils::deviceStream_t stream)
     {
-      ::compression::decompress_scatter_add_bfp<double>(
-        d_compressed, indices, num_indices, gather_block_size,
-        dataArray, bits_per_value, stream);
+      ::compression::decompress_scatter_add_bfp<double>(d_compressed,
+                                                        indices,
+                                                        num_indices,
+                                                        gather_block_size,
+                                                        dataArray,
+                                                        bits_per_value,
+                                                        stream);
     }
 
     void
@@ -205,9 +233,13 @@ namespace dftfe
                                int                          bits_per_value,
                                dftfe::utils::deviceStream_t stream)
     {
-      ::compression::decompress_scatter_add_bfp<float>(
-        d_compressed, indices, num_indices, gather_block_size,
-        dataArray, bits_per_value, stream);
+      ::compression::decompress_scatter_add_bfp<float>(d_compressed,
+                                                       indices,
+                                                       num_indices,
+                                                       gather_block_size,
+                                                       dataArray,
+                                                       bits_per_value,
+                                                       stream);
     }
 
   } // namespace compressionWrapper

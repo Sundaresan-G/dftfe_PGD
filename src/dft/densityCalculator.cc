@@ -240,11 +240,14 @@ namespace dftfe
                     else if (memorySpace == dftfe::utils::MemorySpace::DEVICE)
                       BLASWrapperPtr->stridedCopyToBlockConstantStride(
                         currentBlockSize,
-                        totalNumWaveFunctions/numberBandGroups,
+                        totalNumWaveFunctions / numberBandGroups,
                         numLocalDofs * numWfnSpinors,
-                        jvec  - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
-                        X->data() + numLocalDofs * numWfnSpinors * (totalNumWaveFunctions/numberBandGroups) *
-                                      (numSpinComponents * kPoint + spinIndex),
+                        jvec -
+                          bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                        X->data() +
+                          numLocalDofs * numWfnSpinors *
+                            (totalNumWaveFunctions / numberBandGroups) *
+                            (numSpinComponents * kPoint + spinIndex),
                         flattenedArrayBlock->data());
 #endif
 

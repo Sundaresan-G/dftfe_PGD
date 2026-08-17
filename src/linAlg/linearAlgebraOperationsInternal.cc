@@ -76,7 +76,7 @@ namespace dftfe
             static_cast<unsigned long long>(upperIndex + 1) *
               14029467366897019727ull;
 
-          std::mt19937_64                     generator(seed);
+          std::mt19937_64                        generator(seed);
           std::uniform_real_distribution<double> distribution(-1.0, 1.0);
 
           if (globalRow == globalColumn)
@@ -98,7 +98,8 @@ namespace dftfe
           dftfe::ScaLAPACKMatrix<NumberType> &matrix,
           const dftfe::uInt                   matrixSize)
         {
-          for (dftfe::uInt localRow = 0; localRow < matrix.local_m(); ++localRow)
+          for (dftfe::uInt localRow = 0; localRow < matrix.local_m();
+               ++localRow)
             for (dftfe::uInt localColumn = 0; localColumn < matrix.local_n();
                  ++localColumn)
               matrix.local_el(localRow, localColumn) =
@@ -113,18 +114,21 @@ namespace dftfe
         fillELPAAutotuneOverlapMatrix(
           dftfe::ScaLAPACKMatrix<NumberType> &matrix)
         {
-          for (dftfe::uInt localRow = 0; localRow < matrix.local_m(); ++localRow)
+          for (dftfe::uInt localRow = 0; localRow < matrix.local_m();
+               ++localRow)
             for (dftfe::uInt localColumn = 0; localColumn < matrix.local_n();
                  ++localColumn)
               matrix.local_el(localRow, localColumn) =
                 NumberType(matrix.global_row(localRow) ==
-                             matrix.global_column(localColumn) ?
+                               matrix.global_column(localColumn) ?
                              1.0 :
                              0.0);
         }
 
         bool
-        tryGetELPAInteger(elpa_t &elpaHandle, const char *parameterName, int &value)
+        tryGetELPAInteger(elpa_t     &elpaHandle,
+                          const char *parameterName,
+                          int        &value)
         {
           int error = ELPA_OK;
           value     = 0;
@@ -141,8 +145,10 @@ namespace dftfe
         bool
         elpaHandleUsesGPU(elpa_t &elpaHandle)
         {
-          const std::array<const char *, 4> gpuParameterNames = {
-            "gpu", "nvidia-gpu", "amd-gpu", "intel-gpu"};
+          const std::array<const char *, 4> gpuParameterNames = {"gpu",
+                                                                 "nvidia-gpu",
+                                                                 "amd-gpu",
+                                                                 "intel-gpu"};
 
           for (const char *parameterName : gpuParameterNames)
             {
@@ -213,12 +219,11 @@ namespace dftfe
         elpa_t                                          &elpaHandle,
         const dftParameters                             &dftParams)
       {
-        int error;
+        int        error;
         const bool useLoadedSettings =
           !dftParams.elpaAutoTuneConfigLoadPath.empty();
         const bool runAutotune = !useLoadedSettings && dftParams.elpaAutoTune;
-        const bool useManualELPASettings =
-          !useLoadedSettings && !runAutotune;
+        const bool useManualELPASettings = !useLoadedSettings && !runAutotune;
         dealii::ConditionalOStream pcout(
           std::cout,
           (dealii::Utilities::MPI::this_mpi_process(mpi_communicator) == 0));
@@ -381,19 +386,22 @@ namespace dftfe
                 using NumberType = dftfe::dataTypes::number;
                 using RealType   = dftfe::dataTypes::numberValueType;
 
-                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixA(
-                  na, processGrid, blockSize);
-                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixB(
-                  na, processGrid, blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixA(na,
+                                                                   processGrid,
+                                                                   blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixB(na,
+                                                                   processGrid,
+                                                                   blockSize);
                 dftfe::ScaLAPACKMatrix<NumberType> autotuneEigenvectors(
                   na, processGrid, blockSize);
                 std::vector<RealType> autotuneEigenvalues(nev, RealType(0.0));
 
-                elpa_autotune_t autotuneHandle = elpa_autotune_setup(
-                  elpaHandle,
-                  getELPAAutotuneLevel(dftParams.elpaAutoTuneLevel),
-                  elpaAutotuneDomain,
-                  &error);
+                elpa_autotune_t autotuneHandle =
+                  elpa_autotune_setup(elpaHandle,
+                                      getELPAAutotuneLevel(
+                                        dftParams.elpaAutoTuneLevel),
+                                      elpaAutotuneDomain,
+                                      &error);
                 AssertThrow(error == ELPA_OK && autotuneHandle != nullptr,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
@@ -428,8 +436,7 @@ namespace dftfe
                     AssertThrow(error == ELPA_OK,
                                 dealii::ExcMessage(
                                   "DFT-FE Error: ELPA Error."));
-                  }
-                while (unfinished != 0);
+                } while (unfinished != 0);
 
                 elpa_autotune_set_best(elpaHandle, autotuneHandle, &error);
                 AssertThrow(error == ELPA_OK,
@@ -459,7 +466,9 @@ namespace dftfe
               {
                 elpa_set_integer(elpaHandle,
                                  "solver",
-                                 ELPA_SOLVER_1STAGE,
+                                 dftParams.useELPADeviceTwoStageSolver ?
+                                   ELPA_SOLVER_2STAGE :
+                                   ELPA_SOLVER_1STAGE,
                                  &error);
                 AssertThrow(error == ELPA_OK,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
@@ -509,19 +518,22 @@ namespace dftfe
                 using NumberType = dftfe::dataTypes::number;
                 using RealType   = dftfe::dataTypes::numberValueType;
 
-                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixA(
-                  na, processGrid, blockSize);
-                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixB(
-                  na, processGrid, blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixA(na,
+                                                                   processGrid,
+                                                                   blockSize);
+                dftfe::ScaLAPACKMatrix<NumberType> autotuneMatrixB(na,
+                                                                   processGrid,
+                                                                   blockSize);
                 dftfe::ScaLAPACKMatrix<NumberType> autotuneEigenvectors(
                   na, processGrid, blockSize);
                 std::vector<RealType> autotuneEigenvalues(nev, RealType(0.0));
 
-                elpa_autotune_t autotuneHandle = elpa_autotune_setup(
-                  elpaHandle,
-                  getELPAAutotuneLevel(dftParams.elpaAutoTuneLevel),
-                  elpaAutotuneDomain,
-                  &error);
+                elpa_autotune_t autotuneHandle =
+                  elpa_autotune_setup(elpaHandle,
+                                      getELPAAutotuneLevel(
+                                        dftParams.elpaAutoTuneLevel),
+                                      elpaAutotuneDomain,
+                                      &error);
                 AssertThrow(error == ELPA_OK && autotuneHandle != nullptr,
                             dealii::ExcMessage("DFT-FE Error: ELPA Error."));
 
@@ -556,8 +568,7 @@ namespace dftfe
                     AssertThrow(error == ELPA_OK,
                                 dealii::ExcMessage(
                                   "DFT-FE Error: ELPA Error."));
-                  }
-                while (unfinished != 0);
+                } while (unfinished != 0);
 
                 elpa_autotune_set_best(elpaHandle, autotuneHandle, &error);
                 AssertThrow(error == ELPA_OK,

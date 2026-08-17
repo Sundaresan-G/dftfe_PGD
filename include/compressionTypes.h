@@ -208,7 +208,8 @@ namespace compression
   portable_atomicAdd(double *addr, double val)
   {
 #if defined(DFTFE_WITH_DEVICE_LANG_SYCL)
-    sycl::atomic_ref<double, sycl::memory_order::relaxed,
+    sycl::atomic_ref<double,
+                     sycl::memory_order::relaxed,
                      sycl::memory_scope::device,
                      sycl::access::address_space::global_space>
       ref(*addr);
@@ -222,7 +223,8 @@ namespace compression
   portable_atomicAdd(float *addr, float val)
   {
 #if defined(DFTFE_WITH_DEVICE_LANG_SYCL)
-    sycl::atomic_ref<float, sycl::memory_order::relaxed,
+    sycl::atomic_ref<float,
+                     sycl::memory_order::relaxed,
                      sycl::memory_scope::device,
                      sycl::access::address_space::global_space>
       ref(*addr);

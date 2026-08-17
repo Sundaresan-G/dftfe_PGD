@@ -37,9 +37,12 @@ namespace dftfe
       d_deviceDirectDCCLInstanceCounter++;
     }
 
-    // Ensure that mpiCommDomain calls it first as static variables need to be initialized
+    // Ensure that mpiCommDomain calls it first as static variables need to be
+    // initialized
     void
-    DeviceCCLWrapper::init(const MPI_Comm &mpiComm, const bool useDCCL, int selector /*= 0*/)
+    DeviceCCLWrapper::init(const MPI_Comm &mpiComm,
+                           const bool      useDCCL,
+                           int             selector /*= 0*/)
     {
       MPICHECK(MPI_Comm_dup(mpiComm, &d_mpiComm));
       MPICHECK(MPI_Comm_size(mpiComm, &totalRanks));
@@ -59,17 +62,17 @@ namespace dftfe
           dcclCommInit = true;
         }
 
-        if (selector != 0 && useDCCL){
+      if (selector != 0 && useDCCL)
+        {
           dcclCommSelector = selector;
-          dcclIdPvtPtr = new ncclUniqueId;
-          dcclCommPvtPtr = new ncclComm_t;
+          dcclIdPvtPtr     = new ncclUniqueId;
+          dcclCommPvtPtr   = new ncclComm_t;
           if (myRank == 0)
             ncclGetUniqueId(dcclIdPvtPtr);
-          MPICHECK(
-            MPI_Bcast(dcclIdPvtPtr, sizeof(*dcclIdPvtPtr), MPI_BYTE, 0, d_mpiComm));
-          NCCLCHECK(
-            ncclCommInitRank(dcclCommPvtPtr, totalRanks, *dcclIdPvtPtr, myRank));
-
+          MPICHECK(MPI_Bcast(
+            dcclIdPvtPtr, sizeof(*dcclIdPvtPtr), MPI_BYTE, 0, d_mpiComm));
+          NCCLCHECK(ncclCommInitRank(
+            dcclCommPvtPtr, totalRanks, *dcclIdPvtPtr, myRank));
         }
 #  endif
 
@@ -110,12 +113,13 @@ namespace dftfe
           dcclCommInit = true;
         }
 
-      if (selector != 0 && useDCCL){
+      if (selector != 0 && useDCCL)
+        {
           dcclCommSelector = selector;
           ccl::kvs::address_type onecclIdAddr;
           if (myRank == 0)
             {
-              dcclIdPvtPtr  = ccl::create_main_kvs();
+              dcclIdPvtPtr = ccl::create_main_kvs();
               onecclIdAddr = dcclIdPvtPtr->get_address();
               MPICHECK(MPI_Bcast(onecclIdAddr.data(),
                                  onecclIdAddr.size(),
@@ -143,7 +147,6 @@ namespace dftfe
                                                  dcclIdPvtPtr);
           dcclCommPvtPtr =
             std::make_shared<ccl::communicator>(std::move(comms[0]));
-
         }
 #  endif
 
@@ -168,11 +171,12 @@ namespace dftfe
           dcclCommInit = false;
         }
 
-      if (dcclCommSelector != 0){
-        ncclCommFinalize(*dcclCommPvtPtr);
-        ncclCommDestroy(*dcclCommPvtPtr);
-        delete dcclCommPvtPtr;
-      }
+      if (dcclCommSelector != 0)
+        {
+          ncclCommFinalize(*dcclCommPvtPtr);
+          ncclCommDestroy(*dcclCommPvtPtr);
+          delete dcclCommPvtPtr;
+        }
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
@@ -181,10 +185,11 @@ namespace dftfe
           dcclCommPtr.reset();
           dcclIdPtr.reset();
         }
-      if (dcclCommSelector != 0){
-        dcclCommPvtPtr.reset();
-        dcclIdPvtPtr.reset();
-      }
+      if (dcclCommSelector != 0)
+        {
+          dcclCommPvtPtr.reset();
+          dcclIdPvtPtr.reset();
+        }
 #  endif
 
       d_deviceDirectDCCLInstanceCounter--;
@@ -205,10 +210,11 @@ namespace dftfe
       if (dcclCommInit)
         {
           ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
-            
+          if (dcclCommSelector != 0)
+            {
+              comm = *dcclCommPvtPtr;
+            }
+
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
                                   size,
@@ -222,11 +228,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-
           auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = dcclCommPvtPtr;
+            }
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -275,11 +281,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (dcclCommInit)
         {
-
           ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = *dcclCommPvtPtr;
+            }
 
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -294,11 +300,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-
           auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = dcclCommPvtPtr;
+            }
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -349,11 +355,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (dcclCommInit)
         {
-
           ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = *dcclCommPvtPtr;
+            }
 
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -368,11 +374,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-
           auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = dcclCommPvtPtr;
+            }
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -422,12 +428,12 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (dcclCommInit)
         {
-
           ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
-          
+          if (dcclCommSelector != 0)
+            {
+              comm = *dcclCommPvtPtr;
+            }
+
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
                                   size * 2,
@@ -441,11 +447,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-
           auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = dcclCommPvtPtr;
+            }
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -500,11 +506,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (dcclCommInit)
         {
-
           ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = *dcclCommPvtPtr;
+            }
 
           NCCLCHECK(ncclGroupStart());
           NCCLCHECK(ncclAllReduce((const void *)send1,
@@ -527,11 +533,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-
           auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = dcclCommPvtPtr;
+            }
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -617,11 +623,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       if (dcclCommInit)
         {
-
           ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = *dcclCommPvtPtr;
+            }
 
           NCCLCHECK(ncclGroupStart());
           NCCLCHECK(ncclAllReduce((const void *)send1,
@@ -645,11 +651,11 @@ namespace dftfe
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit)
         {
-
           auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = dcclCommPvtPtr;
+            }
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -724,44 +730,41 @@ namespace dftfe
 
     template <typename NumberType>
     int
-    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const NumberType *        send,
-                                                  dftfe::uInt         sendCount,
-                                                  NumberType *              recv,
-                                                  dftfe::uInt         recvCount,
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const NumberType *send,
+                                                  dftfe::uInt       sendCount,
+                                                  NumberType       *recv,
+                                                  dftfe::uInt       recvCount,
                                                   deviceStream_t stream /*= 0*/,
                                                   bool useDCCL /*= true*/)
     {
-
-      
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
       if (dcclCommInit && useDCCL)
         {
-
           auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          if (dcclCommSelector != 0)
+            {
+              comm = dcclCommPvtPtr;
+            }
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
           ccl::event e;
           ONECCLCHECK(e = ccl::alltoall((const void *)send,
-                                         (void *)recv,
-                                         sendCount * sizeof(NumberType),
-                                         ccl::datatype::uint8,
-                                         *comm,
-                                         devStream));
+                                        (void *)recv,
+                                        sendCount * sizeof(NumberType),
+                                        ccl::datatype::uint8,
+                                        *comm,
+                                        devStream));
           deviceEvent_t commEvent = e.get_native();
           dftfe::utils::deviceStreamWaitEvent(stream, commEvent, 0);
 
           return 0;
-
         }
 #  endif
 
 
 
-      unsigned int sendTo = myRank;
+      unsigned int sendTo   = myRank;
       unsigned int recvFrom = myRank;
 
       dftfe::uInt sendOffset = (dftfe::uInt)sendTo * sendCount;
@@ -778,45 +781,46 @@ namespace dftfe
 
       if (dcclCommInit && useDCCL)
         {
-
           ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
-          
+          if (dcclCommSelector != 0)
+            {
+              comm = *dcclCommPvtPtr;
+            }
+
           NCCLCHECK(ncclGroupStart());
           for (unsigned int i = 1; i < totalRanks; i++)
             {
-
-              sendTo = (myRank + i) % totalRanks;
+              sendTo   = (myRank + i) % totalRanks;
               recvFrom = (myRank + totalRanks - i) % totalRanks;
 
               sendOffset = (dftfe::uInt)sendTo * sendCount;
               recvOffset = (dftfe::uInt)recvFrom * recvCount;
-              
-                NCCLCHECK(ncclSend(reinterpret_cast<const void *>(send + sendOffset),
-                                  sendCount * sizeof(NumberType),
-                                  ncclChar,
-                                  sendTo,
-                                  comm,
-                                  stream));
-                NCCLCHECK(ncclRecv(reinterpret_cast<void *>(recv + recvOffset),
-                                  recvCount * sizeof(NumberType),
-                                  ncclChar,
-                                  recvFrom,
-                                  comm,
-                                  stream));
+
+              NCCLCHECK(
+                ncclSend(reinterpret_cast<const void *>(send + sendOffset),
+                         sendCount * sizeof(NumberType),
+                         ncclChar,
+                         sendTo,
+                         comm,
+                         stream));
+              NCCLCHECK(ncclRecv(reinterpret_cast<void *>(recv + recvOffset),
+                                 recvCount * sizeof(NumberType),
+                                 ncclChar,
+                                 recvFrom,
+                                 comm,
+                                 stream));
             }
           NCCLCHECK(ncclGroupEnd());
-        } else
-#endif
+        }
+      else
+#  endif
         {
 #  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
 
           dftfe::utils::deviceStreamSynchronize(stream);
           for (unsigned int i = 1; i < totalRanks; i++)
             {
-              sendTo = (myRank + i) % totalRanks;
+              sendTo   = (myRank + i) % totalRanks;
               recvFrom = (myRank + totalRanks - i) % totalRanks;
 
               sendOffset = (dftfe::uInt)sendTo * sendCount;
@@ -847,13 +851,39 @@ namespace dftfe
     }
 
     // initialize alltoall templates
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, dftfe::uInt sendCount, double * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double  *send,
+                                                  dftfe::uInt    sendCount,
+                                                  double        *recv,
+                                                  dftfe::uInt    recvCount,
+                                                  deviceStream_t stream,
+                                                  bool           useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, dftfe::uInt sendCount, float * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float   *send,
+                                                  dftfe::uInt    sendCount,
+                                                  float         *recv,
+                                                  dftfe::uInt    recvCount,
+                                                  deviceStream_t stream,
+                                                  bool           useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<double> * send, dftfe::uInt sendCount, std::complex<double> * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(
+      const std::complex<double> *send,
+      dftfe::uInt                 sendCount,
+      std::complex<double>       *recv,
+      dftfe::uInt                 recvCount,
+      deviceStream_t              stream,
+      bool                        useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<float> * send, dftfe::uInt sendCount, std::complex<float> * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(
+      const std::complex<float> *send,
+      dftfe::uInt                sendCount,
+      std::complex<float>       *recv,
+      dftfe::uInt                recvCount,
+      deviceStream_t             stream,
+      bool                       useDCCL);
 
   } // namespace utils
 } // namespace dftfe

@@ -101,6 +101,12 @@ namespace dftfe
           "false",
           dealii::Patterns::Bool(),
           "[Advanced] If DFT-FE is linked to ELPA eigensolver library configured to run on GPUs, this parameter toggles the use of ELPA GPU kernels for dense symmetric matrix diagonalization calls in DFT-FE. ELPA version>=2020.11.001 is required for this feature. Default: false.");
+
+        prm.declare_entry(
+          "USE ELPA GPU TWO STAGE SOLVER",
+          "false",
+          dealii::Patterns::Bool(),
+          "[Advanced] Use the ELPA two-stage solver (ELPA2) instead of the one-stage solver (ELPA1) when USE ELPA GPU KERNEL is set to true; no effect on the CPU path, which always uses ELPA2. Has no effect when ELPA autotuning is enabled or when ELPA settings are loaded from file, as the solver choice then comes from autotune/the loaded settings. Prior to ELPA 2026, ELPA2 is not fully supported on GPUs when ELPA is built with GPU streams (the default), so set this to true only with ELPA 2026 or newer, or with an older ELPA configured with --enable-gpu-streams=no. Default: false.");
       }
       prm.leave_subsection();
 
@@ -1545,6 +1551,7 @@ namespace dftfe
     reuseLanczosUpperBoundFromFirstCall            = false;
     allowMultipleFilteringPassesAfterFirstScf      = true;
     useELPADeviceKernel                            = false;
+    useELPADeviceTwoStageSolver                    = false;
     elpaAutoTuneLevel                              = "MEDIUM";
     elpaAutoTuneConfigSavePath                     = "";
     elpaAutoTuneConfigLoadPath                     = "";
@@ -1635,9 +1642,12 @@ namespace dftfe
       autoDeviceBlockSizes = useDevice && prm.get_bool("AUTO GPU BLOCK SIZES");
       useDeviceDirectAllReduce =
         useDevice && prm.get_bool("USE GPUDIRECT MPI ALL REDUCE");
-      useDCCL             = useDevice && prm.get_bool("USE DCCL");
-      useAlltoAllDCCL     = useDevice && useDCCL && prm.get_bool("USE ALLTOAll DCCL");
+      useDCCL = useDevice && prm.get_bool("USE DCCL");
+      useAlltoAllDCCL =
+        useDevice && useDCCL && prm.get_bool("USE ALLTOAll DCCL");
       useELPADeviceKernel = useDevice && prm.get_bool("USE ELPA GPU KERNEL");
+      useELPADeviceTwoStageSolver =
+        useDevice && prm.get_bool("USE ELPA GPU TWO STAGE SOLVER");
     }
     prm.leave_subsection();
 
@@ -1898,10 +1908,10 @@ namespace dftfe
           prm.get_integer("NUMBER OF KOHN-SHAM WAVEFUNCTIONS");
         numCoreWfcForMixedPrecRR =
           prm.get_integer("NUMBER OF CORE EIGEN STATES FOR MIXED PREC RR");
-        chebyshevOrder       = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
-        useELPA              = prm.get_bool("USE ELPA");
-        elpaAutoTune         = prm.get_bool("ELPA AUTOTUNE");
-        elpaAutoTuneLevel    = prm.get("ELPA AUTOTUNE LEVEL");
+        chebyshevOrder    = prm.get_integer("CHEBYSHEV POLYNOMIAL DEGREE");
+        useELPA           = prm.get_bool("USE ELPA");
+        elpaAutoTune      = prm.get_bool("ELPA AUTOTUNE");
+        elpaAutoTuneLevel = prm.get("ELPA AUTOTUNE LEVEL");
         elpaAutoTuneConfigSavePath = prm.get("ELPA AUTOTUNE SAVE PATH");
         elpaAutoTuneConfigLoadPath = prm.get("ELPA AUTOTUNE LOAD PATH");
         approxOverlapMatrix  = prm.get_bool("USE APPROXIMATE OVERLAP MATRIX");
@@ -1910,7 +1920,7 @@ namespace dftfe
         chebyshevTolerance   = prm.get_double("CHEBYSHEV FILTER TOLERANCE");
         wfcBlockSize         = prm.get_integer("WFC BLOCK SIZE");
         chebyWfcBlockSize    = prm.get_integer("CHEBY WFC BLOCK SIZE");
-        maxChebyPasses     = prm.get_integer("MAX CHEBYSHEV PASSES PER SCF");
+        maxChebyPasses       = prm.get_integer("MAX CHEBYSHEV PASSES PER SCF");
         subspaceRotDofsBlockSize =
           prm.get_integer("SUBSPACE ROT DOFS BLOCK SIZE");
         scalapackParalProcs       = prm.get_integer("SCALAPACKPROCS");
@@ -1921,15 +1931,15 @@ namespace dftfe
         useMixedPrecSubspaceRotRR = prm.get_bool("USE MIXED PREC RR_SR");
         useMixedPrecCommunOnlyXtHXXtOX =
           prm.get_bool("USE MIXED PREC COMMUN ONLY XTOX XTHX");
-        communPrecCheby    = prm.get("COMMUN PREC CHEBY");
-        adaptiveUsageBF16Commun = prm.get_bool("ADAPTIVE USAGE BF16 COMMUN");
-        useSinglePrecCheby = prm.get_bool("USE SINGLE PREC CHEBY");
+        communPrecCheby           = prm.get("COMMUN PREC CHEBY");
+        adaptiveUsageBF16Commun   = prm.get_bool("ADAPTIVE USAGE BF16 COMMUN");
+        useSinglePrecCheby        = prm.get_bool("USE SINGLE PREC CHEBY");
         compressAlgoEarly         = prm.get("COMPRESS ALGO EARLY");
         compressAlgoLate          = prm.get("COMPRESS ALGO LATE");
         compressBitsPerValueEarly = prm.get_integer("COMPRESS BITS EARLY");
         compressBitsPerValueLate  = prm.get_integer("COMPRESS BITS LATE");
         compressLateStartSCF      = prm.get_integer("COMPRESS LATE START SCF");
-        tensorOpType       = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
+        tensorOpType              = prm.get("TENSOR OP TYPE SINGLE PREC CHEBY");
         overlapComputeCommunCheby =
           prm.get_bool("OVERLAP COMPUTE COMMUN CHEBY");
         overlapComputeCommunOrthoRR =
@@ -2363,17 +2373,19 @@ namespace dftfe
 
 
 #ifndef DFTFE_WITH_DEVICE
-    useDevice           = false;
-    useELPADeviceKernel = false;
+    useDevice                   = false;
+    useELPADeviceKernel         = false;
+    useELPADeviceTwoStageSolver = false;
 #endif
 #if defined(DFTFE_WITH_DEVICE_LANG_SYCL)
-    useELPADeviceKernel = false;
+    useELPADeviceKernel         = false;
+    useELPADeviceTwoStageSolver = false;
 #endif
 
     if (scalapackBlockSize == 0)
       {
         if (useELPADeviceKernel)
-          scalapackBlockSize = 16;
+          scalapackBlockSize = 64;
         else
           scalapackBlockSize = 32;
       }

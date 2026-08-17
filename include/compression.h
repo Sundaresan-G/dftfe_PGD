@@ -115,11 +115,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             compress_zfp_32_kernel<Scalar>(item,
-                                                            d_data,
-                                                            d_stream_u32,
-                                                            dim,
-                                                            num_blocks);
+                             compress_zfp_32_kernel<Scalar>(
+                               item, d_data, d_stream_u32, dim, num_blocks);
                            });
 #endif
       }
@@ -131,10 +128,7 @@ namespace compression
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         compress_zfp_48_kernel<Scalar>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_data,
-            reinterpret_cast<uint16_t *>(d_stream),
-            dim,
-            num_blocks);
+            d_data, reinterpret_cast<uint16_t *>(d_stream), dim, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(compress_zfp_48_kernel<Scalar>),
                            grid,
@@ -151,11 +145,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             compress_zfp_48_kernel<Scalar>(item,
-                                                            d_data,
-                                                            d_stream16,
-                                                            dim,
-                                                            num_blocks);
+                             compress_zfp_48_kernel<Scalar>(
+                               item, d_data, d_stream16, dim, num_blocks);
                            });
 #endif
       }
@@ -167,10 +158,7 @@ namespace compression
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         compress_zfp_64_kernel<Scalar>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_data,
-            reinterpret_cast<uint64 *>(d_stream),
-            dim,
-            num_blocks);
+            d_data, reinterpret_cast<uint64 *>(d_stream), dim, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(compress_zfp_64_kernel<Scalar>),
                            grid,
@@ -187,11 +175,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             compress_zfp_64_kernel<Scalar>(item,
-                                                            d_data,
-                                                            d_stream64,
-                                                            dim,
-                                                            num_blocks);
+                             compress_zfp_64_kernel<Scalar>(
+                               item, d_data, d_stream64, dim, num_blocks);
                            });
 #endif
       }
@@ -214,16 +199,15 @@ namespace compression
           (num_supers + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
 
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
-        compress_kernel<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_data,
-            reinterpret_cast<Word *>(d_stream),
-            maxbits,
-            dim,
-            num_blocks,
-            bpt,
-            wpt,
-            num_words);
+        compress_kernel<Scalar><<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
+          d_data,
+          reinterpret_cast<Word *>(d_stream),
+          maxbits,
+          dim,
+          num_blocks,
+          bpt,
+          wpt,
+          num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(compress_kernel<Scalar>),
                            grid,
@@ -311,11 +295,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             decompress_zfp_32_kernel<Scalar>(item,
-                                                               d_stream_u32,
-                                                               d_data,
-                                                               dim,
-                                                               num_blocks);
+                             decompress_zfp_32_kernel<Scalar>(
+                               item, d_stream_u32, d_data, dim, num_blocks);
                            });
 #endif
       }
@@ -327,8 +308,10 @@ namespace compression
           reinterpret_cast<const uint16_t *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_zfp_48_kernel<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream16, d_data, dim, num_blocks);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream16,
+                                                        d_data,
+                                                        dim,
+                                                        num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(decompress_zfp_48_kernel<Scalar>),
                            grid,
@@ -344,11 +327,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             decompress_zfp_48_kernel<Scalar>(item,
-                                                               d_stream16,
-                                                               d_data,
-                                                               dim,
-                                                               num_blocks);
+                             decompress_zfp_48_kernel<Scalar>(
+                               item, d_stream16, d_data, dim, num_blocks);
                            });
 #endif
       }
@@ -356,12 +336,13 @@ namespace compression
       {
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
-        const uint64 *d_stream64 =
-          reinterpret_cast<const uint64 *>(d_stream);
+        const uint64 *d_stream64 = reinterpret_cast<const uint64 *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_zfp_64_kernel<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream64, d_data, dim, num_blocks);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream64,
+                                                        d_data,
+                                                        dim,
+                                                        num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(decompress_zfp_64_kernel<Scalar>),
                            grid,
@@ -377,11 +358,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             decompress_zfp_64_kernel<Scalar>(item,
-                                                               d_stream64,
-                                                               d_data,
-                                                               dim,
-                                                               num_blocks);
+                             decompress_zfp_64_kernel<Scalar>(
+                               item, d_stream64, d_data, dim, num_blocks);
                            });
 #endif
       }
@@ -403,9 +381,14 @@ namespace compression
 
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_kernel_sb<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream_words, d_data, maxbits, dim, num_blocks,
-            bpt, wpt, num_words);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream_words,
+                                                        d_data,
+                                                        maxbits,
+                                                        dim,
+                                                        num_blocks,
+                                                        bpt,
+                                                        wpt,
+                                                        num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(decompress_kernel_sb<Scalar>),
                            grid,
@@ -485,17 +468,17 @@ namespace compression
             reinterpret_cast<unsigned int *>(d_stream),
             num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_zfp_32_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<unsigned int *>(d_stream),
-          num_blocks);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_zfp_32_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<unsigned int *>(d_stream),
+                           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto         &queue = dftfe::utils::queueRegistry.find(stream)->second;
         unsigned int *d_stream_u32 = reinterpret_cast<unsigned int *>(d_stream);
@@ -525,17 +508,17 @@ namespace compression
             reinterpret_cast<uint16_t *>(d_stream),
             num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_zfp_48_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<uint16_t *>(d_stream),
-          num_blocks);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_zfp_48_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<uint16_t *>(d_stream),
+                           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto     &queue      = dftfe::utils::queueRegistry.find(stream)->second;
         uint16_t *d_stream16 = reinterpret_cast<uint16_t *>(d_stream);
@@ -565,17 +548,17 @@ namespace compression
             reinterpret_cast<uint64 *>(d_stream),
             num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_zfp_64_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<uint64 *>(d_stream),
-          num_blocks);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_zfp_64_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<uint64 *>(d_stream),
+                           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto   &queue      = dftfe::utils::queueRegistry.find(stream)->second;
         uint64 *d_stream64 = reinterpret_cast<uint64 *>(d_stream);
@@ -622,21 +605,21 @@ namespace compression
             wpt,
             num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<Word *>(d_stream),
-          maxbits,
-          num_blocks,
-          bpt,
-          wpt,
-          num_words);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<Word *>(d_stream),
+                           maxbits,
+                           num_blocks,
+                           bpt,
+                           wpt,
+                           num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue          = dftfe::utils::queueRegistry.find(stream)->second;
         Word *d_stream_words = reinterpret_cast<Word *>(d_stream);
@@ -701,11 +684,7 @@ namespace compression
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_zfp_32_kernel<Scalar, IndexType>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream_u32,
-            indices,
-            gather_block_size,
-            dataArray,
-            num_blocks);
+            d_stream_u32, indices, gather_block_size, dataArray, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
           HIP_KERNEL_NAME(
@@ -721,18 +700,18 @@ namespace compression
           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_zfp_32_kernel<Scalar,
-                                                                  IndexType>(
-                               item,
-                               d_stream_u32,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               num_blocks);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_zfp_32_kernel<Scalar, IndexType>(
+              item,
+              d_stream_u32,
+              indices,
+              gather_block_size,
+              dataArray,
+              num_blocks);
+          });
 #endif
       }
     else if (maxbits == 48u)
@@ -744,11 +723,7 @@ namespace compression
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_zfp_48_kernel<Scalar, IndexType>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream16,
-            indices,
-            gather_block_size,
-            dataArray,
-            num_blocks);
+            d_stream16, indices, gather_block_size, dataArray, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
           HIP_KERNEL_NAME(
@@ -764,34 +739,29 @@ namespace compression
           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_zfp_48_kernel<Scalar,
-                                                                  IndexType>(
-                               item,
-                               d_stream16,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               num_blocks);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_zfp_48_kernel<Scalar, IndexType>(
+              item,
+              d_stream16,
+              indices,
+              gather_block_size,
+              dataArray,
+              num_blocks);
+          });
 #endif
       }
     else if (maxbits == 64u)
       {
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
-        const uint64 *d_stream64 =
-          reinterpret_cast<const uint64 *>(d_stream);
+        const uint64 *d_stream64 = reinterpret_cast<const uint64 *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_zfp_64_kernel<Scalar, IndexType>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream64,
-            indices,
-            gather_block_size,
-            dataArray,
-            num_blocks);
+            d_stream64, indices, gather_block_size, dataArray, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
           HIP_KERNEL_NAME(
@@ -807,18 +777,18 @@ namespace compression
           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_zfp_64_kernel<Scalar,
-                                                                  IndexType>(
-                               item,
-                               d_stream64,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               num_blocks);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_zfp_64_kernel<Scalar, IndexType>(
+              item,
+              d_stream64,
+              indices,
+              gather_block_size,
+              dataArray,
+              num_blocks);
+          });
 #endif
       }
     else
@@ -839,33 +809,31 @@ namespace compression
 
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_kernel<Scalar, IndexType>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream_words,
-            indices,
-            gather_block_size,
-            dataArray,
-            maxbits,
-            num_blocks,
-            bpt,
-            wpt,
-            num_words);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream_words,
+                                                        indices,
+                                                        gather_block_size,
+                                                        dataArray,
+                                                        maxbits,
+                                                        num_blocks,
+                                                        bpt,
+                                                        wpt,
+                                                        num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(
-            decompress_scatter_add_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          d_stream_words,
-          indices,
-          gather_block_size,
-          dataArray,
-          maxbits,
-          num_blocks,
-          bpt,
-          wpt,
-          num_words);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             decompress_scatter_add_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           d_stream_words,
+                           indices,
+                           gather_block_size,
+                           dataArray,
+                           maxbits,
+                           num_blocks,
+                           bpt,
+                           wpt,
+                           num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
@@ -948,26 +916,21 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             compress_bfp_8_kernel<Scalar>(item,
-                                                           d_data,
-                                                           d_stream_u32,
-                                                           dim,
-                                                           num_blocks);
+                             compress_bfp_8_kernel<Scalar>(
+                               item, d_data, d_stream_u32, dim, num_blocks);
                            });
 #endif
       }
     else if (maxbits == 48u)
       {
-        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 --- */
+        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         compress_bfp_12_kernel<Scalar>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_data,
-            reinterpret_cast<uint16_t *>(d_stream),
-            dim,
-            num_blocks);
+            d_data, reinterpret_cast<uint16_t *>(d_stream), dim, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(compress_bfp_12_kernel<Scalar>),
                            grid,
@@ -984,26 +947,21 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             compress_bfp_12_kernel<Scalar>(item,
-                                                            d_data,
-                                                            d_stream16,
-                                                            dim,
-                                                            num_blocks);
+                             compress_bfp_12_kernel<Scalar>(
+                               item, d_data, d_stream16, dim, num_blocks);
                            });
 #endif
       }
     else if (maxbits == 40u)
       {
-        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 --- */
+        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         compress_bfp_10_kernel<Scalar>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_data,
-            reinterpret_cast<uint8_t *>(d_stream),
-            dim,
-            num_blocks);
+            d_data, reinterpret_cast<uint8_t *>(d_stream), dim, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(compress_bfp_10_kernel<Scalar>),
                            grid,
@@ -1020,26 +978,21 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             compress_bfp_10_kernel<Scalar>(item,
-                                                            d_data,
-                                                            d_stream8,
-                                                            dim,
-                                                            num_blocks);
+                             compress_bfp_10_kernel<Scalar>(
+                               item, d_data, d_stream8, dim, num_blocks);
                            });
 #endif
       }
     else if (maxbits == 64u)
       {
-        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 --- */
+        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         compress_bfp_16_kernel<Scalar>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_data,
-            reinterpret_cast<uint64 *>(d_stream),
-            dim,
-            num_blocks);
+            d_data, reinterpret_cast<uint64 *>(d_stream), dim, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(compress_bfp_16_kernel<Scalar>),
                            grid,
@@ -1056,11 +1009,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             compress_bfp_16_kernel<Scalar>(item,
-                                                            d_data,
-                                                            d_stream64,
-                                                            dim,
-                                                            num_blocks);
+                             compress_bfp_16_kernel<Scalar>(
+                               item, d_data, d_stream64, dim, num_blocks);
                            });
 #endif
       }
@@ -1163,8 +1113,10 @@ namespace compression
           reinterpret_cast<const unsigned int *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_bfp_8_kernel<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream_u32, d_data, dim, num_blocks);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream_u32,
+                                                        d_data,
+                                                        dim,
+                                                        num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(decompress_bfp_8_kernel<Scalar>),
                            grid,
@@ -1180,25 +1132,25 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             decompress_bfp_8_kernel<Scalar>(item,
-                                                             d_stream_u32,
-                                                             d_data,
-                                                             dim,
-                                                             num_blocks);
+                             decompress_bfp_8_kernel<Scalar>(
+                               item, d_stream_u32, d_data, dim, num_blocks);
                            });
 #endif
       }
     else if (maxbits == 48u)
       {
-        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 --- */
+        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
         const uint16_t *d_stream16 =
           reinterpret_cast<const uint16_t *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_bfp_12_kernel<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream16, d_data, dim, num_blocks);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream16,
+                                                        d_data,
+                                                        dim,
+                                                        num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(decompress_bfp_12_kernel<Scalar>),
                            grid,
@@ -1214,25 +1166,24 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             decompress_bfp_12_kernel<Scalar>(item,
-                                                              d_stream16,
-                                                              d_data,
-                                                              dim,
-                                                              num_blocks);
+                             decompress_bfp_12_kernel<Scalar>(
+                               item, d_stream16, d_data, dim, num_blocks);
                            });
 #endif
       }
     else if (maxbits == 40u)
       {
-        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 --- */
+        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
-        const uint8_t *d_stream8 =
-          reinterpret_cast<const uint8_t *>(d_stream);
+        const uint8_t *d_stream8 = reinterpret_cast<const uint8_t *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_bfp_10_kernel<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream8, d_data, dim, num_blocks);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream8,
+                                                        d_data,
+                                                        dim,
+                                                        num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(decompress_bfp_10_kernel<Scalar>),
                            grid,
@@ -1248,25 +1199,24 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             decompress_bfp_10_kernel<Scalar>(item,
-                                                              d_stream8,
-                                                              d_data,
-                                                              dim,
-                                                              num_blocks);
+                             decompress_bfp_10_kernel<Scalar>(
+                               item, d_stream8, d_data, dim, num_blocks);
                            });
 #endif
       }
     else if (maxbits == 64u)
       {
-        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 --- */
+        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
-        const uint64 *d_stream64 =
-          reinterpret_cast<const uint64 *>(d_stream);
+        const uint64 *d_stream64 = reinterpret_cast<const uint64 *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_bfp_16_kernel<Scalar>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream64, d_data, dim, num_blocks);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream64,
+                                                        d_data,
+                                                        dim,
+                                                        num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(HIP_KERNEL_NAME(decompress_bfp_16_kernel<Scalar>),
                            grid,
@@ -1282,11 +1232,8 @@ namespace compression
         queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
                                              COMPRESSION_BLOCK_SIZE),
                            [=](sycl::nd_item<1> item) {
-                             decompress_bfp_16_kernel<Scalar>(item,
-                                                              d_stream64,
-                                                              d_data,
-                                                              dim,
-                                                              num_blocks);
+                             decompress_bfp_16_kernel<Scalar>(
+                               item, d_stream64, d_data, dim, num_blocks);
                            });
 #endif
       }
@@ -1388,17 +1335,17 @@ namespace compression
             reinterpret_cast<unsigned int *>(d_stream),
             num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_bfp_8_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<unsigned int *>(d_stream),
-          num_blocks);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_bfp_8_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<unsigned int *>(d_stream),
+                           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto         &queue = dftfe::utils::queueRegistry.find(stream)->second;
         unsigned int *d_stream_u32 = reinterpret_cast<unsigned int *>(d_stream);
@@ -1417,7 +1364,8 @@ namespace compression
       }
     else if (maxbits == 48u)
       {
-        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 --- */
+        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
@@ -1429,17 +1377,17 @@ namespace compression
             reinterpret_cast<uint16_t *>(d_stream),
             num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_bfp_12_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<uint16_t *>(d_stream),
-          num_blocks);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_bfp_12_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<uint16_t *>(d_stream),
+                           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto     &queue      = dftfe::utils::queueRegistry.find(stream)->second;
         uint16_t *d_stream16 = reinterpret_cast<uint16_t *>(d_stream);
@@ -1458,7 +1406,8 @@ namespace compression
       }
     else if (maxbits == 40u)
       {
-        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 --- */
+        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
@@ -1470,17 +1419,17 @@ namespace compression
             reinterpret_cast<uint8_t *>(d_stream),
             num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_bfp_10_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<uint8_t *>(d_stream),
-          num_blocks);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_bfp_10_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<uint8_t *>(d_stream),
+                           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto    &queue     = dftfe::utils::queueRegistry.find(stream)->second;
         uint8_t *d_stream8 = reinterpret_cast<uint8_t *>(d_stream);
@@ -1499,7 +1448,8 @@ namespace compression
       }
     else if (maxbits == 64u)
       {
-        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 --- */
+        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
@@ -1511,17 +1461,17 @@ namespace compression
             reinterpret_cast<uint64 *>(d_stream),
             num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_bfp_16_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<uint64 *>(d_stream),
-          num_blocks);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_bfp_16_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<uint64 *>(d_stream),
+                           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto   &queue      = dftfe::utils::queueRegistry.find(stream)->second;
         uint64 *d_stream64 = reinterpret_cast<uint64 *>(d_stream);
@@ -1564,21 +1514,21 @@ namespace compression
             wpt,
             num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
-        hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(compress_gather_bfp_sb_kernel<Scalar, IndexType>),
-          grid,
-          COMPRESSION_BLOCK_SIZE,
-          0,
-          stream,
-          dataArray,
-          indices,
-          gather_block_size,
-          reinterpret_cast<Word *>(d_stream),
-          maxbits,
-          num_blocks,
-          bpt,
-          wpt,
-          num_words);
+        hipLaunchKernelGGL(HIP_KERNEL_NAME(
+                             compress_gather_bfp_sb_kernel<Scalar, IndexType>),
+                           grid,
+                           COMPRESSION_BLOCK_SIZE,
+                           0,
+                           stream,
+                           dataArray,
+                           indices,
+                           gather_block_size,
+                           reinterpret_cast<Word *>(d_stream),
+                           maxbits,
+                           num_blocks,
+                           bpt,
+                           wpt,
+                           num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue          = dftfe::utils::queueRegistry.find(stream)->second;
         Word *d_stream_words = reinterpret_cast<Word *>(d_stream);
@@ -1636,14 +1586,11 @@ namespace compression
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_bfp_8_kernel<Scalar, IndexType>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream_u32,
-            indices,
-            gather_block_size,
-            dataArray,
-            num_blocks);
+            d_stream_u32, indices, gather_block_size, dataArray, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
-          HIP_KERNEL_NAME(decompress_scatter_add_bfp_8_kernel<Scalar, IndexType>),
+          HIP_KERNEL_NAME(
+            decompress_scatter_add_bfp_8_kernel<Scalar, IndexType>),
           grid,
           COMPRESSION_BLOCK_SIZE,
           0,
@@ -1655,23 +1602,24 @@ namespace compression
           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_bfp_8_kernel<Scalar,
-                                                                 IndexType>(
-                               item,
-                               d_stream_u32,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               num_blocks);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_bfp_8_kernel<Scalar, IndexType>(
+              item,
+              d_stream_u32,
+              indices,
+              gather_block_size,
+              dataArray,
+              num_blocks);
+          });
 #endif
       }
     else if (maxbits == 48u)
       {
-        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 --- */
+        /* --- specialized 48-bit path (bpv == 12): 1 thread/block, 3×uint16 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
         const uint16_t *d_stream16 =
@@ -1679,11 +1627,7 @@ namespace compression
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_bfp_12_kernel<Scalar, IndexType>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream16,
-            indices,
-            gather_block_size,
-            dataArray,
-            num_blocks);
+            d_stream16, indices, gather_block_size, dataArray, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
           HIP_KERNEL_NAME(
@@ -1699,35 +1643,31 @@ namespace compression
           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_bfp_12_kernel<Scalar,
-                                                                  IndexType>(
-                               item,
-                               d_stream16,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               num_blocks);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_bfp_12_kernel<Scalar, IndexType>(
+              item,
+              d_stream16,
+              indices,
+              gather_block_size,
+              dataArray,
+              num_blocks);
+          });
 #endif
       }
     else if (maxbits == 40u)
       {
-        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 --- */
+        /* --- specialized 40-bit path (bpv == 10): 1 thread/block, 5×uint8 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
-        const uint8_t *d_stream8 =
-          reinterpret_cast<const uint8_t *>(d_stream);
+        const uint8_t *d_stream8 = reinterpret_cast<const uint8_t *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_bfp_10_kernel<Scalar, IndexType>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream8,
-            indices,
-            gather_block_size,
-            dataArray,
-            num_blocks);
+            d_stream8, indices, gather_block_size, dataArray, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
           HIP_KERNEL_NAME(
@@ -1743,35 +1683,31 @@ namespace compression
           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_bfp_10_kernel<Scalar,
-                                                                  IndexType>(
-                               item,
-                               d_stream8,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               num_blocks);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_bfp_10_kernel<Scalar, IndexType>(
+              item,
+              d_stream8,
+              indices,
+              gather_block_size,
+              dataArray,
+              num_blocks);
+          });
 #endif
       }
     else if (maxbits == 64u)
       {
-        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 --- */
+        /* --- specialized 64-bit path (bpv == 16): 1 thread/block, 1×uint64 ---
+         */
         const unsigned int grid =
           (num_blocks + COMPRESSION_BLOCK_SIZE - 1) / COMPRESSION_BLOCK_SIZE;
-        const uint64 *d_stream64 =
-          reinterpret_cast<const uint64 *>(d_stream);
+        const uint64 *d_stream64 = reinterpret_cast<const uint64 *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_bfp_16_kernel<Scalar, IndexType>
           <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream64,
-            indices,
-            gather_block_size,
-            dataArray,
-            num_blocks);
+            d_stream64, indices, gather_block_size, dataArray, num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
           HIP_KERNEL_NAME(
@@ -1787,18 +1723,18 @@ namespace compression
           num_blocks);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_bfp_16_kernel<Scalar,
-                                                                  IndexType>(
-                               item,
-                               d_stream64,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               num_blocks);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_bfp_16_kernel<Scalar, IndexType>(
+              item,
+              d_stream64,
+              indices,
+              gather_block_size,
+              dataArray,
+              num_blocks);
+          });
 #endif
       }
     else
@@ -1817,16 +1753,15 @@ namespace compression
         const Word *d_stream_words = reinterpret_cast<const Word *>(d_stream);
 #if defined(DFTFE_WITH_DEVICE_LANG_CUDA)
         decompress_scatter_add_bfp_sb_kernel<Scalar, IndexType>
-          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(
-            d_stream_words,
-            indices,
-            gather_block_size,
-            dataArray,
-            maxbits,
-            num_blocks,
-            bpt,
-            wpt,
-            num_words);
+          <<<grid, COMPRESSION_BLOCK_SIZE, 0, stream>>>(d_stream_words,
+                                                        indices,
+                                                        gather_block_size,
+                                                        dataArray,
+                                                        maxbits,
+                                                        num_blocks,
+                                                        bpt,
+                                                        wpt,
+                                                        num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_HIP)
         hipLaunchKernelGGL(
           HIP_KERNEL_NAME(
@@ -1846,22 +1781,22 @@ namespace compression
           num_words);
 #elif defined(DFTFE_WITH_DEVICE_LANG_SYCL)
         auto &queue = dftfe::utils::queueRegistry.find(stream)->second;
-        queue.parallel_for(sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
-                                             COMPRESSION_BLOCK_SIZE),
-                           [=](sycl::nd_item<1> item) {
-                             decompress_scatter_add_bfp_sb_kernel<Scalar,
-                                                                  IndexType>(
-                               item,
-                               d_stream_words,
-                               indices,
-                               gather_block_size,
-                               dataArray,
-                               maxbits,
-                               num_blocks,
-                               bpt,
-                               wpt,
-                               num_words);
-                           });
+        queue.parallel_for(
+          sycl::nd_range<1>(grid * COMPRESSION_BLOCK_SIZE,
+                            COMPRESSION_BLOCK_SIZE),
+          [=](sycl::nd_item<1> item) {
+            decompress_scatter_add_bfp_sb_kernel<Scalar, IndexType>(
+              item,
+              d_stream_words,
+              indices,
+              gather_block_size,
+              dataArray,
+              maxbits,
+              num_blocks,
+              bpt,
+              wpt,
+              num_words);
+          });
 #endif
       }
   }

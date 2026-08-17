@@ -331,7 +331,7 @@ namespace dftfe
         for (dftfe::uInt i = 0; i < n_mpi_processes; ++i)
           {
             if (taskId == i)
-              {              
+              {
                 std::cout
                   << " My global id is " << taskId << " , interpool id is "
                   << dealii::Utilities::MPI::this_mpi_process(interpoolcomm)
@@ -342,7 +342,6 @@ namespace dftfe
               }
             MPI_Barrier(intrapoolcomm);
           }
-      
     }
 
     MPI_Comm &

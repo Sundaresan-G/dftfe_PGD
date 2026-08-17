@@ -32,6 +32,7 @@ namespace dftfe
           BLASWrapperPtr)
     {
       d_BLASWrapperPtr = BLASWrapperPtr;
+      d_cellsBlockSize = 0;
       d_nOMPThreads    = 1;
 #ifdef _OPENMP
       if (const char *penv = std::getenv("DFTFE_NUM_THREADS"))
@@ -183,6 +184,7 @@ namespace dftfe
       d_updateFlags         = basisOperationsSrc.d_updateFlags;
       d_nVectors            = basisOperationsSrc.d_nVectors;
       d_nCells              = basisOperationsSrc.d_nCells;
+      d_cellsBlockSize      = basisOperationsSrc.d_cellsBlockSize;
       d_nDofsPerCell        = basisOperationsSrc.d_nDofsPerCell;
       d_locallyOwnedSize    = basisOperationsSrc.d_locallyOwnedSize;
       d_localSize           = basisOperationsSrc.d_localSize;

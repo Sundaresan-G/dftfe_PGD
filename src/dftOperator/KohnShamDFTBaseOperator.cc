@@ -743,7 +743,7 @@ namespace dftfe
       d_pseudopotentialNonLocalOperatorSinglePrec =
         pseudopotentialClassPtr->getNonLocalOperatorSinglePrec();
     d_cellsBlockSizeHamiltonianConstruction =
-      memorySpace == dftfe::utils::MemorySpace::HOST ? 1 : 50;
+      memorySpace == dftfe::utils::MemorySpace::HOST ? 1 : 16;
     d_cellsBlockSizeHX =
       memorySpace == dftfe::utils::MemorySpace::HOST ?
         1 :
