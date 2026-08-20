@@ -8,8 +8,7 @@ namespace dftfe
     ScratchMemoryStorage<ValueType, memorySpace>::View::View(
       Handle *owner) noexcept
       : d_owner(owner)
-    {
-    }
+    {}
 
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
     void
@@ -103,8 +102,7 @@ namespace dftfe
       const std::size_t i)
     {
       throwException<InvalidArgument>(
-        i < size(),
-        "Attempted to access a scratch memory view out of bounds.");
+        i < size(), "Attempted to access a scratch memory view out of bounds.");
       return data()[i];
     }
 
@@ -114,8 +112,7 @@ namespace dftfe
       const std::size_t i) const
     {
       throwException<InvalidArgument>(
-        i < size(),
-        "Attempted to access a scratch memory view out of bounds.");
+        i < size(), "Attempted to access a scratch memory view out of bounds.");
       return data()[i];
     }
 
@@ -148,8 +145,8 @@ namespace dftfe
     }
 
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-    ScratchMemoryStorage<ValueType, memorySpace>::View::operator bool() const
-      noexcept
+    ScratchMemoryStorage<ValueType, memorySpace>::View::operator bool()
+      const noexcept
     {
       return d_owner != nullptr && d_owner->d_buffer != nullptr;
     }
@@ -157,20 +154,18 @@ namespace dftfe
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
     ScratchMemoryStorage<ValueType, memorySpace>::Handle::Handle() noexcept
       : d_view(this)
-    {
-    }
+    {}
 
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
     ScratchMemoryStorage<ValueType, memorySpace>::Handle::Handle(
-      std::shared_ptr<PoolState>                    state,
+      std::shared_ptr<PoolState>             state,
       MemoryStorage<ValueType, memorySpace> *buffer,
-      const std::size_t                       size) noexcept
+      const std::size_t                      size) noexcept
       : d_state(std::move(state))
       , d_buffer(buffer)
       , d_size(size)
       , d_view(this)
-    {
-    }
+    {}
 
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
     ScratchMemoryStorage<ValueType, memorySpace>::Handle::~Handle()
@@ -198,9 +193,9 @@ namespace dftfe
       if (&other != this)
         {
           releaseNoThrow();
-          d_state        = std::move(other.d_state);
-          d_buffer       = other.d_buffer;
-          d_size         = other.d_size;
+          d_state  = std::move(other.d_state);
+          d_buffer = other.d_buffer;
+          d_size   = other.d_size;
           d_view.rebind(this);
           other.d_buffer = nullptr;
           other.d_size   = 0;
@@ -279,8 +274,8 @@ namespace dftfe
     }
 
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
-    ScratchMemoryStorage<ValueType, memorySpace>::Handle::operator bool() const
-      noexcept
+    ScratchMemoryStorage<ValueType, memorySpace>::Handle::operator bool()
+      const noexcept
     {
       return d_buffer != nullptr;
     }
@@ -303,8 +298,8 @@ namespace dftfe
 
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
     void
-    ScratchMemoryStorage<ValueType, memorySpace>::Handle::releaseNoThrow()
-      noexcept
+    ScratchMemoryStorage<ValueType,
+                         memorySpace>::Handle::releaseNoThrow() noexcept
     {
       if (d_state != nullptr && d_buffer != nullptr)
         d_state->release(d_buffer);
@@ -317,8 +312,7 @@ namespace dftfe
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
     ScratchMemoryStorage<ValueType, memorySpace>::ScratchMemoryStorage()
       : d_state(std::make_shared<PoolState>())
-    {
-    }
+    {}
 
     template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
     typename ScratchMemoryStorage<ValueType, memorySpace>::Handle
@@ -326,8 +320,8 @@ namespace dftfe
       const std::size_t size,
       const ValueType   initVal)
     {
-      const std::size_t invalidIndex = d_state->pool.size();
-      std::size_t       bestFitIndex = invalidIndex;
+      const std::size_t invalidIndex     = d_state->pool.size();
+      std::size_t       bestFitIndex     = invalidIndex;
       std::size_t       largestFreeIndex = invalidIndex;
 
       for (std::size_t i = 0; i < d_state->pool.size(); ++i)

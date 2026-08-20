@@ -708,19 +708,23 @@ namespace dftfe
           }
 #endif
 
-        if (d_dftfeParamsPtr->verbosity > 4){
-          if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) == 0)
-            std::cout << "Printing kPointPool details" << std::endl;
-        }
+        if (d_dftfeParamsPtr->verbosity > 4)
+          {
+            if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) ==
+                0)
+              std::cout << "Printing kPointPool details" << std::endl;
+          }
 
         dftfe::dftUtils::Pool kPointPool(d_mpi_comm_parent,
                                          d_dftfeParamsPtr->npool,
                                          d_dftfeParamsPtr->verbosity);
 
-        if (d_dftfeParamsPtr->verbosity > 4){
-          if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) == 0)
-            std::cout << "Printing bandGroupsPool details" << std::endl;
-        }
+        if (d_dftfeParamsPtr->verbosity > 4)
+          {
+            if (dealii::Utilities::MPI::this_mpi_process(d_mpi_comm_parent) ==
+                0)
+              std::cout << "Printing bandGroupsPool details" << std::endl;
+          }
         dftfe::dftUtils::Pool bandGroupsPool(kPointPool.get_intrapool_comm(),
                                              d_dftfeParamsPtr->nbandGrps,
                                              d_dftfeParamsPtr->verbosity);

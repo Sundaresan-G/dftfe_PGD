@@ -412,10 +412,12 @@ namespace dftfe
       }
 #endif
     computingTimerStandard.enter_subsection("Atomic system initialization");
-    
+
     d_numEigenValues = d_dftParamsPtr->numberEigenValues;
 
-    d_numEigenValuesPerBandGroup = d_numEigenValues/ (dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm));
+    d_numEigenValuesPerBandGroup =
+      d_numEigenValues /
+      (dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm));
 
     //
     // read coordinates
@@ -1523,9 +1525,10 @@ namespace dftfe
           << cuttentTime - d_dftfeClassStartTime << " seconds" << std::endl;
       }
     computingTimerStandard.leave_subsection("KSDFT problem initialization");
-    
+
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "KSDFT problem initialization completed");
+      dftUtils::printCurrentMemoryUsage(
+        intrapoolcomm, "KSDFT problem initialization completed");
   }
 
 
@@ -2281,7 +2284,8 @@ namespace dftfe
                                              *d_dftParamsPtr);
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "energyCalc init completed");
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "energyCalc init completed");
 
 
     // set up linear solver
@@ -2290,9 +2294,10 @@ namespace dftfe
                                 dealiiLinearSolver::CG);
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "CGSolver init completed");
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "CGSolver init completed");
 
-    // set up linear solver Device
+      // set up linear solver Device
 #ifdef DFTFE_WITH_DEVICE
     linearSolverCGDevice CGSolverDevice(d_mpiCommParent,
                                         mpi_communicator,
@@ -2301,7 +2306,8 @@ namespace dftfe
 #endif
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "CGSolverDevice init completed");
+      dftUtils::printCurrentMemoryUsage(intrapoolcomm,
+                                        "CGSolverDevice init completed");
 
     //
     // set up solver functions for Helmholtz to be used only when Kerker mixing
@@ -2313,9 +2319,10 @@ namespace dftfe
       mpi_communicator);
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "kerkerPreconditionedResidualSolverProblem created");
+      dftUtils::printCurrentMemoryUsage(
+        intrapoolcomm, "kerkerPreconditionedResidualSolverProblem created");
 
-    // set up solver functions for Helmholtz Device
+      // set up solver functions for Helmholtz Device
 #ifdef DFTFE_WITH_DEVICE
     kerkerSolverProblemDeviceWrapperClass
       kerkerPreconditionedResidualSolverProblemDevice(
@@ -2325,7 +2332,9 @@ namespace dftfe
 #endif
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "kerkerPreconditionedResidualSolverProblemDevice created");
+      dftUtils::printCurrentMemoryUsage(
+        intrapoolcomm,
+        "kerkerPreconditionedResidualSolverProblemDevice created");
 
     if (d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_KERKER" ||
         d_dftParamsPtr->mixingMethod == "ANDERSON_WITH_RESTA")
@@ -2364,7 +2373,9 @@ namespace dftfe
     d_phiTotalSolverProblem.clear();
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "kerkerPreconditionedResidualSolverProblem init completed");
+      dftUtils::printCurrentMemoryUsage(
+        intrapoolcomm,
+        "kerkerPreconditionedResidualSolverProblem init completed");
 
     //
     // solve vself in bins
@@ -2445,7 +2456,8 @@ namespace dftfe
     computing_timer.leave_subsection("Nuclear self-potential solve");
 
     if (d_dftParamsPtr->verbosity >= 4)
-      dftUtils::printCurrentMemoryUsage(intrapoolcomm, "Nuclear self-potential solve completed");
+      dftUtils::printCurrentMemoryUsage(
+        intrapoolcomm, "Nuclear self-potential solve completed");
 
     if ((d_dftParamsPtr->isPseudopotential ||
          d_dftParamsPtr->smearedNuclearCharges))
@@ -3431,7 +3443,8 @@ namespace dftfe
               adaptiveChebysevFilterPassesTol > firstScfChebyTol) ?
                firstScfChebyTol :
                adaptiveChebysevFilterPassesTol);
-        while (maxRes > filterPassTol && count < maxPasses && count < d_dftParamsPtr->maxChebyPasses)
+        while (maxRes > filterPassTol && count < maxPasses &&
+               count < d_dftParamsPtr->maxChebyPasses)
           {
             for (dftfe::uInt s = 0; s < d_dftParamsPtr->spinPolarized + 1; ++s)
               {

@@ -328,7 +328,8 @@ namespace dftfe
 
             // Keep max to avoid shrinking when bpv drops (16 -> 8)
             d_maxCompressedTargetBytes =
-              std::max(d_maxCompressedTargetBytes, d_activeCompressedTargetBytes);
+              std::max(d_maxCompressedTargetBytes,
+                       d_activeCompressedTargetBytes);
             d_maxCompressedGhostBytes =
               std::max(d_maxCompressedGhostBytes, d_activeCompressedGhostBytes);
 
@@ -382,16 +383,23 @@ namespace dftfe
         dftfe::uInt bpv)
       {
 #ifdef DFTFE_WITH_DEVICE
-        d_compressBitsPerValue        = bpv;
-        d_activeCompressedTargetBytes = ((d_mpiPatternP2P->getOwnedLocalIndicesForTargetProcs().size() * d_blockSize * bpv / 8 + 7) / 8) * 8;
-        d_activeCompressedGhostBytes  = ((d_mpiPatternP2P->localGhostSize() * d_blockSize * bpv / 8 + 7) / 8) * 8;
+        d_compressBitsPerValue = bpv;
+        d_activeCompressedTargetBytes =
+          ((d_mpiPatternP2P->getOwnedLocalIndicesForTargetProcs().size() *
+              d_blockSize * bpv / 8 +
+            7) /
+           8) *
+          8;
+        d_activeCompressedGhostBytes =
+          ((d_mpiPatternP2P->localGhostSize() * d_blockSize * bpv / 8 + 7) /
+           8) *
+          8;
 #endif
       }
 
       template <typename ValueType, dftfe::utils::MemorySpace memorySpace>
       void
-      MPICommunicatorP2P<ValueType, memorySpace>::setCompressUseZfp(
-        bool useZfp)
+      MPICommunicatorP2P<ValueType, memorySpace>::setCompressUseZfp(bool useZfp)
       {
 #ifdef DFTFE_WITH_DEVICE
         d_useZfpCompression = useZfp;

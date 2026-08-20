@@ -113,7 +113,10 @@ namespace dftfe
 
     template <typename ValueType>
     void
-    deviceSetValue(ValueType *devPtr, ValueType value, std::size_t size, deviceStream_t stream)
+    deviceSetValue(ValueType     *devPtr,
+                   ValueType      value,
+                   std::size_t    size,
+                   deviceStream_t stream)
     {
       hipLaunchKernelGGL(setValueKernel,
                          size / dftfe::utils::DEVICE_BLOCK_SIZE + 1,
@@ -126,43 +129,64 @@ namespace dftfe
     }
 
     template void
-    deviceSetValue(bool *devPtr, bool value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(bool          *devPtr,
+                   bool           value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(int *devPtr, int value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(int           *devPtr,
+                   int            value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(long int *devPtr, long int value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(long int      *devPtr,
+                   long int       value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(unsigned int *devPtr, unsigned int value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(unsigned int  *devPtr,
+                   unsigned int   value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(unsigned long int *devPtr,
                    unsigned long int  value,
                    std::size_t        size,
+                   deviceStream_t     stream);
+
+    template void
+    deviceSetValue(double        *devPtr,
+                   double         value,
+                   std::size_t    size,
                    deviceStream_t stream);
 
     template void
-    deviceSetValue(double *devPtr, double value, std::size_t size, deviceStream_t stream);
-
-    template void
-    deviceSetValue(float *devPtr, float value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(float         *devPtr,
+                   float          value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<float> *devPtr,
                    std::complex<float>  value,
                    std::size_t          size,
-                   deviceStream_t stream);
+                   deviceStream_t       stream);
 
     template void
     deviceSetValue(std::complex<double> *devPtr,
                    std::complex<double>  value,
                    std::size_t           size,
-                   deviceStream_t stream);
+                   deviceStream_t        stream);
 
     template void
-    deviceSetValue(uint8_t *devPtr, uint8_t value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(uint8_t       *devPtr,
+                   uint8_t        value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<uint8_t> *devPtr,
@@ -171,13 +195,16 @@ namespace dftfe
                    deviceStream_t         stream);
 
     template void
-    deviceSetValue(uint16_t *devPtr, uint16_t value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(uint16_t      *devPtr,
+                   uint16_t       value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<uint16_t> *devPtr,
                    std::complex<uint16_t>  value,
                    std::size_t             size,
-                   deviceStream_t stream);
+                   deviceStream_t          stream);
 
     deviceError_t
     deviceFree(void *devPtr)
@@ -388,7 +415,8 @@ namespace dftfe
                            deviceEvent_t &startEvent,
                            deviceEvent_t &stopEvent)
     {
-      deviceError_t err = hipEventElapsedTime(&milliseconds, startEvent, stopEvent);
+      deviceError_t err =
+        hipEventElapsedTime(&milliseconds, startEvent, stopEvent);
       DEVICE_API_CHECK(err);
       return err;
     }

@@ -64,7 +64,7 @@ namespace dftfe
     decompress_scatter_add(const void                  *d_compressed,
                            const dftfe::uInt           *indices,
                            size_t                       num_indices,
-                           dftfe::uInt                 gather_block_size,
+                           dftfe::uInt                  gather_block_size,
                            double                      *dataArray,
                            int                          bits_per_value,
                            dftfe::utils::deviceStream_t stream);
@@ -73,7 +73,7 @@ namespace dftfe
     decompress_scatter_add(const void                  *d_compressed,
                            const dftfe::uInt           *indices,
                            size_t                       num_indices,
-                           dftfe::uInt                 gather_block_size,
+                           dftfe::uInt                  gather_block_size,
                            float                       *dataArray,
                            int                          bits_per_value,
                            dftfe::utils::deviceStream_t stream);
@@ -243,7 +243,7 @@ namespace dftfe
     decompress_scatter_add(const void                  *d_compressed,
                            const dftfe::uInt           *indices,
                            size_t                       num_indices,
-                           dftfe::uInt                 gather_block_size,
+                           dftfe::uInt                  gather_block_size,
                            std::complex<double>        *dataArray,
                            int                          bits_per_value,
                            dftfe::utils::deviceStream_t stream)
@@ -261,7 +261,7 @@ namespace dftfe
     decompress_scatter_add(const void                  *d_compressed,
                            const dftfe::uInt           *indices,
                            size_t                       num_indices,
-                           dftfe::uInt                 gather_block_size,
+                           dftfe::uInt                  gather_block_size,
                            std::complex<float>         *dataArray,
                            int                          bits_per_value,
                            dftfe::utils::deviceStream_t stream)

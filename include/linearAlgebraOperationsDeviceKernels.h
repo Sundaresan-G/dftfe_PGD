@@ -30,13 +30,12 @@ namespace dftfe
 
     template <typename ValueType1, typename ValueType2>
     void
-    convertLayout(
-      ValueType2 *                   copyTo,
-      const ValueType1 *             copyFromVec,
-      const dftfe::uInt              blockSize,
-      const dftfe::uInt              initBlockRows,
-      const dftfe::uInt              initBlockCols,
-      const dftfe::utils::deviceStream_t   streamId = 0);
+    convertLayout(ValueType2                        *copyTo,
+                  const ValueType1                  *copyFromVec,
+                  const dftfe::uInt                  blockSize,
+                  const dftfe::uInt                  initBlockRows,
+                  const dftfe::uInt                  initBlockCols,
+                  const dftfe::utils::deviceStream_t streamId = 0);
 
     template <typename ValueType1, typename ValueType2>
     void

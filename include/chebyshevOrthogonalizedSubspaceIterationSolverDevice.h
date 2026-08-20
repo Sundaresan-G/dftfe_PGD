@@ -71,8 +71,8 @@ namespace dftfe
           std::vector<double>     &residuals,
           utils::DeviceCCLWrapper &devicecclMpiCommDomain,
           utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
-          const MPI_Comm &         interBandGroupComm,
-          const MPI_Comm &         intrapoolcomm,
+          const MPI_Comm          &interBandGroupComm,
+          const MPI_Comm          &intrapoolcomm,
           const bool               isFirstFilteringCall,
           const bool               computeResidual,
           const bool               useMixedPrecOverall = false,
@@ -134,9 +134,12 @@ namespace dftfe
     dealii::TimerOutput        computing_timer;
 
     // dftfe::utils::deviceStream_t ncclInterBandCommStream;
-    utils::DeviceCCLWrapper  devicecclMpiInterBand;
+    utils::DeviceCCLWrapper devicecclMpiInterBand;
 
-    dftfe::utils::ScratchMemoryStorage<dataTypes::number, dftfe::utils::MemorySpace::DEVICE>::Handle XDevice, HXDevice, MXDevice, extraBufferDevice;
+    dftfe::utils::ScratchMemoryStorage<
+      dataTypes::number,
+      dftfe::utils::MemorySpace::DEVICE>::Handle XDevice,
+      HXDevice, MXDevice, extraBufferDevice;
 
     dftfe::uInt reShapedNumRows, reShapedNumCols;
     dftfe::utils::ScratchMemoryStorage<dataTypes::number,

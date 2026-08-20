@@ -201,7 +201,7 @@ namespace dftfe
           d_sendRecvBufferCompressHostPinnedPtr;
 
         dftfe::uInt d_compressBitsPerValue = 16;
-        bool        d_useZfpCompression = false;
+        bool        d_useZfpCompression    = false;
 
         dftfe::uInt d_maxCompressedTargetBytes    = 0;
         dftfe::uInt d_maxCompressedGhostBytes     = 0;

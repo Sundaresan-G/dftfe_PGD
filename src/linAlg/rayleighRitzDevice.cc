@@ -42,7 +42,7 @@ namespace dftfe
       std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                          &BLASWrapperPtr,
+                                       &BLASWrapperPtr,
       const dftParameters              &dftParams,
       DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
       const bool                        useMixedPrecOverall)
@@ -335,7 +335,7 @@ namespace dftfe
       std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                          &BLASWrapperPtr,
+                                       &BLASWrapperPtr,
       const dftParameters              &dftParams,
       DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
       const bool                        useMixedPrecOverall)
@@ -821,31 +821,31 @@ namespace dftfe
 
     void
     rayleighRitzGEP(
-      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE>         &operatorMatrix,
-      elpaScalaManager &                                           elpaScala,
-      dataTypes::number *                                          X,
-      dataTypes::number *                                          XDevice,
-      dataTypes::number *                                          HXDevice,
-      dataTypes::number *                                          MXDevice,
-      dataTypes::number *                                          extraBufferDevice,
-      distributedDeviceVec<dataTypes::number> &                    Xb,
-      distributedDeviceVec<dataTypes::number> &                    HXb,
-      const std::size_t                                            M,
-      const std::size_t                                            N,
-      const MPI_Comm &                                             mpiCommParent,
-      const MPI_Comm &                                             mpiCommDomain,
-      utils::DeviceCCLWrapper &                                    devicecclMpiCommDomain,
-      utils::DeviceCCLWrapper &                                    devicecclMpiInterBand,
-      utils::DeviceCCLWrapper &                                    devicecclMpiCommIntraPool,
-      const MPI_Comm &                                             interBandGroupComm,
-      const MPI_Comm &                                             intrapoolcomm,
-      std::vector<double> &                                        eigenValues,
+      operatorDFTClass<dftfe::utils::MemorySpace::DEVICE> &operatorMatrix,
+      elpaScalaManager                                    &elpaScala,
+      dataTypes::number                                   *X,
+      dataTypes::number                                   *XDevice,
+      dataTypes::number                                   *HXDevice,
+      dataTypes::number                                   *MXDevice,
+      dataTypes::number                                   *extraBufferDevice,
+      distributedDeviceVec<dataTypes::number>             &Xb,
+      distributedDeviceVec<dataTypes::number>             &HXb,
+      const std::size_t                                    M,
+      const std::size_t                                    N,
+      const MPI_Comm                                      &mpiCommParent,
+      const MPI_Comm                                      &mpiCommDomain,
+      utils::DeviceCCLWrapper &devicecclMpiCommDomain,
+      utils::DeviceCCLWrapper &devicecclMpiInterBand,
+      utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
+      const MPI_Comm          &interBandGroupComm,
+      const MPI_Comm          &intrapoolcomm,
+      std::vector<double>     &eigenValues,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-        &                  BLASWrapperPtr,
-      const dftParameters &                                        dftParams,
-      DeviceNumberScratchMemoryStorage &                           scratchMemoryStorage,
-      const bool                                                   useMixedPrecOverall)
+                                       &BLASWrapperPtr,
+      const dftParameters              &dftParams,
+      DeviceNumberScratchMemoryStorage &scratchMemoryStorage,
+      const bool                        useMixedPrecOverall)
     {
       dealii::ConditionalOStream pcout(
         std::cout,
@@ -876,7 +876,8 @@ namespace dftfe
         dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
       const dftfe::uInt chebyBlockSize =
-                std::min((std::size_t)dftParams.chebyWfcBlockSize, N/numberBandGroups);
+        std::min((std::size_t)dftParams.chebyWfcBlockSize,
+                 N / numberBandGroups);
 
       // dftfe::utils::deviceStream_t streamHX, streamMX;
       // dftfe::utils::deviceStreamCreate(&streamHX);
@@ -884,17 +885,24 @@ namespace dftfe
 
       dftfe::dataTypes::number zero{0.0};
 
-      // Create separate streams for data transfer of X AlltoAll and computation of HX, MX
+      // Create separate streams for data transfer of X AlltoAll and computation
+      // of HX, MX
       static dftfe::utils::deviceStream_t streamCompute = 0, streamDataMove = 0;
 
-      if (streamCompute == 0 && streamDataMove == 0){
-        dftfe::utils::deviceStreamCreate(streamCompute);
-        dftfe::utils::deviceStreamCreate(streamDataMove);
-      }
+      if (streamCompute == 0 && streamDataMove == 0)
+        {
+          dftfe::utils::deviceStreamCreate(streamCompute);
+          dftfe::utils::deviceStreamCreate(streamDataMove);
+        }
 
       // FIXME: May not be needed at all
       // XDevice set additional points value to 0
-      dftfe::utils::deviceSetValue((XDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M, streamDataMove);
+      dftfe::utils::deviceSetValue(
+        (XDevice + (N / numberBandGroups) * M),
+        zero,
+        (((M + numberBandGroups - 1) / numberBandGroups) * N) -
+          (N / numberBandGroups) * M,
+        streamDataMove);
 
       // XHost.setValue(0.0);
       // dftfe::utils::deviceMemcpyH2D(
@@ -903,35 +911,39 @@ namespace dftfe
       //   XHost.size() * sizeof(dataTypes::number));
 
       // Copy X to XDevice
-      dftfe::utils::deviceMemcpyAsyncD2D(
-        XDevice,
-        X,
-        ((N/numberBandGroups) * M) * sizeof(dataTypes::number),
-        streamDataMove);
+      dftfe::utils::deviceMemcpyAsyncD2D(XDevice,
+                                         X,
+                                         ((N / numberBandGroups) * M) *
+                                           sizeof(dataTypes::number),
+                                         streamDataMove);
 
       // Note the timings for alltoall
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.enter_subsection("X Alltoall, RR GEP step");
-      }
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.enter_subsection("X Alltoall, RR GEP step");
+        }
 
       // for (int i=0; i < 3; i++)
       devicecclMpiInterBand.deviceDirectAllToAllWrapper(
         XDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
         extraBufferDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
         streamDataMove,
-        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
+        dftParams.useAlltoAllDCCL // to use DCCL to GPU aware MPI
       );
 
 
 
       // end time
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.leave_subsection("X Alltoall, RR GEP step");
-      }
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.leave_subsection("X Alltoall, RR GEP step");
+        }
 
 
 
@@ -942,14 +954,15 @@ namespace dftfe
           computing_timer.enter_subsection("X Convert Layout, RR GEP step");
         }
 
-      // kernel function to convert XDevice to row major form and save it in extraBufferDevice using stream streamCompute
-      convertLayout(XDevice, 
-                    extraBufferDevice, 
-                    N/numberBandGroups, //block size
-                    numberBandGroups, //initBlockRows
-                    ((M + numberBandGroups - 1)/numberBandGroups), //initBlockCols
-                    streamDataMove
-                    );
+      // kernel function to convert XDevice to row major form and save it in
+      // extraBufferDevice using stream streamCompute
+      convertLayout(XDevice,
+                    extraBufferDevice,
+                    N / numberBandGroups, // block size
+                    numberBandGroups,     // initBlockRows
+                    ((M + numberBandGroups - 1) /
+                     numberBandGroups), // initBlockCols
+                    streamDataMove);
       // Now extraBufferDevice contains X in row major form as needed
 
       // end time
@@ -961,50 +974,52 @@ namespace dftfe
 
       // HXDevice.setValue(0.0);
       // HXDevice set additional points value to 0
-      dftfe::utils::deviceSetValue((HXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M, streamCompute);
+      dftfe::utils::deviceSetValue(
+        (HXDevice + (N / numberBandGroups) * M),
+        zero,
+        (((M + numberBandGroups - 1) / numberBandGroups) * N) -
+          (N / numberBandGroups) * M,
+        streamCompute);
 
-      dftfe::utils::deviceSetValue((MXDevice + (N/numberBandGroups) * M), zero, (((M + numberBandGroups - 1)/numberBandGroups) * N) - (N/numberBandGroups) * M, streamCompute);
+      dftfe::utils::deviceSetValue(
+        (MXDevice + (N / numberBandGroups) * M),
+        zero,
+        (((M + numberBandGroups - 1) / numberBandGroups) * N) -
+          (N / numberBandGroups) * M,
+        streamCompute);
 
       BLASWrapperPtr->setStream(streamCompute);
 
       // Compute HX and MX and store it in HXDevice and MXDevice
-      for (dftfe::uInt k = 0; k < N/numberBandGroups; k += chebyBlockSize)
-      {
-        BLASWrapperPtr->stridedCopyToBlockConstantStride(
-            chebyBlockSize, N/numberBandGroups, M, k, X, Xb.begin());
+      for (dftfe::uInt k = 0; k < N / numberBandGroups; k += chebyBlockSize)
+        {
+          BLASWrapperPtr->stridedCopyToBlockConstantStride(
+            chebyBlockSize, N / numberBandGroups, M, k, X, Xb.begin());
 
-        operatorMatrix.HX(Xb, 1.0, 0.0, 0.0, HXb);
+          operatorMatrix.HX(Xb, 1.0, 0.0, 0.0, HXb);
 
-        BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                                            N/numberBandGroups,
-                                            chebyBlockSize,
-                                            M,
-                                            k,
-                                            HXb.begin(),
-                                            HXDevice);
+          BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+            N / numberBandGroups, chebyBlockSize, M, k, HXb.begin(), HXDevice);
 
-        operatorMatrix.overlapMatrixTimesX(Xb, 1.0, 0.0, 0.0, HXb, dftParams.approxOverlapMatrix);
+          operatorMatrix.overlapMatrixTimesX(
+            Xb, 1.0, 0.0, 0.0, HXb, dftParams.approxOverlapMatrix);
 
-        BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                                            N/numberBandGroups,
-                                            chebyBlockSize,
-                                            M,
-                                            k,
-                                            HXb.begin(),
-                                            MXDevice);
-        
-      }
+          BLASWrapperPtr->stridedCopyFromBlockConstantStride(
+            N / numberBandGroups, chebyBlockSize, M, k, HXb.begin(), MXDevice);
+        }
 
       BLASWrapperPtr->setStream(0);
 
-      // Doing explicit synchronization here so that default stream sync behaviour with other streams is ensured
+      // Doing explicit synchronization here so that default stream sync
+      // behaviour with other streams is ensured
       dftfe::utils::deviceSynchronize();
 
       // Note the timings for alltoall
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.enter_subsection("HX Alltoall, RR GEP step");
-      }
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.enter_subsection("HX Alltoall, RR GEP step");
+        }
 
       // Swap XDevice and extraBufferDevice
       // std::swap(XDevice, extraBufferDevice);
@@ -1012,20 +1027,23 @@ namespace dftfe
       // for (int i=0; i < 3; i++)
       devicecclMpiInterBand.deviceDirectAllToAllWrapper(
         HXDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
         extraBufferDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
-        0, //default stream
-        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
+        0,                        // default stream
+        dftParams.useAlltoAllDCCL // to use DCCL to GPU aware MPI
       );
 
 
 
       // end time
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.leave_subsection("HX Alltoall, RR GEP step");
-      }
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.leave_subsection("HX Alltoall, RR GEP step");
+        }
 
 
 
@@ -1036,13 +1054,15 @@ namespace dftfe
           computing_timer.enter_subsection("HX Convert Layout, RR GEP step");
         }
 
-      // kernel function to convert HXDevice to row major form and save it in HXDevice
-      convertLayout(HXDevice, 
-                    extraBufferDevice, 
-                    N/numberBandGroups, //block size
-                    numberBandGroups, //initBlockRows
-                    ((M + numberBandGroups - 1)/numberBandGroups) //initBlockCols
-                    );
+      // kernel function to convert HXDevice to row major form and save it in
+      // HXDevice
+      convertLayout(HXDevice,
+                    extraBufferDevice,
+                    N / numberBandGroups, // block size
+                    numberBandGroups,     // initBlockRows
+                    ((M + numberBandGroups - 1) /
+                     numberBandGroups) // initBlockCols
+      );
       // Now HXDevice contains HX in row major form as needed
 
       // end time
@@ -1054,10 +1074,11 @@ namespace dftfe
 
 
       // Note the timings for alltoall
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.enter_subsection("MX Alltoall, RR GEP step");
-      }
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.enter_subsection("MX Alltoall, RR GEP step");
+        }
 
       // Swap XDevice and extraBufferDevice
       // std::swap(XDevice, extraBufferDevice);
@@ -1065,20 +1086,23 @@ namespace dftfe
       // for (int i=0; i < 3; i++)
       devicecclMpiInterBand.deviceDirectAllToAllWrapper(
         MXDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
         extraBufferDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
-        0, //default stream
-        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
+        0,                        // default stream
+        dftParams.useAlltoAllDCCL // to use DCCL to GPU aware MPI
       );
 
 
 
       // end time
-      if (dftParams.deviceFineGrainedTimings){
-        dftfe::utils::deviceSynchronize();
-        computing_timer.leave_subsection("MX Alltoall, RR GEP step");
-      }
+      if (dftParams.deviceFineGrainedTimings)
+        {
+          dftfe::utils::deviceSynchronize();
+          computing_timer.leave_subsection("MX Alltoall, RR GEP step");
+        }
 
 
 
@@ -1089,13 +1113,15 @@ namespace dftfe
           computing_timer.enter_subsection("MX Convert Layout, RR GEP step");
         }
 
-      // kernel function to convert MXDevice to row major form and save it in MXDevice
-      convertLayout(MXDevice, 
-                    extraBufferDevice, 
-                    N/numberBandGroups, //block size
-                    numberBandGroups, //initBlockRows
-                    ((M + numberBandGroups - 1)/numberBandGroups) //initBlockCols
-                    );
+      // kernel function to convert MXDevice to row major form and save it in
+      // MXDevice
+      convertLayout(MXDevice,
+                    extraBufferDevice,
+                    N / numberBandGroups, // block size
+                    numberBandGroups,     // initBlockRows
+                    ((M + numberBandGroups - 1) /
+                     numberBandGroups) // initBlockCols
+      );
       // Now MXDevice contains MX in row major form as needed
 
       // end time
@@ -1107,20 +1133,22 @@ namespace dftfe
 
 
 
-
-      // Copy resultant HXDevice to XHost as the device buffer needs to be used again
-      // dftfe::utils::deviceMemcpyD2D(
+      // Copy resultant HXDevice to XHost as the device buffer needs to be used
+      // again dftfe::utils::deviceMemcpyD2D(
       //   HXDevice,
       //   extraBufferDevice,
-      //   (((M + numberBandGroups - 1)/numberBandGroups) * N) * sizeof(dataTypes::number)
+      //   (((M + numberBandGroups - 1)/numberBandGroups) * N) *
+      //   sizeof(dataTypes::number)
       //   );
 
-      // Now finally HXDevice, MXDevice and XDevice have the resultant in row decomposed form.
+      // Now finally HXDevice, MXDevice and XDevice have the resultant in row
+      // decomposed form.
 
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          computing_timer.enter_subsection("SConj=X^{T}MXConj and HConjProj= X^{T}*HConj*XConj, RR GEP step");
+          computing_timer.enter_subsection(
+            "SConj=X^{T}MXConj and HConjProj= X^{T}*HConj*XConj, RR GEP step");
         }
 
       //
@@ -1134,7 +1162,7 @@ namespace dftfe
         std::fill(&overlapMatPar.local_el(0, 0),
                   &overlapMatPar.local_el(0, 0) +
                     overlapMatPar.local_m() * overlapMatPar.local_n(),
-                  dataTypes::number(0.0));                                                              
+                  dataTypes::number(0.0));
 
       //
       // compute projected Hamiltonian conjugate HConjProj= X^{T}*HConj*XConj
@@ -1148,29 +1176,30 @@ namespace dftfe
                     projHamPar.local_m() * projHamPar.local_n(),
                   dataTypes::number(0.0));
 
-      if(!(dftParams.useMixedPrecXtOX && dftParams.useMixedPrecXtHX && useMixedPrecOverall))
-        linearAlgebraOperationsDevice::XtMXAndXtHX(
-          XDevice,
-          HXDevice,
-          MXDevice,
-          (M + numberBandGroups - 1)/numberBandGroups,
-          N,
-          BLASWrapperPtr,
-          mpiCommDomain,
-          devicecclMpiCommIntraPool,
-          interBandGroupComm,
-          intrapoolcomm,
-          processGrid,
-          overlapMatPar,
-          projHamPar,
-          dftParams,
-          scratchMemoryStorage);
+      if (!(dftParams.useMixedPrecXtOX && dftParams.useMixedPrecXtHX &&
+            useMixedPrecOverall))
+        linearAlgebraOperationsDevice::XtMXAndXtHX(XDevice,
+                                                   HXDevice,
+                                                   MXDevice,
+                                                   (M + numberBandGroups - 1) /
+                                                     numberBandGroups,
+                                                   N,
+                                                   BLASWrapperPtr,
+                                                   mpiCommDomain,
+                                                   devicecclMpiCommIntraPool,
+                                                   interBandGroupComm,
+                                                   intrapoolcomm,
+                                                   processGrid,
+                                                   overlapMatPar,
+                                                   projHamPar,
+                                                   dftParams,
+                                                   scratchMemoryStorage);
       else
         linearAlgebraOperationsDevice::XtMXAndXtHXMixedPrec(
           XDevice,
           HXDevice,
           MXDevice,
-          (M + numberBandGroups - 1)/numberBandGroups,
+          (M + numberBandGroups - 1) / numberBandGroups,
           N,
           BLASWrapperPtr,
           mpiCommDomain,
@@ -1211,12 +1240,13 @@ namespace dftfe
                   projHamPar.local_el(j, i) *= dataTypes::number(0.5);
               }
           }
-        
+
 
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          computing_timer.leave_subsection("SConj=X^{T}MXConj and HConjProj= X^{T}*HConj*XConj, RR GEP step");
+          computing_timer.leave_subsection(
+            "SConj=X^{T}MXConj and HConjProj= X^{T}*HConj*XConj, RR GEP step");
         }
 
 
@@ -1269,7 +1299,7 @@ namespace dftfe
                             "DFT-FE Error: elpa_eigenvectors error."));
             }
 
-          
+
           projHamPar.copy_conjugate_transposed(eigenVectors);
 
           if (dftParams.deviceFineGrainedTimings)
@@ -1356,7 +1386,6 @@ namespace dftfe
 
 
 
-
       // Printing Eigenvalues
       // if (dftParams.verbosity > 3)
       //   {
@@ -1372,12 +1401,9 @@ namespace dftfe
       // linearAlgebraOperations::internal::broadcastAcrossInterCommScaLAPACKMat(
       //   processGrid, projHamPar, interBandGroupComm, 0);
 
-      
-      MPI_Bcast(&eigenValues[0],
-      eigenValues.size(),
-      MPI_DOUBLE,
-      0,
-      intrapoolcomm);
+
+      MPI_Bcast(
+        &eigenValues[0], eigenValues.size(), MPI_DOUBLE, 0, intrapoolcomm);
 
       //
       // rotate the basis in the subspace
@@ -1396,22 +1422,23 @@ namespace dftfe
         }
 
       if (useMixedPrecOverall && dftParams.useMixedPrecSubspaceRotRR)
-        subspaceRotationRRMixedPrecScalapack(XDevice,
-                                            (M + numberBandGroups - 1)/numberBandGroups,
-                                            N,
-                                            BLASWrapperPtr,
-                                            processGrid,
-                                            intrapoolcomm,
-                                            devicecclMpiCommIntraPool,
-                                            interBandGroupComm,
-                                            projHamPar,
-                                            dftParams,
-                                            scratchMemoryStorage,
-                                            false,
-                                            dftParams.overlapComputeCommunOrthoRR);
+        subspaceRotationRRMixedPrecScalapack(
+          XDevice,
+          (M + numberBandGroups - 1) / numberBandGroups,
+          N,
+          BLASWrapperPtr,
+          processGrid,
+          intrapoolcomm,
+          devicecclMpiCommIntraPool,
+          interBandGroupComm,
+          projHamPar,
+          dftParams,
+          scratchMemoryStorage,
+          false,
+          dftParams.overlapComputeCommunOrthoRR);
       else
         subspaceRotationScalapack(XDevice,
-                                  (M + numberBandGroups - 1)/numberBandGroups,
+                                  (M + numberBandGroups - 1) / numberBandGroups,
                                   N,
                                   BLASWrapperPtr,
                                   processGrid,
@@ -1440,53 +1467,63 @@ namespace dftfe
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
-      // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
+      // pcout << "No error till line " << __LINE__ << " in function " <<
+      // __func__ << " in file " << __FILE__ << std::endl;
 
       // record time for convertLayout from row to column again
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          computing_timer.enter_subsection("X Convert Layout from row to column, RR GEP step");
+          computing_timer.enter_subsection(
+            "X Convert Layout from row to column, RR GEP step");
         }
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
-      // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
+      // pcout << "No error till line " << __LINE__ << " in function " <<
+      // __func__ << " in file " << __FILE__ << std::endl;
 
-      // kernel function to convert XDevice to col major form and save it in extraBufferDevice using stream streamCompute
-      convertLayout(extraBufferDevice, 
-                    XDevice, 
-                    N/numberBandGroups, //block size
-                    ((M + numberBandGroups - 1)/numberBandGroups), //initBlockRows
-                    numberBandGroups //initBlockCols
-                    );
+      // kernel function to convert XDevice to col major form and save it in
+      // extraBufferDevice using stream streamCompute
+      convertLayout(extraBufferDevice,
+                    XDevice,
+                    N / numberBandGroups, // block size
+                    ((M + numberBandGroups - 1) /
+                     numberBandGroups), // initBlockRows
+                    numberBandGroups    // initBlockCols
+      );
       // Now extraBufferDevice contains X in column major form as needed
 
       // end time
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          computing_timer.leave_subsection("X Convert Layout from row to column, RR GEP step");
+          computing_timer.leave_subsection(
+            "X Convert Layout from row to column, RR GEP step");
         }
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
-      // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
+      // pcout << "No error till line " << __LINE__ << " in function " <<
+      // __func__ << " in file " << __FILE__ << std::endl;
 
       // record time
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          computing_timer.enter_subsection("X Alltoall after subspaceRot, RR GEP step");
+          computing_timer.enter_subsection(
+            "X Alltoall after subspaceRot, RR GEP step");
         }
 
       devicecclMpiInterBand.deviceDirectAllToAllWrapper(
         extraBufferDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
         XDevice,
-        ((M + numberBandGroups - 1)/numberBandGroups) * (N/numberBandGroups),
-        0, //default stream
-        dftParams.useAlltoAllDCCL //to use DCCL to GPU aware MPI
+        ((M + numberBandGroups - 1) / numberBandGroups) *
+          (N / numberBandGroups),
+        0,                        // default stream
+        dftParams.useAlltoAllDCCL // to use DCCL to GPU aware MPI
       );
 
 
@@ -1495,27 +1532,28 @@ namespace dftfe
       if (dftParams.deviceFineGrainedTimings)
         {
           dftfe::utils::deviceSynchronize();
-          computing_timer.leave_subsection("X Alltoall after subspaceRot, RR GEP step");
+          computing_timer.leave_subsection(
+            "X Alltoall after subspaceRot, RR GEP step");
         }
 
 
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
-      // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
+      // pcout << "No error till line " << __LINE__ << " in function " <<
+      // __func__ << " in file " << __FILE__ << std::endl;
 
 
       // copy contents from XDevice to X
       dftfe::utils::deviceMemcpyD2D(
-        X,
-        XDevice,
-        (M * (N/numberBandGroups)) * sizeof(dataTypes::number));
+        X, XDevice, (M * (N / numberBandGroups)) * sizeof(dataTypes::number));
 
 
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
-      // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
+      // pcout << "No error till line " << __LINE__ << " in function " <<
+      // __func__ << " in file " << __FILE__ << std::endl;
 
       // if (dftParams.deviceFineGrainedTimings)
       //   {
@@ -1525,7 +1563,8 @@ namespace dftfe
 
       // print no error after barrier
       // MPI_Barrier(intrapoolcomm);
-      // pcout << "No error till line " << __LINE__ << " in function " << __func__ << " in file " << __FILE__ << std::endl;
+      // pcout << "No error till line " << __LINE__ << " in function " <<
+      // __func__ << " in file " << __FILE__ << std::endl;
     }
 
 
@@ -1547,7 +1586,7 @@ namespace dftfe
       dftfe::elpaScalaManager   &elpaScala,
       std::shared_ptr<
         dftfe::linearAlgebra::BLASWrapper<dftfe::utils::MemorySpace::DEVICE>>
-                          &BLASWrapperPtr,
+                                       &BLASWrapperPtr,
       const dftParameters              &dftParams,
       DeviceNumberScratchMemoryStorage &scratchMemoryStorage)
     {

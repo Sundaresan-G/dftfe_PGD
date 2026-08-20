@@ -146,13 +146,14 @@ namespace dftfe
         deviceStream_t             &stream);
 
       template <typename NumberType>
-      int 
-      deviceDirectAllToAllWrapper(const NumberType *  send,
-                                  dftfe::uInt            sendCount,
-                                  NumberType *       recv,
-                                  dftfe::uInt            recvCount,
-                                  deviceStream_t stream = dftfe::utils::defaultStream,
-                                  bool            useDCCL = true);
+      int
+      deviceDirectAllToAllWrapper(
+        const NumberType *send,
+        dftfe::uInt       sendCount,
+        NumberType       *recv,
+        dftfe::uInt       recvCount,
+        deviceStream_t    stream  = dftfe::utils::defaultStream,
+        bool              useDCCL = true);
 
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       // Non-owning alias used by the legacy NCCL/RCCL direct P2P path.
@@ -168,11 +169,11 @@ namespace dftfe
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
       inline static ncclUniqueId dcclRootId;
       inline static ncclComm_t   dcclRootComm = nullptr;
-      ncclComm_t                 d_ncclComm    = nullptr;
+      ncclComm_t                 d_dcclComm    = nullptr;
 #    elif defined(DFTFE_WITH_SYCL_ONECCL)
-      inline static std::shared_ptr<ccl::kvs> dcclRootIdPtr;
-      inline static std::shared_ptr<ccl::communicator> dcclRootCommPtr;
-      std::shared_ptr<ccl::communicator> d_oneCCLCommPtr;
+      inline static std::shared_ptr<ccl::kvs>          dcclRootId;
+      inline static std::shared_ptr<ccl::communicator> dcclRootComm;
+      std::shared_ptr<ccl::communicator>               d_dcclComm;
 #    endif
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
       defined(DFTFE_WITH_SYCL_ONECCL)

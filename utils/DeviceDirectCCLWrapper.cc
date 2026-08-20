@@ -68,8 +68,8 @@ namespace dftfe
       ccl::kvs::address_type onecclIdAddr;
       if (rootRank == 0)
         {
-          dcclRootIdPtr = ccl::create_main_kvs();
-          onecclIdAddr  = dcclRootIdPtr->get_address();
+          dcclRootId = ccl::create_main_kvs();
+          onecclIdAddr = dcclRootId->get_address();
         }
 
       MPICHECK(MPI_Bcast(onecclIdAddr.data(),
@@ -79,7 +79,7 @@ namespace dftfe
                          dcclMpiCommRoot));
 
       if (rootRank != 0)
-        dcclRootIdPtr = ccl::create_kvs(onecclIdAddr);
+        dcclRootId = ccl::create_kvs(onecclIdAddr);
 
       ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
       rankDeviceMap.push_back(
@@ -88,8 +88,8 @@ namespace dftfe
       auto comms = ccl::create_communicators(rootSize,
                                              rankDeviceMap,
                                              onecclContext,
-                                             dcclRootIdPtr);
-      dcclRootCommPtr =
+                                             dcclRootId);
+      dcclRootComm =
         std::make_shared<ccl::communicator>(std::move(comms[0]));
 #    endif
       dcclCommInit = true;
@@ -115,7 +115,7 @@ namespace dftfe
             throw std::runtime_error(
               "DFT-FE Error: the job-wide NCCL/RCCL root communicator must be initialized before creating split communicators.");
 #    elif defined(DFTFE_WITH_SYCL_ONECCL)
-          if (!dcclCommInit || !dcclRootCommPtr ||
+          if (!dcclCommInit || !dcclRootComm ||
               dcclMpiCommRoot == MPI_COMM_NULL)
             throw std::runtime_error(
               "DFT-FE Error: the job-wide oneCCL root communicator must be initialized before creating split communicators.");
@@ -137,7 +137,7 @@ namespace dftfe
 #      if defined(NCCL_VERSION_CODE) && defined(NCCL_VERSION) && \
         NCCL_VERSION_CODE >= NCCL_VERSION(2, 18, 0)
           NCCLCHECK(ncclCommSplit(
-            dcclRootComm, splitColor, myRank, &d_ncclComm, nullptr));
+            dcclRootComm, splitColor, myRank, &d_dcclComm, nullptr));
 #      else
           (void)splitColor;
           ncclUniqueId subgroupId;
@@ -149,14 +149,14 @@ namespace dftfe
                              0,
                              d_mpiComm));
           NCCLCHECK(
-            ncclCommInitRank(&d_ncclComm, totalRanks, subgroupId, myRank));
+            ncclCommInitRank(&d_dcclComm, totalRanks, subgroupId, myRank));
 #      endif
           if (setAsDefaultP2PComm)
-            dcclCommPtr = &d_ncclComm;
+            dcclCommPtr = &d_dcclComm;
 #    elif defined(DFTFE_WITH_SYCL_ONECCL)
           ONECCLCHECK(
-            d_oneCCLCommPtr = std::make_shared<ccl::communicator>(
-              dcclRootCommPtr->split(splitColor, myRank, true)));
+            d_dcclComm = std::make_shared<ccl::communicator>(
+              dcclRootComm->split(splitColor, myRank, true)));
           (void)setAsDefaultP2PComm;
 #    endif
         }
@@ -174,16 +174,16 @@ namespace dftfe
       if (d_mpiComm != MPI_COMM_NULL)
         MPI_Comm_free(&d_mpiComm);
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (d_ncclComm != nullptr)
+      if (d_dcclComm != nullptr)
         {
-          if (dcclCommPtr == &d_ncclComm)
+          if (dcclCommPtr == &d_dcclComm)
             dcclCommPtr = nullptr;
-          NCCLCHECK(ncclCommFinalize(d_ncclComm));
-          NCCLCHECK(ncclCommDestroy(d_ncclComm));
-          d_ncclComm = nullptr;
+          NCCLCHECK(ncclCommFinalize(d_dcclComm));
+          NCCLCHECK(ncclCommDestroy(d_dcclComm));
+          d_dcclComm = nullptr;
         }
 #  elif defined(DFTFE_WITH_SYCL_ONECCL)
-      d_oneCCLCommPtr.reset();
+      d_dcclComm.reset();
 #  endif
 
       d_deviceDirectDCCLInstanceCounter--;
@@ -198,8 +198,8 @@ namespace dftfe
             }
           dcclCommPtr = nullptr;
 #  elif defined(DFTFE_WITH_SYCL_ONECCL)
-          dcclRootCommPtr.reset();
-          dcclRootIdPtr.reset();
+          dcclRootComm.reset();
+          dcclRootId.reset();
 #  endif
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
     defined(DFTFE_WITH_SYCL_ONECCL)
@@ -222,10 +222,10 @@ namespace dftfe
                                                    deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (d_ncclComm != nullptr)
+      if (d_dcclComm != nullptr)
         {
-          ncclComm_t comm = d_ncclComm;
-            
+          ncclComm_t comm = d_dcclComm;
+
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
                                   size,
@@ -237,10 +237,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (d_oneCCLCommPtr)
+      if (d_dcclComm)
         {
 
-          auto comm = d_oneCCLCommPtr;
+          auto comm = d_dcclComm;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -287,10 +287,10 @@ namespace dftfe
                                                    deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (d_ncclComm != nullptr)
+      if (d_dcclComm != nullptr)
         {
 
-          ncclComm_t comm = d_ncclComm;
+          ncclComm_t comm = d_dcclComm;
 
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -303,10 +303,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (d_oneCCLCommPtr)
+      if (d_dcclComm)
         {
 
-          auto comm = d_oneCCLCommPtr;
+          auto comm = d_dcclComm;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -355,10 +355,10 @@ namespace dftfe
       deviceStream_t             &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (d_ncclComm != nullptr)
+      if (d_dcclComm != nullptr)
         {
 
-          ncclComm_t comm = d_ncclComm;
+          ncclComm_t comm = d_dcclComm;
 
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -371,10 +371,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (d_oneCCLCommPtr)
+      if (d_dcclComm)
         {
 
-          auto comm = d_oneCCLCommPtr;
+          auto comm = d_dcclComm;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -422,11 +422,11 @@ namespace dftfe
       deviceStream_t            &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (d_ncclComm != nullptr)
+      if (d_dcclComm != nullptr)
         {
 
-          ncclComm_t comm = d_ncclComm;
-          
+          ncclComm_t comm = d_dcclComm;
+
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
                                   size * 2,
@@ -438,10 +438,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (d_oneCCLCommPtr)
+      if (d_dcclComm)
         {
 
-          auto comm = d_oneCCLCommPtr;
+          auto comm = d_dcclComm;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -494,10 +494,10 @@ namespace dftfe
       deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (d_ncclComm != nullptr)
+      if (d_dcclComm != nullptr)
         {
 
-          ncclComm_t comm = d_ncclComm;
+          ncclComm_t comm = d_dcclComm;
 
           NCCLCHECK(ncclGroupStart());
           NCCLCHECK(ncclAllReduce((const void *)send1,
@@ -518,10 +518,10 @@ namespace dftfe
         }
 #  endif
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (d_oneCCLCommPtr)
+      if (d_dcclComm)
         {
 
-          auto comm = d_oneCCLCommPtr;
+          auto comm = d_dcclComm;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -605,10 +605,10 @@ namespace dftfe
       deviceStream_t             &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (d_ncclComm != nullptr)
+      if (d_dcclComm != nullptr)
         {
 
-          ncclComm_t comm = d_ncclComm;
+          ncclComm_t comm = d_dcclComm;
 
           NCCLCHECK(ncclGroupStart());
           NCCLCHECK(ncclAllReduce((const void *)send1,
@@ -630,10 +630,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (d_oneCCLCommPtr)
+      if (d_dcclComm)
         {
 
-          auto comm = d_oneCCLCommPtr;
+          auto comm = d_dcclComm;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -708,41 +708,38 @@ namespace dftfe
 
     template <typename NumberType>
     int
-    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const NumberType *        send,
-                                                  dftfe::uInt         sendCount,
-                                                  NumberType *              recv,
-                                                  dftfe::uInt         recvCount,
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const NumberType *send,
+                                                  dftfe::uInt       sendCount,
+                                                  NumberType       *recv,
+                                                  dftfe::uInt       recvCount,
                                                   deviceStream_t stream /*= 0*/,
                                                   bool useDCCL /*= true*/)
     {
-
-      
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (d_oneCCLCommPtr && useDCCL)
+      if (d_dcclComm && useDCCL)
         {
 
-          auto comm = d_oneCCLCommPtr;
+          auto comm = d_dcclComm;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
           ccl::event e;
           ONECCLCHECK(e = ccl::alltoall((const void *)send,
-                                         (void *)recv,
-                                         sendCount * sizeof(NumberType),
-                                         ccl::datatype::uint8,
-                                         *comm,
-                                         devStream));
+                                        (void *)recv,
+                                        sendCount * sizeof(NumberType),
+                                        ccl::datatype::uint8,
+                                        *comm,
+                                        devStream));
           deviceEvent_t commEvent = e.get_native();
           dftfe::utils::deviceStreamWaitEvent(stream, commEvent, 0);
 
           return 0;
-
         }
 #  endif
 
 
 
-      unsigned int sendTo = myRank;
+      unsigned int sendTo   = myRank;
       unsigned int recvFrom = myRank;
 
       dftfe::uInt sendOffset = (dftfe::uInt)sendTo * sendCount;
@@ -757,44 +754,45 @@ namespace dftfe
 
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
 
-      if (d_ncclComm != nullptr && useDCCL)
+      if (d_dcclComm != nullptr && useDCCL)
         {
 
-          ncclComm_t comm = d_ncclComm;
-          
+          ncclComm_t comm = d_dcclComm;
+
           NCCLCHECK(ncclGroupStart());
           for (unsigned int i = 1; i < totalRanks; i++)
             {
-
-              sendTo = (myRank + i) % totalRanks;
+              sendTo   = (myRank + i) % totalRanks;
               recvFrom = (myRank + totalRanks - i) % totalRanks;
 
               sendOffset = (dftfe::uInt)sendTo * sendCount;
               recvOffset = (dftfe::uInt)recvFrom * recvCount;
-              
-                NCCLCHECK(ncclSend(reinterpret_cast<const void *>(send + sendOffset),
-                                  sendCount * sizeof(NumberType),
-                                  ncclChar,
-                                  sendTo,
-                                  comm,
-                                  stream));
-                NCCLCHECK(ncclRecv(reinterpret_cast<void *>(recv + recvOffset),
-                                  recvCount * sizeof(NumberType),
-                                  ncclChar,
-                                  recvFrom,
-                                  comm,
-                                  stream));
+
+              NCCLCHECK(
+                ncclSend(reinterpret_cast<const void *>(send + sendOffset),
+                         sendCount * sizeof(NumberType),
+                         ncclChar,
+                         sendTo,
+                         comm,
+                         stream));
+              NCCLCHECK(ncclRecv(reinterpret_cast<void *>(recv + recvOffset),
+                                 recvCount * sizeof(NumberType),
+                                 ncclChar,
+                                 recvFrom,
+                                 comm,
+                                 stream));
             }
           NCCLCHECK(ncclGroupEnd());
-        } else
-#endif
+        }
+      else
+#  endif
         {
 #  if defined(DFTFE_WITH_DEVICE_AWARE_MPI)
 
           dftfe::utils::deviceStreamSynchronize(stream);
           for (unsigned int i = 1; i < totalRanks; i++)
             {
-              sendTo = (myRank + i) % totalRanks;
+              sendTo   = (myRank + i) % totalRanks;
               recvFrom = (myRank + totalRanks - i) % totalRanks;
 
               sendOffset = (dftfe::uInt)sendTo * sendCount;
@@ -825,13 +823,39 @@ namespace dftfe
     }
 
     // initialize alltoall templates
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double * send, dftfe::uInt sendCount, double * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const double  *send,
+                                                  dftfe::uInt    sendCount,
+                                                  double        *recv,
+                                                  dftfe::uInt    recvCount,
+                                                  deviceStream_t stream,
+                                                  bool           useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float * send, dftfe::uInt sendCount, float * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(const float   *send,
+                                                  dftfe::uInt    sendCount,
+                                                  float         *recv,
+                                                  dftfe::uInt    recvCount,
+                                                  deviceStream_t stream,
+                                                  bool           useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<double> * send, dftfe::uInt sendCount, std::complex<double> * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(
+      const std::complex<double> *send,
+      dftfe::uInt                 sendCount,
+      std::complex<double>       *recv,
+      dftfe::uInt                 recvCount,
+      deviceStream_t              stream,
+      bool                        useDCCL);
 
-    template int DeviceCCLWrapper::deviceDirectAllToAllWrapper(const std::complex<float> * send, dftfe::uInt sendCount, std::complex<float> * recv, dftfe::uInt recvCount, deviceStream_t stream, bool useDCCL);
+    template int
+    DeviceCCLWrapper::deviceDirectAllToAllWrapper(
+      const std::complex<float> *send,
+      dftfe::uInt                sendCount,
+      std::complex<float>       *recv,
+      dftfe::uInt                recvCount,
+      deviceStream_t             stream,
+      bool                       useDCCL);
 
   } // namespace utils
 } // namespace dftfe

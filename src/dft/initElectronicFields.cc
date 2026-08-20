@@ -103,18 +103,19 @@ namespace dftfe
     // initialize PSI and density
     //
     const dftfe::uInt numberBandGroups =
-          dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
+      dealii::Utilities::MPI::n_mpi_processes(interBandGroupComm);
 
     if (d_dftParamsPtr->solverMode == "BANDS")
       {
         AssertThrow(
           ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1) *
               matrix_free_data.get_vector_partitioner()->locally_owned_size() <
-            std::numeric_limits<dftfe::Int>::max() / (d_numEigenValues/numberBandGroups),
+            std::numeric_limits<dftfe::Int>::max() /
+              (d_numEigenValues / numberBandGroups),
           dealii::ExcMessage(
             "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
         d_eigenVectorsFlattenedHost.resize(
-          ((d_numEigenValues/numberBandGroups) *
+          ((d_numEigenValues / numberBandGroups) *
            matrix_free_data.get_vector_partitioner()->locally_owned_size()) *
             ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),
           dataTypes::number(0.0));
@@ -125,11 +126,12 @@ namespace dftfe
           ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1) *
               (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
               matrix_free_data.get_vector_partitioner()->locally_owned_size() <
-            std::numeric_limits<dftfe::Int>::max() / (d_numEigenValues/numberBandGroups),
+            std::numeric_limits<dftfe::Int>::max() /
+              (d_numEigenValues / numberBandGroups),
           dealii::ExcMessage(
             "DFT-FE error: size of local wavefunctions storage exceeds integer bounds. Please increase number of MPI tasks"));
         d_eigenVectorsFlattenedHost.resize(
-          ((d_numEigenValues/numberBandGroups) *
+          ((d_numEigenValues / numberBandGroups) *
            matrix_free_data.get_vector_partitioner()->locally_owned_size()) *
             (1 + d_dftParamsPtr->spinPolarized) * d_kPointWeights.size() *
             ((d_dftParamsPtr->noncolin || d_dftParamsPtr->hasSOC) ? 2 : 1),

@@ -149,28 +149,28 @@ namespace dftfe
 
       private:
         friend class ScratchMemoryStorage<ValueType, memorySpace>;
-         friend class View;
+        friend class View;
 
-        Handle(std::shared_ptr<PoolState>                    state,
-           MemoryStorage<ValueType, memorySpace> *buffer,
-           std::size_t                             size) noexcept;
+        Handle(std::shared_ptr<PoolState>             state,
+               MemoryStorage<ValueType, memorySpace> *buffer,
+               std::size_t                            size) noexcept;
 
-         void
-         validateInUse() const;
+        void
+        validateInUse() const;
 
-         MemoryStorage<ValueType, memorySpace> &
-         storage() &;
+        MemoryStorage<ValueType, memorySpace> &
+        storage() &;
 
-         const MemoryStorage<ValueType, memorySpace> &
-         storage() const &;
+        const MemoryStorage<ValueType, memorySpace> &
+        storage() const &;
 
         void
         releaseNoThrow() noexcept;
 
-        std::shared_ptr<PoolState>                d_state;
+        std::shared_ptr<PoolState>             d_state;
         MemoryStorage<ValueType, memorySpace> *d_buffer = nullptr;
-         std::size_t                               d_size  = 0;
-         View                                      d_view;
+        std::size_t                            d_size   = 0;
+        View                                   d_view;
       };
 
       ScratchMemoryStorage();
@@ -192,11 +192,11 @@ namespace dftfe
        * entries.
        *
        * A reused buffer can be larger than the requested size so that the pool
-      * can avoid reallocating memory. The returned handle exposes a logical
-      * view whose size matches the requested size even when the underlying
-      * reused buffer is larger. Regardless of whether the buffer is reused or
-      * resized, its contents are initialized to @p initVal. The returned
-      * handle releases the buffer automatically on destruction.
+       * can avoid reallocating memory. The returned handle exposes a logical
+       * view whose size matches the requested size even when the underlying
+       * reused buffer is larger. Regardless of whether the buffer is reused or
+       * resized, its contents are initialized to @p initVal. The returned
+       * handle releases the buffer automatically on destruction.
        */
       [[nodiscard]] Handle
       acquire(std::size_t size, ValueType initVal = ValueType());

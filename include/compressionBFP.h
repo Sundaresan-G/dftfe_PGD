@@ -4,13 +4,17 @@
 **   Core device helpers (generic and fixed-rate variants):
 **     bfp_encode_block         – encode to uint32_t (runtime vbits)
 **     bfp_decode_block         – decode from uint32_t (runtime vbits)
-**     bfp_encode_block_32      – encode to uint32_t (constexpr vbits, 8 bpv fast path)
+**     bfp_encode_block_32      – encode to uint32_t (constexpr vbits, 8 bpv
+*fast path)
 **     bfp_decode_block_32      – decode from uint32_t (constexpr vbits)
-**     bfp_encode_block_48      – encode to uint64 lower 48 bits (constexpr, 12 bpv)
+**     bfp_encode_block_48      – encode to uint64 lower 48 bits (constexpr, 12
+*bpv)
 **     bfp_decode_block_48      – decode from uint64 lower 48 bits (constexpr)
-**     bfp_encode_block_40      – encode to uint64 lower 40 bits (constexpr, 10 bpv)
+**     bfp_encode_block_40      – encode to uint64 lower 40 bits (constexpr, 10
+*bpv)
 **     bfp_decode_block_40      – decode from uint64 lower 40 bits (constexpr)
-**     bfp_encode_block_64      – encode to uint64 (constexpr vbits, 16 bpv fast path)
+**     bfp_encode_block_64      – encode to uint64 (constexpr vbits, 16 bpv fast
+*path)
 **     bfp_decode_block_64      – decode from uint64 (constexpr vbits)
 **     bfp_encode_block_writer  – encode via Writer (super-block, any bpv)
 **     bfp_decode_block_reader  – decode via Reader (super-block, any bpv)
@@ -22,13 +26,17 @@
 **
 **     bpt=1 specializations:
 **       8  bpv (uint32_t):  compress_bfp_8_kernel, decompress_bfp_8_kernel,
-**                           compress_gather_bfp_8_kernel, decompress_scatter_add_bfp_8_kernel
+**                           compress_gather_bfp_8_kernel,
+*decompress_scatter_add_bfp_8_kernel
 **       10 bpv (5×uint8_t):  compress_bfp_10_kernel, decompress_bfp_10_kernel,
-**                            compress_gather_bfp_10_kernel, decompress_scatter_add_bfp_10_kernel
+**                            compress_gather_bfp_10_kernel,
+*decompress_scatter_add_bfp_10_kernel
 **       12 bpv (3×uint16_t): compress_bfp_12_kernel, decompress_bfp_12_kernel,
-**                            compress_gather_bfp_12_kernel, decompress_scatter_add_bfp_12_kernel
+**                            compress_gather_bfp_12_kernel,
+*decompress_scatter_add_bfp_12_kernel
 **       16 bpv (uint64):    compress_bfp_16_kernel, decompress_bfp_16_kernel,
-**                           compress_gather_bfp_16_kernel, decompress_scatter_add_bfp_16_kernel
+**                           compress_gather_bfp_16_kernel,
+*decompress_scatter_add_bfp_16_kernel
 **
 ** CUDA/HIP and SYCL backends are both included via preprocessor guards.
 ** Included by compression.h. Never included directly by application code.
@@ -97,8 +105,9 @@ namespace compression
 
     unsigned int packed = e; /* exponent in lower EBITS bits */
 
-    /* quantize: q_i = round(value_i * 2^(vbits-1) / 2^emax), clamped to signed range */
-    Scalar             s     = portable_ldexp((Scalar)1.0, (int)vbits - 1 - emax);
+    /* quantize: q_i = round(value_i * 2^(vbits-1) / 2^emax), clamped to signed
+     * range */
+    Scalar             s = portable_ldexp((Scalar)1.0, (int)vbits - 1 - emax);
     const unsigned int vmask = (1u << vbits) - 1u;
     const int          qmax  = (int)(vmask >> 1u);
     for (int i = 0; i < 4; i++)
@@ -219,8 +228,8 @@ namespace compression
 
     for (int i = 0; i < 4; i++)
       {
-        unsigned int raw = (unsigned int)(
-          (packed >> (ebits + (unsigned int)i * vbits)) & vmask);
+        unsigned int raw =
+          (unsigned int)((packed >> (ebits + (unsigned int)i * vbits)) & vmask);
         int q = (int)raw;
         if (q >= sign_threshold)
           q -= (1 << vbits);
@@ -301,8 +310,8 @@ namespace compression
 
     for (int i = 0; i < 4; i++)
       {
-        unsigned int raw = (unsigned int)(
-          (packed >> (ebits + (unsigned int)i * vbits)) & vmask);
+        unsigned int raw =
+          (unsigned int)((packed >> (ebits + (unsigned int)i * vbits)) & vmask);
         int q = (int)raw;
         if (q >= sign_threshold)
           q -= (1 << vbits);
@@ -455,8 +464,8 @@ namespace compression
 
     for (int i = 0; i < 4; i++)
       {
-        unsigned int raw = (unsigned int)(
-          (packed >> (ebits + (unsigned int)i * vbits)) & vmask);
+        unsigned int raw =
+          (unsigned int)((packed >> (ebits + (unsigned int)i * vbits)) & vmask);
         int q = (int)raw;
         if (q >= sign_threshold)
           q -= (1 << vbits);
@@ -483,7 +492,7 @@ namespace compression
 
     writer.write_bits(e, ebits); /* exponent */
 
-    Scalar             s     = portable_ldexp((Scalar)1.0, (int)vbits - 1 - emax);
+    Scalar             s = portable_ldexp((Scalar)1.0, (int)vbits - 1 - emax);
     const unsigned int vmask = (1u << vbits) - 1u;
     const int          qmax  = (int)(vmask >> 1u);
     for (int i = 0; i < 4; i++)
@@ -568,8 +577,8 @@ namespace compression
         pad_block(fblock, nx);
       }
 
-    uint64   packed = bfp_encode_block_48(fblock);
-    size_t   out    = (size_t)block_idx * 3u;
+    uint64 packed   = bfp_encode_block_48(fblock);
+    size_t out      = (size_t)block_idx * 3u;
     stream[out]     = (uint16_t)(packed);
     stream[out + 1] = (uint16_t)(packed >> 16);
     stream[out + 2] = (uint16_t)(packed >> 32);
@@ -587,8 +596,7 @@ namespace compression
       return;
 
     size_t out    = (size_t)block_idx * 3u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 16) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 16) |
                     ((uint64)stream[out + 2] << 32);
 
     Scalar fblock[4];
@@ -612,23 +620,21 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
-  compress_gather_bfp_12_kernel(
-    const Scalar    *COMPRESSION_RESTRICT dataArray,
-    const IndexType *COMPRESSION_RESTRICT indices,
-    unsigned int                          gatherBlockSize,
-    uint16_t *COMPRESSION_RESTRICT        stream,
-    unsigned int                          tot_blocks)
+  compress_gather_bfp_12_kernel(const Scalar *COMPRESSION_RESTRICT    dataArray,
+                                const IndexType *COMPRESSION_RESTRICT indices,
+                                unsigned int                   gatherBlockSize,
+                                uint16_t *COMPRESSION_RESTRICT stream,
+                                unsigned int                   tot_blocks)
   {
-    const unsigned int block_idx        = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int block_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (block_idx >= tot_blocks)
       return;
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -636,8 +642,8 @@ namespace compression
     fblock[2] = dataArray[base + 2];
     fblock[3] = dataArray[base + 3];
 
-    uint64   packed = bfp_encode_block_48(fblock);
-    size_t   out    = (size_t)block_idx * 3u;
+    uint64 packed   = bfp_encode_block_48(fblock);
+    size_t out      = (size_t)block_idx * 3u;
     stream[out]     = (uint16_t)(packed);
     stream[out + 1] = (uint16_t)(packed >> 16);
     stream[out + 2] = (uint16_t)(packed >> 32);
@@ -646,7 +652,7 @@ namespace compression
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
   decompress_scatter_add_bfp_12_kernel(
-    const uint16_t  *COMPRESSION_RESTRICT stream,
+    const uint16_t *COMPRESSION_RESTRICT  stream,
     const IndexType *COMPRESSION_RESTRICT indices,
     unsigned int                          gatherBlockSize,
     Scalar *COMPRESSION_RESTRICT          dataArray,
@@ -657,8 +663,7 @@ namespace compression
       return;
 
     size_t out    = (size_t)block_idx * 3u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 16) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 16) |
                     ((uint64)stream[out + 2] << 32);
 
     Scalar fblock[4];
@@ -666,10 +671,9 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
@@ -709,8 +713,8 @@ namespace compression
         pad_block(fblock, nx);
       }
 
-    uint64   packed = bfp_encode_block_48(fblock);
-    size_t   out    = (size_t)block_idx * 3u;
+    uint64 packed   = bfp_encode_block_48(fblock);
+    size_t out      = (size_t)block_idx * 3u;
     stream[out]     = (uint16_t)(packed);
     stream[out + 1] = (uint16_t)(packed >> 16);
     stream[out + 2] = (uint16_t)(packed >> 32);
@@ -718,19 +722,18 @@ namespace compression
 
   template <typename Scalar>
   void
-  decompress_bfp_12_kernel(sycl::nd_item<1>  item,
-                           const uint16_t   *stream,
-                           Scalar           *data,
-                           unsigned int      dim,
-                           unsigned int      tot_blocks)
+  decompress_bfp_12_kernel(sycl::nd_item<1> item,
+                           const uint16_t  *stream,
+                           Scalar          *data,
+                           unsigned int     dim,
+                           unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
       return;
 
     size_t out    = (size_t)block_idx * 3u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 16) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 16) |
                     ((uint64)stream[out + 2] << 32);
 
     Scalar fblock[4];
@@ -754,12 +757,12 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  compress_gather_bfp_12_kernel(sycl::nd_item<1>  item,
-                                const Scalar     *dataArray,
-                                const IndexType  *indices,
-                                unsigned int      gatherBlockSize,
-                                uint16_t         *stream,
-                                unsigned int      tot_blocks)
+  compress_gather_bfp_12_kernel(sycl::nd_item<1> item,
+                                const Scalar    *dataArray,
+                                const IndexType *indices,
+                                unsigned int     gatherBlockSize,
+                                uint16_t        *stream,
+                                unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
@@ -767,10 +770,9 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -778,8 +780,8 @@ namespace compression
     fblock[2] = dataArray[base + 2];
     fblock[3] = dataArray[base + 3];
 
-    uint64   packed = bfp_encode_block_48(fblock);
-    size_t   out    = (size_t)block_idx * 3u;
+    uint64 packed   = bfp_encode_block_48(fblock);
+    size_t out      = (size_t)block_idx * 3u;
     stream[out]     = (uint16_t)(packed);
     stream[out + 1] = (uint16_t)(packed >> 16);
     stream[out + 2] = (uint16_t)(packed >> 32);
@@ -787,20 +789,19 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  decompress_scatter_add_bfp_12_kernel(sycl::nd_item<1>  item,
-                                       const uint16_t   *stream,
-                                       const IndexType  *indices,
-                                       unsigned int      gatherBlockSize,
-                                       Scalar           *dataArray,
-                                       unsigned int      tot_blocks)
+  decompress_scatter_add_bfp_12_kernel(sycl::nd_item<1> item,
+                                       const uint16_t  *stream,
+                                       const IndexType *indices,
+                                       unsigned int     gatherBlockSize,
+                                       Scalar          *dataArray,
+                                       unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
       return;
 
     size_t out    = (size_t)block_idx * 3u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 16) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 16) |
                     ((uint64)stream[out + 2] << 32);
 
     Scalar fblock[4];
@@ -808,10 +809,9 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
@@ -864,8 +864,8 @@ namespace compression
         pad_block(fblock, nx);
       }
 
-    uint64   packed = bfp_encode_block_40(fblock);
-    size_t   out    = (size_t)block_idx * 5u;
+    uint64 packed   = bfp_encode_block_40(fblock);
+    size_t out      = (size_t)block_idx * 5u;
     stream[out]     = (uint8_t)(packed);
     stream[out + 1] = (uint8_t)(packed >> 8);
     stream[out + 2] = (uint8_t)(packed >> 16);
@@ -885,8 +885,7 @@ namespace compression
       return;
 
     size_t out    = (size_t)block_idx * 5u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 8) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 8) |
                     ((uint64)stream[out + 2] << 16) |
                     ((uint64)stream[out + 3] << 24) |
                     ((uint64)stream[out + 4] << 32);
@@ -912,23 +911,21 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
-  compress_gather_bfp_10_kernel(
-    const Scalar    *COMPRESSION_RESTRICT dataArray,
-    const IndexType *COMPRESSION_RESTRICT indices,
-    unsigned int                          gatherBlockSize,
-    uint8_t *COMPRESSION_RESTRICT         stream,
-    unsigned int                          tot_blocks)
+  compress_gather_bfp_10_kernel(const Scalar *COMPRESSION_RESTRICT    dataArray,
+                                const IndexType *COMPRESSION_RESTRICT indices,
+                                unsigned int                  gatherBlockSize,
+                                uint8_t *COMPRESSION_RESTRICT stream,
+                                unsigned int                  tot_blocks)
   {
-    const unsigned int block_idx        = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int block_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (block_idx >= tot_blocks)
       return;
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -936,8 +933,8 @@ namespace compression
     fblock[2] = dataArray[base + 2];
     fblock[3] = dataArray[base + 3];
 
-    uint64   packed = bfp_encode_block_40(fblock);
-    size_t   out    = (size_t)block_idx * 5u;
+    uint64 packed   = bfp_encode_block_40(fblock);
+    size_t out      = (size_t)block_idx * 5u;
     stream[out]     = (uint8_t)(packed);
     stream[out + 1] = (uint8_t)(packed >> 8);
     stream[out + 2] = (uint8_t)(packed >> 16);
@@ -948,7 +945,7 @@ namespace compression
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
   decompress_scatter_add_bfp_10_kernel(
-    const uint8_t   *COMPRESSION_RESTRICT stream,
+    const uint8_t *COMPRESSION_RESTRICT   stream,
     const IndexType *COMPRESSION_RESTRICT indices,
     unsigned int                          gatherBlockSize,
     Scalar *COMPRESSION_RESTRICT          dataArray,
@@ -959,8 +956,7 @@ namespace compression
       return;
 
     size_t out    = (size_t)block_idx * 5u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 8) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 8) |
                     ((uint64)stream[out + 2] << 16) |
                     ((uint64)stream[out + 3] << 24) |
                     ((uint64)stream[out + 4] << 32);
@@ -970,10 +966,9 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
@@ -1013,8 +1008,8 @@ namespace compression
         pad_block(fblock, nx);
       }
 
-    uint64   packed = bfp_encode_block_40(fblock);
-    size_t   out    = (size_t)block_idx * 5u;
+    uint64 packed   = bfp_encode_block_40(fblock);
+    size_t out      = (size_t)block_idx * 5u;
     stream[out]     = (uint8_t)(packed);
     stream[out + 1] = (uint8_t)(packed >> 8);
     stream[out + 2] = (uint8_t)(packed >> 16);
@@ -1024,19 +1019,18 @@ namespace compression
 
   template <typename Scalar>
   void
-  decompress_bfp_10_kernel(sycl::nd_item<1>  item,
-                           const uint8_t    *stream,
-                           Scalar           *data,
-                           unsigned int      dim,
-                           unsigned int      tot_blocks)
+  decompress_bfp_10_kernel(sycl::nd_item<1> item,
+                           const uint8_t   *stream,
+                           Scalar          *data,
+                           unsigned int     dim,
+                           unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
       return;
 
     size_t out    = (size_t)block_idx * 5u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 8) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 8) |
                     ((uint64)stream[out + 2] << 16) |
                     ((uint64)stream[out + 3] << 24) |
                     ((uint64)stream[out + 4] << 32);
@@ -1062,12 +1056,12 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  compress_gather_bfp_10_kernel(sycl::nd_item<1>  item,
-                                const Scalar     *dataArray,
-                                const IndexType  *indices,
-                                unsigned int      gatherBlockSize,
-                                uint8_t          *stream,
-                                unsigned int      tot_blocks)
+  compress_gather_bfp_10_kernel(sycl::nd_item<1> item,
+                                const Scalar    *dataArray,
+                                const IndexType *indices,
+                                unsigned int     gatherBlockSize,
+                                uint8_t         *stream,
+                                unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
@@ -1075,10 +1069,9 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -1086,8 +1079,8 @@ namespace compression
     fblock[2] = dataArray[base + 2];
     fblock[3] = dataArray[base + 3];
 
-    uint64   packed = bfp_encode_block_40(fblock);
-    size_t   out    = (size_t)block_idx * 5u;
+    uint64 packed   = bfp_encode_block_40(fblock);
+    size_t out      = (size_t)block_idx * 5u;
     stream[out]     = (uint8_t)(packed);
     stream[out + 1] = (uint8_t)(packed >> 8);
     stream[out + 2] = (uint8_t)(packed >> 16);
@@ -1097,20 +1090,19 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  decompress_scatter_add_bfp_10_kernel(sycl::nd_item<1>  item,
-                                       const uint8_t    *stream,
-                                       const IndexType  *indices,
-                                       unsigned int      gatherBlockSize,
-                                       Scalar           *dataArray,
-                                       unsigned int      tot_blocks)
+  decompress_scatter_add_bfp_10_kernel(sycl::nd_item<1> item,
+                                       const uint8_t   *stream,
+                                       const IndexType *indices,
+                                       unsigned int     gatherBlockSize,
+                                       Scalar          *dataArray,
+                                       unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
       return;
 
     size_t out    = (size_t)block_idx * 5u;
-    uint64 packed = (uint64)stream[out] |
-                    ((uint64)stream[out + 1] << 8) |
+    uint64 packed = (uint64)stream[out] | ((uint64)stream[out + 1] << 8) |
                     ((uint64)stream[out + 2] << 16) |
                     ((uint64)stream[out + 3] << 24) |
                     ((uint64)stream[out + 4] << 32);
@@ -1120,10 +1112,9 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
@@ -1210,23 +1201,21 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
-  compress_gather_bfp_8_kernel(
-    const Scalar    *COMPRESSION_RESTRICT dataArray,
-    const IndexType *COMPRESSION_RESTRICT indices,
-    unsigned int                          gatherBlockSize,
-    unsigned int *COMPRESSION_RESTRICT    stream,
-    unsigned int                          tot_blocks)
+  compress_gather_bfp_8_kernel(const Scalar *COMPRESSION_RESTRICT    dataArray,
+                               const IndexType *COMPRESSION_RESTRICT indices,
+                               unsigned int gatherBlockSize,
+                               unsigned int *COMPRESSION_RESTRICT stream,
+                               unsigned int                       tot_blocks)
   {
     const unsigned int block_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (block_idx >= tot_blocks)
       return;
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
-    unsigned int       gatherIdx  = block_idx / blocks_per_entry;
+    unsigned int       gatherIdx        = block_idx / blocks_per_entry;
     unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
     unsigned int       intraIdx   = localBlock * 4u;
-    size_t base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -1241,7 +1230,7 @@ namespace compression
   COMPRESSION_GLOBAL void
   decompress_scatter_add_bfp_8_kernel(
     const unsigned int *COMPRESSION_RESTRICT stream,
-    const IndexType    *COMPRESSION_RESTRICT indices,
+    const IndexType *COMPRESSION_RESTRICT    indices,
     unsigned int                             gatherBlockSize,
     Scalar *COMPRESSION_RESTRICT             dataArray,
     unsigned int                             tot_blocks)
@@ -1254,13 +1243,12 @@ namespace compression
     bfp_decode_block_32(stream[block_idx], fblock);
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
-    unsigned int       gatherIdx  = block_idx / blocks_per_entry;
+    unsigned int       gatherIdx        = block_idx / blocks_per_entry;
     unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
     unsigned int       intraIdx   = localBlock * 4u;
-    size_t base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
-    portable_atomicAdd(&dataArray[base],     fblock[0]);
+    portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
     portable_atomicAdd(&dataArray[base + 2], fblock[2]);
     portable_atomicAdd(&dataArray[base + 3], fblock[3]);
@@ -1334,23 +1322,22 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  compress_gather_bfp_8_kernel(sycl::nd_item<1>   item,
-                               const Scalar      *dataArray,
-                               const IndexType   *indices,
-                               unsigned int        gatherBlockSize,
-                               unsigned int       *stream,
-                               unsigned int        tot_blocks)
+  compress_gather_bfp_8_kernel(sycl::nd_item<1> item,
+                               const Scalar    *dataArray,
+                               const IndexType *indices,
+                               unsigned int     gatherBlockSize,
+                               unsigned int    *stream,
+                               unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
       return;
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
-    unsigned int       gatherIdx  = block_idx / blocks_per_entry;
+    unsigned int       gatherIdx        = block_idx / blocks_per_entry;
     unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
     unsigned int       intraIdx   = localBlock * 4u;
-    size_t base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -1363,13 +1350,12 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  decompress_scatter_add_bfp_8_kernel(
-    sycl::nd_item<1>    item,
-    const unsigned int *stream,
-    const IndexType    *indices,
-    unsigned int        gatherBlockSize,
-    Scalar             *dataArray,
-    unsigned int        tot_blocks)
+  decompress_scatter_add_bfp_8_kernel(sycl::nd_item<1>    item,
+                                      const unsigned int *stream,
+                                      const IndexType    *indices,
+                                      unsigned int        gatherBlockSize,
+                                      Scalar             *dataArray,
+                                      unsigned int        tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
@@ -1379,13 +1365,12 @@ namespace compression
     bfp_decode_block_32(stream[block_idx], fblock);
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
-    unsigned int       gatherIdx  = block_idx / blocks_per_entry;
+    unsigned int       gatherIdx        = block_idx / blocks_per_entry;
     unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
     unsigned int       intraIdx   = localBlock * 4u;
-    size_t base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
-    portable_atomicAdd(&dataArray[base],     fblock[0]);
+    portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
     portable_atomicAdd(&dataArray[base + 2], fblock[2]);
     portable_atomicAdd(&dataArray[base + 3], fblock[3]);
@@ -1470,23 +1455,21 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
-  compress_gather_bfp_16_kernel(
-    const Scalar    *COMPRESSION_RESTRICT dataArray,
-    const IndexType *COMPRESSION_RESTRICT indices,
-    unsigned int                          gatherBlockSize,
-    uint64 *COMPRESSION_RESTRICT          stream,
-    unsigned int                          tot_blocks)
+  compress_gather_bfp_16_kernel(const Scalar *COMPRESSION_RESTRICT    dataArray,
+                                const IndexType *COMPRESSION_RESTRICT indices,
+                                unsigned int                 gatherBlockSize,
+                                uint64 *COMPRESSION_RESTRICT stream,
+                                unsigned int                 tot_blocks)
   {
-    const unsigned int block_idx        = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int block_idx = blockIdx.x * blockDim.x + threadIdx.x;
     if (block_idx >= tot_blocks)
       return;
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -1500,7 +1483,7 @@ namespace compression
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
   decompress_scatter_add_bfp_16_kernel(
-    const uint64    *COMPRESSION_RESTRICT stream,
+    const uint64 *COMPRESSION_RESTRICT    stream,
     const IndexType *COMPRESSION_RESTRICT indices,
     unsigned int                          gatherBlockSize,
     Scalar *COMPRESSION_RESTRICT          dataArray,
@@ -1515,12 +1498,11 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
-    portable_atomicAdd(&dataArray[base],     fblock[0]);
+    portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
     portable_atomicAdd(&dataArray[base + 2], fblock[2]);
     portable_atomicAdd(&dataArray[base + 3], fblock[3]);
@@ -1563,11 +1545,11 @@ namespace compression
 
   template <typename Scalar>
   void
-  decompress_bfp_16_kernel(sycl::nd_item<1>  item,
-                           const uint64     *stream,
-                           Scalar           *data,
-                           unsigned int      dim,
-                           unsigned int      tot_blocks)
+  decompress_bfp_16_kernel(sycl::nd_item<1> item,
+                           const uint64    *stream,
+                           Scalar          *data,
+                           unsigned int     dim,
+                           unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
@@ -1594,12 +1576,12 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  compress_gather_bfp_16_kernel(sycl::nd_item<1>  item,
-                                const Scalar     *dataArray,
-                                const IndexType  *indices,
-                                unsigned int      gatherBlockSize,
-                                uint64           *stream,
-                                unsigned int      tot_blocks)
+  compress_gather_bfp_16_kernel(sycl::nd_item<1> item,
+                                const Scalar    *dataArray,
+                                const IndexType *indices,
+                                unsigned int     gatherBlockSize,
+                                uint64          *stream,
+                                unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
@@ -1607,10 +1589,9 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
     Scalar fblock[4];
     fblock[0] = dataArray[base];
@@ -1623,12 +1604,12 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  decompress_scatter_add_bfp_16_kernel(sycl::nd_item<1>  item,
-                                       const uint64     *stream,
-                                       const IndexType  *indices,
-                                       unsigned int      gatherBlockSize,
-                                       Scalar           *dataArray,
-                                       unsigned int      tot_blocks)
+  decompress_scatter_add_bfp_16_kernel(sycl::nd_item<1> item,
+                                       const uint64    *stream,
+                                       const IndexType *indices,
+                                       unsigned int     gatherBlockSize,
+                                       Scalar          *dataArray,
+                                       unsigned int     tot_blocks)
   {
     const unsigned int block_idx = item.get_global_id(0);
     if (block_idx >= tot_blocks)
@@ -1639,12 +1620,11 @@ namespace compression
 
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
     unsigned int       gatherIdx        = block_idx / blocks_per_entry;
-    unsigned int       localBlock       = block_idx - gatherIdx * blocks_per_entry;
-    unsigned int       intraIdx         = localBlock * 4u;
-    size_t             base =
-      (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+    unsigned int       localBlock = block_idx - gatherIdx * blocks_per_entry;
+    unsigned int       intraIdx   = localBlock * 4u;
+    size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
-    portable_atomicAdd(&dataArray[base],     fblock[0]);
+    portable_atomicAdd(&dataArray[base], fblock[0]);
     portable_atomicAdd(&dataArray[base + 1], fblock[1]);
     portable_atomicAdd(&dataArray[base + 2], fblock[2]);
     portable_atomicAdd(&dataArray[base + 3], fblock[3]);
@@ -1772,18 +1752,17 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
-  compress_gather_bfp_sb_kernel(
-    const Scalar     *COMPRESSION_RESTRICT dataArray,
-    const IndexType  *COMPRESSION_RESTRICT indices,
-    unsigned int                           gatherBlockSize,
-    Word *COMPRESSION_RESTRICT             stream,
-    unsigned int                           maxbits,
-    unsigned int                           tot_blocks,
-    unsigned int                           bpt,
-    unsigned int                           wpt,
-    unsigned int                           num_words)
+  compress_gather_bfp_sb_kernel(const Scalar *COMPRESSION_RESTRICT    dataArray,
+                                const IndexType *COMPRESSION_RESTRICT indices,
+                                unsigned int               gatherBlockSize,
+                                Word *COMPRESSION_RESTRICT stream,
+                                unsigned int               maxbits,
+                                unsigned int               tot_blocks,
+                                unsigned int               bpt,
+                                unsigned int               wpt,
+                                unsigned int               num_words)
   {
-    const unsigned int super_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int super_idx        = blockIdx.x * blockDim.x + threadIdx.x;
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
 
     Word local_words[MAX_WORDS_PER_SUPERBLOCK];
@@ -1800,8 +1779,7 @@ namespace compression
         unsigned int gatherIdx  = block_idx / blocks_per_entry;
         unsigned int localBlock = block_idx - gatherIdx * blocks_per_entry;
         unsigned int intraIdx   = localBlock * 4u;
-        size_t base =
-          (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+        size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
         Scalar fblock[4];
         fblock[0] = dataArray[base];
@@ -1826,16 +1804,16 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   COMPRESSION_GLOBAL void
-  decompress_scatter_add_bfp_sb_kernel(
-    const Word      *COMPRESSION_RESTRICT stream,
-    const IndexType *COMPRESSION_RESTRICT indices,
-    unsigned int                          gatherBlockSize,
-    Scalar *COMPRESSION_RESTRICT          dataArray,
-    unsigned int                          maxbits,
-    unsigned int                          tot_blocks,
-    unsigned int                          bpt,
-    unsigned int                          wpt,
-    unsigned int                          num_words)
+  decompress_scatter_add_bfp_sb_kernel(const Word *COMPRESSION_RESTRICT stream,
+                                       const IndexType *COMPRESSION_RESTRICT
+                                                    indices,
+                                       unsigned int gatherBlockSize,
+                                       Scalar *COMPRESSION_RESTRICT dataArray,
+                                       unsigned int                 maxbits,
+                                       unsigned int                 tot_blocks,
+                                       unsigned int                 bpt,
+                                       unsigned int                 wpt,
+                                       unsigned int                 num_words)
   {
     const unsigned int super_idx  = blockIdx.x * blockDim.x + threadIdx.x;
     const unsigned int block_base = super_idx * bpt;
@@ -1867,10 +1845,9 @@ namespace compression
         unsigned int gatherIdx  = block_idx / blocks_per_entry;
         unsigned int localBlock = block_idx - gatherIdx * blocks_per_entry;
         unsigned int intraIdx   = localBlock * 4u;
-        size_t base =
-          (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+        size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
-        portable_atomicAdd(&dataArray[base],     fblock[0]);
+        portable_atomicAdd(&dataArray[base], fblock[0]);
         portable_atomicAdd(&dataArray[base + 1], fblock[1]);
         portable_atomicAdd(&dataArray[base + 2], fblock[2]);
         portable_atomicAdd(&dataArray[base + 3], fblock[3]);
@@ -1993,19 +1970,18 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  compress_gather_bfp_sb_kernel(
-    sycl::nd_item<1>   item,
-    const Scalar      *dataArray,
-    const IndexType   *indices,
-    unsigned int        gatherBlockSize,
-    Word               *stream,
-    unsigned int        maxbits,
-    unsigned int        tot_blocks,
-    unsigned int        bpt,
-    unsigned int        wpt,
-    unsigned int        num_words)
+  compress_gather_bfp_sb_kernel(sycl::nd_item<1> item,
+                                const Scalar    *dataArray,
+                                const IndexType *indices,
+                                unsigned int     gatherBlockSize,
+                                Word            *stream,
+                                unsigned int     maxbits,
+                                unsigned int     tot_blocks,
+                                unsigned int     bpt,
+                                unsigned int     wpt,
+                                unsigned int     num_words)
   {
-    const unsigned int super_idx = item.get_global_id(0);
+    const unsigned int super_idx        = item.get_global_id(0);
     const unsigned int blocks_per_entry = gatherBlockSize >> 2;
 
     Word local_words[MAX_WORDS_PER_SUPERBLOCK];
@@ -2022,8 +1998,7 @@ namespace compression
         unsigned int gatherIdx  = block_idx / blocks_per_entry;
         unsigned int localBlock = block_idx - gatherIdx * blocks_per_entry;
         unsigned int intraIdx   = localBlock * 4u;
-        size_t base =
-          (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+        size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
         Scalar fblock[4];
         fblock[0] = dataArray[base];
@@ -2048,17 +2023,16 @@ namespace compression
 
   template <typename Scalar, typename IndexType>
   void
-  decompress_scatter_add_bfp_sb_kernel(
-    sycl::nd_item<1>    item,
-    const Word         *stream,
-    const IndexType    *indices,
-    unsigned int        gatherBlockSize,
-    Scalar             *dataArray,
-    unsigned int        maxbits,
-    unsigned int        tot_blocks,
-    unsigned int        bpt,
-    unsigned int        wpt,
-    unsigned int        num_words)
+  decompress_scatter_add_bfp_sb_kernel(sycl::nd_item<1> item,
+                                       const Word      *stream,
+                                       const IndexType *indices,
+                                       unsigned int     gatherBlockSize,
+                                       Scalar          *dataArray,
+                                       unsigned int     maxbits,
+                                       unsigned int     tot_blocks,
+                                       unsigned int     bpt,
+                                       unsigned int     wpt,
+                                       unsigned int     num_words)
   {
     const unsigned int super_idx  = item.get_global_id(0);
     const unsigned int block_base = super_idx * bpt;
@@ -2090,10 +2064,9 @@ namespace compression
         unsigned int gatherIdx  = block_idx / blocks_per_entry;
         unsigned int localBlock = block_idx - gatherIdx * blocks_per_entry;
         unsigned int intraIdx   = localBlock * 4u;
-        size_t base =
-          (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
+        size_t base = (size_t)indices[gatherIdx] * gatherBlockSize + intraIdx;
 
-        portable_atomicAdd(&dataArray[base],     fblock[0]);
+        portable_atomicAdd(&dataArray[base], fblock[0]);
         portable_atomicAdd(&dataArray[base + 1], fblock[1]);
         portable_atomicAdd(&dataArray[base + 2], fblock[2]);
         portable_atomicAdd(&dataArray[base + 3], fblock[3]);

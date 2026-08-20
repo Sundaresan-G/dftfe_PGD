@@ -13,32 +13,35 @@ namespace dftfe
         void,
         convertLayoutDeviceKernel,
         {
-          const dftfe::uInt numberEntries = initBlockRows * initBlockCols * blockSize; 
+          const dftfe::uInt numberEntries =
+            initBlockRows * initBlockCols * blockSize;
           const dftfe::uInt finalBlockRows = initBlockCols;
           const dftfe::uInt finalBlockCols = initBlockRows;
 
           for (dftfe::uInt index = globalThreadId; index < numberEntries;
-              index += nThreadsPerBlock * nThreadBlock)
+               index += nThreadsPerBlock * nThreadBlock)
             {
-              dftfe::uInt blockIndex = index / blockSize;
-              dftfe::uInt blockCol = blockIndex % initBlockCols;
-              dftfe::uInt blockRow = blockIndex / initBlockCols;
+              dftfe::uInt blockIndex      = index / blockSize;
+              dftfe::uInt blockCol        = blockIndex % initBlockCols;
+              dftfe::uInt blockRow        = blockIndex / initBlockCols;
               dftfe::uInt intraBlockIndex = index - blockIndex * blockSize;
 
               dftfe::uInt new_blockRow = blockCol;
               dftfe::uInt new_blockCol = blockRow;
-              dftfe::uInt new_blockIndex = new_blockRow * finalBlockCols + new_blockCol;
+              dftfe::uInt new_blockIndex =
+                new_blockRow * finalBlockCols + new_blockCol;
 
-              dftfe::uInt new_index = new_blockIndex * blockSize + intraBlockIndex;
+              dftfe::uInt new_index =
+                new_blockIndex * blockSize + intraBlockIndex;
 
               dftfe::utils::copyValue(copyTo + new_index, copyFrom[index]);
             }
         },
-        ValueType2 *                   copyTo,
-        const ValueType1 *             copyFrom,
-        const dftfe::uInt              blockSize,
-        const dftfe::uInt              initBlockRows,
-        const dftfe::uInt              initBlockCols);
+        ValueType2       *copyTo,
+        const ValueType1 *copyFrom,
+        const dftfe::uInt blockSize,
+        const dftfe::uInt initBlockRows,
+        const dftfe::uInt initBlockCols);
 
       template <typename ValueType>
       DFTFE_CREATE_KERNEL(
@@ -694,61 +697,54 @@ namespace dftfe
 
     template <typename ValueType1, typename ValueType2>
     void
-    convertLayout(
-      ValueType2 *                   copyTo,
-      const ValueType1 *             copyFrom,
-      const dftfe::uInt  blockSize,
-      const dftfe::uInt  initBlockRows,
-      const dftfe::uInt  initBlockCols,
-      const dftfe::utils::deviceStream_t   streamId)
+    convertLayout(ValueType2                        *copyTo,
+                  const ValueType1                  *copyFrom,
+                  const dftfe::uInt                  blockSize,
+                  const dftfe::uInt                  initBlockRows,
+                  const dftfe::uInt                  initBlockCols,
+                  const dftfe::utils::deviceStream_t streamId)
     {
-      DFTFE_LAUNCH_KERNEL(
-        convertLayoutDeviceKernel,
-        (initBlockRows * initBlockCols * blockSize +
-         dftfe::utils::DEVICE_BLOCK_SIZE - 1) /
-          dftfe::utils::DEVICE_BLOCK_SIZE,
-        dftfe::utils::DEVICE_BLOCK_SIZE,
-        streamId,
-        dftfe::utils::makeDataTypeDeviceCompatible(copyTo),
-        dftfe::utils::makeDataTypeDeviceCompatible(copyFrom),
-        blockSize,
-        initBlockRows,
-        initBlockCols);
-
+      DFTFE_LAUNCH_KERNEL(convertLayoutDeviceKernel,
+                          (initBlockRows * initBlockCols * blockSize +
+                           dftfe::utils::DEVICE_BLOCK_SIZE - 1) /
+                            dftfe::utils::DEVICE_BLOCK_SIZE,
+                          dftfe::utils::DEVICE_BLOCK_SIZE,
+                          streamId,
+                          dftfe::utils::makeDataTypeDeviceCompatible(copyTo),
+                          dftfe::utils::makeDataTypeDeviceCompatible(copyFrom),
+                          blockSize,
+                          initBlockRows,
+                          initBlockCols);
     }
 
     template void
-    convertLayout(
-      double *                   copyTo,
-      const double *             copyFromVec,
-      const dftfe::uInt         blockSize,
-      const dftfe::uInt         initBlockRows,
-      const dftfe::uInt         initBlockCols,
-      const dftfe::utils::deviceStream_t   streamId);
+    convertLayout(double                            *copyTo,
+                  const double                      *copyFromVec,
+                  const dftfe::uInt                  blockSize,
+                  const dftfe::uInt                  initBlockRows,
+                  const dftfe::uInt                  initBlockCols,
+                  const dftfe::utils::deviceStream_t streamId);
     template void
-    convertLayout(
-      float *                   copyTo,
-      const float *             copyFromVec,
-      const dftfe::uInt         blockSize,
-      const dftfe::uInt         initBlockRows,
-      const dftfe::uInt         initBlockCols,
-      const dftfe::utils::deviceStream_t   streamId);
+    convertLayout(float                             *copyTo,
+                  const float                       *copyFromVec,
+                  const dftfe::uInt                  blockSize,
+                  const dftfe::uInt                  initBlockRows,
+                  const dftfe::uInt                  initBlockCols,
+                  const dftfe::utils::deviceStream_t streamId);
     template void
-    convertLayout(
-      std::complex<double> *                   copyTo,
-      const std::complex<double> *             copyFromVec,
-      const dftfe::uInt         blockSize,
-      const dftfe::uInt         initBlockRows,
-      const dftfe::uInt         initBlockCols,
-      const dftfe::utils::deviceStream_t   streamId);
+    convertLayout(std::complex<double>              *copyTo,
+                  const std::complex<double>        *copyFromVec,
+                  const dftfe::uInt                  blockSize,
+                  const dftfe::uInt                  initBlockRows,
+                  const dftfe::uInt                  initBlockCols,
+                  const dftfe::utils::deviceStream_t streamId);
     template void
-    convertLayout(
-      std::complex<float> *                   copyTo,
-      const std::complex<float> *             copyFromVec,
-      const dftfe::uInt         blockSize,
-      const dftfe::uInt         initBlockRows,
-      const dftfe::uInt         initBlockCols,
-      const dftfe::utils::deviceStream_t   streamId);
+    convertLayout(std::complex<float>               *copyTo,
+                  const std::complex<float>         *copyFromVec,
+                  const dftfe::uInt                  blockSize,
+                  const dftfe::uInt                  initBlockRows,
+                  const dftfe::uInt                  initBlockCols,
+                  const dftfe::utils::deviceStream_t streamId);
 
 
     template void

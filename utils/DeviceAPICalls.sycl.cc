@@ -138,35 +138,49 @@ namespace dftfe
 
     template <typename ValueType>
     void
-    deviceSetValue(ValueType *devPtr, ValueType value, std::size_t size, deviceStream_t stream)
+    deviceSetValue(ValueType     *devPtr,
+                   ValueType      value,
+                   std::size_t    size,
+                   deviceStream_t stream)
     {
       std::size_t total_workitems =
         (size / dftfe::utils::DEVICE_BLOCK_SIZE + 1) *
         dftfe::utils::DEVICE_BLOCK_SIZE;
       deviceEvent_t event =
-        dftfe::utils::queueRegistry.find(stream)
-          ->second.parallel_for(
-            sycl::nd_range<1>(total_workitems, dftfe::utils::DEVICE_BLOCK_SIZE),
-            [=](sycl::nd_item<1> ind) {
-              setValueKernel(ind,
-                             makeDataTypeDeviceCompatible(devPtr),
-                             makeDataTypeDeviceCompatible(value),
-                             size);
-            });
+        dftfe::utils::queueRegistry.find(stream)->second.parallel_for(
+          sycl::nd_range<1>(total_workitems, dftfe::utils::DEVICE_BLOCK_SIZE),
+          [=](sycl::nd_item<1> ind) {
+            setValueKernel(ind,
+                           makeDataTypeDeviceCompatible(devPtr),
+                           makeDataTypeDeviceCompatible(value),
+                           size);
+          });
       DEVICE_API_CHECK(event);
     }
 
     template void
-    deviceSetValue(bool *devPtr, bool value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(bool          *devPtr,
+                   bool           value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(int *devPtr, int value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(int           *devPtr,
+                   int            value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(long int *devPtr, long int value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(long int      *devPtr,
+                   long int       value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(unsigned int *devPtr, unsigned int value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(unsigned int  *devPtr,
+                   unsigned int   value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(unsigned long int *devPtr,
@@ -175,10 +189,16 @@ namespace dftfe
                    deviceStream_t     stream);
 
     template void
-    deviceSetValue(double *devPtr, double value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(double        *devPtr,
+                   double         value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
-    deviceSetValue(float *devPtr, float value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(float         *devPtr,
+                   float          value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<float> *devPtr,
@@ -193,7 +213,10 @@ namespace dftfe
                    deviceStream_t        stream);
 
     template void
-    deviceSetValue(uint8_t *devPtr, uint8_t value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(uint8_t       *devPtr,
+                   uint8_t        value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<uint8_t> *devPtr,
@@ -202,7 +225,10 @@ namespace dftfe
                    deviceStream_t         stream);
 
     template void
-    deviceSetValue(uint16_t *devPtr, uint16_t value, std::size_t size, deviceStream_t stream);
+    deviceSetValue(uint16_t      *devPtr,
+                   uint16_t       value,
+                   std::size_t    size,
+                   deviceStream_t stream);
 
     template void
     deviceSetValue(std::complex<uint16_t> *devPtr,

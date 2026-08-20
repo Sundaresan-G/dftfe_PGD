@@ -121,13 +121,12 @@ namespace dftfe
     utils::DeviceCCLWrapper &devicecclMpiCommDomain,
     utils::DeviceCCLWrapper &devicecclMpiCommIntraPool,
     const MPI_Comm          &interBandGroupComm,
-    const MPI_Comm &         intrapoolcomm,
+    const MPI_Comm          &intrapoolcomm,
     const bool               isFirstFilteringCall,
     const bool               computeResidual,
     const bool               useMixedPrecOverall,
     const bool               isFirstScf)
   {
-    
     // print current memory usage
     if (d_dftParams.verbosity >= 4)
       dftUtils::printCurrentMemoryUsage(intrapoolcomm,
@@ -164,31 +163,35 @@ namespace dftfe
     const dftfe::uInt vectorsBlockSize =
       std::min(d_dftParams.chebyWfcBlockSize, totalNumberWaveFunctions);
 
-    reShapedNumRows = (localVectorSize + numberBandGroups - 1)/numberBandGroups;
+    reShapedNumRows =
+      (localVectorSize + numberBandGroups - 1) / numberBandGroups;
     reShapedNumCols = totalNumberWaveFunctions;
 
     // {
     //   int size, this_process;
     //   MPI_Comm_size(intrapoolcomm, &size);
     //   MPI_Comm_rank(intrapoolcomm, &this_process);
-    //   std::cout << "Out of " << size << " processes, process " << this_process << " reached line " << __LINE__ << " of file " << __FILE__ << std::endl;
-      
+    //   std::cout << "Out of " << size << " processes, process " <<
+    //   this_process << " reached line " << __LINE__ << " of file " << __FILE__
+    //   << std::endl;
+
     // }
 
     if (isFirstScf && isFirstFilteringCall && numberBandGroups > 1)
-    {
-
-      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL);
-      XDevice = d_deviceScratchMemoryStorage.acquire(
-        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
-      HXDevice = d_deviceScratchMemoryStorage.acquire(
-        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
-      MXDevice = d_deviceScratchMemoryStorage.acquire(
-        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
-      extraBufferDevice = d_deviceScratchMemoryStorage.acquire(
-        reShapedNumRows * reShapedNumCols, dataTypes::number(0));
-
-    }
+      {
+        devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL);
+        XDevice  = d_deviceScratchMemoryStorage.acquire(reShapedNumRows *
+                                                         reShapedNumCols,
+                                                       dataTypes::number(0));
+        HXDevice = d_deviceScratchMemoryStorage.acquire(reShapedNumRows *
+                                                          reShapedNumCols,
+                                                        dataTypes::number(0));
+        MXDevice = d_deviceScratchMemoryStorage.acquire(reShapedNumRows *
+                                                          reShapedNumCols,
+                                                        dataTypes::number(0));
+        extraBufferDevice = d_deviceScratchMemoryStorage.acquire(
+          reShapedNumRows * reShapedNumCols, dataTypes::number(0));
+      }
 
     distributedDeviceVec<dataTypes::number> *XBlock =
       &operatorMatrix.getScratchFEMultivector(vectorsBlockSize, 0);
@@ -415,7 +418,7 @@ namespace dftfe
             // wavefunction vectors block
             BLASWrapperPtr->stridedCopyToBlockConstantStride(
               BVec,
-              totalNumberWaveFunctions/numberBandGroups,
+              totalNumberWaveFunctions / numberBandGroups,
               localVectorSize,
               jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
               eigenVectorsFlattenedDevice,
@@ -426,9 +429,10 @@ namespace dftfe
               {
                 BLASWrapperPtr->stridedCopyToBlockConstantStride(
                   BVec,
-                  totalNumberWaveFunctions/numberBandGroups,
+                  totalNumberWaveFunctions / numberBandGroups,
                   localVectorSize,
-                  jvec + BVec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                  jvec + BVec -
+                    bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
                   eigenVectorsFlattenedDevice,
                   (*XBlock2).begin());
               }
@@ -725,7 +729,7 @@ namespace dftfe
             // copy current wavefunction vectors block to vector containing
             // all wavefunction vectors
             BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-              totalNumberWaveFunctions/numberBandGroups,
+              totalNumberWaveFunctions / numberBandGroups,
               BVec,
               localVectorSize,
               jvec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
@@ -735,45 +739,49 @@ namespace dftfe
             if (d_dftParams.overlapComputeCommunCheby &&
                 numSimultaneousBlocksCurrent == 2)
               BLASWrapperPtr->stridedCopyFromBlockConstantStride(
-                totalNumberWaveFunctions/numberBandGroups,
+                totalNumberWaveFunctions / numberBandGroups,
                 BVec,
                 localVectorSize,
-                jvec + BVec - bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
+                jvec + BVec -
+                  bandGroupLowHighPlusOneIndices[2 * bandGroupTaskId],
                 (*XBlock2).begin(),
                 eigenVectorsFlattenedDevice);
           }
-//         else
-//           {
-//             // set to zero wavefunctions which wont go through chebyshev
-//             // filtering inside a given band group
-// #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
-//             setZeroKernel<<<(numSimultaneousBlocksCurrent * BVec +
-//                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-//                               dftfe::utils::DEVICE_BLOCK_SIZE * localVectorSize,
-//                             dftfe::utils::DEVICE_BLOCK_SIZE>>>(
-//               numSimultaneousBlocksCurrent * BVec,
-//               localVectorSize,
-//               totalNumberWaveFunctions,
-//               dftfe::utils::makeDataTypeDeviceCompatible(
-//                 eigenVectorsFlattenedDevice),
-//               jvec);
-// #elif DFTFE_WITH_DEVICE_LANG_HIP
-//             hipLaunchKernelGGL(setZeroKernel,
-//                                (numSimultaneousBlocksCurrent * BVec +
-//                                 (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
-//                                  dftfe::utils::DEVICE_BLOCK_SIZE *
-//                                  localVectorSize,
-//                                dftfe::utils::DEVICE_BLOCK_SIZE,
-//                                0,
-//                                0,
-//                                numSimultaneousBlocksCurrent * BVec,
-//                                localVectorSize,
-//                                totalNumberWaveFunctions,
-//                                dftfe::utils::makeDataTypeDeviceCompatible(
-//                                  eigenVectorsFlattenedDevice),
-//                                jvec);
-// #endif
-//           }
+        //         else
+        //           {
+        //             // set to zero wavefunctions which wont go through
+        //             chebyshev
+        //             // filtering inside a given band group
+        // #ifdef DFTFE_WITH_DEVICE_LANG_CUDA
+        //             setZeroKernel<<<(numSimultaneousBlocksCurrent * BVec +
+        //                              (dftfe::utils::DEVICE_BLOCK_SIZE - 1)) /
+        //                               dftfe::utils::DEVICE_BLOCK_SIZE *
+        //                               localVectorSize,
+        //                             dftfe::utils::DEVICE_BLOCK_SIZE>>>(
+        //               numSimultaneousBlocksCurrent * BVec,
+        //               localVectorSize,
+        //               totalNumberWaveFunctions,
+        //               dftfe::utils::makeDataTypeDeviceCompatible(
+        //                 eigenVectorsFlattenedDevice),
+        //               jvec);
+        // #elif DFTFE_WITH_DEVICE_LANG_HIP
+        //             hipLaunchKernelGGL(setZeroKernel,
+        //                                (numSimultaneousBlocksCurrent * BVec +
+        //                                 (dftfe::utils::DEVICE_BLOCK_SIZE -
+        //                                 1)) /
+        //                                  dftfe::utils::DEVICE_BLOCK_SIZE *
+        //                                  localVectorSize,
+        //                                dftfe::utils::DEVICE_BLOCK_SIZE,
+        //                                0,
+        //                                0,
+        //                                numSimultaneousBlocksCurrent * BVec,
+        //                                localVectorSize,
+        //                                totalNumberWaveFunctions,
+        //                                dftfe::utils::makeDataTypeDeviceCompatible(
+        //                                  eigenVectorsFlattenedDevice),
+        //                                jvec);
+        // #endif
+        //           }
 
       } // block loop
 
@@ -796,7 +804,8 @@ namespace dftfe
     // if (numberBandGroups > 1)
     //   {
     //     std::vector<dataTypes::number> eigenVectorsFlattened(
-    //       totalNumberWaveFunctions * localVectorSize, dataTypes::number(0.0));
+    //       totalNumberWaveFunctions * localVectorSize,
+    //       dataTypes::number(0.0));
 
     //     dftfe::utils::deviceMemcpyD2H(
     //       dftfe::utils::makeDataTypeDeviceCompatible(&eigenVectorsFlattened[0]),
@@ -838,37 +847,57 @@ namespace dftfe
     if (d_dftParams.deviceFineGrainedTimings)
       {
         dftfe::utils::deviceSynchronize();
-        computingTimerStandard.enter_subsection(
-          "Total RR GEP step time");
+        computingTimerStandard.enter_subsection("Total RR GEP step time");
       }
 
-      {
-        if (d_dftParams.useSubspaceProjectedSHEPGPU)
-          {
+    {
+      if (d_dftParams.useSubspaceProjectedSHEPGPU)
+        {
+          AssertThrow(
+            numberBandGroups == 1,
+            dealii::ExcMessage(
+              "SUBSPACE PROJ SHEP GPU == true && NPBAND != 1 is not yet implemented."));
 
-            AssertThrow(numberBandGroups == 1,
-                    dealii::ExcMessage(
-                      "SUBSPACE PROJ SHEP GPU == true && NPBAND != 1 is not yet implemented."));
-
-            linearAlgebraOperationsDevice::pseudoGramSchmidtOrthogonalization(
-              operatorMatrix,
-              elpaScala,
-              eigenVectorsFlattenedDevice,
-              (*XBlock),
-              (*HXBlock),
-              localVectorSize,
-              totalNumberWaveFunctions,
-              d_mpiCommParent,
-              operatorMatrix.getMPICommunicatorDomain(),
-              devicecclMpiCommDomain,
-              interBandGroupComm,
-              BLASWrapperPtr,
-              d_dftParams,
-              d_deviceScratchMemoryStorage,
-              useMixedPrecOverall);
+          linearAlgebraOperationsDevice::pseudoGramSchmidtOrthogonalization(
+            operatorMatrix,
+            elpaScala,
+            eigenVectorsFlattenedDevice,
+            (*XBlock),
+            (*HXBlock),
+            localVectorSize,
+            totalNumberWaveFunctions,
+            d_mpiCommParent,
+            operatorMatrix.getMPICommunicatorDomain(),
+            devicecclMpiCommDomain,
+            interBandGroupComm,
+            BLASWrapperPtr,
+            d_dftParams,
+            d_deviceScratchMemoryStorage,
+            useMixedPrecOverall);
 
 
-            linearAlgebraOperationsDevice::rayleighRitz(
+          linearAlgebraOperationsDevice::rayleighRitz(
+            operatorMatrix,
+            elpaScala,
+            eigenVectorsFlattenedDevice,
+            (*XBlock),
+            (*HXBlock),
+            localVectorSize,
+            totalNumberWaveFunctions,
+            d_mpiCommParent,
+            operatorMatrix.getMPICommunicatorDomain(),
+            devicecclMpiCommDomain,
+            interBandGroupComm,
+            eigenValues,
+            BLASWrapperPtr,
+            d_dftParams,
+            d_deviceScratchMemoryStorage,
+            useMixedPrecOverall);
+        }
+      else
+        {
+          if (numberBandGroups == 1)
+            linearAlgebraOperationsDevice::rayleighRitzGEP(
               operatorMatrix,
               elpaScala,
               eigenVectorsFlattenedDevice,
@@ -885,14 +914,15 @@ namespace dftfe
               d_dftParams,
               d_deviceScratchMemoryStorage,
               useMixedPrecOverall);
-          }
-        else
-          {
-            if (numberBandGroups == 1)
-              linearAlgebraOperationsDevice::rayleighRitzGEP(
+          else
+            linearAlgebraOperationsDevice::rayleighRitzGEP(
               operatorMatrix,
               elpaScala,
               eigenVectorsFlattenedDevice,
+              (*XDevice).begin(),
+              (*HXDevice).begin(),
+              (*MXDevice).begin(),
+              (*extraBufferDevice).begin(),
               (*XBlock),
               (*HXBlock),
               localVectorSize,
@@ -900,45 +930,22 @@ namespace dftfe
               d_mpiCommParent,
               operatorMatrix.getMPICommunicatorDomain(),
               devicecclMpiCommDomain,
+              devicecclMpiInterBand,
+              devicecclMpiCommIntraPool,
               interBandGroupComm,
+              intrapoolcomm,
               eigenValues,
               BLASWrapperPtr,
               d_dftParams,
               d_deviceScratchMemoryStorage,
               useMixedPrecOverall);
-            else
-              linearAlgebraOperationsDevice::rayleighRitzGEP(
-                operatorMatrix,
-                elpaScala,
-                eigenVectorsFlattenedDevice,
-                (*XDevice).begin(),
-                (*HXDevice).begin(),
-                (*MXDevice).begin(),
-                (*extraBufferDevice).begin(),
-                (*XBlock),
-                (*HXBlock),
-                localVectorSize,
-                totalNumberWaveFunctions,
-                d_mpiCommParent,
-                operatorMatrix.getMPICommunicatorDomain(),
-                devicecclMpiCommDomain,
-                devicecclMpiInterBand,
-                devicecclMpiCommIntraPool,
-                interBandGroupComm,
-                intrapoolcomm,
-                eigenValues,
-                BLASWrapperPtr,
-                d_dftParams,
-                d_deviceScratchMemoryStorage,
-                useMixedPrecOverall);
-          }
-      }
+        }
+    }
 
     if (d_dftParams.deviceFineGrainedTimings)
       {
         dftfe::utils::deviceSynchronize();
-        computingTimerStandard.leave_subsection(
-          "Total RR GEP step time");
+        computingTimerStandard.leave_subsection("Total RR GEP step time");
       }
 
     // print current memory usage
