@@ -178,7 +178,7 @@ namespace dftfe
     if (isFirstScf && isFirstFilteringCall && numberBandGroups > 1)
     {
 
-      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL, 1);
+      devicecclMpiInterBand.init(interBandGroupComm, d_dftParams.useDCCL);
       XDevice = d_deviceScratchMemoryStorage.acquire(
         reShapedNumRows * reShapedNumCols, dataTypes::number(0));
       HXDevice = d_deviceScratchMemoryStorage.acquire(

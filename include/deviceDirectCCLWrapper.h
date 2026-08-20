@@ -82,7 +82,20 @@ namespace dftfe
       DeviceCCLWrapper();
 
       void
-      init(const MPI_Comm &mpiComm, const bool useDCCL, int selector = 0);
+      init(const MPI_Comm &mpiComm,
+           const bool      useDCCL,
+           const bool      setAsDefaultP2PComm = false);
+
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
+      defined(DFTFE_WITH_SYCL_ONECCL)
+      /**
+       * Initialize the job-wide device CCL communicator used as the parent for
+       * all application communicator splits. This must be called collectively
+       * on mpiCommParent before init() is called on any device CCL wrapper.
+       */
+      static void
+      initRoot(const MPI_Comm &mpiCommParent, const bool useDCCL);
+#    endif
 
       ~DeviceCCLWrapper();
 
@@ -142,13 +155,8 @@ namespace dftfe
                                   bool            useDCCL = true);
 
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-  inline static ncclUniqueId *dcclIdPtr;
-  inline static ncclComm_t   *dcclCommPtr;
-#    endif
-
-#    if defined(DFTFE_WITH_SYCL_ONECCL)
-  inline static std::shared_ptr<ccl::kvs>          dcclIdPtr;
-  inline static std::shared_ptr<ccl::communicator> dcclCommPtr;
+      // Non-owning alias used by the legacy NCCL/RCCL direct P2P path.
+      inline static ncclComm_t *dcclCommPtr = nullptr;
 #    endif
 
       inline static bool                         dcclCommInit;
@@ -158,15 +166,17 @@ namespace dftfe
 
     private:
 #    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      // 0 - default is handled by ncclCommPtr
-      int      dcclCommSelector = 0; // 0 - intraBandComm, non-zero for interBandCommm or intrapoolComm
-      ncclUniqueId *dcclIdPvtPtr;
-      ncclComm_t *  dcclCommPvtPtr;
+      inline static ncclUniqueId dcclRootId;
+      inline static ncclComm_t   dcclRootComm = nullptr;
+      ncclComm_t                 d_ncclComm    = nullptr;
 #    elif defined(DFTFE_WITH_SYCL_ONECCL)
-      // 0 - default is handled by ncclCommPtr
-      int      dcclCommSelector = 0; // 0 - intraBandComm, non-zero for interBandCommm or intrapoolComm
-      std::shared_ptr<ccl::kvs> dcclIdPvtPtr;
-      std::shared_ptr<ccl::communicator>  dcclCommPvtPtr;
+      inline static std::shared_ptr<ccl::kvs> dcclRootIdPtr;
+      inline static std::shared_ptr<ccl::communicator> dcclRootCommPtr;
+      std::shared_ptr<ccl::communicator> d_oneCCLCommPtr;
+#    endif
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
+      defined(DFTFE_WITH_SYCL_ONECCL)
+      inline static MPI_Comm dcclMpiCommRoot = MPI_COMM_NULL;
 #    endif
       int      myRank;
       int      totalRanks;

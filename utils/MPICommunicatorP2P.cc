@@ -49,7 +49,8 @@ namespace dftfe
 #if defined(DFTFE_WITH_DCCL_P2P) && \
   (defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL))
         if (memorySpace == MemorySpace::DEVICE &&
-            dftfe::utils::DeviceCCLWrapper::dcclCommInit)
+            dftfe::utils::DeviceCCLWrapper::dcclCommInit &&
+            dftfe::utils::DeviceCCLWrapper::dcclCommPtr != nullptr)
           d_commProtocol = communicationProtocol::nccl;
 #endif
 

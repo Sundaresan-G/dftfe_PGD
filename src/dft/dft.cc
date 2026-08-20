@@ -217,12 +217,19 @@ namespace dftfe
 #if defined(DFTFE_WITH_DEVICE)
     d_devicecclMpiCommDomainPtr = new utils::DeviceCCLWrapper;
     d_devicecclMpiCommPoolPtr   = new utils::DeviceCCLWrapper;
-    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace){
-      d_devicecclMpiCommDomainPtr->init(mpi_comm_domain,
+    if constexpr (dftfe::utils::MemorySpace::DEVICE == memorySpace)
+      {
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
+    defined(DFTFE_WITH_SYCL_ONECCL)
+        utils::DeviceCCLWrapper::initRoot(mpi_comm_parent,
+                                          d_dftParamsPtr->useDCCL);
+#  endif
+        d_devicecclMpiCommDomainPtr->init(mpi_comm_domain,
+                                          d_dftParamsPtr->useDCCL,
+                                          true);
+        d_devicecclMpiCommPoolPtr->init(_intrapoolcomm,
                                         d_dftParamsPtr->useDCCL);
-      d_devicecclMpiCommPoolPtr->init(_intrapoolcomm,
-                                        d_dftParamsPtr->useDCCL, 1);
-    }
+      }
 #endif
     d_pspCutOff =
       d_dftParamsPtr->reproducible_output ?
@@ -280,6 +287,7 @@ namespace dftfe
     finalizeKohnShamDFTOperator();
     matrix_free_data.clear();
 #if defined(DFTFE_WITH_DEVICE)
+    delete d_devicecclMpiCommPoolPtr;
     delete d_devicecclMpiCommDomainPtr;
 #endif
 

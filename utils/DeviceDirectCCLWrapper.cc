@@ -19,6 +19,7 @@
 
 #if defined(DFTFE_WITH_DEVICE)
 #  include <iostream>
+#  include <stdexcept>
 
 #  include <deviceDirectCCLWrapper.h>
 #  include <deviceKernelsGeneric.h>
@@ -37,113 +38,127 @@ namespace dftfe
       d_deviceDirectDCCLInstanceCounter++;
     }
 
-    // Ensure that mpiCommDomain calls it first as static variables need to be initialized
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
+    defined(DFTFE_WITH_SYCL_ONECCL)
     void
-    DeviceCCLWrapper::init(const MPI_Comm &mpiComm, const bool useDCCL, int selector /*= 0*/)
+    DeviceCCLWrapper::initRoot(const MPI_Comm &mpiCommParent,
+                               const bool      useDCCL)
+    {
+      if (dcclCommInit || !useDCCL)
+        return;
+
+      MPICHECK(MPI_Comm_dup(mpiCommParent, &dcclMpiCommRoot));
+
+      int rootRank;
+      int rootSize;
+      MPICHECK(MPI_Comm_rank(dcclMpiCommRoot, &rootRank));
+      MPICHECK(MPI_Comm_size(dcclMpiCommRoot, &rootSize));
+
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+      if (rootRank == 0)
+        NCCLCHECK(ncclGetUniqueId(&dcclRootId));
+      MPICHECK(MPI_Bcast(&dcclRootId,
+                         sizeof(dcclRootId),
+                         MPI_BYTE,
+                         0,
+                         dcclMpiCommRoot));
+      NCCLCHECK(
+        ncclCommInitRank(&dcclRootComm, rootSize, dcclRootId, rootRank));
+#    elif defined(DFTFE_WITH_SYCL_ONECCL)
+      ccl::kvs::address_type onecclIdAddr;
+      if (rootRank == 0)
+        {
+          dcclRootIdPtr = ccl::create_main_kvs();
+          onecclIdAddr  = dcclRootIdPtr->get_address();
+        }
+
+      MPICHECK(MPI_Bcast(onecclIdAddr.data(),
+                         onecclIdAddr.size(),
+                         MPI_BYTE,
+                         0,
+                         dcclMpiCommRoot));
+
+      if (rootRank != 0)
+        dcclRootIdPtr = ccl::create_kvs(onecclIdAddr);
+
+      ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
+      rankDeviceMap.push_back(
+        {rootRank, ccl::create_device(dftfe::utils::syclDevice)});
+      auto onecclContext = ccl::create_context(dftfe::utils::syclContext);
+      auto comms = ccl::create_communicators(rootSize,
+                                             rankDeviceMap,
+                                             onecclContext,
+                                             dcclRootIdPtr);
+      dcclRootCommPtr =
+        std::make_shared<ccl::communicator>(std::move(comms[0]));
+#    endif
+      dcclCommInit = true;
+    }
+#  endif
+
+    void
+    DeviceCCLWrapper::init(const MPI_Comm &mpiComm,
+                           const bool      useDCCL,
+                           const bool      setAsDefaultP2PComm)
     {
       MPICHECK(MPI_Comm_dup(mpiComm, &d_mpiComm));
       MPICHECK(MPI_Comm_size(mpiComm, &totalRanks));
       MPICHECK(MPI_Comm_rank(mpiComm, &myRank));
 
-#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (!dcclCommInit && useDCCL)
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
+    defined(DFTFE_WITH_SYCL_ONECCL)
+      if (useDCCL)
         {
-          dcclIdPtr   = new ncclUniqueId;
-          dcclCommPtr = new ncclComm_t;
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+          if (!dcclCommInit || dcclRootComm == nullptr ||
+              dcclMpiCommRoot == MPI_COMM_NULL)
+            throw std::runtime_error(
+              "DFT-FE Error: the job-wide NCCL/RCCL root communicator must be initialized before creating split communicators.");
+#    elif defined(DFTFE_WITH_SYCL_ONECCL)
+          if (!dcclCommInit || !dcclRootCommPtr ||
+              dcclMpiCommRoot == MPI_COMM_NULL)
+            throw std::runtime_error(
+              "DFT-FE Error: the job-wide oneCCL root communicator must be initialized before creating split communicators.");
+#    endif
+
+          // The minimum root rank is a stable color for each disjoint MPI
+          // subgroup, while myRank preserves its MPI rank order.
+          int rootRank;
+          int splitColor;
+          MPICHECK(MPI_Comm_rank(dcclMpiCommRoot, &rootRank));
+          MPICHECK(MPI_Allreduce(&rootRank,
+                                 &splitColor,
+                                 1,
+                                 MPI_INT,
+                                 MPI_MIN,
+                                 d_mpiComm));
+
+#    if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+#      if defined(NCCL_VERSION_CODE) && defined(NCCL_VERSION) && \
+        NCCL_VERSION_CODE >= NCCL_VERSION(2, 18, 0)
+          NCCLCHECK(ncclCommSplit(
+            dcclRootComm, splitColor, myRank, &d_ncclComm, nullptr));
+#      else
+          (void)splitColor;
+          ncclUniqueId subgroupId;
           if (myRank == 0)
-            ncclGetUniqueId(dcclIdPtr);
-          MPICHECK(
-            MPI_Bcast(dcclIdPtr, sizeof(*dcclIdPtr), MPI_BYTE, 0, d_mpiComm));
+            NCCLCHECK(ncclGetUniqueId(&subgroupId));
+          MPICHECK(MPI_Bcast(&subgroupId,
+                             sizeof(subgroupId),
+                             MPI_BYTE,
+                             0,
+                             d_mpiComm));
           NCCLCHECK(
-            ncclCommInitRank(dcclCommPtr, totalRanks, *dcclIdPtr, myRank));
-          dcclCommInit = true;
-        }
-
-        if (selector != 0 && useDCCL){
-          dcclCommSelector = selector;
-          dcclIdPvtPtr = new ncclUniqueId;
-          dcclCommPvtPtr = new ncclComm_t;
-          if (myRank == 0)
-            ncclGetUniqueId(dcclIdPvtPtr);
-          MPICHECK(
-            MPI_Bcast(dcclIdPvtPtr, sizeof(*dcclIdPvtPtr), MPI_BYTE, 0, d_mpiComm));
-          NCCLCHECK(
-            ncclCommInitRank(dcclCommPvtPtr, totalRanks, *dcclIdPvtPtr, myRank));
-
-        }
-#  endif
-
-#  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (!dcclCommInit && useDCCL)
-        {
-          ccl::kvs::address_type onecclIdAddr;
-          if (myRank == 0)
-            {
-              dcclIdPtr    = ccl::create_main_kvs();
-              onecclIdAddr = dcclIdPtr->get_address();
-              MPICHECK(MPI_Bcast(onecclIdAddr.data(),
-                                 onecclIdAddr.size(),
-                                 MPI_BYTE,
-                                 0,
-                                 d_mpiComm));
-            }
-          else
-            {
-              MPICHECK(MPI_Bcast(onecclIdAddr.data(),
-                                 onecclIdAddr.size(),
-                                 MPI_BYTE,
-                                 0,
-                                 d_mpiComm));
-              dcclIdPtr = ccl::create_kvs(onecclIdAddr);
-            }
-
-          ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
-          rankDeviceMap.push_back(
-            {myRank, ccl::create_device(dftfe::utils::syclDevice)});
-          auto onecclContext = ccl::create_context(dftfe::utils::syclContext);
-          auto comms         = ccl::create_communicators(totalRanks,
-                                                 rankDeviceMap,
-                                                 onecclContext,
-                                                 dcclIdPtr);
-          dcclCommPtr =
-            std::make_shared<ccl::communicator>(std::move(comms[0]));
-          dcclCommInit = true;
-        }
-
-      if (selector != 0 && useDCCL){
-          dcclCommSelector = selector;
-          ccl::kvs::address_type onecclIdAddr;
-          if (myRank == 0)
-            {
-              dcclIdPvtPtr  = ccl::create_main_kvs();
-              onecclIdAddr = dcclIdPvtPtr->get_address();
-              MPICHECK(MPI_Bcast(onecclIdAddr.data(),
-                                 onecclIdAddr.size(),
-                                 MPI_BYTE,
-                                 0,
-                                 d_mpiComm));
-            }
-          else
-            {
-              MPICHECK(MPI_Bcast(onecclIdAddr.data(),
-                                 onecclIdAddr.size(),
-                                 MPI_BYTE,
-                                 0,
-                                 d_mpiComm));
-              dcclIdPvtPtr = ccl::create_kvs(onecclIdAddr);
-            }
-
-          ccl::vector_class<ccl::pair_class<int, ccl::device>> rankDeviceMap;
-          rankDeviceMap.push_back(
-            {myRank, ccl::create_device(dftfe::utils::syclDevice)});
-          auto onecclContext = ccl::create_context(dftfe::utils::syclContext);
-          auto comms         = ccl::create_communicators(totalRanks,
-                                                 rankDeviceMap,
-                                                 onecclContext,
-                                                 dcclIdPvtPtr);
-          dcclCommPvtPtr =
-            std::make_shared<ccl::communicator>(std::move(comms[0]));
-
+            ncclCommInitRank(&d_ncclComm, totalRanks, subgroupId, myRank));
+#      endif
+          if (setAsDefaultP2PComm)
+            dcclCommPtr = &d_ncclComm;
+#    elif defined(DFTFE_WITH_SYCL_ONECCL)
+          ONECCLCHECK(
+            d_oneCCLCommPtr = std::make_shared<ccl::communicator>(
+              dcclRootCommPtr->split(splitColor, myRank, true)));
+          (void)setAsDefaultP2PComm;
+#    endif
         }
 #  endif
 
@@ -159,39 +174,44 @@ namespace dftfe
       if (d_mpiComm != MPI_COMM_NULL)
         MPI_Comm_free(&d_mpiComm);
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (dcclCommInit)
+      if (d_ncclComm != nullptr)
         {
-          ncclCommFinalize(*dcclCommPtr);
-          ncclCommDestroy(*dcclCommPtr);
-          delete dcclCommPtr;
-          delete dcclIdPtr;
-          dcclCommInit = false;
+          if (dcclCommPtr == &d_ncclComm)
+            dcclCommPtr = nullptr;
+          NCCLCHECK(ncclCommFinalize(d_ncclComm));
+          NCCLCHECK(ncclCommDestroy(d_ncclComm));
+          d_ncclComm = nullptr;
         }
-
-      if (dcclCommSelector != 0){
-        ncclCommFinalize(*dcclCommPvtPtr);
-        ncclCommDestroy(*dcclCommPvtPtr);
-        delete dcclCommPvtPtr;
-      }
-#  endif
-
-#  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit)
-        {
-          dcclCommPtr.reset();
-          dcclIdPtr.reset();
-        }
-      if (dcclCommSelector != 0){
-        dcclCommPvtPtr.reset();
-        dcclIdPvtPtr.reset();
-      }
+#  elif defined(DFTFE_WITH_SYCL_ONECCL)
+      d_oneCCLCommPtr.reset();
 #  endif
 
       d_deviceDirectDCCLInstanceCounter--;
-      if (commStreamCreated && d_deviceDirectDCCLInstanceCounter == 0)
+      if (d_deviceDirectDCCLInstanceCounter == 0)
         {
-          dftfe::utils::deviceStreamDestroy(d_deviceCommStream);
-          commStreamCreated = false;
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
+          if (dcclRootComm != nullptr)
+            {
+              NCCLCHECK(ncclCommFinalize(dcclRootComm));
+              NCCLCHECK(ncclCommDestroy(dcclRootComm));
+              dcclRootComm = nullptr;
+            }
+          dcclCommPtr = nullptr;
+#  elif defined(DFTFE_WITH_SYCL_ONECCL)
+          dcclRootCommPtr.reset();
+          dcclRootIdPtr.reset();
+#  endif
+#  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL) || \
+    defined(DFTFE_WITH_SYCL_ONECCL)
+          dcclCommInit = false;
+          if (dcclMpiCommRoot != MPI_COMM_NULL)
+            MPI_Comm_free(&dcclMpiCommRoot);
+#  endif
+          if (commStreamCreated)
+            {
+              dftfe::utils::deviceStreamDestroy(d_deviceCommStream);
+              commStreamCreated = false;
+            }
         }
     }
 
@@ -202,12 +222,9 @@ namespace dftfe
                                                    deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (dcclCommInit)
+      if (d_ncclComm != nullptr)
         {
-          ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          ncclComm_t comm = d_ncclComm;
             
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -220,13 +237,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit)
+      if (d_oneCCLCommPtr)
         {
 
-          auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          auto comm = d_oneCCLCommPtr;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -273,13 +287,10 @@ namespace dftfe
                                                    deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (dcclCommInit)
+      if (d_ncclComm != nullptr)
         {
 
-          ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          ncclComm_t comm = d_ncclComm;
 
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -292,13 +303,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit)
+      if (d_oneCCLCommPtr)
         {
 
-          auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          auto comm = d_oneCCLCommPtr;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -347,13 +355,10 @@ namespace dftfe
       deviceStream_t             &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (dcclCommInit)
+      if (d_ncclComm != nullptr)
         {
 
-          ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          ncclComm_t comm = d_ncclComm;
 
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -366,13 +371,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit)
+      if (d_oneCCLCommPtr)
         {
 
-          auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          auto comm = d_oneCCLCommPtr;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -420,13 +422,10 @@ namespace dftfe
       deviceStream_t            &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (dcclCommInit)
+      if (d_ncclComm != nullptr)
         {
 
-          ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          ncclComm_t comm = d_ncclComm;
           
           NCCLCHECK(ncclAllReduce((const void *)send,
                                   (void *)recv,
@@ -439,13 +438,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit)
+      if (d_oneCCLCommPtr)
         {
 
-          auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          auto comm = d_oneCCLCommPtr;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -498,13 +494,10 @@ namespace dftfe
       deviceStream_t &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (dcclCommInit)
+      if (d_ncclComm != nullptr)
         {
 
-          ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          ncclComm_t comm = d_ncclComm;
 
           NCCLCHECK(ncclGroupStart());
           NCCLCHECK(ncclAllReduce((const void *)send1,
@@ -525,13 +518,10 @@ namespace dftfe
         }
 #  endif
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit)
+      if (d_oneCCLCommPtr)
         {
 
-          auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          auto comm = d_oneCCLCommPtr;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -615,13 +605,10 @@ namespace dftfe
       deviceStream_t             &stream)
     {
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
-      if (dcclCommInit)
+      if (d_ncclComm != nullptr)
         {
 
-          ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          ncclComm_t comm = d_ncclComm;
 
           NCCLCHECK(ncclGroupStart());
           NCCLCHECK(ncclAllReduce((const void *)send1,
@@ -643,13 +630,10 @@ namespace dftfe
 #  endif
 
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit)
+      if (d_oneCCLCommPtr)
         {
 
-          auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          auto comm = d_oneCCLCommPtr;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -734,13 +718,10 @@ namespace dftfe
 
       
 #  if defined(DFTFE_WITH_SYCL_ONECCL)
-      if (dcclCommInit && useDCCL)
+      if (d_oneCCLCommPtr && useDCCL)
         {
 
-          auto comm = dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = dcclCommPvtPtr;            
-          }
+          auto comm = d_oneCCLCommPtr;
 
           auto devStream =
             ccl::create_stream(dftfe::utils::queueRegistry.at(stream));
@@ -776,13 +757,10 @@ namespace dftfe
 
 #  if defined(DFTFE_WITH_CUDA_NCCL) || defined(DFTFE_WITH_HIP_RCCL)
 
-      if (dcclCommInit && useDCCL)
+      if (d_ncclComm != nullptr && useDCCL)
         {
 
-          ncclComm_t comm = *dcclCommPtr;
-          if (dcclCommSelector != 0){
-            comm = *dcclCommPvtPtr;            
-          }
+          ncclComm_t comm = d_ncclComm;
           
           NCCLCHECK(ncclGroupStart());
           for (unsigned int i = 1; i < totalRanks; i++)
